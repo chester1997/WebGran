@@ -14,21 +14,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
           <nav className="flex-1 overflow-y-auto py-4">
             <ul className="space-y-1 px-3">
-              <li>
-                <a href="#" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-accent text-accent-foreground">
-                  Dashboard
-                </a>
-              </li>
-              <li>
-                <a href="/admin/themes" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
-                  Temas
-                </a>
-              </li>
-              <li>
-                <a href="#" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
-                  Configurações
-                </a>
-              </li>
+              <li><a href="/admin" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Dashboard</a></li>
+              <li><a href="/admin/stores" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Lojas</a></li>
+              <li><a href="/admin/sellers" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Vendedores</a></li>
+              <li><a href="/admin/bots" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Bots</a></li>
+              <li><a href="/admin/products" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Produtos</a></li>
+              <li><a href="/admin/orders" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Pedidos</a></li>
+              <li><a href="/admin/customers" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Clientes</a></li>
+              <li><a href="/admin/themes" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Temas</a></li>
+              <li><a href="/admin/settings" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">Configurações</a></li>
             </ul>
           </nav>
         </aside>
