@@ -1,0 +1,272 @@
+import { 
+  pgTable, 
+  text, 
+  timestamp, 
+  uuid, 
+  boolean, 
+  integer, 
+  jsonb, 
+  unique, 
+  decimal 
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+
+// Enum-like options or just text for simplicity (using text to avoid custom ENUM types complexity across environments if not strictly needed)
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  password: text('password').notNull().default(''),
+  role: text('role').notNull().default('seller'), // 'admin' | 'seller'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const themes = pgTable('themes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  previewImageUrl: text('preview_image_url'),
+  config: jsonb('config').notNull().default({}),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const stores = pgTable('stores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  logoUrl: text('logo_url'),
+  description: text('description'),
+  status: text('status').notNull().default('active'), // 'active' | 'inactive' | 'suspended'
+  themeId: uuid('theme_id').references(() => themes.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const telegramBots = pgTable('telegram_bots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: text('bot_id').notNull().unique(), // The numeric bot ID from Telegram
+  username: text('username').notNull(),
+  displayName: text('display_name'),
+  tokenEncrypted: text('token_encrypted').notNull(),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  position: integer('position').notNull().default(0),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeSlugUnique: unique().on(t.storeId, t.slug)
+}));
+
+export const products = pgTable('products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  shortDescription: text('short_description'),
+  coverUrl: text('cover_url'),
+  bannerUrl: text('banner_url'),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  compareAtPrice: decimal('compare_at_price', { precision: 10, scale: 2 }),
+  status: text('status').notNull().default('active'), // 'active' | 'draft' | 'archived'
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeSlugUnique: unique().on(t.storeId, t.slug)
+}));
+
+export const telegramCustomers = pgTable('telegram_customers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  telegramUserId: text('telegram_user_id').notNull(),
+  username: text('username'),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  photoUrl: text('photo_url'),
+  languageCode: text('language_code'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeUserUnique: unique().on(t.storeId, t.telegramUserId)
+}));
+
+export const orders = pgTable('orders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('pending'), // 'pending' | 'paid' | 'cancelled' | 'fulfilled'
+  subtotal: decimal('subtotal', { precision: 10, scale: 2 }).notNull(),
+  discount: decimal('discount', { precision: 10, scale: 2 }).notNull().default('0'),
+  total: decimal('total', { precision: 10, scale: 2 }).notNull(),
+  currency: text('currency').notNull().default('BRL'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const orderItems = pgTable('order_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  quantity: integer('quantity').notNull(),
+  unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
+  total: decimal('total', { precision: 10, scale: 2 }).notNull(),
+});
+
+export const accesses = pgTable('accesses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  status: text('status').notNull().default('active'), // 'active' | 'revoked' | 'expired'
+  grantedAt: timestamp('granted_at').defaultNow().notNull(),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const banners = pgTable('banners', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  imageUrl: text('image_url').notNull(),
+  linkType: text('link_type'), // 'product' | 'category' | 'external'
+  linkValue: text('link_value'),
+  position: integer('position').notNull().default(0),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  stores: many(stores),
+}));
+
+export const themesRelations = relations(themes, ({ many }) => ({
+  stores: many(stores),
+}));
+
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [stores.ownerId],
+    references: [users.id],
+  }),
+  theme: one(themes, {
+    fields: [stores.themeId],
+    references: [themes.id],
+  }),
+  bots: many(telegramBots),
+  categories: many(categories),
+  products: many(products),
+  customers: many(telegramCustomers),
+  orders: many(orders),
+  accesses: many(accesses),
+  banners: many(banners),
+}));
+
+export const telegramBotsRelations = relations(telegramBots, ({ one }) => ({
+  store: one(stores, {
+    fields: [telegramBots.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [categories.storeId],
+    references: [stores.id],
+  }),
+  products: many(products),
+}));
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [products.storeId],
+    references: [stores.id],
+  }),
+  category: one(categories, {
+    fields: [products.categoryId],
+    references: [categories.id],
+  }),
+  orderItems: many(orderItems),
+  accesses: many(accesses),
+}));
+
+export const telegramCustomersRelations = relations(telegramCustomers, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [telegramCustomers.storeId],
+    references: [stores.id],
+  }),
+  orders: many(orders),
+  accesses: many(accesses),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [orders.storeId],
+    references: [stores.id],
+  }),
+  customer: one(telegramCustomers, {
+    fields: [orders.customerId],
+    references: [telegramCustomers.id],
+  }),
+  items: many(orderItems),
+  accesses: many(accesses),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const accessesRelations = relations(accesses, ({ one }) => ({
+  store: one(stores, {
+    fields: [accesses.storeId],
+    references: [stores.id],
+  }),
+  customer: one(telegramCustomers, {
+    fields: [accesses.customerId],
+    references: [telegramCustomers.id],
+  }),
+  product: one(products, {
+    fields: [accesses.productId],
+    references: [products.id],
+  }),
+  order: one(orders, {
+    fields: [accesses.orderId],
+    references: [orders.id],
+  }),
+}));
+
+export const bannersRelations = relations(banners, ({ one }) => ({
+  store: one(stores, {
+    fields: [banners.storeId],
+    references: [stores.id],
+  }),
+}));
