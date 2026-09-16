@@ -108,20 +108,6 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0A0A0A]">
-          {/* Top Header */}
-          <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#0A0A0A]/80 backdrop-blur-md z-10 sticky top-0">
-            
-            {/* Page Title & Breadcrumbs Placeholder */}
-            <div className="flex items-center gap-4">
-              <h1 className="font-bold text-xl text-white">Dashboard</h1>
-            </div>
-
-            {/* Right Actions */}
-            <div className="flex items-center gap-6">
-              {/* Reserved for future top-right actions */}
-            </div>
-          </header>
-
           {/* Main Content Scroll */}
           <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
             {/* Ambient Glow */}
