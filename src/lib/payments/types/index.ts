@@ -1,0 +1,70 @@
+export interface MarketplacePaymentProvider {
+  connectSeller(sellerId: string, redirectUrl: string): Promise<string>; // Returns auth URL
+  disconnectSeller(sellerId: string): Promise<void>;
+  getSellerConnection(sellerId: string): Promise<any>;
+  createCheckout(params: CreateCheckoutParams): Promise<CheckoutResponse>;
+  createPayment(params: CreatePaymentParams): Promise<PaymentResponse>;
+  calculatePlatformFee(amount: number): number;
+  getPayment(paymentId: string): Promise<PaymentResponse>;
+  refundPayment(paymentId: string, amount?: number): Promise<void>;
+  handleWebhook(payload: any): Promise<void>;
+}
+
+export interface PlatformBillingProvider {
+  createInvoice(params: CreateInvoiceParams): Promise<InvoiceResponse>;
+  getInvoice(invoiceId: string): Promise<InvoiceResponse>;
+  cancelInvoice(invoiceId: string): Promise<void>;
+  handleWebhook(payload: any): Promise<void>;
+  getSubscriptionStatus(subscriptionId: string): Promise<string>;
+}
+
+export interface CreateCheckoutParams {
+  sellerId: string;
+  items: Array<{
+    id: string;
+    title: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+  customer: {
+    email?: string;
+    name?: string;
+  };
+  successUrl: string;
+  failureUrl: string;
+  metadata?: Record<string, string>;
+}
+
+export interface CheckoutResponse {
+  id: string;
+  url: string;
+}
+
+export interface CreatePaymentParams {
+  sellerId: string;
+  amount: number;
+  paymentMethod: string;
+  token?: string;
+  customer?: any;
+}
+
+export interface PaymentResponse {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'refunded';
+  amount: number;
+}
+
+export interface CreateInvoiceParams {
+  sellerId: string;
+  subscriptionId: string;
+  amount: number;
+  dueDate: Date;
+}
+
+export interface InvoiceResponse {
+  id: string;
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  qrCode?: string;
+  qrCodeText?: string;
+  url?: string;
+}

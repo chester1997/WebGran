@@ -271,3 +271,94 @@ export const bannersRelations = relations(banners, ({ one }) => ({
     references: [stores.id],
   }),
 }));
+
+// ==========================================
+// PAYMENT ARCHITECTURE
+// ==========================================
+
+export const sellerPaymentConnections = pgTable('seller_payment_connections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(), // 'mercado_pago'
+  accessTokenEncrypted: text('access_token_encrypted').notNull(),
+  refreshTokenEncrypted: text('refresh_token_encrypted'),
+  accountId: text('account_id'),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const subscriptionPlans = pgTable('subscription_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  billingInterval: text('billing_interval').notNull().default('month'), // 'month' | 'year'
+  features: jsonb('features').notNull().default({}),
+  maxProducts: integer('max_products'),
+  maxBots: integer('max_bots'),
+  maxCustomers: integer('max_customers'),
+  active: boolean('active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const subscriptions = pgTable('subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  planId: uuid('plan_id').notNull().references(() => subscriptionPlans.id),
+  status: text('status').notNull().default('TRIAL'), // TRIAL, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  currentPeriodStart: timestamp('current_period_start').defaultNow().notNull(),
+  currentPeriodEnd: timestamp('current_period_end').notNull(),
+  cancelledAt: timestamp('cancelled_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const invoices = pgTable('invoices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  subscriptionId: uuid('subscription_id').references(() => subscriptions.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull().default('cora'), // 'cora'
+  externalId: text('external_id'),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  status: text('status').notNull().default('PENDING'), // PENDING, PAID, EXPIRED, CANCELLED, FAILED
+  dueDate: timestamp('due_date').notNull(),
+  paidAt: timestamp('paid_at'),
+  qrCode: text('qr_code'),
+  qrCodeText: text('qr_code_text'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const sellerPaymentConnectionsRelations = relations(sellerPaymentConnections, ({ one }) => ({
+  seller: one(users, {
+    fields: [sellerPaymentConnections.sellerId],
+    references: [users.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
+  seller: one(users, {
+    fields: [subscriptions.sellerId],
+    references: [users.id],
+  }),
+  plan: one(subscriptionPlans, {
+    fields: [subscriptions.planId],
+    references: [subscriptionPlans.id],
+  }),
+  invoices: many(invoices),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  seller: one(users, {
+    fields: [invoices.sellerId],
+    references: [users.id],
+  }),
+  subscription: one(subscriptions, {
+    fields: [invoices.subscriptionId],
+    references: [subscriptions.id],
+  }),
+}));
