@@ -19,7 +19,7 @@ export default async function SellerCategoriesPage() {
   });
 
   return (
-    <div className="space-y-8 fade-in max-w-6xl">
+    <div className="space-y-8 fade-in w-full">
       
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
