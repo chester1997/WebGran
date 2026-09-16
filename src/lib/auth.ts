@@ -1,4 +1,5 @@
 import { NextAuthOptions, getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
@@ -73,16 +74,25 @@ export async function getCurrentUser() {
 
 export async function requireAdmin() {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'admin') {
-    throw new Error("Unauthorized - Admin access required");
+  if (!user) {
+    redirect("/login");
+  }
+  if (user.role !== 'admin') {
+    redirect("/seller");
   }
   return user;
 }
 
 export async function requireSeller() {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'seller') {
-    throw new Error("Unauthorized - Seller access required");
+  if (!user) {
+    redirect("/login");
+  }
+  if (user.role === 'admin') {
+    redirect("/admin");
+  }
+  if (user.role !== 'seller') {
+    throw new Error("Unauthorized");
   }
   return user;
 }
