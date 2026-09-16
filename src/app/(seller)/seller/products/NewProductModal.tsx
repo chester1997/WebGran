@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { 
   Dialog, 
   DialogTrigger, 
@@ -9,13 +9,26 @@ import {
   DialogTitle, 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Upload } from "lucide-react";
+import { Plus, Save, Upload, Image as ImageIcon, X } from "lucide-react";
 import { createProductAction } from "./actions";
 
 export function NewProductModal({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deliveryType, setDeliveryType] = useState<"telegram" | "external" | "native">("telegram");
+  const [imageUrl, setImageUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -113,21 +126,50 @@ export function NewProductModal({ categories }: { categories: any[] }) {
               </div>
             </div>
 
-            {/* Imagem do Produto */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem do produto</label>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white shrink-0 h-11 px-6 rounded-lg">
-                  <Upload className="w-4 h-4 mr-2" /> Enviar imagem
-                </Button>
-                <input 
-                  type="text" 
-                  placeholder="ou cole uma URL aqui"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                />
+              {/* Imagem do Produto */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem do produto</label>
+                
+                {imageUrl && (
+                  <div className="mb-3 relative w-32 h-32 rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1E]">
+                    <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <button 
+                      type="button" 
+                      onClick={() => setImageUrl("")}
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors backdrop-blur-md"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange}
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white shrink-0 h-11 px-6 rounded-lg"
+                  >
+                    <Upload className="w-4 h-4 mr-2" /> Enviar imagem
+                  </Button>
+                  <input 
+                    type="text" 
+                    name="imageUrl"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="ou cole uma URL aqui"
+                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-2">Recomendado: 600 x 600 px - máx 5MB</p>
               </div>
-              <p className="text-[10px] text-zinc-500 mt-2">Recomendado: 600 x 600 px - máx 5MB</p>
-            </div>
 
             {/* Tipo de Entrega */}
             <div>
