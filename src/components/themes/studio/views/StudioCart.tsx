@@ -5,17 +5,25 @@ import { ShoppingCart, Trash2, Plus, Minus, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/components/miniapp/CartProvider";
 
+import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
+import { useRouter } from "next/navigation";
+
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
-  const { items, updateQuantity, removeFromCart, subtotal, total } = useCart();
+  const { items, updateQuantity, removeFromCart, subtotal, total, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
   const handleCheckout = async () => {
     setIsProcessing(true);
-    // Aqui no futuro chamaremos o backend para validar preços e criar o pedido
-    setTimeout(() => {
-      alert("Integração de pagamento em breve!");
+    const result = await createCheckoutSession(storeSlug, items.map(i => ({ id: i.id, quantity: i.quantity })));
+    
+    if (result.success) {
+      clearCart();
+      router.push(`/miniapp/${storeSlug}/accesses`);
+    } else {
+      alert(result.error || "Ocorreu um erro na compra");
       setIsProcessing(false);
-    }, 1000);
+    }
   };
 
   if (items.length === 0) {

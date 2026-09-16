@@ -83,12 +83,20 @@ export async function POST(req: NextRequest) {
       .setExpirationTime("7d")
       .sign(secret);
 
-    // Retorna Token para o client armazenar e enviar nos Headers em futuras requisições API
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       token, 
       user: tgUser 
     });
+
+    response.cookies.set("tg_session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
+
+    return response;
 
   } catch (error) {
     console.error("Auth error:", error);
