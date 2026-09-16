@@ -88,6 +88,7 @@ export const products = pgTable('products', {
   bannerUrl: text('banner_url'),
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
   compareAtPrice: decimal('compare_at_price', { precision: 10, scale: 2 }),
+  duration: text('duration').default('lifetime'), // 'daily', 'weekly', 'monthly', 'quarterly', 'semiannual', 'annual', 'lifetime'
   status: text('status').notNull().default('active'), // 'active' | 'draft' | 'archived'
   position: integer('position').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),

@@ -14,16 +14,8 @@ import { createProductAction } from "./actions";
 
 export function NewProductModal({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
   const [loading, setLoading] = useState(false);
   const [deliveryType, setDeliveryType] = useState<"telegram" | "external" | "native">("telegram");
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    setTitle(newTitle);
-    setSlug(newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -53,31 +45,16 @@ export function NewProductModal({ categories }: { categories: any[] }) {
         <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
           <form id="new-product-form" onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Título e Slug (Inline/Stacked) */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Título *</label>
-                <input 
-                  type="text" 
-                  name="title"
-                  value={title}
-                  onChange={handleTitleChange}
-                  required
-                  placeholder="Ex: Plano Mensal Premium"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">URL (Slug)</label>
-                <input 
-                  type="text" 
-                  name="slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  required
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all font-mono"
-                />
-              </div>
+            {/* Título */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Título *</label>
+              <input 
+                type="text" 
+                name="title"
+                required
+                placeholder="Ex: Plano Mensal Premium"
+                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+              />
             </div>
 
             {/* Descrição */}
@@ -91,7 +68,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
               ></textarea>
             </div>
 
-            {/* Preço e Status (Lado a lado) */}
+            {/* Preço e Duração (Lado a lado) */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Preço (R$) *</label>
@@ -105,14 +82,34 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Preço Riscado (R$)</label>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Duração</label>
+                <select name="duration" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 appearance-none">
+                  <option value="daily">Diário</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                  <option value="quarterly">Trimestral</option>
+                  <option value="semiannual">Semestral</option>
+                  <option value="annual">Anual</option>
+                  <option value="lifetime" selected>Vitalício</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Desconto */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Desconto (%)</label>
                 <input 
                   type="number" 
-                  name="compareAtPrice"
-                  step="0.01"
-                  placeholder="0,00"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all line-through decoration-zinc-600"
+                  name="discount"
+                  min="0"
+                  max="100"
+                  placeholder="0"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all"
                 />
+              </div>
+              <div className="flex items-end pb-3">
+                <span className="text-xs text-zinc-500">Opcional. Ex: 10 para 10% de desconto</span>
               </div>
             </div>
 

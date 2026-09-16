@@ -15,14 +15,22 @@ export async function createProductAction(formData: FormData) {
   }
 
   const title = formData.get("title") as string;
-  const slug = formData.get("slug") as string;
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   const shortDescription = formData.get("shortDescription") as string;
   const description = formData.get("description") as string;
   const price = parseFloat(formData.get("price") as string);
-  const compareAtPriceStr = formData.get("compareAtPrice") as string;
-  const compareAtPrice = compareAtPriceStr ? parseFloat(compareAtPriceStr) : null;
+  const discountStr = formData.get("discount") as string;
+  const discount = discountStr ? parseFloat(discountStr) : 0;
+  
+  let compareAtPrice: string | null = null;
+  if (discount > 0 && discount < 100) {
+    const originalPrice = price / (1 - (discount / 100));
+    compareAtPrice = originalPrice.toFixed(2);
+  }
+
   const categoryId = formData.get("categoryId") as string || null;
   const status = formData.get("status") as string || "active";
+  const duration = formData.get("duration") as string || "lifetime";
 
   // Insert into DB
   await db.insert(products).values({
@@ -32,9 +40,10 @@ export async function createProductAction(formData: FormData) {
     shortDescription,
     description,
     price: price.toString(), // Drizzle decimal takes string
-    compareAtPrice: compareAtPrice ? compareAtPrice.toString() : null,
+    compareAtPrice,
     categoryId,
     status,
+    duration,
     position: 0,
   });
 
