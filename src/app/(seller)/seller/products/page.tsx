@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm";
 import { Package, Plus, Search, MoreHorizontal, Filter, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { NewProductModal } from "./NewProductModal";
 
 export default async function SellerProductsPage() {
   await requireSeller();
@@ -23,6 +24,11 @@ export default async function SellerProductsPage() {
     }
   });
 
+  const allCategories = await db.query.categories.findMany({
+    where: eq(categories.storeId, store.id),
+    columns: { id: true, name: true }
+  });
+
   return (
     <div className="space-y-8 fade-in max-w-7xl">
       
@@ -32,11 +38,7 @@ export default async function SellerProductsPage() {
           <h2 className="text-2xl font-bold text-white tracking-tight">Produtos</h2>
           <p className="text-zinc-400 text-sm mt-1">Gerencie o seu catálogo e controle preços e entregas.</p>
         </div>
-        <Link href="/seller/products/new">
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-violet-600/20 w-full sm:w-auto">
-            <Plus className="w-5 h-5 mr-2" /> Novo Produto
-          </Button>
-        </Link>
+        <NewProductModal categories={allCategories} />
       </div>
 
       {/* Filters Area */}
@@ -88,11 +90,7 @@ export default async function SellerProductsPage() {
                       </div>
                       <p className="text-zinc-300 font-medium text-base mb-1">Seu catálogo está vazio</p>
                       <p className="text-zinc-600 text-sm max-w-sm mb-6">Cadastre seu primeiro produto para começar a vender na sua loja digital.</p>
-                      <Link href="/seller/products/new">
-                        <Button className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-lg shadow-violet-600/20">
-                          <Plus className="w-4 h-4 mr-2" /> Cadastrar Produto
-                        </Button>
-                      </Link>
+                      <NewProductModal categories={allCategories} />
                     </div>
                   </td>
                 </tr>
