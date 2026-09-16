@@ -31,6 +31,7 @@ export const themes = pgTable('themes', {
   previewImageUrl: text('preview_image_url'),
   config: jsonb('config').notNull().default({}),
   isActive: boolean('is_active').default(true).notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

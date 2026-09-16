@@ -20,8 +20,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 </a>
               </li>
               <li>
-                <a href="#" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
-                  Lojas
+                <a href="/admin/themes" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
+                  Temas
                 </a>
               </li>
               <li>
