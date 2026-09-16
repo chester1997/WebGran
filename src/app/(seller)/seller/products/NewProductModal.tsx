@@ -44,8 +44,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
       <DialogTrigger className="bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-violet-600/20 w-full sm:w-auto inline-flex items-center justify-center">
         <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
-      
-      <DialogContent className="max-w-5xl bg-[#0A0A0A] border-white/10 p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-[900px] w-full bg-[#0A0A0A] border border-white/10 p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-white/5 bg-[#121212] flex items-center justify-between shrink-0">
           <div>
             <DialogTitle className="text-xl font-bold text-white">Criar Novo Produto</DialogTitle>
@@ -57,7 +56,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
 
         <div className="overflow-y-auto p-6 custom-scrollbar flex-1 bg-[#0A0A0A]">
           <form id="new-product-form" onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-8">
               
               {/* Coluna Esquerda */}
               <div className="space-y-8">
