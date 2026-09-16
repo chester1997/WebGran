@@ -1,0 +1,1 @@
+const { neon } = require('@neondatabase/serverless'); require('dotenv').config(); const sql = neon(process.env.DATABASE_URL); async function run() { try { const res = await sql('DELETE FROM telegram_customers'); console.log('deleted', res); } catch(e) { console.error(e); } process.exit(0); } run();

@@ -79,6 +79,7 @@ export const categories = pgTable('categories', {
 export const products = pgTable('products', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').references(() => telegramBots.id, { onDelete: 'set null' }),
   categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   slug: text('slug').notNull(),
@@ -205,6 +206,10 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   store: one(stores, {
     fields: [products.storeId],
     references: [stores.id],
+  }),
+  telegramBot: one(telegramBots, {
+    fields: [products.botId],
+    references: [telegramBots.id],
   }),
   category: one(categories, {
     fields: [products.categoryId],

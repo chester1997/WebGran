@@ -1,6 +1,6 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { products, categories } from "@/db/schema";
+import { products, categories, telegramBots } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Package, Search, Image as ImageIcon, LayoutGrid, List, Edit3, Medal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,11 @@ export default async function SellerProductsPage() {
   const allCategories = await db.query.categories.findMany({
     where: eq(categories.storeId, store.id),
     columns: { id: true, name: true }
+  });
+
+  const storeBots = await db.query.telegramBots.findMany({
+    where: eq(telegramBots.storeId, store.id),
+    columns: { id: true, username: true, displayName: true }
   });
 
   const durationMap: Record<string, string> = {

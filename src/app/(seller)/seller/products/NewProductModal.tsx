@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Save, Upload, Image as ImageIcon, X } from "lucide-react";
 import { createProductAction } from "./actions";
 
-export function NewProductModal({ categories }: { categories: any[] }) {
+export function NewProductModal({ categories, bots }: { categories: any[]; bots: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deliveryType, setDeliveryType] = useState<"telegram" | "external" | "native">("telegram");
@@ -217,8 +217,17 @@ export function NewProductModal({ categories }: { categories: any[] }) {
               )}
             </div>
 
-            {/* Organização e Categoria */}
+            {/* Vínculo de Bot e Categoria */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Vincular Bot</label>
+                <select name="botId" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                  <option value="">Todos os Bots (Loja Geral)</option>
+                  {bots?.map(b => (
+                    <option key={b.id} value={b.id}>{b.displayName || `@${b.username}`}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Categoria</label>
                 <select name="categoryId" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
@@ -228,6 +237,9 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
                 <select name="status" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">

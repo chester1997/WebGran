@@ -1,0 +1,1 @@
+const { neon } = require('@neondatabase/serverless'); require('dotenv').config(); const sql = neon(process.env.DATABASE_URL); async function run() { try { await sql('TRUNCATE TABLE telegram_customers CASCADE'); console.log('Truncated'); } catch(e) { console.error(e); } process.exit(0); } run();

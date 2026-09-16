@@ -29,6 +29,7 @@ export async function createProductAction(formData: FormData) {
   }
 
   const categoryId = formData.get("categoryId") as string || null;
+  const botId = formData.get("botId") as string || null;
   const status = formData.get("status") as string || "active";
   const duration = formData.get("duration") as string || "lifetime";
   const coverUrl = formData.get("imageUrl") as string || null;
@@ -36,6 +37,7 @@ export async function createProductAction(formData: FormData) {
   // Insert into DB
   await db.insert(products).values({
     storeId: store.id,
+    botId,
     title,
     slug,
     shortDescription,
