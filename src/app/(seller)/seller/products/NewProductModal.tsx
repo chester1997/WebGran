@@ -33,7 +33,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-violet-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
+      <DialogTrigger className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
         <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
       
@@ -53,7 +53,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                 name="title"
                 required
                 placeholder="Ex: Plano Mensal Premium"
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
               />
             </div>
 
@@ -64,7 +64,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                 name="description"
                 rows={4}
                 placeholder="Detalhe tudo o que o cliente recebe ao comprar este produto..."
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
+                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
               ></textarea>
             </div>
 
@@ -78,12 +78,12 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                   step="0.01"
                   required
                   placeholder="0,00"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all font-semibold"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-semibold"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Duração</label>
-                <select name="duration" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 appearance-none">
+                <select name="duration" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="daily">Diário</option>
                   <option value="weekly">Semanal</option>
                   <option value="monthly">Mensal</option>
@@ -105,7 +105,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                   min="0"
                   max="100"
                   placeholder="0"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
               </div>
               <div className="flex items-end pb-3">
@@ -123,7 +123,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                 <input 
                   type="text" 
                   placeholder="ou cole uma URL aqui"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
               </div>
               <p className="text-[10px] text-zinc-500 mt-2">Recomendado: 600 x 600 px - máx 5MB</p>
@@ -135,14 +135,14 @@ export function NewProductModal({ categories }: { categories: any[] }) {
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div 
                   onClick={() => setDeliveryType("telegram")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-violet-500 bg-violet-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "telegram" ? "text-white" : "text-zinc-300"}`}>Grupo / Canal Telegram</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Bot envia link de convite automaticamente</p>
                 </div>
                 <div 
                   onClick={() => setDeliveryType("external")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "external" ? "border-violet-500 bg-violet-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "external" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "external" ? "text-white" : "text-zinc-300"}`}>Link externo</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Bot envia qualquer link após pagamento</p>
@@ -155,7 +155,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                   <input 
                     type="text" 
                     placeholder="Ex: -1001234567890"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all font-mono"
+                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                   />
                   <div className="mt-2 text-[11px] text-zinc-500 leading-relaxed">
                     <p><strong>Como obter o ID:</strong> Acesse algum bot de ID no Telegram e encaminhe uma mensagem do canal/grupo.</p>
@@ -169,7 +169,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
                   <input 
                     type="url" 
                     placeholder="Ex: https://meudrive.com/arquivo"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all"
+                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                 </div>
               )}
@@ -179,7 +179,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Categoria</label>
-                <select name="categoryId" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-violet-500 appearance-none">
+                <select name="categoryId" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Sem Categoria</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -188,7 +188,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
-                <select name="status" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-violet-500 appearance-none">
+                <select name="status" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="active">Ativo na Loja</option>
                   <option value="draft">Inativo (Rascunho)</option>
                 </select>
@@ -211,7 +211,7 @@ export function NewProductModal({ categories }: { categories: any[] }) {
             type="submit" 
             form="new-product-form"
             disabled={loading} 
-            className="bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-lg px-8 shadow-lg shadow-violet-600/20"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-8 shadow-lg shadow-blue-600/20"
           >
             {loading ? "Salvando..." : "Salvar Produto"}
           </Button>

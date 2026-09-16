@@ -18,7 +18,7 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
   
   // Theme colors options (like the reference)
   const colors = [
-    "#8B5CF6", // Violet
+    "#8B5CF6", // blue
     "#A855F7", // Purple
     "#3B82F6", // Blue
     "#EF4444", // Red
@@ -43,14 +43,14 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
   return (
     <Dialog open={open} onOpenChange={setOpen}>
         {isCard ? (
-          <DialogTrigger className="flex flex-col items-center justify-center gap-3 h-full min-h-[280px] bg-[#1A1A1E]/50 hover:bg-[#1A1A1E] border-2 border-dashed border-white/10 hover:border-violet-500/50 rounded-2xl transition-all group text-zinc-400 hover:text-white w-full">
-            <div className="w-12 h-12 rounded-full bg-white/5 group-hover:bg-violet-600 flex items-center justify-center transition-colors">
+          <DialogTrigger className="flex flex-col items-center justify-center gap-3 h-full min-h-[280px] bg-[#1A1A1E]/50 hover:bg-[#1A1A1E] border-2 border-dashed border-white/10 hover:border-blue-500/50 rounded-2xl transition-all group text-zinc-400 hover:text-white w-full">
+            <div className="w-12 h-12 rounded-full bg-white/5 group-hover:bg-blue-600 flex items-center justify-center transition-colors">
               <Plus className="w-6 h-6" />
             </div>
             <span className="font-medium">{triggerText || "Adicionar bot"}</span>
           </DialogTrigger>
         ) : (
-          <DialogTrigger className={className || "bg-violet-600 hover:bg-violet-700 text-white font-semibold h-9 px-4 py-2 rounded-md text-sm inline-flex items-center justify-center transition-colors"}>
+          <DialogTrigger className={className || "bg-blue-600 hover:bg-blue-700 text-white font-semibold h-9 px-4 py-2 rounded-md text-sm inline-flex items-center justify-center transition-colors"}>
             {triggerText || (bot ? "Editar Bot" : "+ Adicionar bot")}
           </DialogTrigger>
         )}
@@ -77,10 +77,10 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
                 required
                 defaultValue={bot ? "••••••••••••••••••••••••" : ""}
                 placeholder="1234567890:ABCDefGhIjKlMnOpQRstUVwxyZ"
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600 font-mono"
+                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 font-mono"
               />
               <p className="text-xs text-zinc-500 mt-2">
-                Obtenha em <span className="text-violet-400">@BotFather</span>
+                Obtenha em <span className="text-blue-400">@BotFather</span>
               </p>
             </div>
 
@@ -95,7 +95,7 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
                   name="name"
                   defaultValue={store.name}
                   placeholder="Ex: Flex IPTV, Premium TV..."
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
                 />
               </div>
 
@@ -108,7 +108,7 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
                     name="logoUrl"
                     defaultValue={store.logoUrl || ""}
                     placeholder="https://..."
-                    className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+                    className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
                   />
                   <Button type="button" variant="outline" className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:text-white hover:bg-white/5 shrink-0 px-6">
                     <Upload className="w-4 h-4 mr-2" /> Enviar
@@ -140,7 +140,7 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
                   name="buttonName"
                   defaultValue="Abrir App"
                   maxLength={16}
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
                 />
                 <p className="text-xs text-zinc-500 mt-2">
                   Máx. 16 caracteres - aparece no botão fixo do Telegram e na mensagem de boas-vindas
@@ -164,7 +164,7 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
             type="submit" 
             form="bot-form"
             disabled={loading}
-            className="bg-violet-600 hover:bg-violet-700 text-white font-medium px-6"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6"
           >
             {loading ? "Salvando..." : "Salvar"}
           </Button>

@@ -34,14 +34,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-zinc-100 font-sans selection:bg-violet-500/30">
+    <div className="min-h-screen bg-[#0A0A0A] text-zinc-100 font-sans selection:bg-blue-500/30">
       <div className="flex h-screen overflow-hidden">
         
         {/* Sidebar */}
         <aside className="w-64 bg-[#121212] border-r border-white/5 flex-shrink-0 hidden md:flex flex-col relative z-10 shadow-2xl shadow-black">
           {/* Logo Area */}
           <div className="h-20 flex items-center px-6 gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-600/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
               <span className="font-bold text-white tracking-tighter">W</span>
             </div>
             <span className="font-bold text-lg tracking-wide text-white">WebGran</span>
@@ -61,7 +61,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                       href={item.href} 
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                         isActive 
-                          ? "bg-violet-600 text-white shadow-md shadow-violet-600/10" 
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
                           : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
                       }`}
                     >
@@ -77,9 +77,9 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           {/* Upgrade Pro Card (Like reference) */}
           <div className="p-4 mt-auto">
             <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 p-4 rounded-2xl relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-violet-600/20 blur-2xl rounded-full"></div>
-              <div className="w-10 h-10 bg-violet-600/20 rounded-xl flex items-center justify-center mb-3">
-                <Sparkles className="w-5 h-5 text-violet-400" />
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-600/20 blur-2xl rounded-full"></div>
+              <div className="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center mb-3">
+                <Sparkles className="w-5 h-5 text-blue-400" />
               </div>
               <h4 className="text-sm font-bold text-white mb-1">WebGran Pro</h4>
               <p className="text-xs text-zinc-400 mb-4 line-clamp-2">
@@ -111,7 +111,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           {/* Main Content Scroll */}
           <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
             {/* Ambient Glow */}
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
             {children}
           </main>
         </div>

@@ -27,7 +27,7 @@ export default async function SellerCategoriesPage() {
           <h2 className="text-2xl font-bold text-white tracking-tight">Categorias</h2>
           <p className="text-zinc-400 text-sm mt-1">Organize seus produtos e facilite a navegação no Mini App.</p>
         </div>
-        <Button className="bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-violet-600/20 w-full sm:w-auto">
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto">
           <Plus className="w-5 h-5 mr-2" /> Nova Categoria
         </Button>
       </div>
@@ -39,12 +39,12 @@ export default async function SellerCategoriesPage() {
           <input 
             type="text" 
             placeholder="Pesquisar categoria..." 
-            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
           />
         </div>
         <div className="flex items-center gap-2">
           {/* Future select components for Status */}
-          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500 appearance-none min-w-[120px]">
+          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[120px]">
             <option>Todos Status</option>
             <option>Ativos</option>
             <option>Inativos</option>
@@ -76,7 +76,7 @@ export default async function SellerCategoriesPage() {
                       </div>
                       <p className="text-zinc-300 font-medium text-base mb-1">Nenhuma categoria criada</p>
                       <p className="text-zinc-600 text-sm max-w-sm mb-6">Você precisa de categorias para organizar seus produtos na vitrine da loja.</p>
-                      <Button variant="outline" className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300 rounded-xl">
+                      <Button variant="outline" className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 rounded-xl">
                         <Plus className="w-4 h-4 mr-2" /> Criar Primeira Categoria
                       </Button>
                     </div>

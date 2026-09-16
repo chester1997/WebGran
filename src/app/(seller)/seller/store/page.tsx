@@ -52,7 +52,7 @@ export default async function SellerStorePage() {
                   {store.logoUrl ? (
                     <img src={store.logoUrl} className="w-full h-full object-cover" alt="Logo" />
                   ) : (
-                    <Bot className="w-6 h-6 text-violet-400" />
+                    <Bot className="w-6 h-6 text-blue-400" />
                   )}
                 </div>
                 <div className="min-w-0">
@@ -62,7 +62,7 @@ export default async function SellerStorePage() {
               </div>
 
               {/* Separator */}
-              <div className="h-1 bg-violet-600 rounded-full w-full mb-5 shadow-[0_0_10px_rgba(139,92,246,0.3)]"></div>
+              <div className="h-1 bg-blue-600 rounded-full w-full mb-5 shadow-[0_0_10px_rgba(139,92,246,0.3)]"></div>
 
               {/* Telegram Link Block */}
               <div className="bg-[#1A1A1E] border border-white/5 rounded-xl p-4 mb-3">
@@ -127,16 +127,16 @@ export default async function SellerStorePage() {
             <h3 className="font-bold text-white text-sm">Notificações de venda</h3>
           </div>
           <p className="text-xs text-zinc-500 mb-5">
-            Receba uma mensagem no Telegram cada vez que um cliente efetuar uma compra. Para descobrir seu ID, envie <span className="text-violet-400 font-mono bg-violet-500/10 px-1 rounded">/start</span> para @userinfobot.
+            Receba uma mensagem no Telegram cada vez que um cliente efetuar uma compra. Para descobrir seu ID, envie <span className="text-blue-400 font-mono bg-blue-500/10 px-1 rounded">/start</span> para @userinfobot.
           </p>
           
           <div className="flex gap-3">
             <input 
               type="text" 
               placeholder="Seu Telegram ID (ex: 123456789)"
-              className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+              className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
             />
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white font-medium px-6">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6">
               Salvar
             </Button>
           </div>

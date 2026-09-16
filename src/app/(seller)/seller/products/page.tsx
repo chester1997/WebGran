@@ -48,17 +48,17 @@ export default async function SellerProductsPage() {
           <input 
             type="text" 
             placeholder="Pesquisar por título ou slug..." 
-            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
+            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
           />
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
           <Button variant="outline" className="bg-[#0A0A0A] border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl h-10 shrink-0">
             <Filter className="w-4 h-4 mr-2" /> Filtros
           </Button>
-          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 h-10 text-sm text-white focus:outline-none focus:border-violet-500 appearance-none min-w-[140px] shrink-0">
+          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 h-10 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[140px] shrink-0">
             <option>Todas Categorias</option>
           </select>
-          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 h-10 text-sm text-white focus:outline-none focus:border-violet-500 appearance-none min-w-[120px] shrink-0">
+          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 h-10 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[120px] shrink-0">
             <option>Todos Status</option>
             <option>Ativos</option>
             <option>Inativos</option>
