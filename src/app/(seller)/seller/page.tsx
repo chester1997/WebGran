@@ -1,220 +1,263 @@
+"use server";
+
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { products, orders, telegramCustomers } from "@/db/schema";
+import { products, stores, telegramCustomers } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
-import { ArrowUpRight, ArrowDownRight, Wallet, Users, ShoppingBag, TrendingUp, MoreHorizontal, Download } from "lucide-react";
+import { 
+  ArrowUpRight, 
+  Wallet, 
+  TrendingUp, 
+  Users, 
+  MoreHorizontal, 
+  Download,
+  ShoppingBag,
+  Award,
+  Crown,
+  CheckCircle2,
+  Clock
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function SellerDashboardPage() {
   await requireSeller();
   const store = await getCurrentStore();
 
-  let productsCount = 0;
-  let ordersCount = 0;
-  let customersCount = 0;
-
-  if (store) {
-    const pResult = await db.select({ value: count() }).from(products).where(eq(products.storeId, store.id));
-    productsCount = pResult[0].value;
-
-    const oResult = await db.select({ value: count() }).from(orders).where(eq(orders.storeId, store.id));
-    ordersCount = oResult[0].value;
-
-    const cResult = await db.select({ value: count() }).from(telegramCustomers).where(eq(telegramCustomers.storeId, store.id));
-    customersCount = cResult[0].value;
+  if (!store) {
+    return <div>Store not found</div>;
   }
 
+  // Basic Metrics
+  const pResult = await db.select({ value: count() }).from(products).where(eq(products.storeId, store.id));
+  const productsCount = pResult[0].value;
+  
+  const cResult = await db.select({ value: count() }).from(telegramCustomers).where(eq(telegramCustomers.storeId, store.id));
+  const customersCount = cResult[0].value;
+  
+  // Mock Metrics for Dashboard Display
+  const todayRevenue = 0;
+  const todayOrders = 0;
+  const last7DaysRevenue = 0;
+  const last7DaysOrders = 0;
+  const totalRevenue = 0;
+  const averageTicket = 0;
+  const pendingPix = 0;
+  const conversionRate = "0%";
+  
+  // Gamification logic
+  const currentLevel = "Bronze";
+  const nextLevel = "Prata";
+  const nextLevelThreshold = 10000;
+  const progressPercent = (totalRevenue / nextLevelThreshold) * 100;
+  const remainingToNext = nextLevelThreshold - totalRevenue;
+
   return (
-    <div className="space-y-8 fade-in">
+    <div className="space-y-6 fade-in max-w-[1400px]">
       
-      {/* Top Tabs (Visual) */}
-      <div className="flex items-center gap-6 border-b border-white/5 pb-px text-sm font-medium">
-        <div className="text-white border-b-2 border-violet-500 pb-3 -mb-px px-1">
-          Visão Geral
-        </div>
-        <div className="text-zinc-500 hover:text-zinc-300 cursor-pointer pb-3 px-1 transition-colors">
-          Notificações
-        </div>
-        <div className="text-zinc-500 hover:text-zinc-300 cursor-pointer pb-3 px-1 transition-colors">
-          Histórico de Vendas
-        </div>
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-white tracking-tight">
+          Olá, {store.name}
+        </h2>
+        <p className="text-zinc-400 text-sm mt-1">Visão geral da sua operação</p>
       </div>
 
-      {!store && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          Você ainda não possui uma loja configurada. Acesse as configurações para criar.
+      {/* Gamification Bar */}
+      <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden flex items-center justify-between">
+        <div className="flex items-center gap-5 relative z-10 w-full">
+          {/* Badge/Trophy */}
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-700/40 to-amber-900/10 border border-amber-600/30 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(217,119,6,0.15)]">
+            <Award className="w-8 h-8 text-amber-500" />
+          </div>
+          
+          <div className="flex-1">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Sua Classificação</p>
+            <div className="flex items-end gap-3 mb-2">
+              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200">
+                {currentLevel}
+              </h3>
+            </div>
+            
+            {/* Progress Track */}
+            <div className="flex items-center gap-4 w-full max-w-2xl">
+              <div className="flex-1 h-2 bg-[#0A0A0A] rounded-full overflow-hidden border border-white/5 relative">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full"
+                  style={{ width: `${Math.max(progressPercent, 2)}%` }}
+                ></div>
+              </div>
+              <span className="text-xs font-medium text-zinc-400 shrink-0">
+                Faltam <span className="text-white">R$ {remainingToNext.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> para {nextLevel}
+              </span>
+            </div>
+          </div>
+          
+          <div className="hidden lg:block shrink-0 text-right">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Meta Acumulada</p>
+            <p className="text-lg font-bold text-white">R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          </div>
         </div>
-      )}
-
-      {/* Metric Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         
-        {/* Card 1: Primary Gradient */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-6 shadow-xl shadow-violet-900/20 text-white border border-white/10 group">
-          <div className="absolute top-0 right-0 p-4 opacity-50 hover:opacity-100 transition-opacity cursor-pointer">
-            <MoreHorizontal className="w-5 h-5" />
+        {/* Glow Effects */}
+        <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+      </div>
+
+      {/* Metrics Grid (2x4) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Vendas Hoje */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Vendas Hoje</p>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-4 backdrop-blur-sm">
-            <Wallet className="w-5 h-5 text-white" />
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">R$ {todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <p className="text-xs text-zinc-500">{todayOrders} pedidos confirmados</p>
           </div>
-          <p className="text-violet-100 text-sm font-medium mb-1">Faturamento Total</p>
-          <div className="flex items-end gap-3 mb-2">
-            <h3 className="text-3xl font-bold tracking-tight">R$ 0,00</h3>
-            <span className="flex items-center text-xs font-semibold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full mb-1">
-              <ArrowUpRight className="w-3 h-3 mr-0.5" /> +12.5%
-            </span>
-          </div>
-          <p className="text-xs text-violet-200/70">Comparado ao mês passado</p>
         </div>
 
-        {/* Card 2: Orders */}
-        <div className="bg-[#121212] rounded-2xl p-6 border border-white/5 shadow-lg relative group hover:border-white/10 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-            <MoreHorizontal className="w-5 h-5 text-zinc-500 hover:text-white" />
+        {/* Últimos 7 dias */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Últimos 7 Dias</p>
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center border border-violet-500/20">
+              <TrendingUp className="w-4 h-4 text-violet-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center mb-4 border border-white/5">
-            <ShoppingBag className="w-5 h-5 text-violet-400" />
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">R$ {last7DaysRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <p className="text-xs text-zinc-500">{last7DaysOrders} pedidos no período</p>
           </div>
-          <p className="text-zinc-400 text-sm font-medium mb-1">Pedidos Realizados</p>
-          <div className="flex items-end gap-3 mb-2">
-            <h3 className="text-3xl font-bold tracking-tight text-white">{ordersCount}</h3>
-            <span className="flex items-center text-xs font-semibold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full mb-1">
-              <ArrowDownRight className="w-3 h-3 mr-0.5" /> -3.1%
-            </span>
-          </div>
-          <p className="text-xs text-zinc-500">Comparado ao mês passado</p>
         </div>
 
-        {/* Card 3: Customers */}
-        <div className="bg-[#121212] rounded-2xl p-6 border border-white/5 shadow-lg relative group hover:border-white/10 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-            <MoreHorizontal className="w-5 h-5 text-zinc-500 hover:text-white" />
+        {/* Receita Total */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Receita Total</p>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+              <Wallet className="w-4 h-4 text-blue-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center mb-4 border border-white/5">
-            <Users className="w-5 h-5 text-amber-400" />
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <p className="text-xs text-emerald-500/80 font-medium">Líquido disponível</p>
           </div>
-          <p className="text-zinc-400 text-sm font-medium mb-1">Clientes no Bot</p>
-          <div className="flex items-end gap-3 mb-2">
-            <h3 className="text-3xl font-bold tracking-tight text-white">{customersCount}</h3>
-            <span className="flex items-center text-xs font-semibold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full mb-1">
-              <ArrowUpRight className="w-3 h-3 mr-0.5" /> +25.4%
-            </span>
-          </div>
-          <p className="text-xs text-zinc-500">Comparado ao mês passado</p>
         </div>
 
-        {/* Card 4: Products */}
-        <div className="bg-[#121212] rounded-2xl p-6 border border-white/5 shadow-lg relative group hover:border-white/10 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-            <MoreHorizontal className="w-5 h-5 text-zinc-500 hover:text-white" />
+        {/* Ticket Médio */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Ticket Médio</p>
+            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/10">
+              <ShoppingBag className="w-4 h-4 text-zinc-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center mb-4 border border-white/5">
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">R$ {averageTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <p className="text-xs text-zinc-500">Média por cliente</p>
           </div>
-          <p className="text-zinc-400 text-sm font-medium mb-1">Produtos Ativos</p>
-          <div className="flex items-end gap-3 mb-2">
-            <h3 className="text-3xl font-bold tracking-tight text-white">{productsCount}</h3>
+        </div>
+
+        {/* Produtos Ativos */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Produtos Ativos</p>
+            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/10">
+              <ShoppingBag className="w-4 h-4 text-zinc-400" />
+            </div>
           </div>
-          <p className="text-xs text-zinc-500">Catálogo atual da loja</p>
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">{productsCount}</h3>
+            <p className="text-xs text-zinc-500">No catálogo atual</p>
+          </div>
+        </div>
+
+        {/* Total Clientes */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Total Clientes</p>
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+              <Users className="w-4 h-4 text-indigo-400" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">{customersCount}</h3>
+            <p className="text-xs text-zinc-500">Na sua base de dados</p>
+          </div>
+        </div>
+
+        {/* PIX Pendente */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">PIX Pendentes</p>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+              <Clock className="w-4 h-4 text-amber-400" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-amber-400 mb-1">{pendingPix}</h3>
+            <p className="text-xs text-zinc-500">Aguardando pagamento</p>
+          </div>
+        </div>
+
+        {/* Conversão */}
+        <div className="bg-[#121214] rounded-xl p-5 border border-white/5 shadow-md flex flex-col justify-between hover:border-white/10 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Taxa de Conversão</p>
+            <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+              <ArrowUpRight className="w-4 h-4 text-pink-400" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">{conversionRate}</h3>
+            <p className="text-xs text-zinc-500">Visitas x Vendas</p>
+          </div>
         </div>
       </div>
 
-      {/* Transaction History Section (Like the bottom part of the reference) */}
-      <div className="bg-[#121212] border border-white/5 rounded-2xl p-6 shadow-xl mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white">Pedidos Recentes</h3>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="bg-transparent border-white/10 text-zinc-300 hover:bg-white/5 hover:text-white rounded-lg h-8 px-3 text-xs">
-              <Download className="w-3 h-3 mr-2" /> Exportar
-            </Button>
-            <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white rounded-lg h-8 px-4 text-xs font-medium">
-              Ver Todos
-            </Button>
+      {/* Bottom Layout (Top Products & Latest Sales) */}
+      <div className="grid lg:grid-cols-2 gap-6 mt-6">
+        
+        {/* Produtos Mais Vendidos */}
+        <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col">
+          <div className="flex items-center gap-3 mb-6">
+            <Crown className="w-5 h-5 text-amber-400" />
+            <h3 className="text-lg font-bold text-white tracking-tight">Produtos mais vendidos</h3>
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-60">
+            <div className="w-16 h-16 rounded-2xl bg-[#1A1A1E] flex items-center justify-center mb-4 border border-white/5">
+              <ShoppingBag className="w-6 h-6 text-zinc-500" />
+            </div>
+            <p className="text-zinc-400 font-medium text-sm">Nenhuma venda registrada ainda</p>
+            <p className="text-zinc-600 text-xs mt-1 text-center max-w-xs">Os produtos com maior volume de vendas aparecerão listados aqui.</p>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/5 text-zinc-500 text-xs font-medium uppercase tracking-wider">
-                <th className="pb-4 font-medium pl-2">Cliente / Produto</th>
-                <th className="pb-4 font-medium">Valor Total</th>
-                <th className="pb-4 font-medium">Data</th>
-                <th className="pb-4 font-medium">Status</th>
-                <th className="pb-4 font-medium text-right pr-2">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-white/5">
-              {/* Empty State Mock for now, since DB is likely empty */}
-              {ordersCount === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-zinc-800/50 flex items-center justify-center mb-3">
-                        <ShoppingBag className="w-6 h-6 text-zinc-500" />
-                      </div>
-                      <p className="text-zinc-400 font-medium">Nenhum pedido recebido ainda</p>
-                      <p className="text-zinc-600 text-xs mt-1">Divulgue sua loja para conseguir a primeira venda!</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                /* Mock Rows to showcase the design when there are orders */
-                <>
-                  <tr className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="py-4 pl-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400 border border-white/5">JD</div>
-                        <div>
-                          <p className="text-zinc-200 font-medium">João Silva</p>
-                          <p className="text-zinc-500 text-xs">Acesso Premium 30 Dias</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 text-zinc-300">R$ 29,90</td>
-                    <td className="py-4 text-zinc-500 text-sm">Hoje, 14:32</td>
-                    <td className="py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                        <span className="text-emerald-400 text-xs font-medium">Aprovado</span>
-                      </div>
-                    </td>
-                    <td className="py-4 text-right pr-2">
-                      <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-white/5 h-8">
-                        Detalhes
-                      </Button>
-                    </td>
-                  </tr>
-                  <tr className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="py-4 pl-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400 border border-white/5">MA</div>
-                        <div>
-                          <p className="text-zinc-200 font-medium">Maria Antonia</p>
-                          <p className="text-zinc-500 text-xs">E-book Receitas</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 text-zinc-300">R$ 49,90</td>
-                    <td className="py-4 text-zinc-500 text-sm">Ontem, 09:15</td>
-                    <td className="py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div>
-                        <span className="text-amber-400 text-xs font-medium">Pendente</span>
-                      </div>
-                    </td>
-                    <td className="py-4 text-right pr-2">
-                      <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-white/5 h-8">
-                        Detalhes
-                      </Button>
-                    </td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
+        {/* Últimas Vendas */}
+        <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Wallet className="w-5 h-5 text-emerald-400" />
+              <h3 className="text-lg font-bold text-white tracking-tight">Últimas vendas</h3>
+            </div>
+            <Link href="/seller/orders" className="text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors">
+              Ver todas
+            </Link>
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-60">
+            <div className="w-16 h-16 rounded-2xl bg-[#1A1A1E] flex items-center justify-center mb-4 border border-white/5">
+              <CheckCircle2 className="w-6 h-6 text-zinc-500" />
+            </div>
+            <p className="text-zinc-400 font-medium text-sm">O histórico de vendas está vazio</p>
+            <p className="text-zinc-600 text-xs mt-1 text-center max-w-xs">Quando os clientes começarem a comprar via PIX/Cartão, os pedidos aparecerão aqui em tempo real.</p>
+          </div>
         </div>
+
       </div>
       
       <style dangerouslySetInnerHTML={{__html: `
