@@ -53,7 +53,7 @@ export default async function SellerDashboardPage() {
   const remainingToNext = nextLevelThreshold - totalRevenue;
 
   return (
-    <div className="space-y-6 fade-in max-w-[1400px]">
+    <div className="space-y-6 fade-in w-full">
       
       {/* Header */}
       <div>

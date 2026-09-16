@@ -119,27 +119,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
             {/* Right Actions */}
             <div className="flex items-center gap-6">
-              {/* Search Bar */}
-              <div className="relative hidden lg:block w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                <input 
-                  type="text" 
-                  placeholder="Pesquisar..." 
-                  className="w-full bg-[#121212] border border-white/5 rounded-full py-2 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all placeholder:text-zinc-600"
-                />
-              </div>
-
-              {/* Date Filter */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-[#121212] text-sm text-zinc-400">
-                <Calendar className="w-4 h-4" />
-                <span>28 Ago - 15 Dez, 2024</span>
-              </div>
-
-              {/* Notifications */}
-              <button className="relative p-2 text-zinc-400 hover:text-white transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-violet-500 rounded-full border-2 border-[#0A0A0A]"></span>
-              </button>
+              {/* Reserved for future top-right actions */}
             </div>
           </header>
 
