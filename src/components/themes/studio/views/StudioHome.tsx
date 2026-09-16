@@ -5,6 +5,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
+import { RankingService } from "@/lib/catalog/ranking-service";
 import Link from "next/link";
 import { Search, UserCircle } from "lucide-react";
 
@@ -34,9 +35,9 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
 
   // Fallbacks if no data
   const heroProduct = allProducts[0];
-  const topTen = allProducts.slice(0, 10);
+  const topTen = await RankingService.getTopProducts(store.id, 'week');
   const recents = allProducts.slice(0, 8);
-  const bestSellers = allProducts.slice(0, 5); // Just mocking the logic with available data
+  const bestSellers = topTen.length > 0 ? topTen : allProducts.slice(0, 5);
 
   return (
     <div className="w-full h-full pb-8">
