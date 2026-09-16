@@ -1,19 +1,52 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { db } from "@/db";
+import { products, stores } from "@/db/schema";
+import { eq, and, ilike } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { ProductCard } from "../components/ProductCard";
+import { SearchInput } from "../components/SearchInput";
 
-export function StudioSearch({ storeSlug }: { storeSlug: string }) {
+export async function StudioSearch({ storeSlug, q }: { storeSlug: string, q: string }) {
+  const store = await db.query.stores.findFirst({
+    where: eq(stores.slug, storeSlug)
+  });
+
+  if (!store) notFound();
+
+  let searchResults: any[] = [];
+  
+  if (q) {
+    searchResults = await db.query.products.findMany({
+      where: and(
+        eq(products.storeId, store.id),
+        ilike(products.title, `%${q}%`)
+      ),
+      limit: 50
+    });
+  }
+
   return (
-    <div className="p-4 pt-8">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-        <input 
-          type="text" 
-          placeholder="Buscar séries, dramas..." 
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-3 pl-10 pr-4 text-white focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-        />
-      </div>
-      <div className="mt-8 text-center text-zinc-600 text-sm">
-        Busca em desenvolvimento...
+    <div className="p-4 pt-8 min-h-screen text-white bg-zinc-950 pb-24">
+      <SearchInput storeSlug={storeSlug} initialQuery={q} />
+      
+      <div className="mt-8">
+        {!q ? (
+          <div className="text-center text-zinc-500 py-10">
+            Digite algo para buscar.
+          </div>
+        ) : searchResults.length === 0 ? (
+          <div className="text-center text-zinc-500 py-10">
+            Nenhum produto encontrado para "{q}".
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3 md:gap-4">
+            {searchResults.map(prod => (
+              <div key={prod.id} className="flex justify-center">
+                <ProductCard storeSlug={storeSlug} product={prod} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

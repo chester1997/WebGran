@@ -1,0 +1,52 @@
+import { NextRequest, NextResponse } from "next/server";
+import { StoreResolver } from "@/lib/telegram/resolver";
+import { TelegramBotService } from "@/lib/telegram/bot";
+
+export async function POST(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const botId = url.searchParams.get("botId");
+
+    if (!botId) {
+      return NextResponse.json({ error: "botId missing" }, { status: 400 });
+    }
+
+    // Resolve store and bot using the new Resolver
+    const { store, token } = await StoreResolver.resolveFromBotId(botId);
+    
+    // Parse the Telegram Update object
+    const update = await req.json();
+
+    if (update.message && update.message.text) {
+      const text = update.message.text;
+      const chatId = update.message.chat.id;
+
+      if (text.startsWith("/start")) {
+        const botService = new TelegramBotService(token);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+        const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
+        
+        // Bem-vindo e botão
+        const welcomeMessage = `Olá! Bem-vindo(a) à *${store.name}*.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
+        
+        await botService.sendMessage(chatId, welcomeMessage, {
+          inline_keyboard: [
+            [
+              {
+                text: "Abrir Loja",
+                web_app: {
+                  url: miniAppUrl
+                }
+              }
+            ]
+          ]
+        });
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    return NextResponse.json({ ok: true }); // Always return 200 to Telegram to prevent retries on our internal errors
+  }
+}

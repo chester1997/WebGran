@@ -52,7 +52,12 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
         <div className="space-y-3">
           <button className="w-full flex items-center justify-center gap-2 bg-white text-black font-semibold py-3 rounded-md hover:bg-zinc-200 transition-colors">
             <Play className="w-5 h-5 fill-black" />
-            Comprar por R$ {Number(product.price).toFixed(2)}
+            <div className="flex flex-col items-center leading-tight">
+              <span>Comprar por R$ {Number(product.price).toFixed(2)}</span>
+              {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
+                <span className="text-[10px] line-through text-zinc-500 font-normal">de R$ {Number(product.compareAtPrice).toFixed(2)}</span>
+              )}
+            </div>
           </button>
           
           <div className="flex gap-4">

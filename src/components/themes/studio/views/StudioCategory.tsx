@@ -21,7 +21,9 @@ export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: s
   if (!category) notFound();
 
   const categoryProducts = await db.query.products.findMany({
-    where: and(eq(products.storeId, store.id), eq(products.categoryId, category.id))
+    where: and(eq(products.storeId, store.id), eq(products.categoryId, category.id)),
+    orderBy: (products, { desc }) => [desc(products.createdAt)],
+    limit: 100
   });
 
   return (

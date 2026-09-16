@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { stores, telegramCustomers } from "@/db/schema";
+import { telegramCustomers } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { validateInitData } from "@/lib/telegram/validation";
-import { decrypt } from "@/lib/encryption";
 import { SignJWT } from "jose";
+import { StoreResolver } from "@/lib/telegram/resolver";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,20 +14,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 });
     }
 
-    // 1. Encontrar a loja pelo slug
-    const store = await db.query.stores.findFirst({
-      where: eq(stores.slug, storeSlug),
-      with: {
-        bots: true
-      }
-    });
-
-    if (!store || !store.bots || store.bots.length === 0) {
-      return NextResponse.json({ error: "Loja ou Bot não encontrado" }, { status: 404 });
+    let resolved;
+    try {
+      resolved = await StoreResolver.resolveFromSlug(storeSlug);
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 404 });
     }
 
-    // 2. Recuperar Token do Bot (Descriptografar)
-    const botToken = decrypt(store.bots[0].tokenEncrypted);
+    const { store, token: botToken } = resolved;
 
     // 3. Validar a assinatura do initData com o token do bot daquela loja
     const isValid = validateInitData(initData, botToken);

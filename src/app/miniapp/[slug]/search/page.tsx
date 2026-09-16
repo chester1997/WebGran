@@ -1,6 +1,15 @@
 import { ThemeEngineSearch } from "@/components/themes/engine";
 
-export default async function MiniAppSearch({ params }: { params: Promise<{ slug: string }> }) {
+export default async function MiniAppSearch({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ slug: string }>,
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const resolvedParams = await params;
-  return <ThemeEngineSearch storeSlug={resolvedParams.slug} />;
+  const resolvedSearch = await searchParams;
+  const q = typeof resolvedSearch.q === 'string' ? resolvedSearch.q : "";
+  
+  return <ThemeEngineSearch storeSlug={resolvedParams.slug} q={q} />;
 }

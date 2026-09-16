@@ -84,9 +84,28 @@ export async function connectTelegramBot(prevState: unknown, formData: FormData)
     }
 
     // Set Webhook
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3000";
-    const webhookUrl = `${appUrl}/api/telegram/webhook`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${botIdStr}`;
     await botService.setWebhook(webhookUrl);
+
+    // Set Menu Button
+    let storeSlug = "";
+    if (existingBot) {
+      const dbStore = await db.query.stores.findFirst({ where: eq(stores.id, targetStoreId) });
+      storeSlug = dbStore?.slug || "";
+    } else {
+      storeSlug = botUser.username?.toLowerCase() || `loja-${botIdStr}`;
+    }
+    
+    if (storeSlug) {
+      await botService.setChatMenuButton({
+        type: "web_app",
+        text: "Abrir Loja",
+        web_app: {
+          url: `${appUrl}/miniapp/${storeSlug}`
+        }
+      }).catch(err => console.error("Falha ao definir menu button:", err));
+    }
 
     if (existingBot) {
       await db.update(telegramBots).set({

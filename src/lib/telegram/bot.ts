@@ -30,8 +30,19 @@ export class TelegramBotService {
     return telegramFetch<boolean>(this.token, 'deleteWebhook');
   }
 
-  async sendMessage(_chatId: string | number, _text: string): Promise<unknown> {
-    throw new Error("Not implemented yet");
+  async sendMessage(chatId: string | number, text: string, replyMarkup?: any, parseMode: string = "Markdown"): Promise<unknown> {
+    return telegramFetch(this.token, 'sendMessage', {
+      chat_id: chatId,
+      text,
+      parse_mode: parseMode,
+      reply_markup: replyMarkup
+    });
+  }
+
+  async setChatMenuButton(menuButton: any): Promise<boolean> {
+    return telegramFetch<boolean>(this.token, 'setChatMenuButton', {
+      menu_button: menuButton
+    });
   }
 
   async sendPhoto(_chatId: string | number, _photo: string): Promise<unknown> {

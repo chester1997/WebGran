@@ -18,8 +18,8 @@ export async function ThemeEngineHome({ storeSlug }: { storeSlug: string }) {
   return <StudioHome storeSlug={storeSlug} />;
 }
 
-export async function ThemeEngineSearch({ storeSlug }: { storeSlug: string }) {
-  return <StudioSearch storeSlug={storeSlug} />;
+export async function ThemeEngineSearch({ storeSlug, q }: { storeSlug: string, q: string }) {
+  return <StudioSearch storeSlug={storeSlug} q={q} />;
 }
 
 export async function ThemeEngineCart({ storeSlug }: { storeSlug: string }) {

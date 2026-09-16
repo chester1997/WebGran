@@ -1,7 +1,7 @@
 import React from "react";
 import { db } from "@/db";
-import { stores, products, categories } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { stores, products, categories, banners } from "@/db/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
@@ -24,6 +24,12 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     where: eq(products.storeId, store.id),
     orderBy: [desc(products.createdAt)],
     limit: 20
+  });
+
+  const storeBanners = await db.query.banners.findMany({
+    where: and(eq(banners.storeId, store.id), eq(banners.status, 'active')),
+    orderBy: [desc(banners.position), desc(banners.createdAt)],
+    limit: 5
   });
 
   // Fallbacks if no data
@@ -56,7 +62,9 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         </div>
       </header>
 
-      {heroProduct ? (
+      {storeBanners.length > 0 ? (
+        <HeroBanner storeSlug={storeSlug} banner={storeBanners[0]} />
+      ) : heroProduct ? (
         <HeroBanner storeSlug={storeSlug} product={heroProduct} />
       ) : (
         <div className="pt-24 px-4 text-center text-zinc-500">Nenhum produto cadastrado.</div>
