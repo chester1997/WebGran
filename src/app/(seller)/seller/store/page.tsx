@@ -2,7 +2,7 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { stores, telegramBots } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { Store as StoreIcon, Globe, Bot, Bell, ExternalLink, Copy, HelpCircle, ArrowRight, Settings } from "lucide-react";
+import { Store as StoreIcon, Globe, Bot, Bell, ExternalLink, Copy, HelpCircle, Info, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BotSettingsModal } from "./BotSettingsModal";
 
@@ -20,8 +20,8 @@ export default async function SellerStorePage() {
     );
   }
 
-  // Load bot
-  const bot = await db.query.telegramBots.findFirst({
+  // Load bots (now an array as the UI suggests multiple bots side-by-side)
+  const bots = await db.query.telegramBots.findMany({
     where: eq(telegramBots.storeId, store.id)
   });
 
@@ -29,15 +29,15 @@ export default async function SellerStorePage() {
   const storeUrl = `${domain}/s/${store.slug}`;
 
   return (
-    <div className="space-y-6 fade-in max-w-[1200px] w-full">
+    <div className="space-y-6 fade-in w-full">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Sua Loja & Bot</h2>
-          <p className="text-zinc-400 text-sm mt-1">Plano BUSINESS — 1/1 bot disponível</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Bots Telegram</h2>
+          <p className="text-zinc-400 text-sm mt-1">Plano BUSINESS — {bots.length}/5 bots</p>
         </div>
-        <BotSettingsModal store={store} bot={bot} />
+        <BotSettingsModal store={store} triggerText="+ Adicionar bot" />
       </div>
 
       <div className="space-y-6">
@@ -48,7 +48,7 @@ export default async function SellerStorePage() {
             <Globe className="w-5 h-5 text-blue-400" />
             <div>
               <h3 className="font-bold text-white text-sm">Loja Geral (sem bot)</h3>
-              <p className="text-xs text-zinc-500">Link único da sua loja web — funciona sem Telegram, exibe todos os produtos.</p>
+              <p className="text-xs text-zinc-500">Link único da sua loja — funciona sem Telegram, exibe todos os produtos.</p>
             </div>
           </div>
           
@@ -66,78 +66,88 @@ export default async function SellerStorePage() {
           </div>
         </div>
 
-        {/* Bot Conectado */}
-        <div className="bg-[#121214] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-6 flex items-center gap-4 border-b border-white/5 bg-gradient-to-r from-violet-600/10 to-transparent">
-            <div className="w-14 h-14 rounded-xl bg-[#1A1A1E] border border-white/10 flex items-center justify-center shrink-0">
-              {store.logoUrl ? (
-                <img src={store.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-xl" />
-              ) : (
-                <Bot className="w-7 h-7 text-violet-400" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-lg tracking-tight uppercase">{store.name}</h3>
-              <p className="text-sm text-violet-400 font-medium">@{bot ? bot.username : "Nenhum bot conectado"}</p>
-            </div>
-          </div>
-          
-          {bot ? (
-            <div className="p-6 grid gap-6 md:grid-cols-2">
-              {/* Bot Link */}
-              <div className="bg-[#1A1A1E] border border-white/5 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Bot className="w-4 h-4 text-zinc-400" />
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Link do Bot no Telegram</span>
+        {/* Bots Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {bots.map((bot) => (
+            <div key={bot.id} className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col">
+              {/* Card Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-[#1A1A1E] overflow-hidden shrink-0 border border-white/5 flex items-center justify-center">
+                  {store.logoUrl ? (
+                    <img src={store.logoUrl} className="w-full h-full object-cover" alt="Logo" />
+                  ) : (
+                    <Bot className="w-6 h-6 text-violet-400" />
+                  )}
                 </div>
-                <div className="text-sm text-white font-mono bg-[#121214] p-3 rounded-lg mb-4 truncate border border-white/5">
-                  https://t.me/{bot.username}
+                <div className="min-w-0">
+                  <h3 className="font-bold text-white text-base uppercase leading-tight truncate">{store.name}</h3>
+                  <p className="text-zinc-400 text-sm truncate">@{bot.username}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" size="sm" className="bg-[#121214] border-white/5 hover:bg-white/5">
+              </div>
+
+              {/* Separator */}
+              <div className="h-1 bg-violet-600 rounded-full w-full mb-5 shadow-[0_0_10px_rgba(139,92,246,0.3)]"></div>
+
+              {/* Telegram Link Block */}
+              <div className="bg-[#1A1A1E] border border-white/5 rounded-xl p-4 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bot className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="text-xs font-medium text-zinc-400">Link do Bot no Telegram</span>
+                </div>
+                <p className="text-sm font-medium text-white mb-3 truncate">https://t.me/{bot.username}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" className="bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-9">
                     <Copy className="w-3 h-3 mr-2" /> Copiar link
                   </Button>
-                  <Button variant="outline" size="sm" className="bg-[#121214] border-white/5 hover:bg-white/5">
+                  <Button variant="outline" size="sm" className="bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-9">
                     <ExternalLink className="w-3 h-3 mr-2" /> Abrir no Telegram
                   </Button>
                 </div>
               </div>
 
-              {/* Mini App Link */}
-              <div className="bg-[#1A1A1E] border border-white/5 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Globe className="w-4 h-4 text-zinc-400" />
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Loja deste bot (Mini App)</span>
+              {/* Mini App Link Block */}
+              <div className="bg-[#1A1A1E] border border-white/5 rounded-xl p-4 mb-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="text-xs font-medium text-zinc-400">Loja deste bot (fora do Telegram)</span>
                 </div>
-                <div className="text-sm text-white font-mono bg-[#121214] p-3 rounded-lg mb-4 truncate border border-white/5">
-                  https://t.me/{bot.username}/app
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" size="sm" className="bg-[#121214] border-white/5 hover:bg-white/5">
+                <p className="text-sm font-medium text-white mb-3 truncate">https://{domain}/miniapp?b={bot.id}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" className="bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-9">
                     <Copy className="w-3 h-3 mr-2" /> Copiar
                   </Button>
-                  <Button variant="outline" size="sm" className="bg-[#121214] border-white/5 hover:bg-white/5">
+                  <Button variant="outline" size="sm" className="bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-9">
                     <ExternalLink className="w-3 h-3 mr-2" /> Abrir loja
                   </Button>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="p-10 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-zinc-800/50 flex items-center justify-center mb-4 border border-white/5">
-                <Bot className="w-8 h-8 text-zinc-500" />
+
+              {/* Actions Footer */}
+              <div className="flex items-center gap-2 mt-auto">
+                <BotSettingsModal 
+                  store={store} 
+                  bot={bot} 
+                  triggerText="Editar" 
+                  className="flex-1 bg-transparent border border-white/10 hover:bg-white/5 text-white"
+                />
+                <Button variant="outline" size="icon" className="shrink-0 bg-transparent border-white/10 text-zinc-400 hover:text-white h-9 w-9">
+                  <Info className="w-4 h-4" />
+                </Button>
+                <Button variant="destructive" size="icon" className="shrink-0 bg-red-500 hover:bg-red-600 text-white border-transparent h-9 w-9">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
-              <h4 className="text-zinc-200 font-bold mb-2">Nenhum Bot Conectado</h4>
-              <p className="text-zinc-500 text-sm mb-6 max-w-sm">Para vender dentro do Telegram automaticamente, você precisa vincular um bot criado no BotFather.</p>
-              <BotSettingsModal store={store} bot={bot} triggerText="Conectar Agora" />
             </div>
-          )}
+          ))}
+
+          {/* Add Bot Card (Empty State Trigger) */}
+          <BotSettingsModal store={store} triggerText="Adicionar bot" isCard={true} />
         </div>
 
         {/* Notificações de Venda */}
         <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
-            <Bell className="w-5 h-5 text-amber-400" />
+            <Bell className="w-5 h-5 text-zinc-400" />
             <h3 className="font-bold text-white text-sm">Notificações de venda</h3>
           </div>
           <p className="text-xs text-zinc-500 mb-5">
@@ -174,15 +184,15 @@ export default async function SellerStorePage() {
             </div>
             <div className="flex gap-3">
               <span className="font-bold text-zinc-500">3.</span>
-              <p>Copie o token gerado (parece com <span className="text-zinc-500 font-mono">123456:ABC-DEF...</span>)</p>
+              <p>Copie o token gerado e cole acima</p>
             </div>
             <div className="flex gap-3">
               <span className="font-bold text-zinc-500">4.</span>
-              <p>Clique no botão "Adicionar bot" no topo desta página e cole o token.</p>
+              <p>Personalize o nome e logo do seu bot</p>
             </div>
             <div className="flex gap-3">
               <span className="font-bold text-zinc-500">5.</span>
-              <p>Personalize o nome e logo para deixar com a cara da sua loja.</p>
+              <p>Compartilhe o link do mini app com seus clientes</p>
             </div>
           </div>
         </div>
