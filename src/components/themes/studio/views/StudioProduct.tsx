@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Play, Plus, Share2 } from "lucide-react";
+import { AddToCartButton } from "../components/AddToCartButton";
 
 export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: string, productSlug: string }) {
   const store = await db.query.stores.findFirst({
@@ -50,15 +51,18 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
         </div>
 
         <div className="space-y-3">
-          <button className="w-full flex items-center justify-center gap-2 bg-white text-black font-semibold py-3 rounded-md hover:bg-zinc-200 transition-colors">
-            <Play className="w-5 h-5 fill-black" />
-            <div className="flex flex-col items-center leading-tight">
-              <span>Comprar por R$ {Number(product.price).toFixed(2)}</span>
-              {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
-                <span className="text-[10px] line-through text-zinc-500 font-normal">de R$ {Number(product.compareAtPrice).toFixed(2)}</span>
-              )}
-            </div>
-          </button>
+          <AddToCartButton 
+            storeSlug={storeSlug}
+            product={{
+              id: product.id,
+              slug: product.slug,
+              title: product.title,
+              price: Number(product.price),
+              coverUrl: product.coverUrl,
+              storeId: product.storeId,
+              compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : undefined
+            } as any}
+          />
           
           <div className="flex gap-4">
             <button className="flex-1 flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white py-2">

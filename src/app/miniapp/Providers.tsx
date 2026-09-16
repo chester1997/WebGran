@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import Script from "next/script";
+import { CartProvider } from "@/components/miniapp/CartProvider";
 
 interface TelegramContextType {
   webApp: unknown;
@@ -102,7 +103,11 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
         <div className="fixed inset-0 flex items-center justify-center bg-[var(--tg-theme-bg-color,#fff)] text-[var(--tg-theme-text-color,#000)] z-40">
           Carregando...
         </div>
-      ) : children}
+      ) : (
+        <CartProvider storeSlug={storeSlug}>
+          {children}
+        </CartProvider>
+      )}
     </TelegramContext.Provider>
   );
 }

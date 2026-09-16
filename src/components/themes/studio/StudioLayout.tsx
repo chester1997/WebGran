@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { stores } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { CartBadge } from "./components/CartBadge";
 
 export async function StudioLayout({ storeSlug, children }: { storeSlug: string, children: ReactNode }) {
   const store = await db.query.stores.findFirst({
@@ -31,9 +32,10 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
           <Search className="w-5 h-5 mb-1" />
           Buscar
         </Link>
-        <Link href={`/miniapp/${storeSlug}/cart`} className="flex flex-col items-center justify-center w-full h-full text-[10px] text-zinc-400 hover:text-white transition-colors">
+        <Link href={`/miniapp/${storeSlug}/cart`} className="relative flex flex-col items-center justify-center w-full h-full text-[10px] text-zinc-400 hover:text-white transition-colors">
           <ShoppingCart className="w-5 h-5 mb-1" />
           Carrinho
+          <CartBadge />
         </Link>
         <Link href={`/miniapp/${storeSlug}/accesses`} className="flex flex-col items-center justify-center w-full h-full text-[10px] text-zinc-400 hover:text-white transition-colors">
           <Key className="w-5 h-5 mb-1" />
