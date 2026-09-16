@@ -42,30 +42,6 @@ export default async function SellerStorePage() {
 
       <div className="space-y-6">
         
-        {/* Loja Geral Link */}
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <Globe className="w-5 h-5 text-blue-400" />
-            <div>
-              <h3 className="font-bold text-white text-sm">Loja Geral (sem bot)</h3>
-              <p className="text-xs text-zinc-500">Link único da sua loja — funciona sem Telegram, exibe todos os produtos.</p>
-            </div>
-          </div>
-          
-          <div className="bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 flex items-center justify-between">
-            <span className="text-sm text-zinc-300 truncate font-mono">{storeUrl}</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:text-white hover:bg-white/5">
-              <Copy className="w-4 h-4 mr-2" /> Copiar
-            </Button>
-            <Button variant="outline" className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:text-white hover:bg-white/5">
-              <ExternalLink className="w-4 h-4 mr-2" /> Abrir
-            </Button>
-          </div>
-        </div>
-
         {/* Bots Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {bots.map((bot) => (
