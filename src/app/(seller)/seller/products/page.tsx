@@ -2,9 +2,8 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { products, categories } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { Package, Plus, Search, MoreHorizontal, Filter, Image as ImageIcon } from "lucide-react";
+import { Package, Search, Image as ImageIcon, LayoutGrid, List, Edit3, Medal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { NewProductModal } from "./NewProductModal";
 
 export default async function SellerProductsPage() {
@@ -29,146 +28,126 @@ export default async function SellerProductsPage() {
     columns: { id: true, name: true }
   });
 
+  const durationMap: Record<string, string> = {
+    'lifetime': 'Vitalício',
+    'daily': 'Diário',
+    'weekly': 'Semanal',
+    'monthly': 'Mensal',
+    'quarterly': 'Trimestral',
+    'semiannual': 'Semestral',
+    'annual': 'Anual'
+  };
+
   return (
-    <div className="space-y-8 fade-in w-full">
+    <div className="space-y-6 fade-in w-full">
       
-      {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Produtos</h2>
-          <p className="text-zinc-400 text-sm mt-1">Gerencie o seu catálogo e controle preços e entregas.</p>
+      {/* Tab/Count Bar */}
+      <div className="flex items-center gap-6 border-b border-white/5 pb-4">
+        <div className="flex items-center gap-2 text-white border-b-2 border-blue-600 pb-4 -mb-[17px]">
+          <Package className="w-4 h-4 text-blue-500" />
+          <span className="font-bold text-sm">Produtos</span>
+          <span className="bg-blue-600/20 text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{allProducts.length}</span>
         </div>
-        <NewProductModal categories={allCategories} />
+        {/* We omitted "Cupons" as requested */}
+        <div className="ml-auto">
+          <NewProductModal categories={allCategories} />
+        </div>
       </div>
 
-      {/* Filters Area */}
-      <div className="flex flex-col md:flex-row gap-4 bg-[#121212] p-4 border border-white/5 rounded-2xl shadow-xl">
+      {/* Search Bar */}
+      <div className="flex flex-col md:flex-row gap-4 bg-[#121214] p-3 border border-white/5 rounded-xl shadow-lg">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input 
             type="text" 
-            placeholder="Pesquisar por título ou slug..." 
-            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+            placeholder={`Buscar entre ${allProducts.length} produtos...`}
+            className="w-full bg-[#1A1A1E] border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-          <Button variant="outline" className="bg-[#0A0A0A] border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl h-10 shrink-0">
-            <Filter className="w-4 h-4 mr-2" /> Filtros
-          </Button>
-          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 h-10 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[140px] shrink-0">
-            <option>Todas Categorias</option>
-          </select>
-          <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 h-10 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[120px] shrink-0">
-            <option>Todos Status</option>
-            <option>Ativos</option>
-            <option>Inativos</option>
-          </select>
+        <div className="flex items-center gap-2 shrink-0">
+           <Button variant="outline" className="bg-[#1A1A1E] border-white/10 text-white h-10 w-10 p-0 rounded-lg shrink-0">
+             <LayoutGrid className="w-4 h-4" />
+           </Button>
+           <Button variant="ghost" className="text-zinc-500 hover:text-white hover:bg-white/5 h-10 w-10 p-0 rounded-lg shrink-0">
+             <List className="w-4 h-4" />
+           </Button>
         </div>
       </div>
 
-      {/* Products Table */}
-      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="border-b border-white/5 text-zinc-500 text-xs font-medium uppercase tracking-wider bg-white/[0.01]">
-                <th className="py-4 pl-6">Produto</th>
-                <th className="py-4">Categoria</th>
-                <th className="py-4">Preço</th>
-                <th className="py-4">Status</th>
-                <th className="py-4">Vendas</th>
-                <th className="py-4 text-right pr-6">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-white/5">
-              {allProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mb-4 border border-white/5 shadow-inner">
-                        <Package className="w-8 h-8 text-zinc-500" />
-                      </div>
-                      <p className="text-zinc-300 font-medium text-base mb-1">Seu catálogo está vazio</p>
-                      <p className="text-zinc-600 text-sm max-w-sm mb-6">Cadastre seu primeiro produto para começar a vender na sua loja digital.</p>
-                      <NewProductModal categories={allCategories} />
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                /* Map Products */
-                allProducts.map((prod) => (
-                  <tr key={prod.id} className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="py-4 pl-6">
-                      <div className="flex items-center gap-4">
-                        {prod.coverUrl ? (
-                          <img src={prod.coverUrl} alt={prod.title} className="w-12 h-16 rounded-lg object-cover border border-white/10 shadow-sm" />
-                        ) : (
-                          <div className="w-12 h-16 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5">
-                            <ImageIcon className="w-5 h-5 text-zinc-600" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-zinc-200 font-medium line-clamp-1">{prod.title}</p>
-                          <p className="text-zinc-500 font-mono text-xs mt-0.5 truncate max-w-[180px]">/{prod.slug}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      {prod.category ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 text-zinc-300 text-xs font-medium border border-white/10">
-                          {prod.category.name}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-600 text-xs italic">Sem Categoria</span>
-                      )}
-                    </td>
-                    <td className="py-4">
-                      <div className="flex flex-col">
-                        <span className="text-white font-medium">R$ {Number(prod.price).toFixed(2).replace('.', ',')}</span>
-                        {prod.compareAtPrice && (
-                          <span className="text-zinc-500 text-xs line-through">R$ {Number(prod.compareAtPrice).toFixed(2).replace('.', ',')}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      {prod.status === 'active' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                          <span className="text-emerald-400 text-xs font-medium">Ativo</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                          <span className="text-zinc-500 text-xs font-medium">Rascunho</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 text-zinc-400 font-medium">
-                      0 <span className="text-zinc-600 text-xs font-normal">vendas</span>
-                    </td>
-                    <td className="py-4 text-right pr-6">
-                      <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Footer Pagination mock */}
-        {allProducts.length > 0 && (
-          <div className="border-t border-white/5 p-4 flex items-center justify-between text-xs text-zinc-500 bg-white/[0.01]">
-            <span>Mostrando {allProducts.length} produtos</span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-white/10 rounded-md" disabled>Anterior</Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-white/10 rounded-md" disabled>Próxima</Button>
+      {/* Grid */}
+      {allProducts.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center bg-[#121214] rounded-2xl border border-white/5 shadow-xl">
+            <div className="w-16 h-16 rounded-2xl bg-[#1A1A1E] flex items-center justify-center mb-4 border border-white/5 shadow-inner">
+              <Package className="w-8 h-8 text-zinc-500" />
             </div>
+            <p className="text-zinc-300 font-medium text-base mb-1">Seu catálogo está vazio</p>
+            <p className="text-zinc-600 text-sm max-w-sm mb-6">Cadastre seu primeiro produto para começar a vender na sua loja digital.</p>
+            <NewProductModal categories={allCategories} />
           </div>
-        )}
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+          {allProducts.map((prod) => (
+             <div key={prod.id} className="bg-[#121214] border border-white/5 rounded-xl overflow-hidden flex flex-col shadow-xl group hover:border-white/10 transition-all">
+                {/* Image Header */}
+                <div className="w-full aspect-[16/9] bg-zinc-900 relative border-b border-white/5">
+                  {prod.coverUrl ? (
+                    <img src={prod.coverUrl} alt={prod.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-zinc-700" />
+                    </div>
+                  )}
+                  {prod.status === 'active' && (
+                    <div className="absolute top-3 right-3 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-md border border-emerald-500/20">
+                      Ativo
+                    </div>
+                  )}
+                </div>
+
+                {/* Body */}
+                <div className="p-4 flex-1 flex flex-col">
+                  <h3 className="text-white font-bold text-sm uppercase leading-tight line-clamp-2 mb-1">{prod.title}</h3>
+                  <span className="text-blue-400 text-[10px] font-bold tracking-wider uppercase mb-3">{store.name}</span>
+                  
+                  <p className="text-zinc-400 text-[11px] line-clamp-4 mb-4 flex-1 leading-relaxed">
+                    {prod.shortDescription || prod.description || "Nenhuma descrição informada para este produto. O cliente não verá detalhes."}
+                  </p>
+
+                  <div className="flex items-end justify-between mt-auto mb-3">
+                    <span className="text-emerald-400 font-bold text-lg leading-none">R$ {Number(prod.price).toFixed(2).replace('.', ',')}</span>
+                    <span className="text-zinc-500 text-[10px] font-medium uppercase tracking-wider">
+                      {durationMap[prod.duration || 'lifetime'] || 'Vitalício'}
+                    </span>
+                  </div>
+
+                  {prod.category ? (
+                    <div className="flex">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 text-blue-400 text-[10px] font-medium border border-white/5">
+                        <Package className="w-3 h-3" />
+                        {prod.category.name}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-6"></div> /* placeholder to keep cards aligned */
+                  )}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-3 border-t border-white/5 flex gap-2 bg-[#1A1A1E]/50">
+                  <Button variant="outline" className="flex-1 bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-8 text-xs font-medium rounded-lg">
+                    <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
+                  </Button>
+                  <Button variant="outline" size="icon" className="shrink-0 bg-transparent border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg">
+                    <Medal className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="destructive" className="shrink-0 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border-transparent h-8 px-3 text-xs font-medium rounded-lg transition-colors">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                  </Button>
+                </div>
+             </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
