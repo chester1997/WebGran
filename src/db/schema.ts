@@ -55,6 +55,7 @@ export const telegramBots = pgTable('telegram_bots', {
   botId: text('bot_id').notNull().unique(), // The numeric bot ID from Telegram
   username: text('username').notNull(),
   displayName: text('display_name'),
+  photoUrl: text('photo_url'), // Bot profile photo fetched from Telegram
   tokenEncrypted: text('token_encrypted').notNull(),
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

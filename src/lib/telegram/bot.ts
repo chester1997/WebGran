@@ -45,6 +45,28 @@ export class TelegramBotService {
     });
   }
 
+  /**
+   * Fetches the bot's profile photo URL.
+   * Returns null if the bot has no photo.
+   */
+  async getProfilePhotoUrl(): Promise<string | null> {
+    try {
+      const me = await this.getMe();
+      const photos = await telegramFetch<any>(this.token, 'getUserProfilePhotos', { user_id: me.id, limit: 1 });
+      if (!photos?.photos?.length) return null;
+      
+      const fileId = photos.photos[0][0].file_id;
+      const fileInfo = await telegramFetch<any>(this.token, 'getFile', { file_id: fileId });
+      if (!fileInfo?.file_path) return null;
+      
+      // Extract token from the instance (use raw fetch URL)
+      const token = this.token;
+      return `https://api.telegram.org/file/bot${token}/${fileInfo.file_path}`;
+    } catch {
+      return null;
+    }
+  }
+
   async sendPhoto(_chatId: string | number, _photo: string): Promise<unknown> {
     throw new Error("Not implemented yet");
   }

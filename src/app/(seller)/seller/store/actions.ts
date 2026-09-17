@@ -42,9 +42,12 @@ export async function saveBotAction(formData: FormData) {
       web_app: { url: miniAppUrl }
     });
 
+    // 4. Fetch bot's profile photo
+    const photoUrl = await botService.getProfilePhotoUrl();
+
     const tokenEncrypted = encrypt(token);
 
-    // 4. Upsert in DB
+    // 5. Upsert in DB
     const existingBot = await db.query.telegramBots.findFirst({
       where: and(
         eq(telegramBots.botId, botTelegramId),
@@ -56,6 +59,7 @@ export async function saveBotAction(formData: FormData) {
       await db.update(telegramBots).set({
         username: botInfo.username || "",
         displayName: botInfo.first_name || "",
+        photoUrl: photoUrl ?? existingBot.photoUrl,
         tokenEncrypted,
         updatedAt: new Date()
       }).where(eq(telegramBots.id, existingBot.id));
@@ -65,6 +69,7 @@ export async function saveBotAction(formData: FormData) {
         botId: botTelegramId,
         username: botInfo.username || "",
         displayName: botInfo.first_name || "",
+        photoUrl: photoUrl ?? null,
         tokenEncrypted,
         status: "active"
       });
@@ -87,5 +92,34 @@ export async function saveBotAction(formData: FormData) {
     throw new Error("Token do bot é obrigatório para adicionar um novo bot.");
   }
 
+  revalidatePath("/seller/store");
+}
+
+export async function deleteBotAction(botId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(
+      eq(telegramBots.id, botId),
+      eq(telegramBots.storeId, store.id)
+    )
+  });
+
+  if (!bot) throw new Error("Bot não encontrado.");
+
+  // Delete webhook on Telegram side
+  try {
+    const currentToken = decrypt(bot.tokenEncrypted);
+    const botService = new TelegramBotService(currentToken);
+    await botService.deleteWebhook();
+    // Reset menu button to default
+    await botService.setChatMenuButton({ type: "default" });
+  } catch {
+    // If token is invalid, still delete from DB
+  }
+
+  await db.delete(telegramBots).where(eq(telegramBots.id, botId));
   revalidatePath("/seller/store");
 }
