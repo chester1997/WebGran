@@ -40,8 +40,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         {/* Sidebar */}
         <aside className="w-64 bg-[#121212] border-r border-white/5 flex-shrink-0 hidden md:flex flex-col relative z-10 shadow-2xl shadow-black">
           {/* Logo Area */}
-          <div className="h-20 flex items-center px-6 gap-3 pt-4">
-            <img src="/logo.png" alt="WebGran Logo" className="h-10 object-contain" />
+          <div className="pt-8 pb-4 px-6 flex justify-center">
+            <img src="/logo.png" alt="WebGran Logo" className="w-44 h-auto object-contain drop-shadow-xl" />
           </div>
 
           {/* Navigation */}
