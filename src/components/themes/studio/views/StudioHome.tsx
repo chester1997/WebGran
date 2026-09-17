@@ -88,7 +88,8 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         <div className="pt-24 px-4 text-center text-zinc-500">Nenhum produto cadastrado.</div>
       )}
 
-      <div className="relative z-20 -mt-10 space-y-2">
+      <div className="relative z-20 mt-4 space-y-4">
+
         <TopTenCarousel storeSlug={storeSlug} products={topTen} />
         
         {/* Categories Pills */}
