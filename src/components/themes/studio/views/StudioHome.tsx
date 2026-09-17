@@ -35,7 +35,15 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
 
   // Fallbacks if no data
   const heroProduct = allProducts[0];
-  const topTen = await RankingService.getTopProducts(store.id, 'week');
+  
+  let topTen: typeof allProducts = [];
+  try {
+    topTen = await RankingService.getTopProducts(store.id, 'week');
+  } catch {
+    // If ranking fails (e.g. no orders), silently fall back
+    topTen = [];
+  }
+  
   const recents = allProducts.slice(0, 8);
   const bestSellers = topTen.length > 0 ? topTen : allProducts.slice(0, 5);
 
