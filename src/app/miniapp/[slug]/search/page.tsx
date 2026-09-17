@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { ThemeEngineSearch } from "@/components/themes/engine";
 
 export default async function MiniAppSearch({ 
@@ -13,3 +14,4 @@ export default async function MiniAppSearch({
   
   return <ThemeEngineSearch storeSlug={resolvedParams.slug} q={q} />;
 }
+

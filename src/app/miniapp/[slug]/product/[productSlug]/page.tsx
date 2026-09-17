@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { ThemeEngineProduct } from "@/components/themes/engine";
 
 export default async function MiniAppProduct({ 
@@ -8,3 +9,4 @@ export default async function MiniAppProduct({
   const resolvedParams = await params;
   return <ThemeEngineProduct storeSlug={resolvedParams.slug} productSlug={resolvedParams.productSlug} />;
 }
+
