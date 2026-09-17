@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm";
 import { Package, Search, Image as ImageIcon, LayoutGrid, List, Edit3, Medal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewProductModal } from "./NewProductModal";
+import { EditProductModal } from "./EditProductModal";
 
 export default async function SellerProductsPage() {
   await requireSeller();
@@ -139,12 +140,7 @@ export default async function SellerProductsPage() {
 
                 {/* Footer Actions */}
                 <div className="p-3 border-t border-white/5 flex gap-2 bg-[#1A1A1E]/50">
-                  <Button variant="outline" className="flex-1 bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-8 text-xs font-medium rounded-lg">
-                    <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
-                  </Button>
-                  <Button variant="outline" size="icon" className="shrink-0 bg-transparent border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg">
-                    <Medal className="w-3.5 h-3.5" />
-                  </Button>
+                  <EditProductModal product={prod} categories={allCategories} bots={storeBots} />
                   <Button variant="destructive" className="shrink-0 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border-transparent h-8 px-3 text-xs font-medium rounded-lg transition-colors">
                     <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
                   </Button>
