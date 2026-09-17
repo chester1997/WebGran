@@ -35,7 +35,8 @@ export function HeroBanner({ storeSlug, product, banner }: HeroBannerProps) {
   }
 
   return (
-    <div className="relative w-full h-[60vh] min-h-[420px] max-h-[600px] flex items-end justify-center pt-16">
+    <div className="relative w-full h-[55vh] min-h-[380px] max-h-[550px] flex items-end justify-center">
+
 
       <div 
         className="absolute inset-0 bg-cover bg-center"

@@ -19,7 +19,8 @@ export function StudioHeader({ storeSlug, storeName, headerLogoUrl }: StudioHead
   const userInitial = tgUser?.first_name ? tgUser.first_name.charAt(0).toUpperCase() : null;
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-50 px-4 py-4 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+    <header className="sticky top-0 left-0 right-0 z-50 px-4 py-3.5 flex items-center justify-between bg-[#121214] border-b border-white/5 shadow-md">
+
 
       <div className="flex items-center gap-2.5 min-w-0">
         {headerLogoUrl ? (
