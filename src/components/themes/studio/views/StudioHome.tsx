@@ -8,6 +8,8 @@ import { TopTenCarousel } from "../components/TopTenCarousel";
 import { RankingService } from "@/lib/catalog/ranking-service";
 import Link from "next/link";
 import { Search, UserCircle } from "lucide-react";
+import { StudioHeader } from "../components/StudioHeader";
+
 
 export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   const store = await db.query.stores.findFirst({
@@ -70,27 +72,12 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   return (
     <div className="w-full h-full pb-16">
 
-      {/* Absolute Transparent Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 px-4 py-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center gap-2">
-          {headerLogoUrl ? (
-            <img src={headerLogoUrl} alt={store.name} className="w-8 h-8 rounded-full object-cover border border-white/10" />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-bold text-white text-xs">
-              {store.name.charAt(0)}
-            </div>
-          )}
-          <span className="text-white font-bold tracking-wider text-sm">{store.name}</span>
-        </div>
-        <div className="flex items-center gap-4 text-white">
-          <Link href={`/miniapp/${storeSlug}/search`}>
-            <Search className="w-5 h-5" />
-          </Link>
-          <Link href={`/miniapp/${storeSlug}/profile`}>
-            <UserCircle className="w-6 h-6" />
-          </Link>
-        </div>
-      </header>
+      <StudioHeader 
+        storeSlug={storeSlug} 
+        storeName={store.name} 
+        headerLogoUrl={headerLogoUrl} 
+      />
+
 
       {storeBanners.length > 0 ? (
         <HeroBanner storeSlug={storeSlug} banner={storeBanners[0]} />
