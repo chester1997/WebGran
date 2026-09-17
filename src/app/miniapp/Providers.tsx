@@ -33,6 +33,7 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
     const initTelegram = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wa = (window as any).Telegram?.WebApp;
+
       if (wa) {
         wa.ready();
         setWebApp(wa);
@@ -48,28 +49,33 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           root.style.setProperty('--tg-theme-button-text-color', wa.themeParams.button_text_color);
         }
 
-        // Validate initData
-        try {
-          const initData = wa ? (wa.initData || "") : "";
+        // Immediately expose user from initDataUnsafe (always available inside Telegram)
+        if (wa.initDataUnsafe?.user) {
+          setUser(wa.initDataUnsafe.user);
+        }
 
+        // Validate initData with server (upsert customer, get session token)
+        try {
+          const initData = wa.initData || "";
           const res = await fetch("/api/telegram/auth", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ initData, storeSlug })
           });
-
           const data = await res.json();
           if (data.success) {
+            // Server response user overrides (has more complete data)
             setUser(data.user);
             setReady(true);
           } else {
-            setError(data.error || "Erro de autenticação");
+            // Still allow viewing store even if auth fails in Telegram context
+            setReady(true);
           }
         } catch (_err: unknown) {
-          setError("Falha na conexão com o servidor");
+          setReady(true); // Allow viewing store even on auth failure
         }
       } else {
-        // Not in telegram at all (e.g. standard browser preview)
+        // Browser preview (outside Telegram)
         try {
           const res = await fetch("/api/telegram/auth", {
             method: "POST",
@@ -79,11 +85,11 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           const data = await res.json();
           if (data.success) {
             setUser(data.user);
-            setReady(true);
           }
         } catch (e) {
-          setError("Falha no preview");
+          // ignore in preview
         }
+        setReady(true); // Always let browser preview through
       }
     };
 

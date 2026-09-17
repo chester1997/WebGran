@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Upload } from "lucide-react";
+import { X, Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { 
   Dialog, 
   DialogTrigger, 
@@ -11,10 +11,12 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import { saveBotAction } from "./actions";
 
 export function BotSettingsModal({ store, bot, triggerText, isCard, className }: { store: any; bot?: any; triggerText?: string; isCard?: boolean; className?: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{type: "success"|"error", message: string} | null>(null);
   
   // Theme colors options (like the reference)
   const colors = [
@@ -33,11 +35,19 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: Connect to server action to save bot and store settings
-    setTimeout(() => {
+    setFeedback(null);
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      if (bot?.id) formData.set("existingBotId", bot.id);
+      await saveBotAction(formData);
+      setFeedback({ type: "success", message: "Bot configurado! Webhook e botão azul atualizados automaticamente." });
+      setTimeout(() => { setOpen(false); setFeedback(null); }, 2000);
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message || "Erro ao salvar bot." });
+    } finally {
       setLoading(false);
-      setOpen(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -151,23 +161,31 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-white/5 bg-[#121214] flex justify-end gap-3 shrink-0">
-          <Button 
-            type="button" 
-            variant="ghost" 
-            onClick={() => setOpen(false)}
-            className="text-zinc-400 hover:text-white hover:bg-white/5"
-          >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            form="bot-form"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6"
-          >
-            {loading ? "Salvando..." : "Salvar"}
-          </Button>
+        <div className="p-6 border-t border-white/5 bg-[#121214] shrink-0 space-y-3">
+          {feedback && (
+            <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${feedback.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+              {feedback.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+              {feedback.message}
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setOpen(false)}
+              className="text-zinc-400 hover:text-white hover:bg-white/5"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              form="bot-form"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6"
+            >
+              {loading ? "Configurando bot..." : "Salvar e Ativar Bot"}
+            </Button>
+          </div>
         </div>
 
       </DialogContent>
