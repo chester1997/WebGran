@@ -32,7 +32,7 @@ export async function createProductAction(formData: FormData) {
   const botId = formData.get("botId") as string || null;
   const status = formData.get("status") as string || "active";
   const duration = formData.get("duration") as string || "lifetime";
-  const coverUrl = formData.get("imageUrl") as string || null;
+  const coverUrl = (formData.get("coverUrl") as string) || null;
 
   // Insert into DB
   await db.insert(products).values({
@@ -80,7 +80,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   const botId = formData.get("botId") as string || null;
   const status = formData.get("status") as string || "active";
   const duration = formData.get("duration") as string || "lifetime";
-  const coverUrl = formData.get("imageUrl") as string || null;
+  const coverUrl = (formData.get("coverUrl") as string) || null;
 
   const { eq, and } = await import("drizzle-orm");
 
@@ -100,3 +100,4 @@ export async function updateProductAction(productId: string, formData: FormData)
   revalidatePath("/seller/products");
   redirect("/seller/products");
 }
+
