@@ -27,7 +27,10 @@ export default async function MiniAppRootPage({
   }
 
   const bot = await db.query.telegramBots.findFirst({
-    where: eq(telegramBots.id, targetId),
+    where: (bots, { eq, or }) => or(
+      eq(bots.id, targetId),
+      eq(bots.botId, targetId)
+    ),
     with: {
       store: true
     }
