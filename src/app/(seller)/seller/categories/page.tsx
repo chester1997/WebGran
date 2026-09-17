@@ -5,6 +5,8 @@ import { eq, asc } from "drizzle-orm";
 import { Tags, Plus, Search, MoreHorizontal, GripVertical, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewCategoryModal } from "./NewCategoryModal";
+import { CategoryActionsMenu } from "./CategoryActionsMenu";
+
 
 export default async function SellerCategoriesPage() {
   await requireSeller();
@@ -121,10 +123,9 @@ export default async function SellerCategoriesPage() {
                       0
                     </td>
                     <td className="py-4 text-right pr-6">
-                      <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
+                      <CategoryActionsMenu category={cat} />
                     </td>
+
                   </tr>
                 ))
               )}
