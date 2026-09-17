@@ -17,19 +17,19 @@ export function TopTenCarousel({ storeSlug, products }: TopTenCarouselProps) {
   if (products.length === 0) return null;
 
   return (
-    <section className="pt-6 pb-4">
-      <h2 className="text-white text-lg font-bold px-4 mb-6 tracking-tight">Top 10 Hoje</h2>
+    <section className="py-4">
+      <h2 className="text-white text-lg font-bold px-4 mb-4 tracking-tight">Top 10 Hoje</h2>
 
-      <div className="flex overflow-x-auto gap-12 px-10 pb-6 pt-2 snap-x snap-mandatory scrollbar-hide">
+      <div className="flex overflow-x-auto gap-4 px-6 pb-6 pt-2 snap-x snap-mandatory scrollbar-hide">
         {products.map((product, index) => (
           <Link
             key={product.id}
             href={`/miniapp/${storeSlug}/product/${product.slug}`}
-            className="snap-start shrink-0 relative flex items-end group"
+            className="snap-start shrink-0 relative flex items-end group pl-12"
           >
-            {/* Large Bold Outline Number on the left */}
+            {/* Outline number positioned to the left, partially behind card */}
             <span
-              className="text-8xl md:text-9xl font-black text-black select-none pointer-events-none -mr-8 md:-mr-10 z-0 leading-none shrink-0"
+              className="absolute left-0 bottom-0 text-[110px] font-black text-transparent select-none pointer-events-none z-0 leading-none"
               style={{
                 WebkitTextStroke: "2.5px #ffffff",
                 fontFamily: "Impact, 'Arial Black', sans-serif"
@@ -53,7 +53,7 @@ export function TopTenCarousel({ storeSlug, products }: TopTenCarouselProps) {
               )}
 
               {/* Title overlay at the bottom */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent flex items-end p-2.5">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex items-end p-2.5">
                 <span className="text-white text-xs font-bold leading-tight line-clamp-2 uppercase drop-shadow-md">
                   {product.title}
                 </span>
