@@ -109,18 +109,18 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href} 
                   title={collapsed ? item.name : undefined}
-                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative group ${
+                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-[10px] text-sm transition-colors duration-150 relative overflow-hidden ${
                     isActive 
-                      ? "bg-[#1A1A22] text-white border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]" 
-                      : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
+                      ? "bg-[#191A1E] text-[#1683FF] font-medium border border-white/[0.06]" 
+                      : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-[#8B8D93]"
                   }`}
                 >
-                  {/* Left accent bar for active item */}
+                  {/* Left accent indicator bar for active item */}
                   {isActive && (
-                    <div className="absolute left-0 top-2 bottom-2 w-1 bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[16px] bg-[#1683FF] rounded-full" />
                   )}
 
-                  <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-blue-400" : "text-zinc-400 group-hover:text-zinc-200"}`} />
+                  <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-[#1683FF]" : "text-[#8B8D93]"}`} />
                   
                   {!collapsed && (
                     <span className="truncate">{item.name}</span>
@@ -129,6 +129,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
+
 
           {/* Boost com IA / Pro Card */}
           <div className="p-3 mt-auto">
