@@ -54,9 +54,10 @@ export default async function SellerCategoriesPage() {
       </div>
 
       {/* Categories Table / List */}
-      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl">
+        <div>
           <table className="w-full text-left border-collapse">
+
             <thead>
               <tr className="border-b border-white/5 text-zinc-500 text-xs font-medium uppercase tracking-wider bg-white/[0.01]">
                 <th className="w-12 py-4 pl-4 text-center">Pos</th>
