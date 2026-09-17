@@ -25,7 +25,7 @@ export function ProductCarousel({ title, storeSlug, products }: ProductCarouselP
         <div className="w-1 h-4 bg-violet-600 rounded-full"></div>
         <h2 className="text-white text-base font-bold tracking-tight uppercase flex items-center gap-2">
           {title}
-          <span className="text-zinc-600 text-[10px] lowercase font-normal">{products.length} planos</span>
+          <span className="text-zinc-600 text-[10px] lowercase font-normal">{products.length} produto{products.length !== 1 ? 's' : ''}</span>
         </h2>
       </div>
       <div className="flex overflow-x-auto gap-3 px-4 pb-4 snap-x snap-mandatory scrollbar-hide">
