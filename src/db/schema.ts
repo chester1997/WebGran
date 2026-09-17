@@ -161,6 +161,27 @@ export const banners = pgTable('banners', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const productCarousels = pgTable('product_carousels', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  position: integer('position').notNull().default(0),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const carouselProducts = pgTable('carousel_products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  carouselId: uuid('carousel_id').notNull().references(() => productCarousels.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  carouselProductUnique: unique().on(t.carouselId, t.productId)
+}));
+
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   stores: many(stores),
@@ -278,6 +299,26 @@ export const bannersRelations = relations(banners, ({ one }) => ({
     references: [stores.id],
   }),
 }));
+
+export const productCarouselsRelations = relations(productCarousels, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [productCarousels.storeId],
+    references: [stores.id],
+  }),
+  items: many(carouselProducts),
+}));
+
+export const carouselProductsRelations = relations(carouselProducts, ({ one }) => ({
+  carousel: one(productCarousels, {
+    fields: [carouselProducts.carouselId],
+    references: [productCarousels.id],
+  }),
+  product: one(products, {
+    fields: [carouselProducts.productId],
+    references: [products.id],
+  }),
+}));
+
 
 // ==========================================
 // PAYMENT ARCHITECTURE

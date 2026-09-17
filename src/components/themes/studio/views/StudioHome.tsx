@@ -1,7 +1,7 @@
 import React from "react";
 import { db } from "@/db";
-import { stores, products, categories, banners, telegramBots } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { stores, products, categories, banners, telegramBots, productCarousels } from "@/db/schema";
+import { eq, desc, and, asc } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
@@ -33,6 +33,20 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     limit: 5
   });
 
+  // Fetch custom carousels configured by the seller
+  const customCarousels = await db.query.productCarousels.findMany({
+    where: and(eq(productCarousels.storeId, store.id), eq(productCarousels.status, 'active')),
+    orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
+    with: {
+      items: {
+        orderBy: (items, { asc }) => [asc(items.position)],
+        with: {
+          product: true
+        }
+      }
+    }
+  });
+
   // Fetch first bot's photo for the header logo
   const firstBot = await db.query.telegramBots.findFirst({
     where: eq(telegramBots.storeId, store.id),
@@ -40,7 +54,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   });
   const headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
 
-  // Fallbacks if no data
+  // Fallbacks for top 10 and default sections
   const heroProduct = allProducts[0];
   
   let topTen: typeof allProducts = [];
@@ -101,8 +115,31 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
           </section>
         )}
 
-        <ProductCarousel title="Mais Recentes" storeSlug={storeSlug} products={recents} />
-        <ProductCarousel title="Mais Vendidos" storeSlug={storeSlug} products={bestSellers} />
+        {/* Custom Carousels configured by seller */}
+        {customCarousels.length > 0 ? (
+          customCarousels.map(carousel => {
+            const carouselProductsList = carousel.items
+              .map(i => i.product)
+              .filter(p => p && p.status === 'active');
+            
+            if (carouselProductsList.length === 0) return null;
+
+            return (
+              <ProductCarousel 
+                key={carousel.id} 
+                title={carousel.name} 
+                storeSlug={storeSlug} 
+                products={carouselProductsList} 
+              />
+            );
+          })
+        ) : (
+          /* Default Fallback Carousels if no custom carousel created */
+          <>
+            <ProductCarousel title="Mais Recentes" storeSlug={storeSlug} products={recents} />
+            <ProductCarousel title="Mais Vendidos" storeSlug={storeSlug} products={bestSellers} />
+          </>
+        )}
       </div>
     </div>
   );
