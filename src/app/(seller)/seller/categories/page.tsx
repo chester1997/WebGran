@@ -4,6 +4,7 @@ import { categories } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { Tags, Plus, Search, MoreHorizontal, GripVertical, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NewCategoryModal } from "./NewCategoryModal";
 
 export default async function SellerCategoriesPage() {
   await requireSeller();
@@ -27,9 +28,7 @@ export default async function SellerCategoriesPage() {
           <h2 className="text-2xl font-bold text-white tracking-tight">Categorias</h2>
           <p className="text-zinc-400 text-sm mt-1">Organize seus produtos e facilite a navegação no Mini App.</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto">
-          <Plus className="w-5 h-5 mr-2" /> Nova Categoria
-        </Button>
+        <NewCategoryModal />
       </div>
 
       {/* Filters Area */}
@@ -76,9 +75,7 @@ export default async function SellerCategoriesPage() {
                       </div>
                       <p className="text-zinc-300 font-medium text-base mb-1">Nenhuma categoria criada</p>
                       <p className="text-zinc-600 text-sm max-w-sm mb-6">Você precisa de categorias para organizar seus produtos na vitrine da loja.</p>
-                      <Button variant="outline" className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 rounded-xl">
-                        <Plus className="w-4 h-4 mr-2" /> Criar Primeira Categoria
-                      </Button>
+                      <NewCategoryModal isCard />
                     </div>
                   </td>
                 </tr>

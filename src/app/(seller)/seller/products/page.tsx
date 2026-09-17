@@ -55,7 +55,7 @@ export default async function SellerProductsPage() {
         </div>
         {/* We omitted "Cupons" as requested */}
         <div className="ml-auto">
-          <NewProductModal categories={allCategories} />
+          <NewProductModal categories={allCategories} bots={storeBots} />
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default async function SellerProductsPage() {
             </div>
             <p className="text-zinc-300 font-medium text-base mb-1">Seu catálogo está vazio</p>
             <p className="text-zinc-600 text-sm max-w-sm mb-6">Cadastre seu primeiro produto para começar a vender na sua loja digital.</p>
-            <NewProductModal categories={allCategories} />
+            <NewProductModal categories={allCategories} bots={storeBots} />
           </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
