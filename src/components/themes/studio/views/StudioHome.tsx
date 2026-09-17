@@ -1,6 +1,6 @@
 import React from "react";
 import { db } from "@/db";
-import { stores, products, categories, banners } from "@/db/schema";
+import { stores, products, categories, banners, telegramBots } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
@@ -33,6 +33,13 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     limit: 5
   });
 
+  // Fetch first bot's photo for the header logo
+  const firstBot = await db.query.telegramBots.findFirst({
+    where: eq(telegramBots.storeId, store.id),
+    columns: { photoUrl: true }
+  });
+  const headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
+
   // Fallbacks if no data
   const heroProduct = allProducts[0];
   
@@ -40,7 +47,6 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   try {
     topTen = await RankingService.getTopProducts(store.id, 'week');
   } catch {
-    // If ranking fails (e.g. no orders), silently fall back
     topTen = [];
   }
   
@@ -52,10 +58,10 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       {/* Absolute Transparent Header */}
       <header className="absolute top-0 left-0 right-0 z-50 px-4 py-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-2">
-          {store.logoUrl ? (
-            <img src={store.logoUrl} alt={store.name} className="w-8 h-8 rounded-sm object-cover" />
+          {headerLogoUrl ? (
+            <img src={headerLogoUrl} alt={store.name} className="w-8 h-8 rounded-full object-cover border border-white/10" />
           ) : (
-            <div className="w-8 h-8 rounded-sm bg-red-600 flex items-center justify-center font-bold text-white text-xs">
+            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-bold text-white text-xs">
               {store.name.charAt(0)}
             </div>
           )}
