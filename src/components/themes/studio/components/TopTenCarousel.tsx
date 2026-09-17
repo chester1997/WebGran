@@ -17,8 +17,9 @@ export function TopTenCarousel({ storeSlug, products }: TopTenCarouselProps) {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-2">
-      <h2 className="text-white text-lg font-bold px-4 mb-3 tracking-tight">Top 10 Hoje</h2>
+    <section className="pt-6 pb-2">
+      <h2 className="text-white text-lg font-bold px-4 mb-4 tracking-tight">Top 10 Hoje</h2>
+
       <div className="flex overflow-x-auto gap-4 px-4 pb-4 snap-x snap-mandatory scrollbar-hide">
         {products.map((product, index) => (
           <Link key={product.id} href={`/miniapp/${storeSlug}/product/${product.slug}`} className="snap-start shrink-0 flex items-center relative pl-8 md:pl-10 group">
