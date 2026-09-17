@@ -68,7 +68,8 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   const bestSellers = topTen.length > 0 ? topTen : allProducts.slice(0, 5);
 
   return (
-    <div className="w-full h-full pb-8">
+    <div className="w-full h-full pb-16">
+
       {/* Absolute Transparent Header */}
       <header className="absolute top-0 left-0 right-0 z-50 px-4 py-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-2">
