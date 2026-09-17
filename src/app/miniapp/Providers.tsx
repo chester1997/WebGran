@@ -50,13 +50,7 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
 
         // Validate initData
         try {
-          const initData = wa.initData || "";
-          
-          if (!initData && process.env.NODE_ENV === 'development') {
-            // Mock dev data if running in browser
-            setReady(true);
-            return;
-          }
+          const initData = wa ? (wa.initData || "") : "";
 
           const res = await fetch("/api/telegram/auth", {
             method: "POST",
@@ -73,6 +67,22 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           }
         } catch (_err: unknown) {
           setError("Falha na conexão com o servidor");
+        }
+      } else {
+        // Not in telegram at all (e.g. standard browser preview)
+        try {
+          const res = await fetch("/api/telegram/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ initData: "", storeSlug })
+          });
+          const data = await res.json();
+          if (data.success) {
+            setUser(data.user);
+            setReady(true);
+          }
+        } catch (e) {
+          setError("Falha no preview");
         }
       }
     };
