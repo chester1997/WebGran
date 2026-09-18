@@ -70,7 +70,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   const bestSellers = topTen.length > 0 ? topTen : allProducts.slice(0, 5);
 
   return (
-    <div className="w-full h-full pb-24">
+    <div className="w-full h-full pb-28">
 
 
       <StudioHeader 

@@ -18,7 +18,7 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-zinc-950 text-white font-sans overflow-hidden">
-      <main className="flex-1 overflow-y-auto pb-36 scrollbar-hide">
+      <main className="flex-1 overflow-y-auto pb-32 scrollbar-hide">
         {children}
       </main>
 
