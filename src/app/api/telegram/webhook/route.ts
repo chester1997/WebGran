@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
     const update = await req.json();
 
     if (update.message && update.message.text) {
-      const text = update.message.text;
+      const text = update.message.text.trim();
       const chatId = update.message.chat.id;
 
-      if (text.startsWith("/start")) {
+      if (text.toLowerCase().startsWith("/start")) {
         const botService = new TelegramBotService(token);
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
         const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         // Custom welcome message or default
         let welcomeText = store.welcomeMessage;
         if (!welcomeText || welcomeText.trim() === "") {
-          welcomeText = `Olá {nome}! Bem-vindo(a) à *${store.name}*.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
+          welcomeText = `Olá {nome}! Bem-vindo(a) à ${store.name}.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
         }
 
         // Replace dynamic tag {nome} or {name}
@@ -58,22 +58,16 @@ export async function POST(req: NextRequest) {
 
         if (primaryBanner) {
           try {
-            await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard, "HTML");
+            await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard);
           } catch (photoErr) {
-            console.error("Failed to send welcome photo with HTML, trying plain text without parse_mode:", photoErr);
-            try {
-              await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard, undefined as any);
-            } catch (err2) {
-              console.error("Failed to send photo plain text, sending text message:", err2);
-              await botService.sendMessage(chatId, welcomeText, inlineKeyboard, undefined as any);
-            }
+            console.error("Failed to send welcome photo, sending text message:", photoErr);
+            await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
           }
         } else {
           try {
-            await botService.sendMessage(chatId, welcomeText, inlineKeyboard, "HTML");
+            await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
           } catch (msgErr) {
-            console.error("Failed to send welcome message with HTML, sending plain text:", msgErr);
-            await botService.sendMessage(chatId, welcomeText, inlineKeyboard, undefined as any);
+            console.error("Failed to send welcome message:", msgErr);
           }
         }
       }
