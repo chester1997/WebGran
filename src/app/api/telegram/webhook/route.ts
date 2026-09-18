@@ -60,11 +60,13 @@ export async function POST(req: NextRequest) {
         .replace(/\{nome\}/gi, customerFirstName)
         .replace(/\{name\}/gi, customerFirstName);
 
+      const buttonLabel = resolved.bot?.buttonText || "Abrir App";
+
       const inlineKeyboard = {
         inline_keyboard: [
           [
             {
-              text: "🛍️ Acessar Loja",
+              text: buttonLabel,
               web_app: {
                 url: miniAppUrl
               }

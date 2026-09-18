@@ -62,6 +62,7 @@ export const telegramBots = pgTable('telegram_bots', {
   photoUrl: text('photo_url'), // Bot profile photo fetched from Telegram
   tokenEncrypted: text('token_encrypted').notNull(),
   secretToken: text('secret_token'),
+  buttonText: text('button_text').default('Abrir App'),
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

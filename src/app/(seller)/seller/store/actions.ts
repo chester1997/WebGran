@@ -73,6 +73,7 @@ export async function saveBotAction(formData: FormData) {
         photoUrl: photoUrl ?? existingBot.photoUrl,
         tokenEncrypted,
         secretToken,
+        buttonText: buttonName,
         updatedAt: new Date()
       }).where(eq(telegramBots.id, existingBot.id));
     } else {
@@ -84,6 +85,7 @@ export async function saveBotAction(formData: FormData) {
         photoUrl: photoUrl ?? null,
         tokenEncrypted,
         secretToken,
+        buttonText: buttonName,
         status: "active"
       });
     }
@@ -99,8 +101,13 @@ export async function saveBotAction(formData: FormData) {
       let secretToken = existingBot.secretToken;
       if (!secretToken) {
         secretToken = crypto.randomBytes(32).toString("hex");
-        await db.update(telegramBots).set({ secretToken }).where(eq(telegramBots.id, existingBot.id));
       }
+
+      await db.update(telegramBots).set({ 
+        secretToken,
+        buttonText: buttonName,
+        updatedAt: new Date()
+      }).where(eq(telegramBots.id, existingBot.id));
 
       const webhookUrl = `${cleanWebhookUrl}?botId=${existingBot.botId}`;
       await botService.setWebhook(webhookUrl, secretToken);
