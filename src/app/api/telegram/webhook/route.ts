@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
     const url = new URL(req.url);
     const botId = url.searchParams.get("botId");
 
+    console.log("[TELEGRAM WEBHOOK] Incoming request for botId:", botId);
+
     if (!botId) {
       return NextResponse.json({ error: "botId missing" }, { status: 400 });
     }
@@ -20,6 +22,7 @@ export async function POST(req: NextRequest) {
     
     // Parse the Telegram Update object
     const update = await req.json();
+    console.log("[TELEGRAM WEBHOOK] Update payload:", JSON.stringify(update));
 
     if (update.message && update.message.text) {
       const text = update.message.text.trim();
