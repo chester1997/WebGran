@@ -1,41 +1,92 @@
-# WebGran Payments
+# WebGran — Arquitetura do Sistema de Recebimentos & Mercado Pago
 
-Este documento visa guiar as equipes de engenharia financeira que dão manutenção no núcleo financeiro da plataforma WebGran.
+## Visão Geral
 
-## 1. Fluxo Mercado Pago (Marketplace)
-A arquitetura atua no modelo **Marketplace**. Um lojista precisa necessariamente possuir uma conta aprovada no Mercado Pago. O fluxo requer OAuth2 e exige um App Registrado com escopos de pagamentos *offline_access*.
+O WebGran é uma plataforma SaaS multi-tenant onde vendedores gerenciam suas próprias lojas e vendem produtos digitais através de Mini Apps no Telegram. 
+Cada vendedor conecta sua própria conta do **Mercado Pago** via OAuth para receber pagamentos diretamente em sua conta, enquanto o WebGran retém a taxa de plataforma (split automático de marketplace).
 
-## 2. OAuth
-A obtenção da autorização (OAuth) permite gerar um Access Token que atua em nome do Vendedor (`seller`). 
-- **NUNCA** pedir para o vendedor colar Access Tokens manualmente, isso quebra o Application Fee e viola diretrizes de segurança do Provedor.
+---
 
-## 3. Split
-Quando `createCheckout()` ou `createPayment()` for acionado via Mercado Pago API, o payload enviará a variável de configuração da conta atrelada, e o WebGran coletará automaticamente sua parcela pela variável `application_fee` contida na request.
+## Componentes do Sistema
 
-## 4. Comissão WebGran
-O motor da aplicação calcula a comissão em tempo real com base no método estático do contrato da loja (`calculatePlatformFee`), e repassa para o MP em formato flat ou percentage, a depender do Provedor (MP prefere absolute fee).
+1. **Provider de Mercado Pago (`src/lib/payments/providers/mercado-pago.ts`)**
+   - Gera URL OAuth de autorização para vendedores (`connectSeller`).
+   - Processa o código do callback OAuth e salva `accessToken` e `refreshToken` criptografados AES-256 (`handleOAuthCallback`).
+   - Renova `accessToken` automaticamente caso esteja próximo da expiração (`getValidAccessToken`).
+   - Cria preferências de checkout com `marketplace_fee` para split automático (`createCheckout`).
+   - Processa webhooks do Mercado Pago e libera acessos do cliente de forma **idempotente** (`handleWebhook`).
 
-## 5. Fluxo Cora (B2B Billing)
-Para faturar a própria mensalidade da plataforma contra os Vendedores, usa-se a Cora (Banco B2B). Sem split de pagamentos, e focado em PIX Billing.
+2. **Serviço de Pagamentos (`src/lib/payments/payment-service.ts`)**
+   - Singleton `paymentService` que expõe métodos simplificados para as rotas da aplicação.
 
-## 6. Cobrança Pix
-Toda Subscription gera Invoices. Uma Invoice PENDING guarda um Payload Copia e Cola em sua coluna `qrCodeText`. O Frontend lê esse texto e renderiza via QR Code ou Botão.
+3. **Endpoints de API (`src/app/api/payments/` & `src/app/api/webhooks/`)**
+   - `GET /api/payments/mercadopago/connect`: Inicia o fluxo OAuth com o Mercado Pago.
+   - `GET /api/payments/mercadopago/callback`: Recebe o callback com o código de autorização.
+   - `POST /api/payments/mercadopago/disconnect`: Desconecta a conta do vendedor.
+   - `POST /api/payments/checkout`: Gera uma preferência de checkout para uma compra direta.
+   - `POST /api/webhooks/mercadopago`: Recebe notificações assíncronas de pagamentos do Mercado Pago.
 
-## 7. Webhook
-Ambos os fluxos injetam rotas de webhook em `api/webhooks/mercadopago` e `api/webhooks/cora`.
-As validações ocorrem via HMAC. Uma falha de assinatura retorna `401 Unauthorized`.
+4. **Painel do Vendedor (`src/app/(seller)/recebimentos/`)**
+   - Apresenta card de conexão da conta Mercado Pago com status visual.
+   - Exibe estatísticas financeiras: Saldo Líquido, Vendas Processadas (Bruto), Taxas da Plataforma e Contagem de Pedidos.
+   - Tabela filtrável de transações com busca por ID e filtro de status (Pagos, Pendentes, Cancelados).
 
-## 8. Assinatura
-A Entidade `subscriptions` gerencia o life-cycle (período ativo). Se um `dueDate` for cruzado sem pagamento, o status cai para `PAST_DUE` e posteriormente suspende o serviço (bots offline).
+5. **Mini App Checkout & Confirmção (`src/app/miniapp/[slug]/`)**
+   - Integração no carrinho (`src/app/miniapp/[slug]/cart/actions.ts`) para gerar preferência no MP e redirecionar o comprador.
+   - Tela de confirmação e status do pedido (`src/app/miniapp/[slug]/order-status/[orderId]/page.tsx`).
 
-## 9. Estados
-Pagamentos não processam devoluções ou aprovações instantâneas a não ser que os retornos sejam literais e assinados. 
-- Order states: `pending -> paid -> cancelled`.
-- Invoices: `PENDING -> PAID -> EXPIRED`.
+---
 
-## 10. Segurança e Idempotência
-Todas as chaves criptográficas (como tokens do MP dos Lojistas) devem ser salvas criptografadas.
-Os Webhooks usam Lock no banco (via ID da notificação) para rejeitar payloads processados duas vezes. Idempotency-Keys devem ser anexadas a toda request PUT/POST feita contra a API dos bancos.
+## Variaveis de Ambiente Necessárias (`.env`)
 
-## 11. Reembolso
-O Reembolso (Refund) deve reverter a Order (cancelling Accesses via AccessService), e no Mercado Pago API deve bater no endpoint genérico de Refunds para devolver o saldo ao end-user e reverter a Application Fee cobrada pelo WebGran.
+```env
+# Mercado Pago Credentials
+MP_CLIENT_ID="seu_app_id_ou_client_id"
+MP_CLIENT_SECRET="seu_client_secret"
+MP_ACCESS_TOKEN="seu_access_token_da_plataforma"
+MP_WEBHOOK_SECRET="seu_secret_de_webhook"
+
+# Taxa de Plataforma WebGran (%)
+NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE="10"
+```
+
+---
+
+## Fluxo de Pagamento & Liberação de Acesso
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Cliente (Telegram Mini App)
+    participant MiniApp as Mini App Frontend
+    participant API as API WebGran
+    participant MP as Mercado Pago API
+    participant DB as Neon DB
+    actor Vendedor as Vendedor WebGran
+
+    Vendedor->>API: Conecta Mercado Pago via OAuth
+    API->>MP: Troca código por Access Token
+    API->>DB: Salva tokens criptografados (AES-256) em seller_payment_connections
+
+    Cliente->>MiniApp: Clica em Finalizar Compra
+    MiniApp->>API: POST /miniapp/[slug]/cart/actions
+    API->>DB: Cria Pedido PENDENTE em orders e order_items
+    API->>MP: POST /checkout/preferences (marketplace_fee = 10%)
+    MP-->>API: Retorna preferencia (checkoutUrl)
+    API-->>MiniApp: Redireciona para checkoutUrl (Mercado Pago)
+    
+    Cliente->>MP: Realiza Pagamento (PIX / Cartão)
+    MP->>API: Webhook (POST /api/webhooks/mercadopago)
+    API->>MP: GET /v1/payments/{id} (Valida status = approved)
+    API->>DB: Atualiza orders (status = 'paid', paidAt, platformFee, netAmount)
+    API->>DB: Insere registro em accesses (Liberação Idempotente)
+    Cliente->>MiniApp: Redirecionado para /miniapp/[slug]/order-status/[orderId]
+```
+
+---
+
+## Segurança & Isolamento Multi-Tenant
+
+- **Criptografia AES-256**: Nenhum `access_token` ou `refresh_token` é armazenado em texto puro. O módulo `src/lib/encryption.ts` criptografa todos os tokens antes de persistir no Neon DB.
+- **Isolamento de Loja**: Todas as consultas verificam estritamente o `sellerId` da sessão autenticada ou o `storeId`.
+- **Idempotência no Webhook**: O processamento de webhooks verifica a existência prévia de registros na tabela `accesses` por pedido/produto antes de conceder acesso, garantindo que notificações duplicadas do Mercado Pago não dupliquem acessos ou alterem estados já concluídos.

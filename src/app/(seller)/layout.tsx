@@ -11,6 +11,7 @@ import {
   Layers, 
   ShoppingCart, 
   Users, 
+  Wallet,
   Settings,
   Search,
   PanelLeftClose,
@@ -33,6 +34,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },
     { name: "Pedidos", href: "/seller/orders", icon: ShoppingCart },
+    { name: "Recebimento", href: "/seller/recebimentos", icon: Wallet },
     { name: "Clientes", href: "/seller/customers", icon: Users },
     { name: "Configurações", href: "/seller/settings", icon: Settings },
   ];

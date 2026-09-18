@@ -19,7 +19,15 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     
     if (result.success) {
       clearCart();
-      router.push(`/miniapp/${storeSlug}/accesses`);
+      if (result.checkoutUrl) {
+        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.openLink) {
+          (window as any).Telegram.WebApp.openLink(result.checkoutUrl);
+        } else {
+          window.location.href = result.checkoutUrl;
+        }
+      } else {
+        router.push(`/miniapp/${storeSlug}/accesses`);
+      }
     } else {
       alert(result.error || "Ocorreu um erro na compra");
       setIsProcessing(false);

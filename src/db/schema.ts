@@ -123,6 +123,12 @@ export const orders = pgTable('orders', {
   discount: decimal('discount', { precision: 10, scale: 2 }).notNull().default('0'),
   total: decimal('total', { precision: 10, scale: 2 }).notNull(),
   currency: text('currency').notNull().default('BRL'),
+  paymentId: text('payment_id'),
+  preferenceId: text('preference_id'),
+  paymentMethod: text('payment_method'),
+  platformFee: decimal('platform_fee', { precision: 10, scale: 2 }).default('0'),
+  netAmount: decimal('net_amount', { precision: 10, scale: 2 }).default('0'),
+  paidAt: timestamp('paid_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -327,11 +333,15 @@ export const carouselProductsRelations = relations(carouselProducts, ({ one }) =
 export const sellerPaymentConnections = pgTable('seller_payment_connections', {
   id: uuid('id').primaryKey().defaultRandom(),
   sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  storeId: uuid('store_id').references(() => stores.id, { onDelete: 'cascade' }),
   provider: text('provider').notNull(), // 'mercado_pago'
+  providerUserId: text('provider_user_id'),
+  providerEmail: text('provider_email'),
   accessTokenEncrypted: text('access_token_encrypted').notNull(),
   refreshTokenEncrypted: text('refresh_token_encrypted'),
   accountId: text('account_id'),
   status: text('status').notNull().default('active'),
+  expiresAt: timestamp('expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -385,6 +395,10 @@ export const sellerPaymentConnectionsRelations = relations(sellerPaymentConnecti
   seller: one(users, {
     fields: [sellerPaymentConnections.sellerId],
     references: [users.id],
+  }),
+  store: one(stores, {
+    fields: [sellerPaymentConnections.storeId],
+    references: [stores.id],
   }),
 }));
 
