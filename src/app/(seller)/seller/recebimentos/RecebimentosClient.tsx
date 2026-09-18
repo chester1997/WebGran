@@ -219,7 +219,7 @@ export default function RecebimentosClient({ connection, metrics, transactions }
       </div>
 
       {/* Metrics Grid Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Metric 1: Total Liquido */}
         <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 space-y-3 relative overflow-hidden shadow-md">
           <div className="flex items-center justify-between text-zinc-400">
@@ -253,23 +253,7 @@ export default function RecebimentosClient({ connection, metrics, transactions }
           </p>
         </div>
 
-        {/* Metric 3: Taxa WebGran */}
-        <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 space-y-3 relative overflow-hidden shadow-md">
-          <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Taxa WebGran</span>
-            <div className="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-white tracking-tight">
-            {formatCurrency(metrics.totalTaxa)}
-          </div>
-          <p className="text-[11px] text-zinc-500">
-            Split automático de taxa da plataforma
-          </p>
-        </div>
-
-        {/* Metric 4: Pedidos Concluidos */}
+        {/* Metric 3: Pedidos Concluidos */}
         <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 space-y-3 relative overflow-hidden shadow-md">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Status de Pedidos</span>
@@ -345,7 +329,6 @@ export default function RecebimentosClient({ connection, metrics, transactions }
                 <th className="py-3 px-4">Cliente</th>
                 <th className="py-3 px-4">Data</th>
                 <th className="py-3 px-4 text-right">Valor Bruto</th>
-                <th className="py-3 px-4 text-right">Taxa WebGran</th>
                 <th className="py-3 px-4 text-right">Valor Líquido</th>
                 <th className="py-3 px-4 text-center">Status</th>
               </tr>
@@ -353,7 +336,7 @@ export default function RecebimentosClient({ connection, metrics, transactions }
             <tbody className="divide-y divide-white/5 text-xs">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="py-8 text-center text-zinc-500">
                     Nenhuma transação encontrada.
                   </td>
                 </tr>
@@ -377,10 +360,6 @@ export default function RecebimentosClient({ connection, metrics, transactions }
 
                     <td className="py-3.5 px-4 text-right font-medium text-white">
                       {formatCurrency(tx.total)}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right text-zinc-400 font-mono">
-                      -{formatCurrency(tx.platformFee)}
                     </td>
 
                     <td className="py-3.5 px-4 text-right font-bold text-emerald-400">
