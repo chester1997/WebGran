@@ -39,6 +39,16 @@ export class TelegramBotService {
     });
   }
 
+  async sendPhoto(chatId: string | number, photo: string, caption?: string, replyMarkup?: any, parseMode: string = "Markdown"): Promise<unknown> {
+    return telegramFetch(this.token, 'sendPhoto', {
+      chat_id: chatId,
+      photo,
+      caption,
+      parse_mode: parseMode,
+      reply_markup: replyMarkup
+    });
+  }
+
   async setChatMenuButton(menuButton: any): Promise<boolean> {
     return telegramFetch<boolean>(this.token, 'setChatMenuButton', {
       menu_button: menuButton
@@ -65,10 +75,6 @@ export class TelegramBotService {
     } catch {
       return null;
     }
-  }
-
-  async sendPhoto(_chatId: string | number, _photo: string): Promise<unknown> {
-    throw new Error("Not implemented yet");
   }
 
   async sendVideo(_chatId: string | number, _video: string): Promise<unknown> {

@@ -30,6 +30,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { name: "Dashboard", href: "/seller", icon: LayoutDashboard },
     { name: "Loja & Bot", href: "/seller/store", icon: Store },
+    { name: "Boas-vindas", href: "/seller/boas-vindas", icon: Sparkles },
     { name: "Produtos", href: "/seller/products", icon: Package },
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },

@@ -45,6 +45,10 @@ export const stores = pgTable('stores', {
   description: text('description'),
   status: text('status').notNull().default('active'), // 'active' | 'inactive' | 'suspended'
   themeId: uuid('theme_id').references(() => themes.id, { onDelete: 'set null' }),
+  welcomeMessage: text('welcome_message'),
+  welcomeBanners: jsonb('welcome_banners').default([]),
+  supportType: text('support_type').default('telegram'),
+  supportValue: text('support_value'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

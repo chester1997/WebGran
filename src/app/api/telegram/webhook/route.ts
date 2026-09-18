@@ -26,10 +26,21 @@ export async function POST(req: NextRequest) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
         const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
         
-        // Bem-vindo e botão
-        const welcomeMessage = `Olá! Bem-vindo(a) à *${store.name}*.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
-        
-        await botService.sendMessage(chatId, welcomeMessage, {
+        // Customer name formatting
+        const customerFirstName = update.message.from?.first_name || "Cliente";
+
+        // Custom welcome message or default
+        let welcomeText = store.welcomeMessage;
+        if (!welcomeText || welcomeText.trim() === "") {
+          welcomeText = `Olá {nome}! Bem-vindo(a) à *${store.name}*.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
+        }
+
+        // Replace dynamic tag {nome} or {name}
+        welcomeText = welcomeText
+          .replace(/\{nome\}/gi, customerFirstName)
+          .replace(/\{name\}/gi, customerFirstName);
+
+        const inlineKeyboard = {
           inline_keyboard: [
             [
               {
@@ -40,7 +51,21 @@ export async function POST(req: NextRequest) {
               }
             ]
           ]
-        });
+        };
+
+        const banners = (store.welcomeBanners as string[]) || [];
+        const primaryBanner = banners.find(b => b && b.trim() !== "");
+
+        if (primaryBanner) {
+          try {
+            await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard, "HTML");
+          } catch (photoErr) {
+            console.error("Failed to send welcome photo, falling back to message:", photoErr);
+            await botService.sendMessage(chatId, welcomeText, inlineKeyboard, "HTML");
+          }
+        } else {
+          await botService.sendMessage(chatId, welcomeText, inlineKeyboard, "HTML");
+        }
       }
     }
 
