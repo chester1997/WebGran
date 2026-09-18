@@ -79,6 +79,20 @@ export class TelegramBotService {
     }
   }
 
+  async createChatInviteLink(chatId: string | number, name?: string, memberLimit: number = 1): Promise<{ invite_link: string }> {
+    return telegramFetch<{ invite_link: string }>(this.token, 'createChatInviteLink', {
+      chat_id: chatId,
+      name: name || 'Acesso WebGran',
+      member_limit: memberLimit,
+    });
+  }
+
+  async getChat(chatId: string | number): Promise<any> {
+    return telegramFetch<any>(this.token, 'getChat', {
+      chat_id: chatId,
+    });
+  }
+
   async sendVideo(_chatId: string | number, _video: string): Promise<unknown> {
     throw new Error("Not implemented yet");
   }
