@@ -142,3 +142,17 @@ export async function updateProductAction(productId: string, formData: FormData)
   revalidatePath("/seller/products");
   return { success: true };
 }
+
+export async function deleteProductAction(productId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    throw new Error("Store not found");
+  }
+
+  await db.delete(products).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
+
+  revalidatePath("/seller/products");
+  return { success: true };
+}
