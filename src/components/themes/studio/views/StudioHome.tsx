@@ -94,8 +94,15 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         
         {/* Categories Pills */}
         {store.categories && store.categories.length > 0 && (
-          <section className="px-4 py-4">
-            <div className="flex overflow-x-auto gap-2 scrollbar-hide">
+          <section className="py-2 w-full overflow-hidden">
+            <div 
+              className="flex overflow-x-auto scrollbar-hide w-full"
+              style={{
+                paddingInlineStart: "var(--miniapp-content-padding-x)",
+                paddingInlineEnd: "var(--miniapp-content-padding-x)",
+                gap: "0.5rem",
+              }}
+            >
               {store.categories.map(cat => (
                 <Link key={cat.id} href={`/miniapp/${storeSlug}/category/${cat.slug}`} className="shrink-0 px-4 py-1.5 rounded-full border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium hover:bg-white hover:text-black transition-colors">
                   {cat.name}

@@ -1,6 +1,6 @@
 import React from "react";
-import Link from "next/link";
 import { ProductCard } from "./ProductCard";
+import { HorizontalCarousel } from "./HorizontalCarousel";
 
 interface Product {
   id: string;
@@ -19,22 +19,15 @@ interface ProductCarouselProps {
 export function ProductCarousel({ title, storeSlug, products }: ProductCarouselProps) {
   if (products.length === 0) return null;
 
+  const countBadge = `${products.length} produto${products.length !== 1 ? 's' : ''}`;
+
   return (
-    <section className="py-2">
-      <div className="flex items-center gap-2 px-4 mb-3">
-        <div className="w-1 h-4 bg-violet-600 rounded-full"></div>
-        <h2 className="text-white text-base font-bold tracking-tight uppercase flex items-center gap-2">
-          {title}
-          <span className="text-zinc-600 text-[10px] lowercase font-normal">{products.length} produto{products.length !== 1 ? 's' : ''}</span>
-        </h2>
-      </div>
-      <div className="flex overflow-x-auto gap-3 px-4 pb-4 snap-x snap-mandatory scrollbar-hide">
-        {products.map(product => (
-          <div key={product.id} className="snap-start shrink-0">
-            <ProductCard storeSlug={storeSlug} product={product} />
-          </div>
-        ))}
-      </div>
-    </section>
+    <HorizontalCarousel title={title} subtitle={countBadge}>
+      {products.map(product => (
+        <div key={product.id} className="snap-start shrink-0">
+          <ProductCard storeSlug={storeSlug} product={product} />
+        </div>
+      ))}
+    </HorizontalCarousel>
   );
 }
