@@ -33,58 +33,61 @@ export async function POST(req: NextRequest) {
     const { store, token } = resolved;
     const update = await req.json();
 
-    if (update.message && update.message.text) {
-      const text = update.message.text.trim();
+    if (update.message && (update.message.text || update.message.caption)) {
+      const text = (update.message.text || update.message.caption || "").trim();
       const chatId = update.message.chat.id;
 
-      if (text.toLowerCase().startsWith("/start")) {
-        const botService = new TelegramBotService(token);
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-        const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
-        
-        // Customer name formatting
-        const customerFirstName = update.message.from?.first_name || "Cliente";
+      const botService = new TelegramBotService(token);
+      let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+      if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
+        rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
+      }
+      const appUrl = rawAppUrl.replace(/\/+$/, "");
+      const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
+      
+      // Customer name formatting
+      const customerFirstName = update.message.from?.first_name || "Cliente";
 
-        // Custom welcome message or default
-        let welcomeText = store.welcomeMessage;
-        if (!welcomeText || welcomeText.trim() === "") {
-          welcomeText = `Olá {nome}! Bem-vindo(a) à ${store.name}.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
-        }
+      // Custom welcome message or default
+      let welcomeText = store.welcomeMessage;
+      if (!welcomeText || welcomeText.trim() === "") {
+        welcomeText = `Olá {nome}! Bem-vindo(a) à ${store.name}.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
+      }
 
-        // Replace dynamic tag {nome} or {name}
-        welcomeText = welcomeText
-          .replace(/\{nome\}/gi, customerFirstName)
-          .replace(/\{name\}/gi, customerFirstName);
+      // Replace dynamic tag {nome} or {name}
+      welcomeText = welcomeText
+        .replace(/\{nome\}/gi, customerFirstName)
+        .replace(/\{name\}/gi, customerFirstName);
 
-        const inlineKeyboard = {
-          inline_keyboard: [
-            [
-              {
-                text: "Abrir Loja",
-                web_app: {
-                  url: miniAppUrl
-                }
+      const inlineKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "🛍️ Acessar Loja",
+              web_app: {
+                url: miniAppUrl
               }
-            ]
+            }
           ]
-        };
+        ]
+      };
 
-        const banners = (store.welcomeBanners as string[]) || [];
-        const primaryBanner = banners.find(b => b && b.trim() !== "");
+      const banners = (store.welcomeBanners as string[]) || [];
+      const primaryBanner = banners.find(b => b && b.trim() !== "");
 
-        if (primaryBanner) {
-          try {
-            await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard);
-          } catch (photoErr) {
-            console.error("Failed to send welcome photo, sending text message:", photoErr);
-            await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
-          }
-        } else {
-          try {
-            await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
-          } catch (msgErr) {
-            console.error("Failed to send welcome message:", msgErr);
-          }
+      if (primaryBanner) {
+        try {
+          await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard);
+        } catch (photoErr) {
+          console.error("Failed to send welcome photo, sending text message:", photoErr);
+          await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
+        }
+      } else {
+        try {
+          await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
+        } catch (msgErr) {
+          console.error("Failed to send welcome message:", msgErr);
         }
       }
     }
