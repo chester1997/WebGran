@@ -43,8 +43,9 @@ export async function saveBotAction(formData: FormData) {
     // 2. Generate secretToken for secure multi-tenant verification
     const secretToken = crypto.randomBytes(32).toString("hex");
 
-    // 3. Set Webhook automatically with clean URL and secret_token
-    await botService.setWebhook(cleanWebhookUrl, secretToken);
+    // 3. Set Webhook automatically with botId query param and secret_token header
+    const webhookUrl = `${cleanWebhookUrl}?botId=${botTelegramId}`;
+    await botService.setWebhook(webhookUrl, secretToken);
 
     // 4. Set the blue Menu Button automatically
     await botService.setChatMenuButton({
@@ -101,7 +102,8 @@ export async function saveBotAction(formData: FormData) {
         await db.update(telegramBots).set({ secretToken }).where(eq(telegramBots.id, existingBot.id));
       }
 
-      await botService.setWebhook(cleanWebhookUrl, secretToken);
+      const webhookUrl = `${cleanWebhookUrl}?botId=${existingBot.botId}`;
+      await botService.setWebhook(webhookUrl, secretToken);
 
       await botService.setChatMenuButton({
         type: "web_app",
