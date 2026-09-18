@@ -21,6 +21,10 @@ export async function saveBotAction(formData: FormData) {
   let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+  // If user configured non-www domain while Vercel domain redirect is www, ensure canonical host
+  if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
+    rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
+  }
   const appUrl = rawAppUrl.replace(/\/+$/, "");
   const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
 
