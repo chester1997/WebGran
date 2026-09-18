@@ -156,3 +156,41 @@ export async function deleteProductAction(productId: string) {
   revalidatePath("/seller/products");
   return { success: true };
 }
+
+export async function testTelegramChatAccessAction(botId: string, telegramChatId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    throw new Error("Store not found");
+  }
+
+  const { telegramBots } = await import("@/db/schema");
+  const { decrypt } = await import("@/lib/encryption");
+  const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
+
+  let bot = null;
+  if (botId) {
+    bot = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+  }
+
+  if (!bot) {
+    bot = await db.query.telegramBots.findFirst({
+      where: eq(telegramBots.storeId, store.id)
+    });
+  }
+
+  if (!bot) {
+    return {
+      success: false,
+      error: "Nenhum bot do Telegram está conectado a esta loja."
+    };
+  }
+
+  const botToken = decrypt(bot.tokenEncrypted);
+  const result = await TelegramDeliveryService.validateBotAndChatPermission(botToken, telegramChatId);
+  return result;
+}
+

@@ -4,6 +4,7 @@ import { orders, telegramCustomers } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Search, ShoppingCart, MoreHorizontal, Filter, Receipt, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RetryDeliveryButton } from "./RetryDeliveryButton";
 
 export default async function OrdersPage() {
   await requireSeller();
@@ -17,7 +18,12 @@ export default async function OrdersPage() {
     where: eq(orders.storeId, store.id),
     orderBy: [desc(orders.createdAt)],
     with: {
-      customer: true
+      customer: true,
+      accesses: {
+        with: {
+          product: true
+        }
+      }
     }
   });
 
@@ -62,14 +68,15 @@ export default async function OrdersPage() {
                 <th className="py-4">Cliente</th>
                 <th className="py-4">Data</th>
                 <th className="py-4">Total</th>
-                <th className="py-4">Status</th>
+                <th className="py-4">Pagamento</th>
+                <th className="py-4">Entrega</th>
                 <th className="py-4 text-right pr-6">Ações</th>
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-white/5">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mb-4 border border-white/5 shadow-inner">
                         <ShoppingCart className="w-8 h-8 text-zinc-500" />
@@ -80,63 +87,88 @@ export default async function OrdersPage() {
                   </td>
                 </tr>
               ) : (
-                items.map((order) => (
-                  <tr key={order.id} className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="py-4 pl-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-zinc-300 font-mono text-xs bg-white/5 px-2 py-1 rounded border border-white/5">
-                          #{order.id.slice(0, 8)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      {order.customer ? (
+                items.map((order) => {
+                  const access = order.accesses?.[0];
+                  return (
+                    <tr key={order.id} className="group hover:bg-white/[0.02] transition-colors">
+                      <td className="py-4 pl-6">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/20 font-bold text-[10px]">
-                            {order.customer.photoUrl ? (
-                              <img src={order.customer.photoUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              (order.customer.firstName?.[0] || 'U').toUpperCase()
+                          <span className="text-zinc-300 font-mono text-xs bg-white/5 px-2 py-1 rounded border border-white/5">
+                            #{order.id.slice(0, 8)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        {order.customer ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/20 font-bold text-[10px]">
+                              {order.customer.photoUrl ? (
+                                <img src={order.customer.photoUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                              ) : (
+                                (order.customer.firstName?.[0] || 'U').toUpperCase()
+                              )}
+                            </div>
+                            <span className="text-zinc-200 font-medium">{order.customer.firstName} {order.customer.lastName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-500">Desconhecido</span>
+                        )}
+                      </td>
+                      <td className="py-4 text-zinc-400 text-xs">
+                        {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="py-4">
+                        <span className="text-emerald-400 font-medium tracking-tight">R$ {Number(order.total).toFixed(2).replace('.', ',')}</span>
+                      </td>
+                      <td className="py-4">
+                        {order.status === 'paid' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> APROVADO
+                          </span>
+                        ) : order.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div> PENDENTE
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> CANCELADO
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4">
+                        {!access ? (
+                          <span className="text-zinc-500 text-xs">—</span>
+                        ) : access.deliveryStatus === 'DELIVERED' || access.status === 'ACTIVE' ? (
+                          <div className="flex flex-col">
+                            <span className="inline-flex items-center gap-1 text-emerald-400 text-xs font-semibold">
+                              🟢 ENTREGUE
+                            </span>
+                            {access.telegramChatId && (
+                              <span className="text-[10px] text-zinc-500 font-mono">Chat: {access.telegramChatId}</span>
                             )}
                           </div>
-                          <span className="text-zinc-200 font-medium">{order.customer.firstName} {order.customer.lastName}</span>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-500">Desconhecido</span>
-                      )}
-                    </td>
-                    <td className="py-4 text-zinc-400">
-                      {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-4">
-                      <span className="text-emerald-400 font-medium tracking-tight">R$ {Number(order.total).toFixed(2).replace('.', ',')}</span>
-                    </td>
-                    <td className="py-4">
-                      {order.status === 'paid' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Pago
-                        </span>
-                      ) : order.status === 'pending' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div> Pendente
-                        </span>
-                      ) : order.status === 'cancelled' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Cancelado
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
-                          {order.status}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 text-right pr-6">
-                      <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg">
-                        <ArrowUpRight className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                        ) : (
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="inline-flex items-center gap-1 text-red-400 text-xs font-semibold">
+                              🔴 FALHOU
+                            </span>
+                            {access.deliveryError && (
+                              <span className="text-[10px] text-red-400/80 max-w-[160px] truncate" title={access.deliveryError}>
+                                {access.deliveryError}
+                              </span>
+                            )}
+                            <RetryDeliveryButton accessId={access.id} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 text-right pr-6">
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg">
+                          <ArrowUpRight className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

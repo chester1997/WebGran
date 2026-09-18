@@ -397,90 +397,9 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
         })
         .where(eq(orders.id, order.id));
 
-      // Idempotent Access Fulfillment & Automatic Telegram Delivery
-      const itemsList = order.items || await db.query.orderItems.findMany({
-        where: eq(orderItems.orderId, order.id),
-      });
-
-      const customer = await db.query.telegramCustomers.findFirst({
-        where: eq(telegramCustomers.id, order.customerId)
-      });
-
-      const bot = await db.query.telegramBots.findFirst({
-        where: eq(telegramBots.storeId, order.storeId)
-      });
-
-      for (const item of itemsList) {
-        const existingAccess = await db.query.accesses.findFirst({
-          where: and(
-            eq(accesses.orderId, order.id),
-            eq(accesses.productId, item.productId)
-          ),
-        });
-
-        if (!existingAccess) {
-          await db.insert(accesses).values({
-            storeId: order.storeId,
-            customerId: order.customerId,
-            productId: item.productId,
-            orderId: order.id,
-            status: 'active',
-            grantedAt: new Date(),
-          });
-        }
-
-        // Automatic Telegram Delivery
-        if (customer && bot) {
-          try {
-            const product = await db.query.products.findFirst({
-              where: eq(products.id, item.productId)
-            });
-
-            if (product) {
-              const botToken = decrypt(bot.tokenEncrypted);
-              const { TelegramBotService } = await import('@/lib/telegram/bot');
-              const botService = new TelegramBotService(botToken);
-              
-              let deliveryUrl = '';
-              
-              if (product.deliveryType === 'telegram' && product.deliveryValue) {
-                try {
-                  const linkObj = await botService.createChatInviteLink(product.deliveryValue, `Acesso - ${product.title}`);
-                  deliveryUrl = linkObj.invite_link;
-                } catch (linkErr) {
-                  console.warn(`[MP Webhook] Could not create dynamic invite link for chat ${product.deliveryValue}:`, linkErr);
-                  deliveryUrl = `https://t.me/c/${product.deliveryValue.replace('-100', '')}`;
-                }
-              } else if (product.deliveryValue) {
-                deliveryUrl = product.deliveryValue;
-              }
-
-              let msgText = `🎉 *Pagamento Confirmado!*\n\nSeu acesso para *${product.title}* foi liberado com sucesso!`;
-              const keyboardButtons = [];
-
-              if (deliveryUrl) {
-                keyboardButtons.push([{ text: "🎬 Acessar Conteúdo", url: deliveryUrl }]);
-              }
-
-              let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-              if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
-              if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
-                rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
-              }
-              const appUrl = rawAppUrl.replace(/\/+$/, "");
-
-              const storeObj = await db.query.stores.findFirst({ where: eq(stores.id, order.storeId) });
-              if (storeObj) {
-                keyboardButtons.push([{ text: "Meus Acessos", web_app: { url: `${appUrl}/miniapp/${storeObj.slug}/accesses` } }]);
-              }
-
-              await botService.sendMessage(customer.telegramUserId, msgText, { inline_keyboard: keyboardButtons });
-            }
-          } catch (delivErr) {
-            console.error('[MP Webhook] Error sending automated Telegram delivery notification:', delivErr);
-          }
-        }
-      }
+      // Delegate Access Fulfillment & Telegram Delivery to AccessDeliveryService
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+      await AccessDeliveryService.processOrderDelivery(order.id);
 
       console.log(`[MP Webhook] Successfully processed payment ${paymentId} for order ${order.id}. Granted access.`);
     } else if (paymentStatus === 'cancelled' || paymentStatus === 'rejected') {

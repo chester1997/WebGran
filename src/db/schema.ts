@@ -156,11 +156,19 @@ export const accesses = pgTable('accesses', {
   customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
-  status: text('status').notNull().default('active'), // 'active' | 'revoked' | 'expired'
-  grantedAt: timestamp('granted_at').defaultNow().notNull(),
+  deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
+  telegramChatId: text('telegram_chat_id'),
+  inviteLink: text('invite_link'),
+  status: text('status').notNull().default('PENDING'), // 'PENDING' | 'ACTIVE' | 'REVOKED' | 'EXPIRED' | 'FAILED'
+  deliveryStatus: text('delivery_status').notNull().default('PENDING'), // 'PENDING' | 'DELIVERED' | 'FAILED'
+  deliveryError: text('delivery_error'),
+  grantedAt: timestamp('granted_at'),
   expiresAt: timestamp('expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  accessOrderUnique: unique().on(t.storeId, t.customerId, t.productId, t.orderId)
+}));
 
 export const banners = pgTable('banners', {
   id: uuid('id').primaryKey().defaultRandom(),

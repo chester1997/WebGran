@@ -57,13 +57,15 @@ export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
                 <h3 className="font-bold text-sm leading-tight text-white line-clamp-2 drop-shadow mb-3">
                   {acc.product.title}
                 </h3>
-                <Link 
-                  href={`/miniapp/${storeSlug}/product/${acc.product.slug}`}
-                  className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-medium text-xs py-2 rounded flex items-center justify-center gap-1 transition-colors"
+                <a 
+                  href={acc.inviteLink || acc.product.deliveryValue || `/miniapp/${storeSlug}/product/${acc.product.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2 rounded flex items-center justify-center gap-1 transition-colors shadow"
                 >
-                  <PlayCircle className="w-3 h-3" />
-                  Acessar
-                </Link>
+                  <PlayCircle className="w-3.5 h-3.5" />
+                  Acessar Conteúdo
+                </a>
               </div>
             </div>
           ))}

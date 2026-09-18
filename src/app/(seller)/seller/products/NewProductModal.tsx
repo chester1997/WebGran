@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
-import { createProductAction } from "./actions";
+import { createProductAction, testTelegramChatAccessAction } from "./actions";
 
 export function NewProductModal({ categories, bots }: { categories: any[]; bots: any[] }) {
   const router = useRouter();
@@ -21,7 +21,24 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
   const [deliveryType, setDeliveryType] = useState<"telegram" | "external">("telegram");
   const [deliveryValue, setDeliveryValue] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [selectedBotId, setSelectedBotId] = useState("");
+  const [testingAccess, setTestingAccess] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; chatName?: string; error?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTestAccess = async () => {
+    if (!deliveryValue.trim()) return;
+    setTestingAccess(true);
+    setTestResult(null);
+    try {
+      const res = await testTelegramChatAccessAction(selectedBotId, deliveryValue.trim());
+      setTestResult(res);
+    } catch (e: any) {
+      setTestResult({ success: false, error: e.message || "Erro no teste de acesso." });
+    } finally {
+      setTestingAccess(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -241,16 +258,40 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
 
               {/* Input for Delivery */}
               {deliveryType === "telegram" && (
-                <div className="space-y-1.5">
-                  <input 
-                    type="text"
-                    name="deliveryValue"
-                    required
-                    value={deliveryValue}
-                    onChange={(e) => setDeliveryValue(e.target.value)}
-                    placeholder="Ex: -1001234567890"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
-                  />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      name="deliveryValue"
+                      required
+                      value={deliveryValue}
+                      onChange={(e) => {
+                        setDeliveryValue(e.target.value);
+                        setTestResult(null);
+                      }}
+                      placeholder="Ex: -1001234567890"
+                      className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={testingAccess || !deliveryValue.trim()}
+                      onClick={handleTestAccess}
+                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-11 px-4 rounded-lg shrink-0"
+                    >
+                      {testingAccess ? "Testando..." : "Testar acesso"}
+                    </Button>
+                  </div>
+
+                  {testResult && (
+                    <div className={`p-3 rounded-lg border text-xs flex items-center justify-between ${testResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{testResult.success ? "🟢" : "🔴"}</span>
+                        <span>{testResult.success ? `Bot conectado | Destino acessível (${testResult.chatName})` : `Bot sem permissão: ${testResult.error}`}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="text-[11px] text-zinc-500 leading-relaxed">
                     <p><strong>Como obter o ID:</strong> Acesse algum bot de ID no Telegram e encaminhe uma mensagem do canal/grupo.</p>
                     <p className="text-amber-500/80 mt-1">⚠️ O bot de vendas precisa ser <strong>administrador</strong> do grupo/canal para gerar links de convite.</p>
@@ -277,7 +318,12 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Vincular Bot</label>
-                <select name="botId" defaultValue="" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select 
+                  name="botId" 
+                  value={selectedBotId} 
+                  onChange={(e) => setSelectedBotId(e.target.value)} 
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
+                >
                   <option value="">Todos os Bots (Loja Geral)</option>
                   {bots?.map(b => (
                     <option key={b.id} value={b.id}>{b.displayName || `@${b.username}`}</option>

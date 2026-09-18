@@ -15,11 +15,13 @@ export class AccessService {
     });
 
     if (existing) {
-      if (existing.status !== 'active') {
+      if (existing.status !== 'ACTIVE') {
         await db.update(accesses).set({
-          status: 'active',
+          status: 'ACTIVE',
+          deliveryStatus: 'DELIVERED',
           orderId: orderId || existing.orderId,
-          grantedAt: new Date()
+          grantedAt: new Date(),
+          updatedAt: new Date(),
         }).where(eq(accesses.id, existing.id));
       }
       return existing;
@@ -30,7 +32,8 @@ export class AccessService {
       customerId,
       productId,
       orderId,
-      status: 'active',
+      status: 'ACTIVE',
+      deliveryStatus: 'DELIVERED',
     }).returning();
 
     return inserted[0];
@@ -38,14 +41,14 @@ export class AccessService {
 
   static async revokeAccess(accessId: string) {
     return db.update(accesses)
-      .set({ status: 'revoked' })
+      .set({ status: 'REVOKED', updatedAt: new Date() })
       .where(eq(accesses.id, accessId))
       .returning();
   }
 
   static async expireAccess(accessId: string) {
     return db.update(accesses)
-      .set({ status: 'expired' })
+      .set({ status: 'EXPIRED', updatedAt: new Date() })
       .where(eq(accesses.id, accessId))
       .returning();
   }
@@ -55,12 +58,12 @@ export class AccessService {
       where: and(
         eq(accesses.storeId, storeId),
         eq(accesses.customerId, customerId),
-        eq(accesses.status, 'active')
+        eq(accesses.status, 'ACTIVE')
       ),
       with: {
         product: true
       },
-      orderBy: (accesses, { desc }) => [desc(accesses.grantedAt)]
+      orderBy: (accesses, { desc }) => [desc(accesses.createdAt)]
     });
   }
 }

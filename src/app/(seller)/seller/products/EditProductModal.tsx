@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Edit3, ImageIcon, AlertCircle } from "lucide-react";
-import { updateProductAction } from "./actions";
+import { updateProductAction, testTelegramChatAccessAction } from "./actions";
 
 export function EditProductModal({ categories, bots, product }: { categories: any[]; bots: any[]; product: any }) {
   const router = useRouter();
@@ -22,7 +22,24 @@ export function EditProductModal({ categories, bots, product }: { categories: an
   );
   const [deliveryValue, setDeliveryValue] = useState(product?.deliveryValue || "");
   const [imageUrl, setImageUrl] = useState(product?.coverUrl || "");
+  const [selectedBotId, setSelectedBotId] = useState(product?.botId || "");
+  const [testingAccess, setTestingAccess] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; chatName?: string; error?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTestAccess = async () => {
+    if (!deliveryValue.trim()) return;
+    setTestingAccess(true);
+    setTestResult(null);
+    try {
+      const res = await testTelegramChatAccessAction(selectedBotId, deliveryValue.trim());
+      setTestResult(res);
+    } catch (e: any) {
+      setTestResult({ success: false, error: e.message || "Erro no teste de acesso." });
+    } finally {
+      setTestingAccess(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -223,16 +240,40 @@ export function EditProductModal({ categories, bots, product }: { categories: an
               <input type="hidden" name="deliveryType" value={deliveryType} />
 
               {deliveryType === "telegram" && (
-                <div>
-                  <input 
-                    type="text" 
-                    name="deliveryValue"
-                    required
-                    value={deliveryValue}
-                    onChange={(e) => setDeliveryValue(e.target.value)}
-                    placeholder="Ex: -1001234567890"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
-                  />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      name="deliveryValue"
+                      required
+                      value={deliveryValue}
+                      onChange={(e) => {
+                        setDeliveryValue(e.target.value);
+                        setTestResult(null);
+                      }}
+                      placeholder="Ex: -1001234567890"
+                      className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={testingAccess || !deliveryValue.trim()}
+                      onClick={handleTestAccess}
+                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 px-4 rounded-lg shrink-0"
+                    >
+                      {testingAccess ? "Testando..." : "Testar acesso"}
+                    </Button>
+                  </div>
+
+                  {testResult && (
+                    <div className={`p-3 rounded-lg border text-xs flex items-center justify-between ${testResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{testResult.success ? "🟢" : "🔴"}</span>
+                        <span>{testResult.success ? `Bot conectado | Destino acessível (${testResult.chatName})` : `Bot sem permissão: ${testResult.error}`}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="text-[10px] text-zinc-500 mt-1.5"><strong>Como obter o ID:</strong> Encaminhe uma mensagem do canal/grupo para o bot de ID.</p>
                   <p className="text-[10px] text-amber-500/80 mt-0.5">⚠ O bot precisa ser <strong>administrador</strong> do grupo/canal para gerar links de convite.</p>
                 </div>
