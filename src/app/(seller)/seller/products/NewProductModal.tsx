@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { 
   Dialog, 
   DialogTrigger, 
@@ -9,22 +10,30 @@ import {
   DialogTitle, 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { createProductAction } from "./actions";
 
 export function NewProductModal({ categories, bots }: { categories: any[]; bots: any[] }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [deliveryType, setDeliveryType] = useState<"telegram" | "external" | "native">("telegram");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deliveryType, setDeliveryType] = useState<"telegram" | "external">("telegram");
+  const [deliveryValue, setDeliveryValue] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMessage("A imagem deve ter no máximo 5MB.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setImageUrl(reader.result as string);
+        setErrorMessage(null);
       };
       reader.readAsDataURL(file);
     }
@@ -32,20 +41,41 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    if (!deliveryValue.trim()) {
+      setErrorMessage(
+        deliveryType === "telegram"
+          ? "Informe o ID do Grupo/Canal do Telegram para entrega."
+          : "Informe o Link externo para entrega após o pagamento."
+      );
+      return;
+    }
+
     setLoading(true);
     const formData = new FormData(e.currentTarget);
+    formData.set("deliveryType", deliveryType);
+    formData.set("deliveryValue", deliveryValue.trim());
+    formData.set("coverUrl", imageUrl);
+
     try {
-      await createProductAction(formData);
-      setOpen(false);
-    } catch (err) {
-      console.error(err);
+      const res = await createProductAction(formData);
+      if (res?.success) {
+        setOpen(false);
+        setImageUrl("");
+        setDeliveryValue("");
+        setErrorMessage(null);
+        router.refresh();
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Erro ao criar produto.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) setErrorMessage(null); }}>
       <DialogTrigger className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
         <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
@@ -55,7 +85,14 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
           <DialogTitle className="text-xl font-bold text-white">Novo Produto</DialogTitle>
         </div>
 
-        <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
+        <div className="overflow-y-auto p-6 custom-scrollbar flex-1 space-y-6">
+          {errorMessage && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <form id="new-product-form" onSubmit={handleSubmit} className="space-y-6">
             
             {/* Título */}
@@ -75,13 +112,13 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Descrição</label>
               <textarea 
                 name="description"
-                rows={4}
+                rows={3}
                 placeholder="Detalhe tudo o que o cliente recebe ao comprar este produto..."
                 className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
               ></textarea>
             </div>
 
-            {/* Preço e Duração (Lado a lado) */}
+            {/* Preço e Duração */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Preço (R$) *</label>
@@ -90,20 +127,21 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                   name="price"
                   step="0.01"
                   required
-                  placeholder="0,00"
+                  min="0"
+                  placeholder="0.00"
                   className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-semibold"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Duração</label>
-                <select name="duration" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="duration" defaultValue="lifetime" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="daily">Diário</option>
                   <option value="weekly">Semanal</option>
                   <option value="monthly">Mensal</option>
                   <option value="quarterly">Trimestral</option>
                   <option value="semiannual">Semestral</option>
                   <option value="annual">Anual</option>
-                  <option value="lifetime" selected>Vitalício</option>
+                  <option value="lifetime">Vitalício</option>
                 </select>
               </div>
             </div>
@@ -126,24 +164,29 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               </div>
             </div>
 
-              {/* Imagem do Produto */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem do produto</label>
-                
-                {imageUrl && (
-                  <div className="mb-3 relative w-32 h-32 rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1E]">
-                    <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <button 
-                      type="button" 
-                      onClick={() => setImageUrl("")}
-                      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors backdrop-blur-md"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+            {/* Imagem do Produto */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem do produto</label>
+              
+              <div className="flex gap-4 items-start">
+                <div className="relative shrink-0 w-28 h-28 rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1E] flex items-center justify-center">
+                  {imageUrl ? (
+                    <>
+                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => setImageUrl("")}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/70 hover:bg-black rounded-full flex items-center justify-center text-white transition-colors backdrop-blur-md"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-zinc-600" />
+                  )}
+                </div>
 
-                <div className="flex gap-2">
+                <div className="flex-1 space-y-2">
                   <input 
                     type="file" 
                     accept="image/*" 
@@ -155,25 +198,28 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                     type="button" 
                     variant="outline" 
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white shrink-0 h-11 px-6 rounded-lg"
+                    className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white h-11 px-5 rounded-lg w-full"
                   >
-                    <Upload className="w-4 h-4 mr-2" /> Enviar imagem
+                    <Upload className="w-4 h-4 mr-2" /> Enviar imagem do computador
                   </Button>
                   <input 
                     type="text" 
-                    name="imageUrl"
-                    value={imageUrl}
+                    value={imageUrl.startsWith("data:") ? "" : imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="ou cole uma URL aqui"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    placeholder="ou cole uma URL de imagem aqui"
+                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
                   />
+                  <p className="text-[10px] text-zinc-500">Recomendado: 600 × 600 px - máx 5MB</p>
                 </div>
-                <p className="text-[10px] text-zinc-500 mt-2">Recomendado: 600 x 600 px - máx 5MB</p>
               </div>
+              <input type="hidden" name="coverUrl" value={imageUrl} />
+            </div>
 
             {/* Tipo de Entrega */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Tipo de entrega após pagamento</label>
+              <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+                Tipo de entrega após pagamento *
+              </label>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div 
                   onClick={() => setDeliveryType("telegram")}
@@ -191,15 +237,21 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                 </div>
               </div>
               
-              {/* Conditional Input for Delivery */}
+              <input type="hidden" name="deliveryType" value={deliveryType} />
+
+              {/* Input for Delivery */}
               {deliveryType === "telegram" && (
-                <div className="fade-in">
+                <div className="space-y-1.5">
                   <input 
-                    type="text" 
+                    type="text"
+                    name="deliveryValue"
+                    required
+                    value={deliveryValue}
+                    onChange={(e) => setDeliveryValue(e.target.value)}
                     placeholder="Ex: -1001234567890"
                     className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                   />
-                  <div className="mt-2 text-[11px] text-zinc-500 leading-relaxed">
+                  <div className="text-[11px] text-zinc-500 leading-relaxed">
                     <p><strong>Como obter o ID:</strong> Acesse algum bot de ID no Telegram e encaminhe uma mensagem do canal/grupo.</p>
                     <p className="text-amber-500/80 mt-1">⚠️ O bot de vendas precisa ser <strong>administrador</strong> do grupo/canal para gerar links de convite.</p>
                   </div>
@@ -207,9 +259,13 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               )}
 
               {deliveryType === "external" && (
-                <div className="fade-in">
+                <div className="space-y-1.5">
                   <input 
                     type="url" 
+                    name="deliveryValue"
+                    required
+                    value={deliveryValue}
+                    onChange={(e) => setDeliveryValue(e.target.value)}
                     placeholder="Ex: https://meudrive.com/arquivo"
                     className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
@@ -221,7 +277,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Vincular Bot</label>
-                <select name="botId" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="botId" defaultValue="" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Todos os Bots (Loja Geral)</option>
                   {bots?.map(b => (
                     <option key={b.id} value={b.id}>{b.displayName || `@${b.username}`}</option>
@@ -230,7 +286,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Categoria</label>
-                <select name="categoryId" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="categoryId" defaultValue="" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Sem Categoria</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -242,7 +298,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
-                <select name="status" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="status" defaultValue="active" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="active">Ativo na Loja</option>
                   <option value="draft">Inativo (Rascunho)</option>
                 </select>

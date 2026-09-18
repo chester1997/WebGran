@@ -93,6 +93,8 @@ export const products = pgTable('products', {
   duration: text('duration').default('lifetime'), // 'daily', 'weekly', 'monthly', 'quarterly', 'semiannual', 'annual', 'lifetime'
   status: text('status').notNull().default('active'), // 'active' | 'draft' | 'archived'
   position: integer('position').notNull().default(0),
+  deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
+  deliveryValue: text('delivery_value'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
