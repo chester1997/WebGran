@@ -75,13 +75,17 @@ export async function saveBotAction(formData: FormData) {
       });
     }
   } else if (existingBotId) {
-    // --- No new token: just update the menu button text ---
+    // --- No new token provided: re-register webhook and update menu button ---
     const existingBot = await db.query.telegramBots.findFirst({
       where: eq(telegramBots.id, existingBotId)
     });
     if (existingBot) {
       const currentToken = decrypt(existingBot.tokenEncrypted);
       const botService = new TelegramBotService(currentToken);
+
+      const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${existingBot.botId}`;
+      await botService.setWebhook(webhookUrl);
+
       await botService.setChatMenuButton({
         type: "web_app",
         text: buttonName,
