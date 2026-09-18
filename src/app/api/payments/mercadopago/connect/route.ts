@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(oauthUrl);
   } catch (error: any) {
     console.error('Error generating Mercado Pago OAuth URL:', error);
-    return NextResponse.json({ error: error.message || 'Erro ao conectar ao Mercado Pago' }, { status: 500 });
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const errorMessage = error.message || 'Erro ao conectar ao Mercado Pago';
+    return NextResponse.redirect(`${appUrl}/seller/recebimentos?error=${encodeURIComponent(errorMessage)}`);
   }
 }
