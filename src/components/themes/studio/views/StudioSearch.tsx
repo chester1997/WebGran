@@ -26,7 +26,7 @@ export async function StudioSearch({ storeSlug, q }: { storeSlug: string, q: str
   }
 
   return (
-    <div className="p-4 pt-8 min-h-screen text-white bg-zinc-950 pb-24">
+    <div className="p-4 pt-8 text-white bg-zinc-950 w-full">
       <SearchInput storeSlug={storeSlug} initialQuery={q} />
       
       <div className="mt-8">

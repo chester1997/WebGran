@@ -21,7 +21,7 @@ export function StudioProfile({ storeSlug }: { storeSlug: string }) {
   const photoUrl = tgUser?.photo_url || null;
 
   return (
-    <div className="p-4 pt-8 pb-24">
+    <div className="p-4 pt-8 w-full">
       <h1 className="text-2xl font-bold mb-6">Perfil</h1>
 
       {/* User card */}

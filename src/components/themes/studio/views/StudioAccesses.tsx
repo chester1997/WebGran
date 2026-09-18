@@ -30,7 +30,7 @@ export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
   const accesses = await AccessService.getCustomerAccesses(store.id, session.customerId);
 
   return (
-    <div className="p-4 pt-8 pb-24 min-h-screen text-white bg-zinc-950">
+    <div className="p-4 pt-8 text-white bg-zinc-950 w-full">
       <h1 className="text-2xl font-bold mb-6">Meus Acessos</h1>
       
       {accesses.length === 0 ? (

@@ -17,15 +17,14 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-zinc-950 text-white font-sans overflow-hidden">
-      <main className="flex-1 overflow-y-auto pb-32 scrollbar-hide">
+    <div className="flex flex-col h-full w-full bg-zinc-950 text-white font-sans overflow-hidden relative">
+      {/* Scrollable Center Content Area (Only scrollable container) */}
+      <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(var(--bottom-nav-height)+1.5rem+env(safe-area-inset-bottom,0px))]">
         {children}
       </main>
 
-
-      
-      {/* Cinematic Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 flex items-center justify-around z-50 pb-safe">
+      {/* Fixed Bottom Navigation Area */}
+      <nav className="shrink-0 h-16 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 flex items-center justify-around z-50 pb-[env(safe-area-inset-bottom,0px)]">
         <Link href={`/miniapp/${storeSlug}`} className="flex flex-col items-center justify-center w-full h-full text-[10px] text-zinc-400 hover:text-white transition-colors">
           <Home className="w-5 h-5 mb-1" />
           Início

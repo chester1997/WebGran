@@ -52,7 +52,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   }
 
   return (
-    <div className="p-4 pt-6 pb-24 min-h-screen text-white bg-zinc-950">
+    <div className="p-4 pt-6 text-white bg-zinc-950 w-full">
       <h1 className="text-2xl font-bold mb-6">Seu Carrinho</h1>
 
       <div className="space-y-4 mb-8">

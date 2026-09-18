@@ -36,6 +36,9 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
 
       if (wa) {
         wa.ready();
+        if (typeof wa.expand === 'function') {
+          wa.expand();
+        }
         setWebApp(wa);
 
         // Apply Theme Params directly to document root
