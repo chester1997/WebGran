@@ -9,20 +9,29 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const botId = url.searchParams.get("botId");
+    const botIdParam = url.searchParams.get("botId");
+    const secretTokenHeader = req.headers.get("x-telegram-bot-api-secret-token");
 
-    console.log("[TELEGRAM WEBHOOK] Incoming request for botId:", botId);
-
-    if (!botId) {
-      return NextResponse.json({ error: "botId missing" }, { status: 400 });
+    let resolved;
+    if (secretTokenHeader) {
+      try {
+        resolved = await StoreResolver.resolveFromSecretToken(secretTokenHeader);
+      } catch (err) {
+        console.warn("[TELEGRAM WEBHOOK] Could not resolve store from secret_token header, checking botId param...");
+      }
     }
 
-    // Resolve store and bot using the new Resolver
-    const { store, token } = await StoreResolver.resolveFromBotId(botId);
-    
-    // Parse the Telegram Update object
+    if (!resolved && botIdParam) {
+      resolved = await StoreResolver.resolveFromBotId(botIdParam);
+    }
+
+    if (!resolved) {
+      console.error("[TELEGRAM WEBHOOK] Unrecognized request: missing valid secret_token header or botId parameter");
+      return NextResponse.json({ ok: true }); // Always return 200 to prevent retries
+    }
+
+    const { store, token } = resolved;
     const update = await req.json();
-    console.log("[TELEGRAM WEBHOOK] Update payload:", JSON.stringify(update));
 
     if (update.message && update.message.text) {
       const text = update.message.text.trim();

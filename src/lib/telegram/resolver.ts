@@ -6,8 +6,31 @@ import { TelegramError } from "./validation";
 
 export class StoreResolver {
   /**
+   * Resolves the Store and Bot based on secretToken header or botId query.
+   */
+  static async resolveFromSecretToken(secretToken: string) {
+    const bot = await db.query.telegramBots.findFirst({
+      where: eq(telegramBots.secretToken, secretToken),
+      with: {
+        store: true,
+      }
+    });
+
+    if (!bot || !bot.store) {
+      throw new TelegramError("Loja não encontrada para este secret token.", 404);
+    }
+
+    const token = decrypt(bot.tokenEncrypted);
+
+    return {
+      bot,
+      store: bot.store,
+      token,
+    };
+  }
+
+  /**
    * Resolves the Store and Bot based on a telegram botId.
-   * Useful for webhooks where we know the botId from query params.
    */
   static async resolveFromBotId(botId: string) {
     const bot = await db.query.telegramBots.findFirst({
@@ -18,7 +41,7 @@ export class StoreResolver {
     });
 
     if (!bot || !bot.store) {
-      throw new TelegramError("Loja nǜo encontrada para este bot.", 404);
+      throw new TelegramError("Loja não encontrada para este bot.", 404);
     }
 
     const token = decrypt(bot.tokenEncrypted);

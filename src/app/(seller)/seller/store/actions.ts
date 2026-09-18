@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { telegramBots } from "@/db/schema";
@@ -25,6 +26,8 @@ export async function saveBotAction(formData: FormData) {
 
   const isRealToken = token && token.includes(":");
 
+  const cleanWebhookUrl = `${appUrl}/api/telegram/webhook`;
+
   if (isRealToken) {
     // --- Token provided: validate, register webhook, set menu button ---
     const botService = new TelegramBotService(token);
@@ -33,23 +36,24 @@ export async function saveBotAction(formData: FormData) {
     const botInfo = await botService.getMe();
     const botTelegramId = String(botInfo.id);
 
-    // 2. Set Webhook automatically (no manual BotFather config needed)
-    const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${botTelegramId}`;
-    await botService.setWebhook(webhookUrl);
+    // 2. Generate secretToken for secure multi-tenant verification
+    const secretToken = crypto.randomBytes(32).toString("hex");
 
-    // 3. Set the blue Menu Button automatically (no manual BotFather config needed)
+    // 3. Set Webhook automatically with clean URL and secret_token
+    await botService.setWebhook(cleanWebhookUrl, secretToken);
+
+    // 4. Set the blue Menu Button automatically
     await botService.setChatMenuButton({
       type: "web_app",
       text: buttonName,
       web_app: { url: miniAppUrl }
     });
 
-    // 4. Fetch bot's profile photo
+    // 5. Fetch bot's profile photo
     const photoUrl = await botService.getProfilePhotoUrl();
-
     const tokenEncrypted = encrypt(token);
 
-    // 5. Upsert in DB
+    // 6. Upsert in DB
     const existingBot = await db.query.telegramBots.findFirst({
       where: and(
         eq(telegramBots.botId, botTelegramId),
@@ -63,6 +67,7 @@ export async function saveBotAction(formData: FormData) {
         displayName: botInfo.first_name || "",
         photoUrl: photoUrl ?? existingBot.photoUrl,
         tokenEncrypted,
+        secretToken,
         updatedAt: new Date()
       }).where(eq(telegramBots.id, existingBot.id));
     } else {
@@ -73,6 +78,7 @@ export async function saveBotAction(formData: FormData) {
         displayName: botInfo.first_name || "",
         photoUrl: photoUrl ?? null,
         tokenEncrypted,
+        secretToken,
         status: "active"
       });
     }
@@ -85,8 +91,13 @@ export async function saveBotAction(formData: FormData) {
       const currentToken = decrypt(existingBot.tokenEncrypted);
       const botService = new TelegramBotService(currentToken);
 
-      const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${existingBot.botId}`;
-      await botService.setWebhook(webhookUrl);
+      let secretToken = existingBot.secretToken;
+      if (!secretToken) {
+        secretToken = crypto.randomBytes(32).toString("hex");
+        await db.update(telegramBots).set({ secretToken }).where(eq(telegramBots.id, existingBot.id));
+      }
+
+      await botService.setWebhook(cleanWebhookUrl, secretToken);
 
       await botService.setChatMenuButton({
         type: "web_app",
