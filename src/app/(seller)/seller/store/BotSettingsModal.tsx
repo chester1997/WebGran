@@ -82,7 +82,7 @@ export function BotSettingsModal({ store, bot, triggerText, isCard, className }:
             <div>
               <label className="block text-sm font-bold text-zinc-300 mb-2">Token do Bot *</label>
               <input 
-                type="password" 
+                type="text" 
                 name="token"
                 required
                 defaultValue={bot ? "••••••••••••••••••••••••" : ""}
