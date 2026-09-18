@@ -60,19 +60,20 @@ export async function POST(req: NextRequest) {
           try {
             await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard, "HTML");
           } catch (photoErr) {
-            console.error("Failed to send welcome photo with HTML, trying plain text/Markdown:", photoErr);
+            console.error("Failed to send welcome photo with HTML, trying plain text without parse_mode:", photoErr);
             try {
-              await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard, "Markdown");
+              await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard, undefined as any);
             } catch (err2) {
-              await botService.sendMessage(chatId, welcomeText, inlineKeyboard, "Markdown");
+              console.error("Failed to send photo plain text, sending text message:", err2);
+              await botService.sendMessage(chatId, welcomeText, inlineKeyboard, undefined as any);
             }
           }
         } else {
           try {
             await botService.sendMessage(chatId, welcomeText, inlineKeyboard, "HTML");
           } catch (msgErr) {
-            console.error("Failed to send welcome message with HTML, trying Markdown:", msgErr);
-            await botService.sendMessage(chatId, welcomeText, inlineKeyboard, "Markdown");
+            console.error("Failed to send welcome message with HTML, sending plain text:", msgErr);
+            await botService.sendMessage(chatId, welcomeText, inlineKeyboard, undefined as any);
           }
         }
       }

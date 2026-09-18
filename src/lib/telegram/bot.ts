@@ -30,23 +30,25 @@ export class TelegramBotService {
     return telegramFetch<boolean>(this.token, 'deleteWebhook');
   }
 
-  async sendMessage(chatId: string | number, text: string, replyMarkup?: any, parseMode: string = "Markdown"): Promise<unknown> {
-    return telegramFetch(this.token, 'sendMessage', {
+  async sendMessage(chatId: string | number, text: string, replyMarkup?: any, parseMode?: string): Promise<unknown> {
+    const payload: any = {
       chat_id: chatId,
       text,
-      parse_mode: parseMode,
       reply_markup: replyMarkup
-    });
+    };
+    if (parseMode) payload.parse_mode = parseMode;
+    return telegramFetch(this.token, 'sendMessage', payload);
   }
 
-  async sendPhoto(chatId: string | number, photo: string, caption?: string, replyMarkup?: any, parseMode: string = "Markdown"): Promise<unknown> {
-    return telegramFetch(this.token, 'sendPhoto', {
+  async sendPhoto(chatId: string | number, photo: string, caption?: string, replyMarkup?: any, parseMode?: string): Promise<unknown> {
+    const payload: any = {
       chat_id: chatId,
       photo,
       caption,
-      parse_mode: parseMode,
       reply_markup: replyMarkup
-    });
+    };
+    if (parseMode) payload.parse_mode = parseMode;
+    return telegramFetch(this.token, 'sendPhoto', payload);
   }
 
   async setChatMenuButton(menuButton: any): Promise<boolean> {
