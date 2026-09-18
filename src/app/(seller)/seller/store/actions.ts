@@ -34,7 +34,7 @@ export async function saveBotAction(formData: FormData) {
     const botTelegramId = String(botInfo.id);
 
     // 2. Set Webhook automatically (no manual BotFather config needed)
-    const webhookUrl = `${appUrl}/api/telegram/webhook/?botId=${botTelegramId}`;
+    const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${botTelegramId}`;
     await botService.setWebhook(webhookUrl);
 
     // 3. Set the blue Menu Button automatically (no manual BotFather config needed)
@@ -85,7 +85,7 @@ export async function saveBotAction(formData: FormData) {
       const currentToken = decrypt(existingBot.tokenEncrypted);
       const botService = new TelegramBotService(currentToken);
 
-      const webhookUrl = `${appUrl}/api/telegram/webhook/?botId=${existingBot.botId}`;
+      const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${existingBot.botId}`;
       await botService.setWebhook(webhookUrl);
 
       await botService.setChatMenuButton({
