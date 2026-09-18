@@ -17,8 +17,10 @@ export async function saveBotAction(formData: FormData) {
   const buttonName = (formData.get("buttonName") as string) || "Abrir Loja";
   const existingBotId = formData.get("existingBotId") as string | null;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ||
+  let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+  const appUrl = rawAppUrl.replace(/\/+$/, "");
   const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
 
   const isRealToken = token && token.includes(":");
