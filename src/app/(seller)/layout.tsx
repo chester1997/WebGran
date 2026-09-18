@@ -61,7 +61,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 <img src="/logo.png" alt="WebGran Logo" className="w-36 h-auto object-contain drop-shadow-md" />
               </div>
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/30 text-base">
+              <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30 text-base">
                 W
               </div>
             )}
@@ -78,7 +78,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar" 
-                    className="w-full bg-[#18181C] border border-white/5 rounded-xl py-2 pl-8 pr-7 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/50 transition-all"
+                    className="w-full bg-[#18181C] border border-white/5 rounded-xl py-2 pl-8 pr-7 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/50 transition-all"
                   />
                   <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 bg-white/5 px-1.5 py-0.5 rounded font-mono">
                     /
@@ -114,16 +114,16 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   title={collapsed ? item.name : undefined}
                   className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-[10px] text-sm transition-colors duration-150 relative overflow-hidden ${
                     isActive 
-                      ? "bg-[#191A1E] text-[#1683FF] font-medium border border-white/[0.06]" 
+                      ? "bg-[#191A1E] text-red-500 font-medium border border-white/[0.06]" 
                       : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-[#8B8D93]"
                   }`}
                 >
                   {/* Left accent indicator bar for active item */}
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[16px] bg-[#1683FF] rounded-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[16px] bg-red-600 rounded-full" />
                   )}
 
-                  <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-[#1683FF]" : "text-[#8B8D93]"}`} />
+                  <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-red-500" : "text-[#8B8D93]"}`} />
                   
                   {!collapsed && (
                     <span className="truncate">{item.name}</span>
@@ -133,35 +133,6 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-
-          {/* Boost com IA / Pro Card */}
-          <div className="p-3 mt-auto">
-            {!collapsed ? (
-              <div className="bg-gradient-to-br from-[#181820] to-[#121218] border border-white/5 p-4 rounded-2xl relative overflow-hidden shadow-lg">
-                <div className="absolute -top-8 -right-8 w-20 h-20 bg-blue-500/10 blur-xl rounded-full"></div>
-                
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-white" />
-                  <h4 className="text-sm font-bold text-white">Boost com IA</h4>
-                </div>
-                
-                <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-                  Respostas geradas por IA, insights rápidos e ferramentas que poupam horas.
-                </p>
-                
-                <Button variant="default" size="sm" className="w-full bg-white text-black hover:bg-zinc-200 font-bold rounded-xl text-xs h-9 shadow-md">
-                  Upgrade para Pro
-                </Button>
-              </div>
-            ) : (
-              <button 
-                title="Boost com IA - Upgrade"
-                className="w-full p-2.5 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center text-white shadow-lg"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-            )}
-          </div>
           
           {/* User Footer with dropdown style */}
           <div className="border-t border-white/5 p-3">
@@ -190,7 +161,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#070709]">
           <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-600/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
             {children}
           </main>
         </div>

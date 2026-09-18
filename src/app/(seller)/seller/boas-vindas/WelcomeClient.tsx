@@ -78,7 +78,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
         <button
           onClick={handleSave}
           disabled={isPending}
-          className="inline-flex items-center justify-center gap-2 bg-[#1683FF] hover:bg-blue-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 shrink-0"
+          className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 shrink-0"
         >
           {isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
