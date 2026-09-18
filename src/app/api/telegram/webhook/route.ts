@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { StoreResolver } from "@/lib/telegram/resolver";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
+export async function GET(req: NextRequest) {
+  return NextResponse.json({ ok: true, status: "Telegram Webhook Active" });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const url = new URL(req.url);
