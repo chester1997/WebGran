@@ -4,7 +4,8 @@ import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  LayoutDashboard, 
+import { 
+  Home, 
   Store, 
   Package, 
   Tags,
@@ -28,7 +29,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const navItems = [
-    { name: "Dashboard", href: "/seller", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/seller", icon: Home },
     { name: "Loja & Bot", href: "/seller/store", icon: Store },
     { name: "Boas-vindas", href: "/seller/boas-vindas", icon: Sparkles },
     { name: "Produtos", href: "/seller/products", icon: Package },
@@ -45,7 +46,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#070709] text-zinc-100 font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#070709] text-zinc-100 font-sans selection:bg-red-500/30">
       <div className="flex h-screen overflow-hidden">
         
         {/* Sidebar with depth shadow, gradient border, and collapsible behavior */}
@@ -112,21 +113,26 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href} 
                   title={collapsed ? item.name : undefined}
-                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-[10px] text-sm transition-colors duration-150 relative overflow-hidden ${
+                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-3 rounded-2xl text-sm transition-all duration-200 relative overflow-hidden ${
                     isActive 
-                      ? "bg-[#191A1E] text-red-500 font-medium border border-white/[0.06]" 
+                      ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
                       : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-[#8B8D93]"
                   }`}
                 >
-                  {/* Left accent indicator bar for active item */}
+                  {/* Left glowing accent indicator bar for active item */}
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[16px] bg-red-600 rounded-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
                   )}
 
-                  <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-red-500" : "text-[#8B8D93]"}`} />
+                  {/* Radial glow background on left */}
+                  {isActive && (
+                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-500/20 blur-md rounded-full pointer-events-none" />
+                  )}
+
+                  <item.icon className={`w-4 h-4 shrink-0 transition-colors z-10 ${isActive ? "text-red-500" : "text-[#8B8D93]"}`} />
                   
                   {!collapsed && (
-                    <span className="truncate">{item.name}</span>
+                    <span className="truncate z-10">{item.name}</span>
                   )}
                 </Link>
               );
