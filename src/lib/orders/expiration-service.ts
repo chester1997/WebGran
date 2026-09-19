@@ -180,7 +180,7 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
   const results: ExpiredProcessResult['results'] = [];
 
   for (const acc of expiredAccesses) {
-    let revokedFromTelegram = false;
+    let revocationStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'SKIPPED_NOT_MEMBER' = 'PENDING';
     let revocationError: string | undefined = undefined;
 
     try {
@@ -191,25 +191,35 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
       const telegramChatId = acc.telegramChatId || acc.product?.deliveryValue;
       const telegramUserId = acc.customer?.telegramUserId;
 
-      if (storeBot && storeBot.tokenEncrypted && telegramChatId && telegramUserId) {
-        if (!telegramChatId.startsWith('http://') && !telegramChatId.startsWith('https://')) {
-          const botToken = decrypt(storeBot.tokenEncrypted);
-          const botService = new TelegramBotService(botToken);
+      if (storeBot && storeBot.tokenEncrypted && telegramChatId && telegramUserId && !telegramChatId.startsWith('http://') && !telegramChatId.startsWith('https://')) {
+        const botToken = decrypt(storeBot.tokenEncrypted);
+        const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
 
+        // 1. Check if user is currently in channel
+        const isMember = await TelegramDeliveryService.checkBuyerMembership(botToken, telegramChatId, telegramUserId);
+
+        if (!isMember) {
+          revocationStatus = 'SKIPPED_NOT_MEMBER';
+          console.log(`[processExpiredAccesses] User ${telegramUserId} already left channel ${telegramChatId}. Skipped revocation.`);
+        } else {
+          // 2. User IS in channel: execute ban & unban to revoke access
+          const botService = new TelegramBotService(botToken);
           try {
-            // Kick/ban member from chat to revoke access upon expiration
             await botService.banChatMember(telegramChatId, telegramUserId);
-            // Optionally unban immediately so user is removed but not permanently blocked from re-purchasing
             await botService.unbanChatMember(telegramChatId, telegramUserId);
-            revokedFromTelegram = true;
+            revocationStatus = 'SUCCESS';
             console.log(`[processExpiredAccesses] Successfully revoked Telegram user ${telegramUserId} from chat ${telegramChatId}.`);
           } catch (botErr: any) {
-            revocationError = `Erro da API do Telegram ao remover usuário (${telegramUserId}): ${botErr.message}`;
-            console.warn(`[processExpiredAccesses] Telegram revocation warning for access ${acc.id}:`, revocationError);
+            revocationStatus = 'FAILED';
+            revocationError = `Erro Telegram API: ${botErr.message}`;
+            console.warn(`[processExpiredAccesses] Revocation failed for access ${acc.id}:`, revocationError);
           }
         }
+      } else {
+        revocationStatus = 'SKIPPED_NOT_MEMBER';
       }
     } catch (err: any) {
+      revocationStatus = 'FAILED';
       revocationError = err.message || "Erro na remoção do Telegram.";
     }
 
@@ -218,7 +228,9 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
       status: 'EXPIRED',
       deliveryStatus: 'EXPIRED',
       expiredAt: now,
-      deliveryError: revocationError || null,
+      revocationStatus,
+      revocationError: revocationError || null,
+      revokedAt: revocationStatus === 'SUCCESS' ? now : null,
       updatedAt: now,
     }).where(eq(accesses.id, acc.id));
 
@@ -227,7 +239,7 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
       storeId: acc.storeId,
       customerId: acc.customerId,
       productId: acc.productId,
-      revokedFromTelegram,
+      revokedFromTelegram: revocationStatus === 'SUCCESS',
       error: revocationError
     });
   }

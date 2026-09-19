@@ -162,13 +162,17 @@ export const accesses = pgTable('accesses', {
   deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
   telegramChatId: text('telegram_chat_id'),
   inviteLink: text('invite_link'),
+  inviteExpiresAt: timestamp('invite_expires_at'),
   status: text('status').notNull().default('PENDING'), // 'PENDING' | 'ACTIVE' | 'REVOKED' | 'EXPIRED' | 'FAILED'
-  deliveryStatus: text('delivery_status').notNull().default('PENDING'), // 'PENDING' | 'DELIVERED' | 'FAILED'
+  deliveryStatus: text('delivery_status').notNull().default('PENDING'), // 'PENDING' | 'DELIVERED' | 'FAILED' | 'EXPIRED'
   deliveryError: text('delivery_error'),
   grantedAt: timestamp('granted_at'),
   expiresAt: timestamp('expires_at'),
   expiredAt: timestamp('expired_at'),
   confirmationSentAt: timestamp('confirmation_sent_at'),
+  revocationStatus: text('revocation_status'), // 'PENDING' | 'SUCCESS' | 'FAILED' | 'SKIPPED_NOT_MEMBER'
+  revocationError: text('revocation_error'),
+  revokedAt: timestamp('revoked_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
