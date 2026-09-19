@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { accesses, products } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export class AccessService {
   /**
@@ -58,7 +58,7 @@ export class AccessService {
       where: and(
         eq(accesses.storeId, storeId),
         eq(accesses.customerId, customerId),
-        eq(accesses.status, 'ACTIVE')
+        inArray(accesses.status, ['ACTIVE', 'PENDING', 'FAILED'])
       ),
       with: {
         product: true
