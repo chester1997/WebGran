@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { orders, stores, sellerPaymentConnections } from '@/db/schema';
+import { orders, stores, sellerPaymentConnections, accesses } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { decrypt } from '@/lib/encryption';
 import { AccessDeliveryService } from '@/lib/delivery/access-delivery-service';

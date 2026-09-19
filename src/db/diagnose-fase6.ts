@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { db } from './index';
-import { orders, stores, customers, products, orderItems, sellerPaymentConnections } from './schema';
+import { orders, stores, telegramCustomers, products, orderItems, sellerPaymentConnections } from './schema';
 import { eq, like, sql } from 'drizzle-orm';
 import { decrypt } from '../lib/encryption';
 
