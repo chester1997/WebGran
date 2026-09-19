@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { PlayCircle, Lock, RefreshCw, ShoppingCart, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { formatAccessExpirationBR } from "@/lib/orders/expiration-service";
+import { formatAccessExpirationBR } from "@/lib/orders/expiration-utils";
 
 export interface AccessCardData {
   id: string;
