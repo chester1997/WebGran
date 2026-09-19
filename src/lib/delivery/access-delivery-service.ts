@@ -158,30 +158,55 @@ export class AccessDeliveryService {
         throw new Error("Nenhum bot do Telegram está vinculado a esta loja.");
       }
 
-      const botToken = decrypt(bot.tokenEncrypted);
-      let deliveryUrl = '';
+      const telegramChatId = product.deliveryValue ? String(product.deliveryValue).trim() : null;
 
-      if (product.deliveryType === 'telegram' && product.deliveryValue) {
-        if (product.deliveryValue.startsWith('http://') || product.deliveryValue.startsWith('https://')) {
-          deliveryUrl = product.deliveryValue;
-        } else {
-          // Validate bot permission in chat
-          const permCheck = await TelegramDeliveryService.validateBotAndChatPermission(botToken, product.deliveryValue);
-          if (!permCheck.success) {
-            throw new Error(`Bot sem permissão no Telegram Chat (${product.deliveryValue}): ${permCheck.error}`);
-          }
-
-          // Generate dynamic invite link
-          const invite = await TelegramDeliveryService.createTelegramInvite(botToken, product.deliveryValue, product.title);
-          deliveryUrl = invite.inviteLink;
-        }
-      } else if (product.deliveryValue) {
-        deliveryUrl = product.deliveryValue;
-      } else {
-        throw new Error("Produto não possui ID de Grupo ou Link de entrega configurado.");
+      if (!telegramChatId || telegramChatId === "null" || telegramChatId === "") {
+        throw new Error("Produto sem telegramChatId configurado.");
       }
 
-      // Send automated message to Customer
+      const botToken = decrypt(bot.tokenEncrypted);
+      let deliveryUrl = '';
+      let isAlreadyMember = false;
+
+      if (product.deliveryType === 'telegram' || product.deliveryType === 'TELEGRAM_CHAT') {
+        if (telegramChatId.startsWith('http://') || telegramChatId.startsWith('https://')) {
+          deliveryUrl = telegramChatId;
+        } else {
+          // 1. Validate Bot Admin Permissions in Target Chat
+          const permCheck = await TelegramDeliveryService.validateBotAndChatPermission(botToken, telegramChatId, bot.botId);
+          if (!permCheck.success) {
+            throw new Error(`Validação do Telegram Chat (${telegramChatId}) falhou: ${permCheck.error}`);
+          }
+
+          // 2. Check if Buyer is Already a Member of the Group/Channel
+          if (customer?.telegramUserId) {
+            isAlreadyMember = await TelegramDeliveryService.checkBuyerMembership(
+              botToken,
+              telegramChatId,
+              customer.telegramUserId
+            );
+          }
+
+          if (isAlreadyMember) {
+            console.log(`[AccessDeliveryService] Customer ${customer?.telegramUserId} is ALREADY a member of chat ${telegramChatId}.`);
+            const cleanedId = telegramChatId.replace('-100', '');
+            deliveryUrl = `https://t.me/c/${cleanedId}`;
+          } else {
+            // 3. Generate Single-Use Invite Link for New Buyer
+            const invite = await TelegramDeliveryService.createTelegramInvite(
+              botToken,
+              telegramChatId,
+              product.title,
+              accessRecord.orderId
+            );
+            deliveryUrl = invite.inviteLink;
+          }
+        }
+      } else {
+        deliveryUrl = telegramChatId;
+      }
+
+      // 4. Send Automated Notification Message to Buyer
       if (customer && customer.telegramUserId) {
         await TelegramDeliveryService.deliverToCustomer(
           botToken,
@@ -192,7 +217,7 @@ export class AccessDeliveryService {
         );
       }
 
-      // Update Access as ACTIVE and DELIVERED
+      // 5. Save Access Record as ACTIVE and DELIVERED
       await db.update(accesses).set({
         status: 'ACTIVE',
         deliveryStatus: 'DELIVERED',

@@ -9,16 +9,54 @@ export interface DeliveryTestResult {
 
 export class TelegramDeliveryService {
   /**
-   * Tests if the bot is connected and has permission in the target Telegram chat/group.
+   * Tests if the bot is connected and has administrator permissions in the target Telegram chat/group.
    */
   static async validateBotAndChatPermission(
     botToken: string,
-    telegramChatId: string
+    telegramChatId: string,
+    botId?: string
   ): Promise<DeliveryTestResult> {
     try {
       const botService = new TelegramBotService(botToken);
+      
+      // 1. Validate Chat Exists
       const chatInfo = await botService.getChat(telegramChatId);
       
+      // 2. Resolve bot ID if not provided
+      let targetBotId = botId;
+      if (!targetBotId) {
+        const me = await botService.getMe();
+        targetBotId = String(me.id);
+      }
+
+      // 3. Check Bot Membership and Admin Rights in Chat
+      let botMember: any = null;
+      try {
+        botMember = await botService.getChatMember(telegramChatId, targetBotId);
+      } catch (err: any) {
+        return {
+          success: false,
+          error: `O bot não é membro do grupo/canal (${telegramChatId}): ${err.message}`,
+        };
+      }
+
+      const isAdmin = botMember.status === 'administrator' || botMember.status === 'creator';
+      const canInvite = botMember.status === 'creator' || botMember.can_invite_users === true;
+
+      if (!isAdmin) {
+        return {
+          success: false,
+          error: `O bot não possui privilégios de Administrador no grupo/canal (${telegramChatId}).`,
+        };
+      }
+
+      if (!canInvite) {
+        return {
+          success: false,
+          error: `O bot é Administrador no grupo/canal (${telegramChatId}), mas NÃO possui a permissão de Convidar Usuários (can_invite_users).`,
+        };
+      }
+
       return {
         success: true,
         chatName: chatInfo.title || chatInfo.username || `Chat ${telegramChatId}`,
@@ -33,28 +71,47 @@ export class TelegramDeliveryService {
   }
 
   /**
-   * Creates a single-use or temporary invite link for a Telegram group/channel.
+   * Checks if the buyer is already a member of the target group/channel.
+   */
+  static async checkBuyerMembership(
+    botToken: string,
+    telegramChatId: string,
+    telegramUserId: string
+  ): Promise<boolean> {
+    try {
+      const botService = new TelegramBotService(botToken);
+      const member = await botService.getChatMember(telegramChatId, telegramUserId);
+      const status = member?.status;
+      return status === 'member' || status === 'administrator' || status === 'creator';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Creates a single-use invite link for the target group/channel.
    */
   static async createTelegramInvite(
     botToken: string,
     telegramChatId: string,
-    productTitle: string
+    productTitle: string,
+    orderId?: string
   ): Promise<{ inviteLink: string }> {
     const botService = new TelegramBotService(botToken);
     
-    try {
-      const linkObj = await botService.createChatInviteLink(
-        telegramChatId,
-        `Acesso WebGran - ${productTitle}`,
-        1 // member_limit = 1 (single-use link associated to the buyer)
-      );
-      return { inviteLink: linkObj.invite_link };
-    } catch (err: any) {
-      console.warn(`[TelegramDeliveryService] Dynamic invite link failed for ${telegramChatId}, falling back to channel link:`, err);
-      // Fallback format if member limit invite creation fails
-      const cleanedId = String(telegramChatId).replace('-100', '');
-      return { inviteLink: `https://t.me/c/${cleanedId}` };
+    const linkName = orderId ? `WebGran-${orderId.slice(0, 8)}` : `Acesso - ${productTitle.slice(0, 15)}`;
+
+    const linkObj = await botService.createChatInviteLink(
+      telegramChatId,
+      linkName,
+      1 // single-use link for the buyer
+    );
+
+    if (!linkObj || !linkObj.invite_link) {
+      throw new Error(`Falha ao gerar link de convite único para o grupo ${telegramChatId}.`);
     }
+
+    return { inviteLink: linkObj.invite_link };
   }
 
   /**

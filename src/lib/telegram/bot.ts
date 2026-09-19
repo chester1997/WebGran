@@ -93,6 +93,13 @@ export class TelegramBotService {
     });
   }
 
+  async getChatMember(chatId: string | number, userId: string | number): Promise<any> {
+    return telegramFetch<any>(this.token, 'getChatMember', {
+      chat_id: chatId,
+      user_id: userId,
+    });
+  }
+
   async sendVideo(_chatId: string | number, _video: string): Promise<unknown> {
     throw new Error("Not implemented yet");
   }
