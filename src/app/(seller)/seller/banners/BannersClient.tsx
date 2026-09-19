@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Image as ImageIcon, 
   Plus, 
@@ -14,7 +14,9 @@ import {
   Clock, 
   AlertCircle,
   CheckCircle2,
-  X
+  X,
+  Upload,
+  Link as LinkIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -44,6 +46,9 @@ interface BannersClientProps {
   maxLimit: number;
 }
 
+const MAX_BANNER_SIZE_MB = 20;
+const MAX_BANNER_SIZE_BYTES = MAX_BANNER_SIZE_MB * 1024 * 1024; // 20,971,520 bytes
+
 export default function BannersClient({ initialBanners, initialInterval, maxLimit }: BannersClientProps) {
   const [bannersList, setBannersList] = useState<BannerItem[]>(initialBanners);
   const [bannerInterval, setBannerInterval] = useState<number>(initialInterval);
@@ -54,6 +59,12 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Upload method tab: 'upload' | 'url'
+  const [inputMode, setInputMode] = useState<"upload" | "url">("upload");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFileSizeMB, setSelectedFileSizeMB] = useState<string | null>(null);
+
   // Form State
   const [formData, setFormData] = useState({
     title: "",
@@ -62,7 +73,6 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     linkValue: "",
   });
 
-  const activeCount = bannersList.filter(b => b.status === "active").length;
   const isLimitReached = bannersList.length >= maxLimit;
 
   // Auto-dismiss feedback
@@ -72,7 +82,35 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     setTimeout(() => {
       setErrorMsg(null);
       setSuccessMsg(null);
-    }, 4000);
+    }, 5000);
+  };
+
+  // Handle File Upload Selection with 20MB validation rule
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check 20MB Size Rule
+    if (file.size > MAX_BANNER_SIZE_BYTES) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      showFeedback(
+        `A imagem excede o tamanho máximo permitido de ${MAX_BANNER_SIZE_MB}MB. O arquivo selecionado possui ${fileSizeMB}MB. Escolha uma imagem menor.`,
+        true
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    // Convert file to Data URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+      setSelectedFileName(file.name);
+      setSelectedFileSizeMB((file.size / (1024 * 1024)).toFixed(2));
+      setErrorMsg(null);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle Interval Change
@@ -96,6 +134,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       return;
     }
     setFormData({ title: "", imageUrl: "", linkType: "none", linkValue: "" });
+    setSelectedFileName(null);
+    setSelectedFileSizeMB(null);
+    setInputMode("upload");
     setEditingBanner(null);
     setIsAddModalOpen(true);
   };
@@ -108,6 +149,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       linkType: b.linkType || "none",
       linkValue: b.linkValue || "",
     });
+    setSelectedFileName(null);
+    setSelectedFileSizeMB(null);
+    setInputMode(b.imageUrl.startsWith("data:") ? "upload" : "url");
     setEditingBanner(b);
     setIsAddModalOpen(true);
   };
@@ -116,7 +160,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.imageUrl.trim()) {
-      showFeedback("Informe a URL da imagem do banner.", true);
+      showFeedback("Selecione uma imagem para o banner ou informe uma URL.", true);
       return;
     }
 
@@ -130,13 +174,19 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           linkType: formData.linkType === "none" ? undefined : formData.linkType,
           linkValue: formData.linkValue,
         });
-        setBannersList(prev => prev.map(b => b.id === editingBanner.id ? {
-          ...b,
-          title: formData.title || b.title,
-          imageUrl: formData.imageUrl,
-          linkType: formData.linkType === "none" ? null : formData.linkType,
-          linkValue: formData.linkValue || null,
-        } : b));
+        setBannersList((prev) =>
+          prev.map((b) =>
+            b.id === editingBanner.id
+              ? {
+                  ...b,
+                  title: formData.title || b.title,
+                  imageUrl: formData.imageUrl,
+                  linkType: formData.linkType === "none" ? null : formData.linkType,
+                  linkValue: formData.linkValue || null,
+                }
+              : b
+          )
+        );
         showFeedback("Banner atualizado com sucesso!");
       } else {
         await createBannerAction({
@@ -146,7 +196,6 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           linkValue: formData.linkValue,
         });
         showFeedback("Banner cadastrado com sucesso!");
-        // Reload list client-side or trigger window reload
         window.location.reload();
       }
       setIsAddModalOpen(false);
@@ -161,7 +210,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   const handleToggleStatus = async (b: BannerItem) => {
     const nextStatus = b.status === "active" ? "inactive" : "active";
     try {
-      setBannersList(prev => prev.map(item => item.id === b.id ? { ...item, status: nextStatus } : item));
+      setBannersList((prev) =>
+        prev.map((item) => (item.id === b.id ? { ...item, status: nextStatus } : item))
+      );
       await updateBannerAction({ id: b.id, status: nextStatus });
       showFeedback(`Banner ${nextStatus === "active" ? "ativado" : "desativado"}.`);
     } catch (err: any) {
@@ -174,7 +225,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este banner?")) return;
     try {
-      setBannersList(prev => prev.filter(b => b.id !== id));
+      setBannersList((prev) => prev.filter((b) => b.id !== id));
       await deleteBannerAction(id);
       showFeedback("Banner excluído.");
     } catch (err: any) {
@@ -193,7 +244,6 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     newList[index] = newList[targetIndex];
     newList[targetIndex] = temp;
 
-    // Update positions
     newList.forEach((item, idx) => {
       item.position = idx;
     });
@@ -201,7 +251,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     setBannersList(newList);
 
     try {
-      const orderedIds = newList.map(b => b.id);
+      const orderedIds = newList.map((b) => b.id);
       await reorderBannersAction(orderedIds);
       showFeedback("Ordem dos banners atualizada.");
     } catch (err: any) {
@@ -213,15 +263,15 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     <div className="space-y-8 max-w-6xl pb-16">
       {/* Toast Feedback */}
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 flex items-center gap-3 animate-in fade-in">
+        <div className="p-4 rounded-xl bg-red-950/90 border border-red-500/40 text-red-200 flex items-center gap-3 animate-in fade-in shadow-xl">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-          <p className="text-sm font-medium">{errorMsg}</p>
+          <p className="text-sm font-semibold">{errorMsg}</p>
         </div>
       )}
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 flex items-center gap-3 animate-in fade-in">
+        <div className="p-4 rounded-xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-200 flex items-center gap-3 animate-in fade-in shadow-xl">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <p className="text-sm font-medium">{successMsg}</p>
+          <p className="text-sm font-semibold">{successMsg}</p>
         </div>
       )}
 
@@ -235,7 +285,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             </span>
           </div>
           <p className="text-sm text-zinc-400 mt-1">
-            Configure os banners exibidos no topo da sua loja no Mini App.
+            Faça upload ou configure os banners exibidos no topo da sua loja no Mini App. Suporta arquivos de até 20MB.
           </p>
         </div>
 
@@ -262,7 +312,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
         </div>
 
         <div className="flex items-center gap-2">
-          {[3, 5, 7, 10].map(seconds => (
+          {[3, 5, 7, 10].map((seconds) => (
             <button
               key={seconds}
               onClick={() => handleIntervalChange(seconds)}
@@ -285,7 +335,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           <ImageIcon className="w-12 h-12 text-zinc-600 mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Nenhum banner cadastrado</h3>
           <p className="text-xs text-zinc-400 max-w-sm mb-6">
-            Sua loja atualmente não possui banners cadastrados. Adicione o primeiro banner para exibi-lo no topo do Mini App.
+            Sua loja atualmente não possui banners cadastrados. Faça upload do primeiro banner (até 20MB) para exibi-lo no Mini App.
           </p>
           <Button
             onClick={openAddModal}
@@ -312,7 +362,10 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                     alt={banner.title}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     onError={(e) => {
-                      (e.target as HTMLElement).setAttribute("src", "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000");
+                      (e.target as HTMLElement).setAttribute(
+                        "src",
+                        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000"
+                      );
                     }}
                   />
                   {/* Position Badge */}
@@ -320,11 +373,13 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                     #{index + 1}
                   </div>
                   {/* Status Badge */}
-                  <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-lg backdrop-blur-md border text-xs font-semibold flex items-center gap-1.5 ${
-                    isActive 
-                      ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30" 
-                      : "bg-zinc-900/80 text-zinc-400 border-white/10"
-                  }`}>
+                  <div
+                    className={`absolute top-3 right-3 px-2.5 py-1 rounded-lg backdrop-blur-md border text-xs font-semibold flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30"
+                        : "bg-zinc-900/80 text-zinc-400 border-white/10"
+                    }`}
+                  >
                     <span className={`w-2 h-2 rounded-full ${isActive ? "bg-emerald-400" : "bg-zinc-500"}`} />
                     {isActive ? "Ativo" : "Inativo"}
                   </div>
@@ -334,7 +389,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                 <div className="p-4 space-y-4">
                   <div>
                     <h4 className="text-sm font-bold text-white truncate">{banner.title || `Banner #${index + 1}`}</h4>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5">{banner.imageUrl}</p>
+                    <p className="text-xs text-zinc-500 truncate mt-0.5">
+                      {banner.imageUrl.startsWith("data:") ? "Imagem enviada via upload local" : banner.imageUrl}
+                    </p>
                   </div>
 
                   {/* Actions Button Row */}
@@ -364,8 +421,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                       <button
                         onClick={() => handleToggleStatus(banner)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                          isActive 
-                            ? "bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 border-white/10" 
+                          isActive
+                            ? "bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 border-white/10"
                             : "bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-400 border-emerald-500/20"
                         }`}
                       >
@@ -415,7 +472,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitForm} className="p-6 space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
                   Título do Banner (Opcional)
@@ -429,36 +486,114 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                  URL da Imagem (Recomendado 16:9) <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://exemplo.com/imagem.png"
-                  className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500 transition-all"
-                />
+              {/* Mode Selection Tabs (Upload File vs External URL) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-zinc-300">
+                    Imagem do Banner <span className="text-red-400">*</span>
+                  </label>
+                  <span className="text-[11px] font-semibold text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                    Tamanho Máximo: 20MB
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-1 bg-[#181820] rounded-xl border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("upload")}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                      inputMode === "upload"
+                        ? "bg-red-600 text-white shadow-md"
+                        : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload do Dispositivo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("url")}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                      inputMode === "url"
+                        ? "bg-red-600 text-white shadow-md"
+                        : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    URL Externa
+                  </button>
+                </div>
               </div>
 
+              {/* Input Mode: File Upload (Max 20MB) */}
+              {inputMode === "upload" && (
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-white/10 hover:border-red-500/50 bg-[#181820] hover:bg-[#1E1E28] rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-3 group-hover:scale-110 transition-transform">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-semibold text-white">
+                      Clique para selecionar a imagem
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Formatos suportados: PNG, JPG, WEBP, GIF (Até 20MB)
+                    </p>
+                    {selectedFileName && (
+                      <div className="mt-3 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{selectedFileName} ({selectedFileSizeMB}MB)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Input Mode: External URL */}
+              {inputMode === "url" && (
+                <div>
+                  <input
+                    type="url"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    placeholder="https://exemplo.com/imagem.png"
+                    className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500 transition-all"
+                  />
+                </div>
+              )}
+
+              {/* Real-time Preview */}
               {formData.imageUrl && (
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1">Pré-visualização</label>
-                  <div className="w-full aspect-[2.2/1] rounded-xl overflow-hidden border border-white/10 bg-black/60">
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
+                    Pré-visualização do Banner (Recomendado 16:9)
+                  </label>
+                  <div className="w-full aspect-[2.2/1] rounded-xl overflow-hidden border border-white/10 bg-black/60 relative shadow-md">
                     <img
                       src={formData.imageUrl}
                       alt="Preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLElement).setAttribute("src", "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000");
+                        (e.target as HTMLElement).setAttribute(
+                          "src",
+                          "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000"
+                        );
                       }}
                     />
                   </div>
                 </div>
               )}
 
+              {/* Buttons */}
               <div className="pt-4 border-t border-white/5 flex items-center justify-end gap-3">
                 <button
                   type="button"

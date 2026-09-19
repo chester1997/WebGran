@@ -34,7 +34,12 @@ export async function createBannerAction(data: {
   if (!store) throw new Error("Loja não encontrada");
 
   if (!data.imageUrl || !data.imageUrl.trim()) {
-    throw new Error("A URL da imagem do banner é obrigatória.");
+    throw new Error("A URL ou arquivo de imagem do banner é obrigatório.");
+  }
+
+  // Server-side validation: 20MB size rule
+  if (data.imageUrl.startsWith("data:") && data.imageUrl.length > 28 * 1024 * 1024) {
+    throw new Error("A imagem do banner excede o tamanho máximo permitido de 20MB.");
   }
 
   // Server-side validation: Max 5 banners per store
