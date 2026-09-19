@@ -112,11 +112,11 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
         Gerenciar Top 15 (Ranking)
       </DialogTrigger>
 
-      <DialogContent className="bg-[#121216] border border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl shadow-2xl">
-        <DialogHeader className="border-b border-white/5 pb-4">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
-            Configurar Ranking Editorial (Top 15)
+      <DialogContent className="bg-[#121216] border border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden custom-scrollbar rounded-2xl shadow-2xl">
+        <DialogHeader className="border-b border-white/5 pb-4 pr-10">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2 pr-2">
+            <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
+            <span className="truncate">Configurar Ranking Editorial (Top 15)</span>
           </DialogTitle>
           <p className="text-xs text-zinc-400 mt-1">
             Personalize o nome da seção e escolha manualmente a ordem exata dos até 15 produtos em destaque.
@@ -132,8 +132,8 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
 
         <div className="space-y-6 py-2">
           {/* Section Name & Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
+            <div className="flex-1 min-w-0 space-y-1.5">
               <label className="text-xs font-semibold text-zinc-300">Nome da Seção no Mini App</label>
               <input
                 type="text"
@@ -144,19 +144,19 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Status no Mini App</label>
+            <div className="w-full sm:w-auto shrink-0 space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 block">Status no Mini App</label>
               <button
                 type="button"
                 onClick={() => setStatus(status === "active" ? "inactive" : "active")}
-                className={`w-full py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`w-full sm:w-auto py-2 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${
                   status === "active"
                     ? "bg-emerald-950/60 text-emerald-400 border-emerald-500/30"
                     : "bg-zinc-800 text-zinc-400 border-white/10"
                 }`}
               >
-                {status === "active" ? <Eye className="w-4 h-4 text-emerald-400" /> : <EyeOff className="w-4 h-4" />}
-                {status === "active" ? "Ativo no Mini App" : "Oculto"}
+                {status === "active" ? <Eye className="w-4 h-4 text-emerald-400 shrink-0" /> : <EyeOff className="w-4 h-4 shrink-0" />}
+                <span>{status === "active" ? "Ativo no Mini App" : "Oculto"}</span>
               </button>
             </div>
           </div>
@@ -184,7 +184,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                 Nenhum produto selecionado para o ranking. Escolha os produtos abaixo para começar.
               </div>
             ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+              <div className="space-y-2 max-h-72 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
                 {selectedIds.map((id, index) => {
                   const prod = products.find((p) => p.id === id);
                   if (!prod) return null;
@@ -193,13 +193,13 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                   return (
                     <div
                       key={id}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all gap-2 ${
                         isTop5
                           ? "bg-gradient-to-r from-red-950/30 to-[#181820] border-red-500/30"
                           : "bg-[#181820] border-white/5"
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         {/* Position Badge */}
                         <div
                           className={`w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs shrink-0 ${
@@ -216,7 +216,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                         >
                           {String(index + 1).padStart(2, "0")}
                         </div>
-                        <span className="text-xs font-semibold text-white truncate max-w-xs md:max-w-md">
+                        <span className="text-xs font-semibold text-white truncate min-w-0 flex-1">
                           {prod.title}
                         </span>
                       </div>
