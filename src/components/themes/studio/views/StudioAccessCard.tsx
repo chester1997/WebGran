@@ -57,12 +57,14 @@ export function StudioAccessCard({
 
       const data = await res.json();
 
-      console.log("[WEBGRAN ACCESS CLICK]", {
+      console.log("[WEBGRAN ACCESS OPEN]", {
         accessId: access.id,
-        status: data.status,
+        telegramChatId: access.product.deliveryValue,
+        telegramUserId: data.telegramUserId,
+        membershipStatus: data.membershipStatus,
+        accessStatus: data.status,
         destinationType: data.destinationType,
-        destinationUrl: data.destinationUrl,
-        expiresAt: data.expiresAt
+        destinationUrl: data.destinationUrl
       });
 
       if (!res.ok || !data.success) {

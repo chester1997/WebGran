@@ -22,6 +22,8 @@ export interface AccessDestinationResult {
   destinationType: 'DIRECT_CHAT' | 'INVITE' | 'EXPIRED' | 'ERROR';
   destinationUrl: string | null;
   expiresAt: Date | null;
+  membershipStatus?: string;
+  telegramUserId?: string;
   message?: string;
   canRepurchase?: boolean;
   productSlug?: string;
@@ -141,12 +143,16 @@ export class AccessLifecycleService {
 
     // 2. Check if buyer IS ALREADY A MEMBER of the Telegram group/channel
     let isAlreadyMember = false;
+    let memberStatusStr = "NOT_MEMBER";
     if (customer?.telegramUserId) {
       isAlreadyMember = await TelegramDeliveryService.checkBuyerMembership(
         botToken,
         telegramChatId,
         customer.telegramUserId
       );
+      if (isAlreadyMember) {
+        memberStatusStr = "MEMBER";
+      }
     }
 
     if (isAlreadyMember) {
@@ -164,6 +170,8 @@ export class AccessLifecycleService {
         destinationType: 'DIRECT_CHAT',
         destinationUrl: directChannelUrl,
         expiresAt: accessRecord.expiresAt,
+        membershipStatus: memberStatusStr,
+        telegramUserId: customer?.telegramUserId || undefined,
       };
     }
 
@@ -179,6 +187,8 @@ export class AccessLifecycleService {
         destinationType: 'INVITE',
         destinationUrl: accessRecord.inviteLink,
         expiresAt: accessRecord.expiresAt,
+        membershipStatus: memberStatusStr,
+        telegramUserId: customer?.telegramUserId || undefined,
       };
     }
 
@@ -215,6 +225,8 @@ export class AccessLifecycleService {
       destinationType: 'INVITE',
       destinationUrl: freshInviteLink,
       expiresAt: accessRecord.expiresAt,
+      membershipStatus: memberStatusStr,
+      telegramUserId: customer?.telegramUserId || undefined,
     };
   }
 
