@@ -47,6 +47,7 @@ export const stores = pgTable('stores', {
   themeId: uuid('theme_id').references(() => themes.id, { onDelete: 'set null' }),
   welcomeMessage: text('welcome_message'),
   welcomeBanners: jsonb('welcome_banners').default([]),
+  bannerInterval: integer('banner_interval').default(5).notNull(),
   supportType: text('support_type').default('telegram'),
   supportValue: text('support_value'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

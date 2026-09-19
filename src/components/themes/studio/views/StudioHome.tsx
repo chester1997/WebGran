@@ -80,12 +80,13 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       />
 
 
-      {storeBanners.length > 0 ? (
-        <HeroBanner storeSlug={storeSlug} banner={storeBanners[0]} />
-      ) : heroProduct ? (
-        <HeroBanner storeSlug={storeSlug} product={heroProduct} />
-      ) : (
-        <div className="pt-24 px-4 text-center text-zinc-500">Nenhum produto cadastrado.</div>
+      {/* Premium Compact Banner Slider */}
+      {storeBanners.length > 0 && (
+        <HeroBanner 
+          storeSlug={storeSlug} 
+          banners={storeBanners} 
+          intervalSeconds={store.bannerInterval || 5} 
+        />
       )}
 
       <div className="relative z-20 mt-4 space-y-4">

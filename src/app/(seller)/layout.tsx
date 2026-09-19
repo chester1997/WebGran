@@ -18,7 +18,7 @@ import {
   PanelLeftOpen,
   Sparkles,
   ChevronUp,
-  LogOut
+  Image as ImageIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,6 +31,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     { name: "Dashboard", href: "/seller", icon: Home },
     { name: "Loja & Bot", href: "/seller/store", icon: Store },
     { name: "Boas-vindas", href: "/seller/boas-vindas", icon: Sparkles },
+    { name: "Banners", href: "/seller/banners", icon: ImageIcon },
     { name: "Produtos", href: "/seller/products", icon: Package },
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },

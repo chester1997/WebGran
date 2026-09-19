@@ -1,57 +1,153 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Play, Info } from "lucide-react";
+
+export interface BannerItem {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkType?: string | null;
+  linkValue?: string | null;
+}
 
 interface HeroBannerProps {
   storeSlug: string;
-  product?: {
-    id: string;
-    slug: string;
-    title: string;
-    shortDescription: string | null;
-    bannerUrl: string | null;
-    coverUrl: string | null;
-  };
-  banner?: {
-    id: string;
-    title: string;
-    imageUrl: string;
-    linkType: string | null;
-    linkValue: string | null;
-  }
+  banners?: BannerItem[];
+  intervalSeconds?: number;
+  // Backward compatibility prop (optional)
+  product?: any;
 }
 
-export function HeroBanner({ storeSlug, product, banner }: HeroBannerProps) {
-  const bgImage = banner?.imageUrl || product?.bannerUrl || product?.coverUrl || "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop";
-  const title = banner?.title || product?.title || "Destaque";
-  const description = banner ? null : (product?.shortDescription || "Assista agora e descubra uma nova experiência.");
-  
-  let href = "#";
-  if (banner) {
-    if (banner.linkType === 'product' && banner.linkValue) href = `/miniapp/${storeSlug}/product/${banner.linkValue}`;
-    else if (banner.linkType === 'category' && banner.linkValue) href = `/miniapp/${storeSlug}/category/${banner.linkValue}`;
-  } else if (product) {
-    href = `/miniapp/${storeSlug}/product/${product.slug}`;
+export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: HeroBannerProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  // Filter only valid banners with image URLs
+  const activeBanners = banners.filter(b => b && b.imageUrl);
+  const totalBanners = activeBanners.length;
+
+  // 0 Banners -> Return null (do not leave empty space)
+  if (totalBanners === 0) {
+    return null;
   }
 
-  return (
-    <div className="relative w-full h-[55vh] min-h-[380px] max-h-[550px] flex items-end justify-center">
+  // Autoplay Effect (Only if 2 or more banners exist)
+  useEffect(() => {
+    if (totalBanners <= 1) return;
 
+    const intervalMs = Math.max(3, intervalSeconds) * 1000;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % totalBanners);
+    }, intervalMs);
 
-      <div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${bgImage})` }}
+    return () => clearInterval(timer);
+  }, [totalBanners, intervalSeconds]);
+
+  // Handle Touch Swipe for Mobile / Telegram WebApp
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const deltaX = touchStartX.current - touchEndX.current;
+
+    // Minimum swipe threshold: 40px
+    if (deltaX > 40) {
+      // Swiped Left -> Next Banner
+      setCurrentIndex((prev) => (prev + 1) % totalBanners);
+    } else if (deltaX < -40) {
+      // Swiped Right -> Previous Banner
+      setCurrentIndex((prev) => (prev - 1 + totalBanners) % totalBanners);
+    }
+
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  const currentBanner = activeBanners[currentIndex] || activeBanners[0];
+
+  // Destination link resolution
+  let href: string | null = null;
+  if (currentBanner.linkType === 'product' && currentBanner.linkValue) {
+    href = `/miniapp/${storeSlug}/product/${currentBanner.linkValue}`;
+  } else if (currentBanner.linkType === 'category' && currentBanner.linkValue) {
+    href = `/miniapp/${storeSlug}/category/${currentBanner.linkValue}`;
+  }
+
+  const BannerContent = (
+    <div
+      onTouchStart={totalBanners > 1 ? handleTouchStart : undefined}
+      onTouchMove={totalBanners > 1 ? handleTouchMove : undefined}
+      onTouchEnd={totalBanners > 1 ? handleTouchEnd : undefined}
+      className="relative w-full aspect-[2.2/1] sm:aspect-[2.5/1] max-h-[220px] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-xl group select-none cursor-pointer"
+    >
+      {/* Banner Image with Smooth Fade Transition */}
+      <img
+        key={currentBanner.id || currentIndex}
+        src={currentBanner.imageUrl}
+        alt={currentBanner.title || "Banner"}
+        className="w-full h-full object-cover transition-opacity duration-500 ease-in-out"
+        onError={(e) => {
+          (e.target as HTMLElement).setAttribute(
+            "src",
+            "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000"
+          );
+        }}
       />
-      {/* Cinematic Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/80 via-transparent to-transparent" />
-      
-      <div className="relative z-10 w-full px-4 pb-12 flex flex-col items-center text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight drop-shadow-md uppercase">
-          {title}
-        </h1>
-      </div>
 
+      {/* Subtle Overlay Gradients */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+
+      {/* Title Tag if present */}
+      {currentBanner.title && (
+        <div className="absolute bottom-3 left-3.5 right-3.5 z-10 pointer-events-none">
+          <span className="inline-block px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-xs font-bold tracking-tight truncate max-w-full drop-shadow-md">
+            {currentBanner.title}
+          </span>
+        </div>
+      )}
+
+      {/* Discrete Dot Indicators (Only if 2+ Banners) */}
+      {totalBanners > 1 && (
+        <div className="absolute bottom-2.5 right-3 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/5">
+          {activeBanners.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCurrentIndex(idx);
+              }}
+              title={`Banner ${idx + 1}`}
+              className={`transition-all duration-300 ${
+                currentIndex === idx
+                  ? "w-4 h-1.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"
+                  : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70 rounded-full"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="w-full px-4 pt-3 pb-1">
+      {href ? (
+        <Link href={href} className="block w-full">
+          {BannerContent}
+        </Link>
+      ) : (
+        BannerContent
+      )}
     </div>
   );
 }
