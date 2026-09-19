@@ -164,6 +164,10 @@ export class AccessDeliveryService {
         throw new Error("Produto sem telegramChatId configurado.");
       }
 
+      const { calculateAccessExpiration } = await import("@/lib/orders/expiration-service");
+      const paidAtDate = order?.paidAt || accessRecord.grantedAt || new Date();
+      const accessExpiresAt = calculateAccessExpiration(product.duration, paidAtDate);
+
       const botToken = decrypt(bot.tokenEncrypted);
       let deliveryUrl = accessRecord.inviteLink || '';
       let isAlreadyMember = false;
@@ -193,11 +197,13 @@ export class AccessDeliveryService {
             deliveryUrl = `https://t.me/c/${cleanedId}`;
           } else if (!deliveryUrl) {
             // 3. Generate Single-Use Invite Link for New Buyer if no existing link
+            const expireTimestamp = accessExpiresAt ? Math.floor(accessExpiresAt.getTime() / 1000) : undefined;
             const invite = await TelegramDeliveryService.createTelegramInvite(
               botToken,
               telegramChatId,
               product.title,
-              accessRecord.orderId
+              accessRecord.orderId,
+              expireTimestamp
             );
             deliveryUrl = invite.inviteLink;
           }
@@ -228,14 +234,15 @@ export class AccessDeliveryService {
 
       const now = new Date();
 
-      // 5. Save Access Record as ACTIVE and DELIVERED
+      // 5. Save Access Record as ACTIVE and DELIVERED with real grantedAt & expiresAt
       await db.update(accesses).set({
         status: 'ACTIVE',
         deliveryStatus: 'DELIVERED',
         inviteLink: deliveryUrl,
         deliveryError: null,
+        grantedAt: accessRecord.grantedAt || paidAtDate,
+        expiresAt: accessExpiresAt,
         confirmationSentAt: confirmationSent ? (accessRecord.confirmationSentAt || now) : null,
-        grantedAt: accessRecord.grantedAt || now,
         updatedAt: now,
       }).where(eq(accesses.id, accessRecord.id));
 

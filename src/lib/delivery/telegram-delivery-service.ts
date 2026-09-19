@@ -95,7 +95,8 @@ export class TelegramDeliveryService {
     botToken: string,
     telegramChatId: string,
     productTitle: string,
-    orderId?: string
+    orderId?: string,
+    expireDateTimestamp?: number
   ): Promise<{ inviteLink: string }> {
     const botService = new TelegramBotService(botToken);
     
@@ -104,7 +105,8 @@ export class TelegramDeliveryService {
     const linkObj = await botService.createChatInviteLink(
       telegramChatId,
       linkName,
-      1 // single-use link for the buyer
+      1, // single-use link for the buyer
+      expireDateTimestamp
     );
 
     if (!linkObj || !linkObj.invite_link) {

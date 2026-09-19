@@ -79,12 +79,14 @@ export class TelegramBotService {
     }
   }
 
-  async createChatInviteLink(chatId: string | number, name?: string, memberLimit: number = 1): Promise<{ invite_link: string }> {
-    return telegramFetch<{ invite_link: string }>(this.token, 'createChatInviteLink', {
+  async createChatInviteLink(chatId: string | number, name?: string, memberLimit: number = 1, expireDate?: number): Promise<{ invite_link: string }> {
+    const payload: any = {
       chat_id: chatId,
       name: name || 'Acesso WebGran',
       member_limit: memberLimit,
-    });
+    };
+    if (expireDate) payload.expire_date = expireDate;
+    return telegramFetch<{ invite_link: string }>(this.token, 'createChatInviteLink', payload);
   }
 
   async getChat(chatId: string | number): Promise<any> {
@@ -97,6 +99,24 @@ export class TelegramBotService {
     return telegramFetch<any>(this.token, 'getChatMember', {
       chat_id: chatId,
       user_id: userId,
+    });
+  }
+
+  async banChatMember(chatId: string | number, userId: string | number, untilDate?: number, revokeMessages: boolean = false): Promise<boolean> {
+    const payload: any = {
+      chat_id: chatId,
+      user_id: userId,
+      revoke_messages: revokeMessages,
+    };
+    if (untilDate) payload.until_date = untilDate;
+    return telegramFetch<boolean>(this.token, 'banChatMember', payload);
+  }
+
+  async unbanChatMember(chatId: string | number, userId: string | number, onlyIfBanned: boolean = true): Promise<boolean> {
+    return telegramFetch<boolean>(this.token, 'unbanChatMember', {
+      chat_id: chatId,
+      user_id: userId,
+      only_if_banned: onlyIfBanned,
     });
   }
 

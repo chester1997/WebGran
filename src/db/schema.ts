@@ -167,6 +167,7 @@ export const accesses = pgTable('accesses', {
   deliveryError: text('delivery_error'),
   grantedAt: timestamp('granted_at'),
   expiresAt: timestamp('expires_at'),
+  expiredAt: timestamp('expired_at'),
   confirmationSentAt: timestamp('confirmation_sent_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

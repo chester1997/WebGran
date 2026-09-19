@@ -1,5 +1,5 @@
 import React from "react";
-import { PlayCircle, Lock, AlertTriangle } from "lucide-react";
+import { PlayCircle, Lock, AlertTriangle, RefreshCw, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { getMiniAppSession } from "@/lib/telegram/session";
 import { AccessService } from "@/lib/orders/access-service";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { stores, telegramCustomers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { formatAccessExpirationBR } from "@/lib/orders/expiration-service";
 
 export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
   const store = await db.query.stores.findFirst({
@@ -57,43 +58,94 @@ export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {accesses.map((acc) => {
+            const expInfo = formatAccessExpirationBR(acc.expiresAt, acc.status);
+            const isExpired = acc.status === 'EXPIRED' || expInfo.isExpired;
+            const isFailedDelivery = acc.deliveryStatus === 'FAILED';
+            const isPendingDelivery = acc.deliveryStatus === 'PENDING';
             const hasDirectLink = acc.inviteLink || (acc.product.deliveryValue && acc.product.deliveryValue.startsWith('http'));
             const accessUrl = acc.inviteLink || (acc.product.deliveryValue?.startsWith('http') ? acc.product.deliveryValue : `/miniapp/${storeSlug}/product/${acc.product.slug}`);
-            const isFailedDelivery = acc.deliveryStatus === 'FAILED';
 
             return (
-              <div key={acc.id} className="relative aspect-[2/3] rounded-md overflow-hidden bg-zinc-900 border border-zinc-800 group flex flex-col">
+              <div key={acc.id} className="relative aspect-[16/10] sm:aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 group flex flex-col justify-between">
                 <div 
                   className="absolute inset-0 bg-cover bg-center" 
                   style={{ backgroundImage: `url(${acc.product.coverUrl || ''})` }} 
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
                 
-                <div className="relative z-10 flex-1 flex flex-col justify-end p-3">
-                  {isFailedDelivery && (
-                    <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 mb-2 w-fit">
-                      <AlertTriangle className="w-3 h-3" />
-                      Entrega pendente
+                {/* Header Status Badges */}
+                <div className="relative z-10 p-3 flex items-center justify-between">
+                  {isExpired ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-red-500/20 text-red-400 px-2.5 py-1 rounded-full border border-red-500/30 backdrop-blur-md">
+                      🔴 Acesso expirado
+                    </span>
+                  ) : isFailedDelivery || isPendingDelivery ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full border border-amber-500/30 backdrop-blur-md">
+                      🟡 Entrega pendente
+                    </span>
+                  ) : expInfo.isLifetime ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md">
+                      🟢 Acesso vitalício
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md">
+                      🟢 Acesso ativo
                     </span>
                   )}
-                  <h3 className="font-bold text-sm leading-tight text-white line-clamp-2 drop-shadow mb-3">
+                </div>
+
+                {/* Footer Content & Actions */}
+                <div className="relative z-10 p-4 flex flex-col justify-end">
+                  <h3 className="font-bold text-base leading-tight text-white line-clamp-2 drop-shadow mb-1">
                     {acc.product.title}
                   </h3>
-                  <a 
-                    href={accessUrl}
-                    target={hasDirectLink ? "_blank" : "_self"}
-                    rel={hasDirectLink ? "noopener noreferrer" : undefined}
-                    className={`w-full text-white font-semibold text-xs py-2 rounded flex items-center justify-center gap-1 transition-colors shadow ${
-                      isFailedDelivery && !hasDirectLink
-                        ? "bg-zinc-700 hover:bg-zinc-600"
-                        : "bg-blue-600 hover:bg-blue-500"
-                    }`}
-                  >
-                    <PlayCircle className="w-3.5 h-3.5" />
-                    {isFailedDelivery && !hasDirectLink ? "Ver Detalhes" : "Acessar Conteúdo"}
-                  </a>
+
+                  {/* Expiration date text */}
+                  <div className="text-xs text-zinc-400 mb-3 space-y-0.5">
+                    {expInfo.isLifetime ? (
+                      <p className="text-emerald-400 font-medium">Vitalício • Sem data limite</p>
+                    ) : isExpired ? (
+                      <p className="text-red-400 font-medium">{expInfo.dateFormatted}</p>
+                    ) : (
+                      <p className="text-zinc-300">
+                        {expInfo.dateFormatted}
+                        {expInfo.daysRemaining !== null && (
+                          <span className="text-zinc-400 ml-1.5">({expInfo.daysRemaining} {expInfo.daysRemaining === 1 ? 'dia restante' : 'dias restantes'})</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action Button */}
+                  {isExpired ? (
+                    <Link
+                      href={`/miniapp/${storeSlug}/product/${acc.product.slug}`}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Comprar novamente
+                    </Link>
+                  ) : isFailedDelivery ? (
+                    <Link
+                      href={`/miniapp/${storeSlug}/product/${acc.product.slug}`}
+                      className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Tentar liberar acesso
+                    </Link>
+                  ) : (
+                    <a 
+                      href={accessUrl}
+                      target={hasDirectLink ? "_blank" : "_self"}
+                      rel={hasDirectLink ? "noopener noreferrer" : undefined}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      Acessar Conteúdo
+                    </a>
+                  )}
                 </div>
               </div>
             );
