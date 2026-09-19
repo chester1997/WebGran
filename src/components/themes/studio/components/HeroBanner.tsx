@@ -15,7 +15,6 @@ interface HeroBannerProps {
   storeSlug: string;
   banners?: BannerItem[];
   intervalSeconds?: number;
-  // Backward compatibility prop (optional)
   product?: any;
 }
 
@@ -82,7 +81,7 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
     href = `/miniapp/${storeSlug}/category/${currentBanner.linkValue}`;
   }
 
-  const BannerContent = (
+  const BannerCard = (
     <div
       onTouchStart={totalBanners > 1 ? handleTouchStart : undefined}
       onTouchMove={totalBanners > 1 ? handleTouchMove : undefined}
@@ -102,22 +101,22 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
           );
         }}
       />
+    </div>
+  );
 
-      {/* Subtle Overlay Gradients */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-
-      {/* Title Tag if present */}
-      {currentBanner.title && (
-        <div className="absolute bottom-3 left-3.5 right-3.5 z-10 pointer-events-none">
-          <span className="inline-block px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-xs font-bold tracking-tight truncate max-w-full drop-shadow-md">
-            {currentBanner.title}
-          </span>
-        </div>
+  return (
+    <div className="w-full px-4 pt-3 pb-1 flex flex-col items-center">
+      {href ? (
+        <Link href={href} className="block w-full">
+          {BannerCard}
+        </Link>
+      ) : (
+        BannerCard
       )}
 
-      {/* Discrete Dot Indicators (Only if 2+ Banners) */}
+      {/* Discrete Dot Indicators positioned BELOW the banner card */}
       {totalBanners > 1 && (
-        <div className="absolute bottom-2.5 right-3 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/5">
+        <div className="flex items-center justify-center gap-1.5 mt-2.5">
           {activeBanners.map((_, idx) => (
             <button
               key={idx}
@@ -129,24 +128,12 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
               title={`Banner ${idx + 1}`}
               className={`transition-all duration-300 ${
                 currentIndex === idx
-                  ? "w-4 h-1.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"
-                  : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70 rounded-full"
+                  ? "w-5 h-1.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"
+                  : "w-1.5 h-1.5 bg-zinc-600 hover:bg-zinc-400 rounded-full"
               }`}
             />
           ))}
         </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="w-full px-4 pt-3 pb-1">
-      {href ? (
-        <Link href={href} className="block w-full">
-          {BannerContent}
-        </Link>
-      ) : (
-        BannerContent
       )}
     </div>
   );
