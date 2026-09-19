@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Upload, X, Edit3, ImageIcon, AlertCircle } from "lucide-react";
 import { updateProductAction, testTelegramChatAccessAction } from "./actions";
 
+import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
+
 export function EditProductModal({ categories, bots, product }: { categories: any[]; bots: any[]; product: any }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -24,7 +26,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
   const [imageUrl, setImageUrl] = useState(product?.coverUrl || "");
   const [selectedBotId, setSelectedBotId] = useState(product?.botId || "");
   const [testingAccess, setTestingAccess] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; chatName?: string; error?: string } | null>(null);
+  const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTestAccess = async () => {
@@ -276,12 +278,9 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                         <p className="font-bold text-sm text-emerald-400 flex items-center gap-1.5 mb-2">
                           ✓ Canal encontrado
                         </p>
-                        <p><strong>Nome:</strong> {testResult.chat?.title}</p>
-                        <p><strong>ID:</strong> {testResult.chat?.id}</p>
-                        <p><strong>Tipo:</strong> {testResult.chat?.type}</p>
-                        <p><strong>Bot:</strong> @{testResult.bot?.username}</p>
-                        <p><strong>Permissão:</strong> {testResult.permission || "Administrador"}</p>
-                        <p className="text-emerald-400 font-semibold"><strong>Convites:</strong> ✓ Pode convidar usuários</p>
+                        <p><strong>Nome:</strong> {testResult.chatName || "Grupo/Canal Telegram"}</p>
+                        {testResult.chatType && <p><strong>Tipo:</strong> {testResult.chatType}</p>}
+                        <p className="text-emerald-400 font-semibold mt-1">✓ Bot verificado com permissão de Administrador (pode convidar usuários)</p>
                       </div>
                     ) : (
                       <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs whitespace-pre-line font-sans leading-relaxed">

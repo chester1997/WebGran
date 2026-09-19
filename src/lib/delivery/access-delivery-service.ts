@@ -165,7 +165,7 @@ export class AccessDeliveryService {
       }
 
       const { calculateAccessExpiration } = await import("@/lib/orders/expiration-service");
-      const paidAtDate = order?.paidAt || accessRecord.grantedAt || new Date();
+      const paidAtDate = accessRecord.grantedAt || new Date();
       const accessExpiresAt = calculateAccessExpiration(product.duration, paidAtDate);
 
       const botToken = decrypt(bot.tokenEncrypted);
