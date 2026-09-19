@@ -66,7 +66,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           if (data.status === 'paid') {
             setIsPaid(true);
             if (data.accesses && data.accesses.length > 0) {
-              setAccessLink(data.accesses[0].inviteLink);
+              setAccessLink(`/api/telegram/access/redirect?accessId=${data.accesses[0].id}&storeSlug=${storeSlug}`);
             }
             clearInterval(interval);
           }

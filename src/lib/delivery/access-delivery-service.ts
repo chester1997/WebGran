@@ -194,7 +194,7 @@ export class AccessDeliveryService {
           if (isAlreadyMember) {
             console.log(`[AccessDeliveryService] Customer ${customer?.telegramUserId} is ALREADY a member of chat ${telegramChatId}.`);
             const cleanedId = telegramChatId.replace('-100', '');
-            deliveryUrl = `https://t.me/c/${cleanedId}`;
+            deliveryUrl = `https://t.me/c/${cleanedId}/1`;
           } else if (!deliveryUrl) {
             // 3. Generate Single-Use Invite Link for New Buyer if no existing link
             const expireTimestamp = accessExpiresAt ? Math.floor(accessExpiresAt.getTime() / 1000) : undefined;

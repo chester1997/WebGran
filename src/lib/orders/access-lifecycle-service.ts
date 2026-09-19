@@ -153,7 +153,7 @@ export class AccessLifecycleService {
       let directChannelUrl = telegramChatId;
       if (telegramChatId.startsWith('-100')) {
         const cleanedId = telegramChatId.replace('-100', '');
-        directChannelUrl = `https://t.me/c/${cleanedId}`;
+        directChannelUrl = `https://t.me/c/${cleanedId}/1`;
       } else if (telegramChatId.startsWith('@')) {
         directChannelUrl = `https://t.me/${telegramChatId.replace('@', '')}`;
       }

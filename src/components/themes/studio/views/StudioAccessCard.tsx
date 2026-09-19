@@ -49,13 +49,6 @@ export function StudioAccessCard({
       setLoading(true);
       setErrorMessage(null);
 
-      // Fast-path if we already have a pre-resolved destinationUrl
-      if (destinationUrl) {
-        openLink(destinationUrl);
-        setLoading(false);
-        return;
-      }
-
       const res = await fetch("/api/telegram/access/open", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,6 +56,14 @@ export function StudioAccessCard({
       });
 
       const data = await res.json();
+
+      console.log("[WEBGRAN ACCESS CLICK]", {
+        accessId: access.id,
+        status: data.status,
+        destinationType: data.destinationType,
+        destinationUrl: data.destinationUrl,
+        expiresAt: data.expiresAt
+      });
 
       if (!res.ok || !data.success) {
         if (data.status === 'EXPIRED') {
