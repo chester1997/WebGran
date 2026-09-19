@@ -7,9 +7,7 @@ import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
 import { RankingService } from "@/lib/catalog/ranking-service";
 import Link from "next/link";
-import { Search, UserCircle } from "lucide-react";
 import { StudioHeader } from "../components/StudioHeader";
-
 
 export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   const store = await db.query.stores.findFirst({
@@ -31,13 +29,41 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
 
   const storeBanners = await db.query.banners.findMany({
     where: and(eq(banners.storeId, store.id), eq(banners.status, 'active')),
-    orderBy: [desc(banners.position), desc(banners.createdAt)],
+    orderBy: [asc(banners.position), desc(banners.createdAt)],
     limit: 5
   });
 
-  // Fetch custom carousels configured by the seller
-  const customCarousels = await db.query.productCarousels.findMany({
-    where: and(eq(productCarousels.storeId, store.id), eq(productCarousels.status, 'active')),
+  // Fetch Editorial Ranking Carousel (Top 15)
+  const rankingCarousel = await db.query.productCarousels.findFirst({
+    where: and(
+      eq(productCarousels.storeId, store.id),
+      eq(productCarousels.isRanking, true),
+      eq(productCarousels.status, 'active')
+    ),
+    with: {
+      items: {
+        orderBy: (items, { asc }) => [asc(items.position)],
+        with: {
+          product: true
+        }
+      }
+    }
+  });
+
+  const rankingProducts = rankingCarousel
+    ? rankingCarousel.items
+        .map(i => i.product)
+        .filter(p => p && p.status === 'active')
+        .slice(0, 15)
+    : [];
+
+  // Fetch Standard Carousels configured by the seller
+  const standardCarousels = await db.query.productCarousels.findMany({
+    where: and(
+      eq(productCarousels.storeId, store.id),
+      eq(productCarousels.isRanking, false),
+      eq(productCarousels.status, 'active')
+    ),
     orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
     with: {
       items: {
@@ -56,29 +82,17 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   });
   const headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
 
-  // Fallbacks for top 10 and default sections
-  const heroProduct = allProducts[0];
-  
-  let topTen: typeof allProducts = [];
-  try {
-    topTen = await RankingService.getTopProducts(store.id, 'week');
-  } catch {
-    topTen = [];
-  }
-  
+  // Fallbacks for default sections if no custom carousels created
   const recents = allProducts.slice(0, 8);
-  const bestSellers = topTen.length > 0 ? topTen : allProducts.slice(0, 5);
+  const bestSellers = allProducts.slice(0, 5);
 
   return (
     <div className="w-full">
-
-
       <StudioHeader 
         storeSlug={storeSlug} 
         storeName={store.name} 
         headerLogoUrl={headerLogoUrl} 
       />
-
 
       {/* Premium Compact Banner Slider */}
       {storeBanners.length > 0 && (
@@ -90,8 +104,14 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       )}
 
       <div className="relative z-20 mt-4 space-y-4">
-
-        <TopTenCarousel storeSlug={storeSlug} products={topTen} />
+        {/* Editorial Ranking Carousel (Top 15) */}
+        {rankingProducts.length > 0 && (
+          <TopTenCarousel 
+            storeSlug={storeSlug} 
+            title={rankingCarousel?.name || "Top 15 Hoje"} 
+            products={rankingProducts} 
+          />
+        )}
         
         {/* Categories Pills */}
         {store.categories && store.categories.length > 0 && (
@@ -113,9 +133,9 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
           </section>
         )}
 
-        {/* Custom Carousels configured by seller */}
-        {customCarousels.length > 0 ? (
-          customCarousels.map(carousel => {
+        {/* Custom Standard Carousels configured by seller */}
+        {standardCarousels.length > 0 ? (
+          standardCarousels.map(carousel => {
             const carouselProductsList = carousel.items
               .map(i => i.product)
               .filter(p => p && p.status === 'active');

@@ -199,6 +199,7 @@ export const productCarousels = pgTable('product_carousels', {
   name: text('name').notNull(),
   position: integer('position').notNull().default(0),
   status: text('status').notNull().default('active'),
+  isRanking: boolean('is_ranking').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
