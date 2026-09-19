@@ -116,8 +116,8 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set("tg_session", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 60 * 60 * 24 * 7 // 7 days
     });
 

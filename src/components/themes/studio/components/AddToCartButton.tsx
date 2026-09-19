@@ -24,13 +24,9 @@ export function AddToCartButton({
     e.preventDefault();
     e.stopPropagation();
     
-    if (!isAlreadyInCart) {
-      addToCart({ ...product, quantity: 1 });
-      setJustAdded(true);
-      setTimeout(() => setJustAdded(false), 2000);
-    } else if (storeSlug) {
-      router.push(`/miniapp/${storeSlug}/cart`);
-    }
+    addToCart({ ...product, quantity: 1 });
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 2000);
   };
 
   if (variant === "card") {
@@ -39,7 +35,7 @@ export function AddToCartButton({
         onClick={handleClick}
         className="flex-1 bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white text-[11px] font-bold py-2 rounded-lg text-center transition-colors flex items-center justify-center gap-1"
       >
-        {isAlreadyInCart ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : "+ Carrinho"}
+        {justAdded ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : "+ Carrinho"}
       </button>
     );
   }
@@ -47,18 +43,18 @@ export function AddToCartButton({
   return (
     <button 
       onClick={handleClick}
-      className="w-full flex items-center justify-center gap-2 bg-white text-black font-semibold py-3 rounded-md hover:bg-zinc-200 transition-colors"
+      className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors"
     >
-      {isAlreadyInCart ? (
+      {justAdded ? (
         <>
-          <Check className="w-5 h-5" />
+          <Check className="w-5 h-5 text-white" />
           <div className="flex flex-col items-center leading-tight">
-            <span>Ver no Carrinho</span>
+            <span>Adicionado ao Carrinho!</span>
           </div>
         </>
       ) : (
         <>
-          <Play className="w-5 h-5 fill-black" />
+          <Play className="w-5 h-5 fill-white" />
           <div className="flex flex-col items-center leading-tight">
             <span>Comprar por R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
           </div>

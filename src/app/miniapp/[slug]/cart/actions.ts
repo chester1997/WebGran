@@ -88,50 +88,46 @@ export async function createCheckoutSession(storeSlug: string, items: { id: stri
       : null;
 
     if (conn && conn.status === 'active') {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      const redirectUrl = `${appUrl}/miniapp/${storeSlug}/order-status/${newOrder.id}`;
-
-      const preference = await paymentService.createCheckoutPreference({
+      const pixPayment = await paymentService.createPixPayment({
         sellerId: storeRecord!.ownerId,
-        items: realProducts.map(p => {
-          const cartItem = items.find(i => i.id === p.id);
-          return {
-            id: p.id,
-            title: p.title,
-            quantity: cartItem?.quantity || 1,
-            unitPrice: Number(p.price)
-          };
-        }),
+        orderId: newOrder.id,
+        amount: subtotal,
+        description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
         customer: {
           name: 'Cliente Telegram',
           email: 'cliente@webgran.app'
-        },
-        successUrl: redirectUrl,
-        failureUrl: redirectUrl,
-        metadata: {
-          orderId: newOrder.id,
-          storeId,
-          slug: storeSlug
         }
       });
 
       await db.update(orders)
-        .set({ preferenceId: preference.id })
+        .set({
+          paymentId: pixPayment.paymentId,
+          pixQrCode: pixPayment.qrCode,
+          pixQrCodeBase64: pixPayment.qrCodeBase64,
+          pixExpiresAt: pixPayment.expiresAt,
+        })
         .where(eq(orders.id, newOrder.id));
 
-      return { success: true, checkoutUrl: preference.url, orderId: newOrder.id };
+      return {
+        success: true,
+        orderId: newOrder.id,
+        pix: {
+          qrCode: pixPayment.qrCode,
+          qrCodeBase64: pixPayment.qrCodeBase64,
+          expiresAt: pixPayment.expiresAt.toISOString(),
+        }
+      };
     }
 
-    // Fallback mode if seller hasn't connected Mercado Pago yet
+    // Fallback mode if seller hasn't connected Mercado Pago yet (Simulator / Demo Mode)
     await db.update(orders)
       .set({ status: 'paid' })
       .where(eq(orders.id, newOrder.id));
 
-    for (const item of itemsToInsert) {
-      await AccessService.grantAccess(storeId, customerId, item.productId, newOrder.id);
-    }
+    const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+    await AccessDeliveryService.processOrderDelivery(newOrder.id);
 
-    return { success: true, orderId: newOrder.id };
+    return { success: true, orderId: newOrder.id, isDemoPaid: true };
   } catch (error: any) {
     console.error("Checkout error:", error);
     return { success: false, error: error.message || "Erro interno ao processar pedido" };

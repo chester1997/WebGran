@@ -7,7 +7,8 @@ import {
   CreateCheckoutParams, 
   CheckoutResponse, 
   CreatePaymentParams, 
-  PaymentResponse 
+  PaymentResponse,
+  PixPaymentResponse 
 } from '../types';
 
 export class MercadoPagoProvider implements MarketplacePaymentProvider {
@@ -263,23 +264,97 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
       body: JSON.stringify(prefPayload),
     });
 
-    const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.message || 'Error creating Mercado Pago checkout preference.');
+      const err = await res.json();
+      throw new Error(`Mercado Pago preference creation failed: ${JSON.stringify(err)}`);
     }
 
-    const checkoutUrl = process.env.NODE_ENV === 'production' 
-      ? data.init_point 
-      : (data.sandbox_init_point || data.init_point);
-
+    const data = await res.json();
     return {
       id: data.id,
-      url: checkoutUrl,
+      url: data.init_point || data.sandbox_init_point,
     };
   }
 
   async createPayment(params: CreatePaymentParams): Promise<PaymentResponse> {
-    throw new Error('Direct API payments require custom transparent checkout. Use createCheckout preference method instead.');
+    const pixRes = await this.createPixPayment(params);
+    return {
+      id: pixRes.paymentId,
+      status: pixRes.status,
+      amount: params.amount,
+    };
+  }
+
+  /**
+   * Create transparent PIX Payment using Mercado Pago /v1/orders API
+   */
+  async createPixPayment(params: CreatePaymentParams): Promise<PixPaymentResponse> {
+    const accessToken = await this.getValidAccessToken(params.sellerId);
+    const platformFee = this.calculatePlatformFee(params.amount);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
+    const orderPayload = {
+      type: "online",
+      total_amount: params.amount.toFixed(2),
+      external_reference: params.orderId,
+      processing_mode: "automatic",
+      description: params.description || `Pedido #${params.orderId.slice(0, 8)}`,
+      marketplace_fee: platformFee.toFixed(2),
+      payer: {
+        email: params.customer?.email || 'cliente@webgran.app',
+        first_name: params.customer?.name?.split(' ')[0] || params.customer?.firstName || 'Cliente',
+        last_name: params.customer?.name?.split(' ').slice(1).join(' ') || params.customer?.lastName || 'WebGran',
+      },
+      transactions: {
+        payments: [
+          {
+            amount: params.amount.toFixed(2),
+            payment_method: {
+              id: "pix",
+              type: "bank_transfer"
+            }
+          }
+        ]
+      }
+    };
+
+    const idempotencyKey = `order_pix_${params.orderId}`;
+
+    const res = await fetch('https://api.mercadopago.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify(orderPayload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error('[MP Orders API createPixPayment error]', data);
+      throw new Error(`Mercado Pago Orders API PIX creation failed: ${data.message || JSON.stringify(data)}`);
+    }
+
+    const firstPayment = data.transactions?.payments?.[0] || data.payments?.[0];
+    const paymentMethodData = firstPayment?.payment_method || firstPayment?.point_of_interaction?.transaction_data;
+
+    const qrCode = paymentMethodData?.qr_code || firstPayment?.qr_code;
+    const qrCodeBase64 = paymentMethodData?.qr_code_base64 || firstPayment?.qr_code_base64;
+    const expiresAt = firstPayment?.date_of_expiration ? new Date(firstPayment.date_of_expiration) : new Date(Date.now() + 30 * 60 * 1000);
+
+    if (!qrCode) {
+      console.warn('[MP Orders API] missing qr_code in response:', data);
+    }
+
+    return {
+      paymentId: String(firstPayment?.id || data.id),
+      status: firstPayment?.status || data.status || 'pending',
+      qrCode: qrCode || '',
+      qrCodeBase64: qrCodeBase64 || '',
+      expiresAt,
+    };
   }
 
   async getPayment(paymentId: string): Promise<PaymentResponse> {

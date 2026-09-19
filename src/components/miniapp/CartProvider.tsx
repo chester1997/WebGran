@@ -43,7 +43,15 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        setItems(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const sanitized = parsed.map((item: any) => ({
+            ...item,
+            price: Number(item.price || 0),
+            quantity: Number(item.quantity || 1)
+          }));
+          setItems(sanitized);
+        }
       }
     } catch (e) {
       console.error("Failed to load cart", e);

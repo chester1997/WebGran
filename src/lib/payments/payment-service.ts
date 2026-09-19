@@ -28,6 +28,10 @@ export class PaymentService {
     return this.mercadoPagoProvider.createCheckout(params);
   }
 
+  async createPixPayment(params: import('./types').CreatePaymentParams) {
+    return this.mercadoPagoProvider.createPixPayment(params);
+  }
+
   async handleWebhook(provider: string, payload: any): Promise<void> {
     if (provider === 'mercado_pago' || provider === 'mercadopago') {
       await this.mercadoPagoProvider.handleWebhook(payload);

@@ -4,6 +4,7 @@ export interface MarketplacePaymentProvider {
   getSellerConnection(sellerId: string): Promise<any>;
   createCheckout(params: CreateCheckoutParams): Promise<CheckoutResponse>;
   createPayment(params: CreatePaymentParams): Promise<PaymentResponse>;
+  createPixPayment?(params: CreatePaymentParams): Promise<PixPaymentResponse>;
   calculatePlatformFee(amount: number): number;
   getPayment(paymentId: string): Promise<PaymentResponse>;
   refundPayment(paymentId: string, amount?: number): Promise<void>;
@@ -43,14 +44,29 @@ export interface CheckoutResponse {
 export interface CreatePaymentParams {
   sellerId: string;
   amount: number;
-  paymentMethod: string;
+  paymentMethod?: string;
+  description?: string;
+  orderId: string;
   token?: string;
-  customer?: any;
+  customer?: {
+    email?: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+export interface PixPaymentResponse {
+  paymentId: string;
+  status: string;
+  qrCode: string;
+  qrCodeBase64: string;
+  expiresAt: Date;
 }
 
 export interface PaymentResponse {
   id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'refunded';
+  status: 'pending' | 'approved' | 'rejected' | 'refunded' | string;
   amount: number;
 }
 
