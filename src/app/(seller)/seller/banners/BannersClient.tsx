@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
-  createBannerAction, 
   updateBannerAction, 
   deleteBannerAction, 
   reorderBannersAction, 
@@ -82,7 +81,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     setTimeout(() => {
       setErrorMsg(null);
       setSuccessMsg(null);
-    }, 5000);
+    }, 6000);
   };
 
   // Handle File Upload Selection with 20MB validation rule
@@ -156,7 +155,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     setIsAddModalOpen(true);
   };
 
-  // Submit Form (Create or Edit)
+  // Submit Form (Create or Edit via API Endpoint)
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.imageUrl.trim()) {
@@ -166,41 +165,34 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
 
     try {
       setIsSubmitting(true);
-      if (editingBanner) {
-        await updateBannerAction({
-          id: editingBanner.id,
+      setErrorMsg(null);
+
+      const res = await fetch("/api/seller/banners/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingBanner ? editingBanner.id : undefined,
           title: formData.title,
           imageUrl: formData.imageUrl,
-          linkType: formData.linkType === "none" ? undefined : formData.linkType,
+          linkType: formData.linkType,
           linkValue: formData.linkValue,
-        });
-        setBannersList((prev) =>
-          prev.map((b) =>
-            b.id === editingBanner.id
-              ? {
-                  ...b,
-                  title: formData.title || b.title,
-                  imageUrl: formData.imageUrl,
-                  linkType: formData.linkType === "none" ? null : formData.linkType,
-                  linkValue: formData.linkValue || null,
-                }
-              : b
-          )
-        );
-        showFeedback("Banner atualizado com sucesso!");
-      } else {
-        await createBannerAction({
-          title: formData.title,
-          imageUrl: formData.imageUrl,
-          linkType: formData.linkType === "none" ? undefined : formData.linkType,
-          linkValue: formData.linkValue,
-        });
-        showFeedback("Banner cadastrado com sucesso!");
-        window.location.reload();
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Erro ao salvar o banner.");
       }
+
+      showFeedback(editingBanner ? "Banner atualizado com sucesso!" : "Banner cadastrado com sucesso!");
       setIsAddModalOpen(false);
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (err: any) {
-      showFeedback(err.message || "Erro ao salvar banner", true);
+      showFeedback(err.message || "Erro ao salvar banner.", true);
     } finally {
       setIsSubmitting(false);
     }
@@ -605,10 +597,13 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2 shadow-lg shadow-red-600/20"
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2 shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Cadastrando...</span>
+                    </>
                   ) : editingBanner ? (
                     "Salvar Alterações"
                   ) : (
