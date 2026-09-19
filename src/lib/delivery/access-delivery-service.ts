@@ -165,7 +165,7 @@ export class AccessDeliveryService {
       }
 
       const botToken = decrypt(bot.tokenEncrypted);
-      let deliveryUrl = '';
+      let deliveryUrl = accessRecord.inviteLink || '';
       let isAlreadyMember = false;
 
       if (product.deliveryType === 'telegram' || product.deliveryType === 'TELEGRAM_CHAT') {
@@ -191,8 +191,8 @@ export class AccessDeliveryService {
             console.log(`[AccessDeliveryService] Customer ${customer?.telegramUserId} is ALREADY a member of chat ${telegramChatId}.`);
             const cleanedId = telegramChatId.replace('-100', '');
             deliveryUrl = `https://t.me/c/${cleanedId}`;
-          } else {
-            // 3. Generate Single-Use Invite Link for New Buyer
+          } else if (!deliveryUrl) {
+            // 3. Generate Single-Use Invite Link for New Buyer if no existing link
             const invite = await TelegramDeliveryService.createTelegramInvite(
               botToken,
               telegramChatId,
@@ -206,16 +206,27 @@ export class AccessDeliveryService {
         deliveryUrl = telegramChatId;
       }
 
-      // 4. Send Automated Notification Message to Buyer
-      if (customer && customer.telegramUserId) {
-        await TelegramDeliveryService.deliverToCustomer(
-          botToken,
-          customer.telegramUserId,
-          product.title,
-          deliveryUrl,
-          storeSlug
-        );
+      // 4. Send Automated Notification Message to Buyer (Idempotent: check confirmationSentAt)
+      let confirmationSent = Boolean(accessRecord.confirmationSentAt);
+
+      if (!confirmationSent && customer && customer.telegramUserId) {
+        try {
+          await TelegramDeliveryService.sendPaymentConfirmationMessage(
+            botToken,
+            customer.telegramUserId,
+            product.title,
+            deliveryUrl,
+            isAlreadyMember,
+            false,
+            storeSlug
+          );
+          confirmationSent = true;
+        } catch (msgErr: any) {
+          console.error(`[AccessDeliveryService] Erro ao enviar mensagem no bot para ${customer.telegramUserId}:`, msgErr.message);
+        }
       }
+
+      const now = new Date();
 
       // 5. Save Access Record as ACTIVE and DELIVERED
       await db.update(accesses).set({
@@ -223,9 +234,26 @@ export class AccessDeliveryService {
         deliveryStatus: 'DELIVERED',
         inviteLink: deliveryUrl,
         deliveryError: null,
-        grantedAt: new Date(),
-        updatedAt: new Date(),
+        confirmationSentAt: confirmationSent ? (accessRecord.confirmationSentAt || now) : null,
+        grantedAt: accessRecord.grantedAt || now,
+        updatedAt: now,
       }).where(eq(accesses.id, accessRecord.id));
+
+      // 6. Structured Audit Log (Section 20)
+      console.log(JSON.stringify({
+        event: "ACCESS_DELIVERY_SUCCESS",
+        orderId: accessRecord.orderId,
+        accessId: accessRecord.id,
+        storeId: accessRecord.storeId,
+        productId: product.id,
+        telegramUserId: customer?.telegramUserId,
+        telegramChatId: telegramChatId,
+        botId: bot?.id || bot?.botId,
+        paymentStatus: "paid",
+        accessStatus: "ACTIVE",
+        deliveryStatus: "DELIVERED",
+        confirmationMessageSent: confirmationSent
+      }));
 
       return {
         accessId: accessRecord.id,
@@ -237,13 +265,54 @@ export class AccessDeliveryService {
       const errorMsg = err.message || "Erro desconhecido na entrega de acesso.";
       console.error(`[AccessDeliveryService] Delivery failed for access ${accessRecord.id}:`, errorMsg);
 
-      // Mark Access as FAILED without setting status to ACTIVE
+      let confirmationSent = Boolean(accessRecord.confirmationSentAt);
+
+      // Attempt sending failed notification to buyer if not sent yet
+      if (!confirmationSent && customer && customer.telegramUserId && bot) {
+        try {
+          const botToken = decrypt(bot.tokenEncrypted);
+          await TelegramDeliveryService.sendPaymentConfirmationMessage(
+            botToken,
+            customer.telegramUserId,
+            product.title,
+            "",
+            false,
+            true,
+            storeSlug
+          );
+          confirmationSent = true;
+        } catch {
+          // Non-blocking fallback
+        }
+      }
+
+      const now = new Date();
+
+      // Mark Access as FAILED
       await db.update(accesses).set({
         status: 'FAILED',
         deliveryStatus: 'FAILED',
         deliveryError: errorMsg,
-        updatedAt: new Date(),
+        confirmationSentAt: confirmationSent ? (accessRecord.confirmationSentAt || now) : null,
+        updatedAt: now,
       }).where(eq(accesses.id, accessRecord.id));
+
+      // Structured Audit Log (Section 20)
+      console.log(JSON.stringify({
+        event: "ACCESS_DELIVERY_FAILED",
+        orderId: accessRecord.orderId,
+        accessId: accessRecord.id,
+        storeId: accessRecord.storeId,
+        productId: product?.id,
+        telegramUserId: customer?.telegramUserId,
+        telegramChatId: product?.deliveryValue,
+        botId: bot?.id || bot?.botId,
+        paymentStatus: "paid",
+        accessStatus: "FAILED",
+        deliveryStatus: "FAILED",
+        confirmationMessageSent: confirmationSent,
+        error: errorMsg
+      }));
 
       return {
         accessId: accessRecord.id,

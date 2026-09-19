@@ -32,10 +32,15 @@ export function EditProductModal({ categories, bots, product }: { categories: an
     setTestingAccess(true);
     setTestResult(null);
     try {
-      const res = await testTelegramChatAccessAction(selectedBotId, deliveryValue.trim());
-      setTestResult(res);
+      const res = await fetch("/api/seller/products/validate-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryValue: deliveryValue.trim() })
+      });
+      const data = await res.json();
+      setTestResult(data);
     } catch (e: any) {
-      setTestResult({ success: false, error: e.message || "Erro no teste de acesso." });
+      setTestResult({ success: false, error: e.message || "Erro ao conectar com a API." });
     } finally {
       setTestingAccess(false);
     }
@@ -259,19 +264,30 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                       variant="outline"
                       disabled={testingAccess || !deliveryValue.trim()}
                       onClick={handleTestAccess}
-                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 px-4 rounded-lg shrink-0"
+                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 px-4 rounded-lg shrink-0 font-medium"
                     >
-                      {testingAccess ? "Testando..." : "Testar acesso"}
+                      {testingAccess ? "Testando..." : "🔍 Testar conexão"}
                     </Button>
                   </div>
 
                   {testResult && (
-                    <div className={`p-3 rounded-lg border text-xs flex items-center justify-between ${testResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{testResult.success ? "🟢" : "🔴"}</span>
-                        <span>{testResult.success ? `Bot conectado | Destino acessível (${testResult.chatName})` : `Bot sem permissão: ${testResult.error}`}</span>
+                    testResult.success ? (
+                      <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs space-y-1.5 font-sans">
+                        <p className="font-bold text-sm text-emerald-400 flex items-center gap-1.5 mb-2">
+                          ✓ Canal encontrado
+                        </p>
+                        <p><strong>Nome:</strong> {testResult.chat?.title}</p>
+                        <p><strong>ID:</strong> {testResult.chat?.id}</p>
+                        <p><strong>Tipo:</strong> {testResult.chat?.type}</p>
+                        <p><strong>Bot:</strong> @{testResult.bot?.username}</p>
+                        <p><strong>Permissão:</strong> {testResult.permission || "Administrador"}</p>
+                        <p className="text-emerald-400 font-semibold"><strong>Convites:</strong> ✓ Pode convidar usuários</p>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs whitespace-pre-line font-sans leading-relaxed">
+                        {testResult.error}
+                      </div>
+                    )
                   )}
 
                   <p className="text-[10px] text-zinc-500 mt-1.5"><strong>Como obter o ID:</strong> Encaminhe uma mensagem do canal/grupo para o bot de ID.</p>

@@ -48,26 +48,23 @@ export async function POST(req: NextRequest) {
         if (syncRes.status === 'paid') {
           await botService.answerCallbackQuery(cbId, "🎉 Pagamento confirmado!");
 
-          let inviteUrl = "";
-          if (syncRes.accesses && syncRes.accesses.length > 0) {
-            inviteUrl = syncRes.accesses[0].inviteLink || "";
-          }
-
-          const confirmedMsg = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi identificado e seu acesso foi liberado com sucesso.`;
-          const buttons: any[] = [];
-          if (inviteUrl) {
-            buttons.push([{ text: "📺 Acessar Conteúdo", url: inviteUrl }]);
-          }
-
-          if (chatId) {
-            await botService.sendMessage(chatId, confirmedMsg, { inline_keyboard: buttons }, "Markdown");
-          }
+          // Re-trigger AccessDeliveryService to ensure delivery and confirmation message are processed
+          const { AccessDeliveryService } = await import("@/lib/delivery/access-delivery-service");
+          await AccessDeliveryService.processOrderDelivery(orderId);
         } else {
           await botService.answerCallbackQuery(
             cbId,
-            "⏳ Pagamento ainda não identificado. Aguarde alguns instantes e tente novamente.",
+            "⏳ PAGAMENTO AINDA NÃO IDENTIFICADO\n\nAguarde alguns instantes e tente novamente.",
             true
           );
+          if (chatId) {
+            await botService.sendMessage(
+              chatId,
+              "⏳ *PAGAMENTO AINDA NÃO IDENTIFICADO*\n\nAguarde alguns instantes e tente novamente.",
+              undefined,
+              "Markdown"
+            );
+          }
         }
       } else {
         const botService = new TelegramBotService(token);

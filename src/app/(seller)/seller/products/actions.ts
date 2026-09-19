@@ -39,23 +39,10 @@ export async function createProductAction(formData: FormData) {
   // Validate Telegram Chat & Bot Permissions on Product Creation
   if (deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
-      const { telegramBots } = await import("@/db/schema");
-      const { decrypt } = await import("@/lib/encryption");
-      const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
-
-      const bot = await db.query.telegramBots.findFirst({
-        where: eq(telegramBots.storeId, store.id)
-      });
-
-      if (!bot) {
-        throw new Error("Conecte um Bot do Telegram à sua loja antes de cadastrar produtos de entrega via Telegram.");
-      }
-
-      const botToken = decrypt(bot.tokenEncrypted);
-      const permCheck = await TelegramDeliveryService.validateBotAndChatPermission(botToken, deliveryValue, bot.botId);
-
-      if (!permCheck.success) {
-        throw new Error(`Não foi possível validar o Grupo/Canal (${deliveryValue}): ${permCheck.error}`);
+      const { validateProductTelegramChat } = await import("@/lib/telegram/product-chat-validator");
+      const validation = await validateProductTelegramChat(store.id, deliveryValue);
+      if (!validation.success) {
+        throw new Error(validation.error || "Falha ao validar grupo/canal no Telegram.");
       }
     }
   }
@@ -133,23 +120,10 @@ export async function updateProductAction(productId: string, formData: FormData)
   // Validate Telegram Chat & Bot Permissions on Product Update
   if (deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
-      const { telegramBots } = await import("@/db/schema");
-      const { decrypt } = await import("@/lib/encryption");
-      const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
-
-      const bot = await db.query.telegramBots.findFirst({
-        where: eq(telegramBots.storeId, store.id)
-      });
-
-      if (!bot) {
-        throw new Error("Conecte um Bot do Telegram à sua loja antes de salvar alterações neste produto.");
-      }
-
-      const botToken = decrypt(bot.tokenEncrypted);
-      const permCheck = await TelegramDeliveryService.validateBotAndChatPermission(botToken, deliveryValue, bot.botId);
-
-      if (!permCheck.success) {
-        throw new Error(`Não foi possível validar o Grupo/Canal (${deliveryValue}): ${permCheck.error}`);
+      const { validateProductTelegramChat } = await import("@/lib/telegram/product-chat-validator");
+      const validation = await validateProductTelegramChat(store.id, deliveryValue);
+      if (!validation.success) {
+        throw new Error(validation.error || "Falha ao validar grupo/canal no Telegram.");
       }
     }
   }

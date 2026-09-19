@@ -115,7 +115,55 @@ export class TelegramDeliveryService {
   }
 
   /**
-   * Sends the automated delivery message directly to the TelegramCustomer.
+   * Sends the automated payment confirmation message directly to the buyer's private bot chat using telegramUserId.
+   */
+  static async sendPaymentConfirmationMessage(
+    botToken: string,
+    telegramUserId: string,
+    productTitle: string,
+    inviteLink: string,
+    isAlreadyMember: boolean = false,
+    deliveryFailed: boolean = false,
+    storeSlug?: string
+  ): Promise<boolean> {
+    const botService = new TelegramBotService(botToken);
+    
+    let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
+    if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+    if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
+      rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
+    }
+    const appUrl = rawAppUrl.replace(/\/+$/, "");
+
+    let msgText = "";
+    let inlineKeyboard: Array<Array<{ text: string; url?: string; web_app?: { url: string } }>> = [];
+
+    if (deliveryFailed) {
+      msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi recebido.\n\n⚠️ Estamos finalizando a liberação do seu acesso.\n\nVocê não precisa pagar novamente.`;
+      inlineKeyboard.push([
+        { 
+          text: "🔄 TENTAR LIBERAR ACESSO", 
+          web_app: { url: storeSlug ? `${appUrl}/miniapp/${storeSlug}/accesses` : `${appUrl}/miniapp` } 
+        }
+      ]);
+    } else if (isAlreadyMember) {
+      msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\n📦 *${productTitle}*\n\nVocê já possui acesso ao conteúdo.`;
+      inlineKeyboard.push([
+        { text: "📺 ACESSAR CONTEÚDO", url: inviteLink }
+      ]);
+    } else {
+      msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi identificado com sucesso.\n\n📦 *Produto:*\n${productTitle}\n\n🔐 Seu acesso foi liberado.\n\nClique abaixo para acessar:`;
+      inlineKeyboard.push([
+        { text: "📺 ACESSAR CONTEÚDO", url: inviteLink }
+      ]);
+    }
+
+    await botService.sendMessage(telegramUserId, msgText, { inline_keyboard: inlineKeyboard }, "Markdown");
+    return true;
+  }
+
+  /**
+   * Alias for backward compatibility.
    */
   static async deliverToCustomer(
     botToken: string,
@@ -124,25 +172,14 @@ export class TelegramDeliveryService {
     deliveryUrl: string,
     storeSlug?: string
   ): Promise<boolean> {
-    const botService = new TelegramBotService(botToken);
-    
-    const msgText = `✅ *Pagamento confirmado!*\n\nSeu acesso para *${productTitle}* está pronto.\n\nClique no botão abaixo para acessar seu conteúdo.`;
-    
-    const inlineKeyboard: Array<Array<{ text: string; url?: string; web_app?: { url: string } }>> = [
-      [{ text: "🎬 Acessar conteúdo", url: deliveryUrl }]
-    ];
-
-    if (storeSlug) {
-      let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
-      if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
-      if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
-        rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
-      }
-      const appUrl = rawAppUrl.replace(/\/+$/, "");
-      inlineKeyboard.push([{ text: "📦 Meus Acessos", web_app: { url: `${appUrl}/miniapp/${storeSlug}/accesses` } }]);
-    }
-
-    await botService.sendMessage(telegramUserId, msgText, { inline_keyboard: inlineKeyboard });
-    return true;
+    return this.sendPaymentConfirmationMessage(
+      botToken,
+      telegramUserId,
+      productTitle,
+      deliveryUrl,
+      false,
+      false,
+      storeSlug
+    );
   }
 }
