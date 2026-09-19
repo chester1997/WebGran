@@ -112,7 +112,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href} 
                   title={collapsed ? item.name : undefined}
-                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-3 rounded-2xl text-sm transition-all duration-200 relative overflow-hidden ${
+                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
                     isActive 
                       ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
                       : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-[#8B8D93]"
