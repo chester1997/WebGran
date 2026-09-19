@@ -16,35 +16,58 @@ export interface AccessResolutionResult {
   error?: string;
 }
 
+export interface AccessDestinationResult {
+  success: boolean;
+  status: 'ACTIVE' | 'EXPIRED' | 'FAILED';
+  destinationType: 'DIRECT_CHAT' | 'INVITE' | 'EXPIRED' | 'ERROR';
+  destinationUrl: string | null;
+  expiresAt: Date | null;
+  message?: string;
+  canRepurchase?: boolean;
+  productSlug?: string;
+  error?: string;
+}
+
 export class AccessLifecycleService {
   /**
    * Resolves the exact content destination URL or renews single-use invite link dynamically based on real Telegram membership & access validity.
+   * Returns a structured AccessDestinationResult object.
    */
-  static async resolveAccessContent(accessId: string, storeSlug: string): Promise<AccessResolutionResult> {
-    const store = await db.query.stores.findFirst({
-      where: eq(stores.slug, storeSlug),
-      with: {
-        bots: true
-      }
-    });
-
-    if (!store) {
-      return { success: false, status: 'FAILED', error: "Loja não encontrada." };
-    }
-
+  static async resolveAccessDestination(accessId: string, storeSlug?: string): Promise<AccessDestinationResult> {
     const accessRecord = await db.query.accesses.findFirst({
-      where: and(
-        eq(accesses.id, accessId),
-        eq(accesses.storeId, store.id)
-      ),
+      where: eq(accesses.id, accessId),
       with: {
         product: true,
         customer: true,
+        store: {
+          with: {
+            bots: true
+          }
+        }
       }
     });
 
     if (!accessRecord) {
-      return { success: false, status: 'FAILED', error: "Acesso não encontrado." };
+      return {
+        success: false,
+        status: 'FAILED',
+        destinationType: 'ERROR',
+        destinationUrl: null,
+        expiresAt: null,
+        error: "Acesso não encontrado."
+      };
+    }
+
+    const store = accessRecord.store;
+    if (storeSlug && store.slug !== storeSlug) {
+      return {
+        success: false,
+        status: 'FAILED',
+        destinationType: 'ERROR',
+        destinationUrl: null,
+        expiresAt: accessRecord.expiresAt,
+        error: "Acesso não pertence a esta loja."
+      };
     }
 
     const now = new Date();
@@ -64,6 +87,9 @@ export class AccessLifecycleService {
       return {
         success: false,
         status: 'EXPIRED',
+        destinationType: 'EXPIRED',
+        destinationUrl: null,
+        expiresAt: accessRecord.expiresAt,
         message: "🔴 Seu acesso expirou.",
         canRepurchase: true,
         productSlug: accessRecord.product?.slug,
@@ -75,16 +101,24 @@ export class AccessLifecycleService {
     const telegramChatId = product?.deliveryValue ? String(product.deliveryValue).trim() : null;
 
     if (!telegramChatId) {
-      return { success: false, status: 'FAILED', error: "Produto sem destino configurado." };
+      return {
+        success: false,
+        status: 'FAILED',
+        destinationType: 'ERROR',
+        destinationUrl: null,
+        expiresAt: accessRecord.expiresAt,
+        error: "Produto sem destino configurado."
+      };
     }
 
     // External link delivery
     if (product?.deliveryType === 'external' || telegramChatId.startsWith('http://') || telegramChatId.startsWith('https://')) {
       return {
         success: true,
-        status: 'MEMBER',
-        url: telegramChatId,
-        isMember: true,
+        status: 'ACTIVE',
+        destinationType: 'DIRECT_CHAT',
+        destinationUrl: telegramChatId,
+        expiresAt: accessRecord.expiresAt,
       };
     }
 
@@ -93,7 +127,14 @@ export class AccessLifecycleService {
     });
 
     if (!bot || !bot.tokenEncrypted) {
-      return { success: false, status: 'FAILED', error: "Bot da loja não encontrado." };
+      return {
+        success: false,
+        status: 'FAILED',
+        destinationType: 'ERROR',
+        destinationUrl: null,
+        expiresAt: accessRecord.expiresAt,
+        error: "Bot da loja não encontrado."
+      };
     }
 
     const botToken = decrypt(bot.tokenEncrypted);
@@ -109,14 +150,20 @@ export class AccessLifecycleService {
     }
 
     if (isAlreadyMember) {
-      const cleanedId = telegramChatId.replace('-100', '');
-      const directChannelUrl = `https://t.me/c/${cleanedId}`;
+      let directChannelUrl = telegramChatId;
+      if (telegramChatId.startsWith('-100')) {
+        const cleanedId = telegramChatId.replace('-100', '');
+        directChannelUrl = `https://t.me/c/${cleanedId}`;
+      } else if (telegramChatId.startsWith('@')) {
+        directChannelUrl = `https://t.me/${telegramChatId.replace('@', '')}`;
+      }
       console.log(`[AccessLifecycleService] Buyer ${customer?.telegramUserId} is ALREADY a member of ${telegramChatId}. Returning direct channel URL.`);
       return {
         success: true,
-        status: 'MEMBER',
-        url: directChannelUrl,
-        isMember: true,
+        status: 'ACTIVE',
+        destinationType: 'DIRECT_CHAT',
+        destinationUrl: directChannelUrl,
+        expiresAt: accessRecord.expiresAt,
       };
     }
 
@@ -128,9 +175,10 @@ export class AccessLifecycleService {
     if (hasValidInvite && accessRecord.inviteLink) {
       return {
         success: true,
-        status: 'INVITE_VALID',
-        url: accessRecord.inviteLink,
-        isMember: false,
+        status: 'ACTIVE',
+        destinationType: 'INVITE',
+        destinationUrl: accessRecord.inviteLink,
+        expiresAt: accessRecord.expiresAt,
       };
     }
 
@@ -163,9 +211,40 @@ export class AccessLifecycleService {
 
     return {
       success: true,
-      status: 'INVITE_RENEWED',
-      url: freshInviteLink,
-      isMember: false,
+      status: 'ACTIVE',
+      destinationType: 'INVITE',
+      destinationUrl: freshInviteLink,
+      expiresAt: accessRecord.expiresAt,
+    };
+  }
+
+  /**
+   * Alias for backward compatibility with previous APIs.
+   */
+  static async resolveAccessContent(accessId: string, storeSlug: string): Promise<AccessResolutionResult> {
+    const res = await this.resolveAccessDestination(accessId, storeSlug);
+    if (!res.success) {
+      if (res.status === 'EXPIRED') {
+        return {
+          success: false,
+          status: 'EXPIRED',
+          message: res.message || "🔴 Seu acesso expirou.",
+          canRepurchase: true,
+          productSlug: res.productSlug,
+        };
+      }
+      return {
+        success: false,
+        status: 'FAILED',
+        error: res.error || "Falha ao resolver acesso."
+      };
+    }
+
+    return {
+      success: true,
+      status: res.destinationType === 'DIRECT_CHAT' ? 'MEMBER' : 'INVITE_VALID',
+      url: res.destinationUrl || undefined,
+      isMember: res.destinationType === 'DIRECT_CHAT',
     };
   }
 }

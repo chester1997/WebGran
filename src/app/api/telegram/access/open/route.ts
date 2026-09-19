@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Sessão não encontrada." }, { status: 401 });
     }
 
-    const resolution = await AccessLifecycleService.resolveAccessContent(accessId, storeSlug);
+    const resolution = await AccessLifecycleService.resolveAccessDestination(accessId, storeSlug);
 
     return NextResponse.json(resolution);
   } catch (error: any) {

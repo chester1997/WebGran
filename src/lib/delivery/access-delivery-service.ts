@@ -217,11 +217,16 @@ export class AccessDeliveryService {
 
       if (!confirmationSent && customer && customer.telegramUserId) {
         try {
+          let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
+          if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+          const appUrl = rawAppUrl.replace(/\/+$/, "");
+          const redirectUrl = accessRecord?.id ? `${appUrl}/api/telegram/access/redirect?accessId=${accessRecord.id}${storeSlug ? `&storeSlug=${storeSlug}` : ''}` : deliveryUrl;
+
           await TelegramDeliveryService.sendPaymentConfirmationMessage(
             botToken,
             customer.telegramUserId,
             product.title,
-            deliveryUrl,
+            redirectUrl,
             isAlreadyMember,
             false,
             storeSlug
