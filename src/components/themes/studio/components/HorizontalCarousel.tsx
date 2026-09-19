@@ -1,4 +1,6 @@
-import React, { ReactNode } from "react";
+"use client";
+
+import React, { ReactNode, useRef, useState, useCallback } from "react";
 
 interface HorizontalCarouselProps {
   title?: ReactNode;
@@ -13,6 +15,54 @@ export function HorizontalCarousel({
   children,
   className = "",
 }: HorizontalCarouselProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [hasMoved, setHasMoved] = useState(false);
+
+  // Mouse Drag Handlers for Telegram Desktop & PC browsers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    setIsMouseDown(true);
+    setHasMoved(false);
+    setStartX(e.pageX - containerRef.current.offsetLeft);
+    setScrollLeft(containerRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMouseDown || !containerRef.current) return;
+    const x = e.pageX - containerRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // Scroll speed factor
+    if (Math.abs(x - startX) > 6) {
+      setHasMoved(true);
+    }
+    containerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    setIsMouseDown(false);
+  };
+
+  // Prevent link click if user was dragging mouse
+  const handleClickCapture = useCallback(
+    (e: React.MouseEvent) => {
+      if (hasMoved) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    },
+    [hasMoved]
+  );
+
+  // Wheel Handler: Convert vertical scroll (deltaY) to horizontal scroll in Desktop
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!containerRef.current) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      containerRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
   return (
     <section className={`py-2 w-full overflow-hidden ${className}`}>
       {title && (
@@ -35,17 +85,23 @@ export function HorizontalCarousel({
         </div>
       )}
 
-      {/* Carousel Track Container:
-          Utiliza padding-inline-start e padding-inline-end com var(--miniapp-content-padding-x).
-          Garante que o PRIMEIRO card comece exatamente alinhado com o título (x = var(--miniapp-content-padding-x))
-          e o ÚLTIMO card possua margem final visível ao scrollar completamente sem quebrar o layout ou a viewport.
-      */}
-      <div 
-        className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 w-full"
+      {/* Carousel Track Container with Drag-to-Scroll & Mouse Wheel Support */}
+      <div
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        onClickCapture={handleClickCapture}
+        onWheel={handleWheel}
+        className={`flex overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 w-full select-none ${
+          isMouseDown ? "cursor-grabbing" : "cursor-grab"
+        }`}
         style={{
           paddingInlineStart: "var(--miniapp-content-padding-x)",
           paddingInlineEnd: "var(--miniapp-content-padding-x)",
           gap: "var(--carousel-gap)",
+          scrollBehavior: isMouseDown ? "auto" : "smooth",
         }}
       >
         {children}
