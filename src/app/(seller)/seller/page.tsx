@@ -2,8 +2,8 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { products, stores, telegramCustomers } from "@/db/schema";
-import { eq, count } from "drizzle-orm";
+import { products, stores, telegramCustomers, orders } from "@/db/schema";
+import { eq, count, and, gte, desc } from "drizzle-orm";
 import { 
   ArrowUpRight, 
   Wallet, 
@@ -35,22 +35,51 @@ export default async function SellerDashboardPage() {
   const cResult = await db.select({ value: count() }).from(telegramCustomers).where(eq(telegramCustomers.storeId, store.id));
   const customersCount = cResult[0].value;
   
-  // Mock Metrics for Dashboard Display
-  const todayRevenue = 0;
-  const todayOrders = 0;
-  const last7DaysRevenue = 0;
-  const last7DaysOrders = 0;
-  const totalRevenue = 0;
-  const averageTicket = 0;
-  const pendingPix = 0;
-  const conversionRate = "0%";
-  
+  // Real Database Metrics Calculation
+  const allStoreOrders = await db.query.orders.findMany({
+    where: eq(orders.storeId, store.id),
+    with: {
+      customer: true,
+      items: {
+        with: {
+          product: true,
+        }
+      }
+    },
+    orderBy: [desc(orders.createdAt)]
+  });
+
+  const paidOrders = allStoreOrders.filter(o => o.status === 'paid');
+  const pendingOrders = allStoreOrders.filter(o => o.status === 'pending');
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const todayPaidOrdersList = paidOrders.filter(o => new Date(o.createdAt) >= startOfToday);
+  const todayRevenue = todayPaidOrdersList.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const todayOrders = todayPaidOrdersList.length;
+
+  const last7DaysPaidOrdersList = paidOrders.filter(o => new Date(o.createdAt) >= sevenDaysAgo);
+  const last7DaysRevenue = last7DaysPaidOrdersList.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const last7DaysOrders = last7DaysPaidOrdersList.length;
+
+  const totalRevenue = paidOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const averageTicket = paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0;
+  const pendingPix = pendingOrders.length;
+  const conversionRate = customersCount > 0 ? `${((paidOrders.length / customersCount) * 100).toFixed(1)}%` : "0%";
+
+  // Latest Paid Orders for UI
+  const latestSales = paidOrders.slice(0, 5);
+
   // Gamification logic
-  const currentLevel = "Bronze";
-  const nextLevel = "Prata";
-  const nextLevelThreshold = 10000;
-  const progressPercent = (totalRevenue / nextLevelThreshold) * 100;
-  const remainingToNext = nextLevelThreshold - totalRevenue;
+  const currentLevel = totalRevenue >= 50000 ? "Ouro" : totalRevenue >= 10000 ? "Prata" : "Bronze";
+  const nextLevel = currentLevel === "Bronze" ? "Prata" : currentLevel === "Prata" ? "Ouro" : "Diamante";
+  const nextLevelThreshold = currentLevel === "Bronze" ? 10000 : currentLevel === "Prata" ? 50000 : 100000;
+  const progressPercent = Math.min((totalRevenue / nextLevelThreshold) * 100, 100);
+  const remainingToNext = Math.max(nextLevelThreshold - totalRevenue, 0);
 
   return (
     <div className="space-y-6 fade-in w-full">
@@ -249,13 +278,34 @@ export default async function SellerDashboardPage() {
             </Link>
           </div>
           
-          <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-60">
-            <div className="w-16 h-16 rounded-2xl bg-[#1A1A1E] flex items-center justify-center mb-4 border border-white/5">
-              <CheckCircle2 className="w-6 h-6 text-zinc-500" />
+          {latestSales.length > 0 ? (
+            <div className="space-y-3">
+              {latestSales.map((s) => {
+                const prodTitle = s.items?.[0]?.product?.title || "Produto Digital";
+                const customerName = s.customer?.firstName ? `${s.customer.firstName} ${s.customer.lastName || ''}` : "Cliente Telegram";
+                return (
+                  <div key={s.id} className="flex items-center justify-between bg-[#1A1A1E] p-3 rounded-xl border border-white/5">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{prodTitle}</p>
+                      <p className="text-xs text-zinc-400">#{s.id.slice(0, 8)} • {customerName}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-emerald-400">R$ {Number(s.total).toFixed(2)}</p>
+                      <p className="text-[10px] text-zinc-500">{new Date(s.createdAt).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-zinc-400 font-medium text-sm">O histórico de vendas está vazio</p>
-            <p className="text-zinc-600 text-xs mt-1 text-center max-w-xs">Quando os clientes começarem a comprar via PIX/Cartão, os pedidos aparecerão aqui em tempo real.</p>
-          </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-60">
+              <div className="w-16 h-16 rounded-2xl bg-[#1A1A1E] flex items-center justify-center mb-4 border border-white/5">
+                <CheckCircle2 className="w-6 h-6 text-zinc-500" />
+              </div>
+              <p className="text-zinc-400 font-medium text-sm">O histórico de vendas está vazio</p>
+              <p className="text-zinc-600 text-xs mt-1 text-center max-w-xs">Quando os clientes começarem a comprar via PIX/Cartão, os pedidos aparecerão aqui em tempo real.</p>
+            </div>
+          )}
         </div>
 
       </div>

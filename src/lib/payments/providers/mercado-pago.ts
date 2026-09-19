@@ -389,103 +389,72 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
    * Process Webhook and fulfill customer order idempotently
    */
   async handleWebhook(payload: any): Promise<void> {
-    const paymentId = payload?.data?.id || payload?.id;
-    const type = payload?.type || payload?.topic;
+    const resourceId = payload?.data?.id || payload?.id;
+    const type = payload?.type || payload?.topic || payload?.action;
 
-    if (!paymentId || (type && type !== 'payment')) {
+    console.log(`[MP Webhook Received] type: ${type}, resourceId: ${resourceId}`);
+
+    if (!resourceId) {
       return;
     }
 
-    // Fetch payment details from Mercado Pago
-    let paymentData: any = null;
+    const { syncOrderWithMercadoPago } = await import('../order-sync');
 
-    const platformToken = process.env.MP_ACCESS_TOKEN;
-    if (platformToken) {
-      try {
-        const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-          headers: { Authorization: `Bearer ${platformToken}` },
-        });
-        if (res.ok) {
-          paymentData = await res.json();
-        }
-      } catch (err) {
-        console.error('Error fetching payment with platform token:', err);
-      }
-    }
-
-    // If platform token failed or was not set, try active seller tokens
-    if (!paymentData) {
-      const activeConnections = await db.query.sellerPaymentConnections.findMany({
-        where: eq(sellerPaymentConnections.status, 'active'),
-      });
-
-      for (const conn of activeConnections) {
-        try {
-          const sellerToken = decrypt(conn.accessTokenEncrypted);
-          const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-            headers: { Authorization: `Bearer ${sellerToken}` },
-          });
-          if (res.ok) {
-            paymentData = await res.json();
-            break;
-          }
-        } catch {
-          // Continue trying other connections
-        }
-      }
-    }
-
-    if (!paymentData || !paymentData.external_reference) {
-      console.warn(`[MP Webhook] Payment ${paymentId} could not be retrieved or has no external_reference.`);
-      return;
-    }
-
-    const orderId = paymentData.external_reference;
-    const paymentStatus = paymentData.status;
-
-    const order = await db.query.orders.findFirst({
-      where: eq(orders.id, orderId),
-      with: {
-        items: true,
-      },
+    // Check if resourceId is directly a WebGran order ID in DB
+    const directOrder = await db.query.orders.findFirst({
+      where: eq(orders.id, String(resourceId)),
     });
 
-    if (!order) {
-      console.warn(`[MP Webhook] Order ${orderId} not found in WebGran database.`);
+    if (directOrder) {
+      await syncOrderWithMercadoPago(directOrder.id);
       return;
     }
 
-    if (paymentStatus === 'approved') {
-      const platformFee = Number(paymentData.marketplace_fee || this.calculatePlatformFee(Number(order.total)));
-      const netAmount = Number(order.total) - platformFee;
+    // Try finding order by paymentId or scanning active sellers
+    const orderWithPaymentId = await db.query.orders.findFirst({
+      where: eq(orders.paymentId, String(resourceId)),
+    });
 
-      // Update Order Status to paid
-      await db.update(orders)
-        .set({
-          status: 'paid',
-          paymentId: String(paymentId),
-          paymentMethod: paymentData.payment_method_id || paymentData.payment_type_id || 'mercado_pago',
-          platformFee: String(platformFee),
-          netAmount: String(netAmount),
-          paidAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(orders.id, order.id));
+    if (orderWithPaymentId) {
+      await syncOrderWithMercadoPago(orderWithPaymentId.id);
+      return;
+    }
 
-      // Delegate Access Fulfillment & Telegram Delivery to AccessDeliveryService
-      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
-      await AccessDeliveryService.processOrderDelivery(order.id);
+    // Search active seller connections in Mercado Pago by resourceId/external_reference
+    const activeConnections = await db.query.sellerPaymentConnections.findMany({
+      where: eq(sellerPaymentConnections.status, 'active'),
+    });
 
-      console.log(`[MP Webhook] Successfully processed payment ${paymentId} for order ${order.id}. Granted access.`);
-    } else if (paymentStatus === 'cancelled' || paymentStatus === 'rejected') {
-      if (order.status === 'pending') {
-        await db.update(orders)
-          .set({
-            status: 'cancelled',
-            paymentId: String(paymentId),
-            updatedAt: new Date(),
-          })
-          .where(eq(orders.id, order.id));
+    for (const conn of activeConnections) {
+      try {
+        const sellerToken = decrypt(conn.accessTokenEncrypted);
+        // Try fetching as payment to get external_reference
+        const res = await fetch(`https://api.mercadopago.com/v1/payments/${resourceId}`, {
+          headers: { Authorization: `Bearer ${sellerToken}` },
+        });
+
+        if (res.ok) {
+          const pData = await res.json();
+          if (pData.external_reference) {
+            await syncOrderWithMercadoPago(pData.external_reference);
+            return;
+          }
+        }
+
+        // Try fetching as order
+        const resOrd = await fetch(`https://api.mercadopago.com/v1/orders/${resourceId}`, {
+          headers: { Authorization: `Bearer ${sellerToken}` },
+        });
+
+        if (resOrd.ok) {
+          const oData = await resOrd.json();
+          if (oData.external_reference) {
+            await syncOrderWithMercadoPago(oData.external_reference);
+            return;
+          }
+        }
+      } catch (err) {
+        // Continue checking other connections
       }
     }
   }

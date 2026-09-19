@@ -101,7 +101,11 @@ export class TelegramBotService {
     throw new Error("Not implemented yet");
   }
 
-  async answerCallbackQuery(_callbackQueryId: string, _text?: string): Promise<unknown> {
-    throw new Error("Not implemented yet");
+  async answerCallbackQuery(callbackQueryId: string, text?: string, showAlert: boolean = false): Promise<unknown> {
+    return telegramFetch(this.token, 'answerCallbackQuery', {
+      callback_query_id: callbackQueryId,
+      text,
+      show_alert: showAlert,
+    });
   }
 }

@@ -33,6 +33,48 @@ export async function POST(req: NextRequest) {
     const { store, token } = resolved;
     const update = await req.json();
 
+    if (update.callback_query) {
+      const cbData = update.callback_query.data || "";
+      const cbId = update.callback_query.id;
+      const chatId = update.callback_query.message?.chat?.id;
+
+      if (cbData.startsWith("check_pay:")) {
+        const orderId = cbData.replace("check_pay:", "").trim();
+        const botService = new TelegramBotService(token);
+
+        const { syncOrderWithMercadoPago } = await import("@/lib/payments/order-sync");
+        const syncRes = await syncOrderWithMercadoPago(orderId);
+
+        if (syncRes.status === 'paid') {
+          await botService.answerCallbackQuery(cbId, "🎉 Pagamento confirmado!");
+
+          let inviteUrl = "";
+          if (syncRes.accesses && syncRes.accesses.length > 0) {
+            inviteUrl = syncRes.accesses[0].inviteLink || "";
+          }
+
+          const confirmedMsg = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi identificado e seu acesso foi liberado com sucesso.`;
+          const buttons: any[] = [];
+          if (inviteUrl) {
+            buttons.push([{ text: "📺 Acessar Conteúdo", url: inviteUrl }]);
+          }
+
+          if (chatId) {
+            await botService.sendMessage(chatId, confirmedMsg, { inline_keyboard: buttons }, "Markdown");
+          }
+        } else {
+          await botService.answerCallbackQuery(
+            cbId,
+            "⏳ Pagamento ainda não identificado. Aguarde alguns instantes e tente novamente.",
+            true
+          );
+        }
+      } else {
+        const botService = new TelegramBotService(token);
+        await botService.answerCallbackQuery(cbId);
+      }
+    }
+
     if (update.message && (update.message.text || update.message.caption)) {
       const text = (update.message.text || update.message.caption || "").trim();
       const chatId = update.message.chat.id;

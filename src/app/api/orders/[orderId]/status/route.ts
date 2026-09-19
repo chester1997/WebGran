@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { orders, accesses } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { syncOrderWithMercadoPago } from '@/lib/payments/order-sync';
 
 export async function GET(
   request: Request,
@@ -29,9 +30,16 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // If paid, check if access records exist
+    let orderStatus = order.status;
     let accessList: any[] = [];
-    if (order.status === 'paid') {
+
+    if (orderStatus !== 'paid') {
+      const syncRes = await syncOrderWithMercadoPago(order.id);
+      if (syncRes.status === 'paid') {
+        orderStatus = 'paid';
+        accessList = syncRes.accesses || [];
+      }
+    } else {
       accessList = await db.query.accesses.findMany({
         where: eq(accesses.orderId, order.id),
       });

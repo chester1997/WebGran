@@ -162,15 +162,19 @@ export class AccessDeliveryService {
       let deliveryUrl = '';
 
       if (product.deliveryType === 'telegram' && product.deliveryValue) {
-        // Validate bot permission in chat
-        const permCheck = await TelegramDeliveryService.validateBotAndChatPermission(botToken, product.deliveryValue);
-        if (!permCheck.success) {
-          throw new Error(`Bot sem permissão no Telegram Chat (${product.deliveryValue}): ${permCheck.error}`);
-        }
+        if (product.deliveryValue.startsWith('http://') || product.deliveryValue.startsWith('https://')) {
+          deliveryUrl = product.deliveryValue;
+        } else {
+          // Validate bot permission in chat
+          const permCheck = await TelegramDeliveryService.validateBotAndChatPermission(botToken, product.deliveryValue);
+          if (!permCheck.success) {
+            throw new Error(`Bot sem permissão no Telegram Chat (${product.deliveryValue}): ${permCheck.error}`);
+          }
 
-        // Generate dynamic invite link
-        const invite = await TelegramDeliveryService.createTelegramInvite(botToken, product.deliveryValue, product.title);
-        deliveryUrl = invite.inviteLink;
+          // Generate dynamic invite link
+          const invite = await TelegramDeliveryService.createTelegramInvite(botToken, product.deliveryValue, product.title);
+          deliveryUrl = invite.inviteLink;
+        }
       } else if (product.deliveryValue) {
         deliveryUrl = product.deliveryValue;
       } else {
