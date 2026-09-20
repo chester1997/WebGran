@@ -422,6 +422,13 @@ export const invoices = pgTable('invoices', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const systemSettings = pgTable('system_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const sellerPaymentConnectionsRelations = relations(sellerPaymentConnections, ({ one }) => ({
   seller: one(users, {
     fields: [sellerPaymentConnections.sellerId],

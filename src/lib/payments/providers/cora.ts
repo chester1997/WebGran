@@ -21,24 +21,49 @@ export class CoraProvider implements PlatformBillingProvider {
     };
   }
 
+  private async getActiveConfig(): Promise<CoraConfig> {
+    try {
+      const { db } = await import('@/db');
+      const { systemSettings } = await import('@/db/schema');
+      const { inArray } = await import('drizzle-orm');
+
+      const settings = await db.query.systemSettings.findMany({
+        where: inArray(systemSettings.key, ['cora_client_id', 'cora_client_secret', 'cora_environment'])
+      });
+
+      const settingsMap = new Map(settings.map(s => [s.key, s.value]));
+
+      return {
+        clientId: settingsMap.get('cora_client_id') || this.config.clientId || process.env.CORA_CLIENT_ID,
+        clientSecret: settingsMap.get('cora_client_secret') || this.config.clientSecret || process.env.CORA_CLIENT_SECRET,
+        environment: (settingsMap.get('cora_environment') as 'stage' | 'production') || this.config.environment || 'production'
+      };
+    } catch {
+      return {
+        clientId: this.config.clientId || process.env.CORA_CLIENT_ID,
+        clientSecret: this.config.clientSecret || process.env.CORA_CLIENT_SECRET,
+        environment: (process.env.CORA_ENV as 'stage' | 'production') || 'production'
+      };
+    }
+  }
+
   /**
-   * Create a PIX Billed Invoice via Cora API (or fallback PIX generation)
+   * Create a PIX Billed Invoice via Cora API (or fallback PIX payload)
    */
   async createInvoice(params: CreateInvoiceParams): Promise<InvoiceResponse> {
+    const activeConfig = await this.getActiveConfig();
     const amountFormatted = params.amount.toFixed(2);
     const invoiceId = `cora_inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     // Generate valid EMV Co BR Code PIX Copia e Cola payload
     const pixCopiaECola = `00020101021226840014br.gov.bcb.pix2562cora.com.br/qr/v2/${invoiceId}5204000053039865405${amountFormatted}5802BR5915WebGran SaaS6009SAO PAULO62070503***6304`;
-
-    // Standard QR Code SVG/Base64 placeholder URL or Data URL
     const qrCodeBase64 = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixCopiaECola)}`;
 
-    // Real Cora HTTP call if credentials are present
-    if (this.config.clientId && this.config.clientSecret) {
+    // Real Cora HTTP call if client credentials are provided
+    if (activeConfig.clientId && activeConfig.clientSecret) {
       try {
         const tokenRes = await fetch(
-          this.config.environment === 'stage' 
+          activeConfig.environment === 'stage' 
             ? 'https://matls-clients.stage.cora.com.br/token' 
             : 'https://matls-clients.api.cora.com.br/token',
           {
@@ -46,8 +71,8 @@ export class CoraProvider implements PlatformBillingProvider {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
               grant_type: 'client_credentials',
-              client_id: this.config.clientId,
-              client_secret: this.config.clientSecret,
+              client_id: activeConfig.clientId,
+              client_secret: activeConfig.clientSecret,
             })
           }
         );
@@ -55,7 +80,7 @@ export class CoraProvider implements PlatformBillingProvider {
         if (tokenRes.ok) {
           const { access_token } = await tokenRes.json();
           const invoiceRes = await fetch(
-            this.config.environment === 'stage'
+            activeConfig.environment === 'stage'
               ? 'https://api.stage.cora.com.br/v2/invoices'
               : 'https://api.cora.com.br/v2/invoices',
             {
@@ -68,11 +93,11 @@ export class CoraProvider implements PlatformBillingProvider {
                 code: invoiceId,
                 customer: {
                   name: 'Vendedor WebGran',
-                  email: 'vendedor@webgran.com'
+                  email: 'vendedor@webgran.online'
                 },
                 services: [
                   {
-                    name: 'Assinatura WebGran SaaS - R$ 89,90/mês',
+                    name: `Assinatura WebGran SaaS - R$ ${amountFormatted}/mês`,
                     amount: Math.round(params.amount * 100)
                   }
                 ],
@@ -95,7 +120,7 @@ export class CoraProvider implements PlatformBillingProvider {
           }
         }
       } catch (err) {
-        console.error('Cora API Live Request failed, falling back to secure billing payload:', err);
+        console.error('Cora API Live Request failed, using fallback payload:', err);
       }
     }
 

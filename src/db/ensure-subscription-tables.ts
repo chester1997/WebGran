@@ -60,14 +60,24 @@ async function main() {
     );
   `;
 
-  // 4. Seed single WebGran R$ 89,90 plan
+  // 4. Create system_settings table
+  await sql`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      key TEXT NOT NULL UNIQUE,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `;
+
+  // 5. Seed single WebGran R$ 89,90 plan if missing
   await sql`
     INSERT INTO subscription_plans (name, slug, description, price, billing_interval, active)
     VALUES ('WebGran', 'webgran', 'Plano Único WebGran SaaS', 89.90, 'month', true)
-    ON CONFLICT (slug) DO UPDATE SET price = 89.90, name = 'WebGran', active = true;
+    ON CONFLICT (slug) DO NOTHING;
   `;
 
-  console.log('✓ Subscription tables and default WebGran (R$ 89,90) plan ensured in DB!');
+  console.log('✓ Subscription tables, system_settings, and default WebGran plan ensured in DB!');
 }
 
 main().catch(console.error);

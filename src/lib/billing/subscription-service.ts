@@ -86,10 +86,10 @@ export async function getSellerSubscription(sellerId: string) {
     },
     plan: {
       id: plan.id,
-      name: 'WebGran',
-      price: WEBGRAN_PLAN_PRICE,
+      name: plan.name,
+      price: Number(plan.price),
       currency: 'BRL',
-      billingInterval: 'MONTHLY',
+      billingInterval: plan.billingInterval === 'year' ? 'ANNUAL' : 'MONTHLY',
     },
     latestInvoice: latestPendingInvoice || null,
     invoiceHistory: invoiceHistory.map((inv) => ({
@@ -111,8 +111,8 @@ export async function createCoraBillingInvoice(sellerId: string) {
   const subData = await getSellerSubscription(sellerId);
   const subscription = subData.subscription;
 
-  // Amount is ALWAYS strictly R$ 89,90 validated on server
-  const amount = WEBGRAN_PLAN_PRICE;
+  // Amount is dynamically fetched from active DB plan
+  const amount = Number(plan.price);
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 3);
 
@@ -130,7 +130,7 @@ export async function createCoraBillingInvoice(sellerId: string) {
       subscriptionId: subscription.id,
       provider: 'cora',
       externalId: coraRes.id,
-      amount: '89.90',
+      amount: amount.toFixed(2),
       status: 'PENDING',
       dueDate,
       qrCode: coraRes.qrCode || null,
@@ -141,7 +141,7 @@ export async function createCoraBillingInvoice(sellerId: string) {
   return {
     invoiceId: insertedInvoice[0].id,
     externalId: coraRes.id,
-    amount: WEBGRAN_PLAN_PRICE,
+    amount: amount,
     status: 'PENDING',
     qrCode: coraRes.qrCode,
     qrCodeText: coraRes.qrCodeText,
