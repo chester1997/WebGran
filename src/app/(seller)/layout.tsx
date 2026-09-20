@@ -1,11 +1,12 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
   Home, 
-  Store, 
+  Bot,
+  Settings2,
   Package, 
   Tags,
   Layers, 
@@ -18,31 +19,74 @@ import {
   PanelLeftOpen,
   Sparkles,
   ChevronUp,
+  ChevronDown,
   Image as ImageIcon
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [botGroupOpen, setBotGroupOpen] = useState(true);
 
-  const navItems = [
-    { name: "Dashboard", href: "/seller", icon: Home },
-    { name: "Loja & Bot", href: "/seller/store", icon: Store },
+  // Sub-items for "Bot Telegram" group
+  const botTelegramSubItems = [
+    { name: "Configuração", href: "/seller/store", icon: Settings2 },
     { name: "Boas-vindas", href: "/seller/boas-vindas", icon: Sparkles },
     { name: "Banners", href: "/seller/banners", icon: ImageIcon },
     { name: "Produtos", href: "/seller/products", icon: Package },
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },
+  ];
+
+  // Root level items outside the group
+  const dashboardItem = { name: "Dashboard", href: "/seller", icon: Home };
+  const bottomRootItems = [
     { name: "Pedidos", href: "/seller/orders", icon: ShoppingCart },
     { name: "Recebimento", href: "/seller/recebimentos", icon: Wallet },
     { name: "Clientes", href: "/seller/customers", icon: Users },
     { name: "Configurações", href: "/seller/settings", icon: Settings },
   ];
 
-  const filteredNavItems = navItems.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Check if currently navigating inside any Bot Telegram child route
+  const isBotChildActive = botTelegramSubItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+
+  // Auto-expand "Bot Telegram" group on child page load or navigation
+  useEffect(() => {
+    if (isBotChildActive) {
+      setBotGroupOpen(true);
+    }
+  }, [pathname, isBotChildActive]);
+
+  // Search filter logic
+  const queryLower = searchQuery.toLowerCase().trim();
+
+  const isChildSearchMatch =
+    queryLower !== "" &&
+    botTelegramSubItems.some((item) =>
+      item.name.toLowerCase().includes(queryLower)
+    );
+
+  const effectiveBotGroupOpen = botGroupOpen || isChildSearchMatch;
+
+  const isBotGroupMatch =
+    queryLower === "" ||
+    "bot telegram".includes(queryLower) ||
+    botTelegramSubItems.some((item) =>
+      item.name.toLowerCase().includes(queryLower)
+    );
+
+  const filteredBotSubItems = botTelegramSubItems.filter((item) =>
+    queryLower === "" ? true : item.name.toLowerCase().includes(queryLower)
+  );
+
+  const isDashboardMatch =
+    queryLower === "" || dashboardItem.name.toLowerCase().includes(queryLower);
+
+  const filteredBottomRootItems = bottomRootItems.filter((item) =>
+    queryLower === "" ? true : item.name.toLowerCase().includes(queryLower)
   );
 
   return (
@@ -88,7 +132,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 <button 
                   onClick={() => setCollapsed(!collapsed)}
                   title="Recolher menu"
-                  className="p-2 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all shrink-0"
+                  className="p-2 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all shrink-0 cursor-pointer"
                 >
                   <PanelLeftClose className="w-4 h-4" />
                 </button>
@@ -97,7 +141,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               <button 
                 onClick={() => setCollapsed(!collapsed)}
                 title="Expandir menu"
-                className="w-full py-2 flex items-center justify-center text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all"
+                className="w-full py-2 flex items-center justify-center text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all cursor-pointer"
               >
                 <PanelLeftOpen className="w-4 h-4" />
               </button>
@@ -106,8 +150,120 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
           {/* Navigation Items */}
           <nav className="flex-1 overflow-y-auto py-3 custom-scrollbar px-3 space-y-1">
-            {filteredNavItems.map((item) => {
+            {/* 1. Dashboard */}
+            {isDashboardMatch && (
+              <Link 
+                href={dashboardItem.href}
+                title={collapsed ? dashboardItem.name : undefined}
+                className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
+                  pathname === dashboardItem.href 
+                    ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
+                    : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                }`}
+              >
+                {pathname === dashboardItem.href && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                )}
+                {pathname === dashboardItem.href && (
+                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-500/20 blur-md rounded-full pointer-events-none" />
+                )}
+                <Home className={`w-4 h-4 shrink-0 transition-colors z-10 ${pathname === dashboardItem.href ? "text-red-500" : "text-[#8B8D93]"}`} />
+                {!collapsed && <span className="truncate z-10">{dashboardItem.name}</span>}
+              </Link>
+            )}
+
+            {/* 2. Bot Telegram Group (Expandable Parent Menu) */}
+            {isBotGroupMatch && (
+              <div className="space-y-1">
+                {!collapsed ? (
+                  <>
+                    {/* Parent Group Header Button */}
+                    <button
+                      type="button"
+                      onClick={() => setBotGroupOpen(!botGroupOpen)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 cursor-pointer ${
+                        isBotChildActive
+                          ? "text-white font-semibold bg-white/[0.03]"
+                          : "text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Bot className={`w-4 h-4 shrink-0 transition-colors ${isBotChildActive ? "text-red-400" : "text-[#8B8D93]"}`} />
+                        <span className="truncate">Bot Telegram</span>
+                      </div>
+                      {effectiveBotGroupOpen ? (
+                        <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200" />
+                      )}
+                    </button>
+
+                    {/* Submenus (Indented & Animated Expand/Collapse) */}
+                    {effectiveBotGroupOpen && (
+                      <div className="pl-4 space-y-0.5 transition-all duration-200 ease-in-out">
+                        {filteredBotSubItems.map((subItem) => {
+                          const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                          const SubIcon = subItem.icon;
+
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              className={`flex items-center gap-2.5 pl-5 pr-3 py-2 rounded-[8px] text-xs transition-all duration-200 relative overflow-hidden ${
+                                isSubActive
+                                  ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                                  : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                              }`}
+                            >
+                              {/* Left glowing accent indicator bar for active sub-item */}
+                              {isSubActive && (
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                              )}
+                              {isSubActive && (
+                                <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-red-500/20 blur-md rounded-full pointer-events-none" />
+                              )}
+
+                              <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors z-10 ${isSubActive ? "text-red-500" : "text-[#8B8D93]"}`} />
+                              <span className="truncate z-10">{subItem.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Collapsed mode icons with tooltips */
+                  filteredBotSubItems.map((subItem) => {
+                    const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                    const SubIcon = subItem.icon;
+
+                    return (
+                      <Link
+                        key={subItem.href}
+                        href={subItem.href}
+                        title={`Bot Telegram - ${subItem.name}`}
+                        className={`flex items-center justify-center p-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
+                          isSubActive
+                            ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                            : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                        }`}
+                      >
+                        {isSubActive && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                        )}
+                        <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-[#8B8D93]"}`} />
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* 3. Bottom Root Level Items (Pedidos, Recebimento, Clientes, Configurações) */}
+            {filteredBottomRootItems.map((item) => {
               const isActive = pathname === item.href;
+              const ItemIcon = item.icon;
+
               return (
                 <Link 
                   key={item.href}
@@ -116,20 +272,18 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
                     isActive 
                       ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
-                      : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-[#8B8D93]"
+                      : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
                   }`}
                 >
-                  {/* Left glowing accent indicator bar for active item */}
                   {isActive && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
                   )}
 
-                  {/* Radial glow background on left */}
                   {isActive && (
                     <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-500/20 blur-md rounded-full pointer-events-none" />
                   )}
 
-                  <item.icon className={`w-4 h-4 shrink-0 transition-colors z-10 ${isActive ? "text-red-500" : "text-[#8B8D93]"}`} />
+                  <ItemIcon className={`w-4 h-4 shrink-0 transition-colors z-10 ${isActive ? "text-red-500" : "text-[#8B8D93]"}`} />
                   
                   {!collapsed && (
                     <span className="truncate z-10">{item.name}</span>
@@ -139,7 +293,6 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          
           {/* User Footer with dropdown style */}
           <div className="border-t border-white/5 p-3">
             <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} p-2 rounded-xl bg-[#16161C] border border-white/5`}>
