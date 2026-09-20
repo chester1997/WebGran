@@ -108,35 +108,39 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             collapsed ? "w-20" : "w-64"
           }`}
         >
-          {/* Logo Area Header with Divider Line & Collapse Toggle */}
-          <div className="py-5 px-4 flex items-center justify-between border-b border-white/10 bg-[#141416]/40">
-            {!collapsed ? (
-              <>
-                <div className="flex-1 flex items-center justify-center">
-                  <img 
-                    src="/logo.png" 
-                    alt="WebGran Logo" 
-                    className="h-8 max-w-[145px] w-auto object-contain drop-shadow-md" 
-                  />
-                </div>
-                <button 
-                  onClick={() => setCollapsed(!collapsed)}
-                  title="Recolher menu"
-                  className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all cursor-pointer shrink-0 ml-2"
-                >
-                  <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
-                </button>
-              </>
-            ) : (
+        {/* Sidebar Header: Logo Area & Collapse Toggle */}
+        <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-[#101114]">
+          {!collapsed ? (
+            <>
+              <Link href="/seller" className="flex items-center">
+                <img 
+                  src="/logo-expanded.png" 
+                  alt="WebGran Logo" 
+                  className="h-8 w-auto max-w-[145px] object-contain drop-shadow-sm" 
+                />
+              </Link>
               <button 
                 onClick={() => setCollapsed(!collapsed)}
-                title="Expandir menu"
-                className="w-full flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer py-1"
+                title="Recolher menu"
+                className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all cursor-pointer shrink-0"
               >
-                <PanelLeftOpen className="w-5 h-5 text-zinc-400 hover:text-white" strokeWidth={1.8} />
+                <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
               </button>
-            )}
-          </div>
+            </>
+          ) : (
+            <button 
+              onClick={() => setCollapsed(!collapsed)}
+              title="Expandir menu"
+              className="w-full flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer py-1"
+            >
+              <img 
+                src="/logo-icon.png" 
+                alt="WebGran Icon" 
+                className="h-8 w-8 object-contain drop-shadow-sm mx-auto" 
+              />
+            </button>
+          )}
+        </div>
 
           {/* Navigation Items */}
           <nav className="flex-1 overflow-y-auto py-5 custom-scrollbar px-3 space-y-1">

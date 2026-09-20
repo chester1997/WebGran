@@ -75,13 +75,17 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       `}>
         {/* Brand Header */}
-        <div className="py-5 px-4 flex flex-col items-center justify-center border-b border-[#27272A] bg-[#141416]/40">
-          <Link href="/admin" className="flex flex-col items-center justify-center w-full">
-            <img src="/logo.png" alt="WebGran Logo" className="h-8 max-w-[150px] w-auto object-contain drop-shadow-md mx-auto" />
-            <span className="mt-2 px-2.5 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-full tracking-wider uppercase">
-              ADMIN PANEL
-            </span>
+        <div className="h-16 px-4 flex items-center justify-between border-b border-[#27272A] bg-[#101114]">
+          <Link href="/admin" className="flex items-center">
+            <img 
+              src="/logo-expanded.png" 
+              alt="WebGran Logo" 
+              className="h-8 w-auto max-w-[145px] object-contain drop-shadow-sm" 
+            />
           </Link>
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-md tracking-wider uppercase">
+            ADMIN
+          </span>
         </div>
 
         {/* Navigation Links */}
