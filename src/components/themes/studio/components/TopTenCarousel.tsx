@@ -83,15 +83,15 @@ export function TopTenCarousel({
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
               className={`relative flex items-end ${
                 isDoubleDigit 
-                  ? "pl-8 sm:pl-9 md:pl-10" 
-                  : "pl-[19px] sm:pl-6 md:pl-7"
+                  ? "pl-9 sm:pl-10 md:pl-12" 
+                  : "pl-6 sm:pl-7 md:pl-8"
               }`}
             >
               {/* Crisp outline position number overlapping bottom-left edge */}
               <span
-                className="absolute left-0 bottom-1 text-5xl sm:text-6xl md:text-7xl font-extrabold text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+                className="absolute left-0 bottom-1 text-6xl sm:text-7xl md:text-[80px] font-extrabold text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
                 style={{
-                  WebkitTextStroke: `2px ${style.stroke}`,
+                  WebkitTextStroke: `2.5px ${style.stroke}`,
                   filter: style.glow !== "transparent" ? `drop-shadow(0 0 6px ${style.glow})` : "none",
                   fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
                   letterSpacing: "-0.03em"
