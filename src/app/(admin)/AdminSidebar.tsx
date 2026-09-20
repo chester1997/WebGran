@@ -75,20 +75,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       `}>
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-[#27272A] bg-[#141416]/50">
-          <Link href="/admin" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-white font-black shadow-lg shadow-red-900/30">
-              W
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-white text-base leading-tight tracking-tight">WebGran</span>
-              <span className="text-[10px] text-red-400 font-semibold tracking-widest uppercase">Admin Panel</span>
-            </div>
+        <div className="pt-6 pb-4 px-4 flex flex-col items-center justify-center border-b border-[#27272A] bg-[#141416]/50">
+          <Link href="/admin" className="flex flex-col items-center justify-center w-full">
+            <img src="/logo.png" alt="WebGran Logo" className="w-40 h-auto object-contain drop-shadow-md mx-auto" />
+            <span className="mt-2 px-2.5 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-full tracking-wider uppercase">
+              ADMIN PANEL
+            </span>
           </Link>
-          <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20 rounded-md">
-            <ShieldAlert className="w-3 h-3" />
-            SUPER
-          </span>
         </div>
 
         {/* Navigation Links */}

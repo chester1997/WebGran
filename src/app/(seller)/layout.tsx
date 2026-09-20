@@ -140,10 +140,10 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           }`}
         >
           {/* Logo Area & Collapse Toggle */}
-          <div className={`pt-6 pb-4 px-4 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
+          <div className={`pt-6 pb-4 px-4 flex items-center justify-center ${collapsed ? "justify-center" : "justify-center"}`}>
             {!collapsed ? (
-              <div className="flex items-center gap-2 pl-2">
-                <img src="/logo.png" alt="WebGran Logo" className="w-36 h-auto object-contain drop-shadow-md" />
+              <div className="flex items-center justify-center w-full">
+                <img src="/logo.png" alt="WebGran Logo" className="w-40 h-auto object-contain drop-shadow-md mx-auto" />
               </div>
             ) : (
               <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30 text-base">
