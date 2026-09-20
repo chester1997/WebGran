@@ -109,25 +109,29 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           }`}
         >
           {/* Logo Area Header with Divider Line & Collapse Toggle */}
-          <div className="pt-6 pb-5 px-4 flex flex-col items-center justify-center border-b border-white/10 bg-[#141416]/40 relative">
+          <div className="py-5 px-4 flex items-center justify-between border-b border-white/10 bg-[#141416]/40">
             {!collapsed ? (
-              <div className="flex items-center justify-between w-full relative">
-                <div className="flex-1 flex justify-center pl-6">
-                  <img src="/logo.png" alt="WebGran Logo" className="w-44 h-auto object-contain drop-shadow-md mx-auto" />
+              <>
+                <div className="flex-1 flex items-center justify-center">
+                  <img 
+                    src="/logo.png" 
+                    alt="WebGran Logo" 
+                    className="h-8 max-w-[145px] w-auto object-contain drop-shadow-md" 
+                  />
                 </div>
                 <button 
                   onClick={() => setCollapsed(!collapsed)}
                   title="Recolher menu"
-                  className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all shrink-0 cursor-pointer absolute right-0 top-1/2 -translate-y-1/2"
+                  className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all cursor-pointer shrink-0 ml-2"
                 >
                   <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
                 </button>
-              </div>
+              </>
             ) : (
               <button 
                 onClick={() => setCollapsed(!collapsed)}
                 title="Expandir menu"
-                className="w-full flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer"
+                className="w-full flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer py-1"
               >
                 <PanelLeftOpen className="w-5 h-5 text-zinc-400 hover:text-white" strokeWidth={1.8} />
               </button>
