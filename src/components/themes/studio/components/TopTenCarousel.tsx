@@ -53,8 +53,8 @@ export function TopTenCarousel({ storeSlug, products, title = "Top 15 Hoje" }: T
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
               className={`relative flex items-end ${
                 isDoubleDigit 
-                  ? "pl-9 sm:pl-10 md:pl-12" 
-                  : "pl-6 sm:pl-7 md:pl-8"
+                  ? "pl-8 sm:pl-9 md:pl-10" 
+                  : "pl-[19px] sm:pl-6 md:pl-7"
               }`}
             >
               {/* Crisp outline position number overlapping bottom-left edge */}
