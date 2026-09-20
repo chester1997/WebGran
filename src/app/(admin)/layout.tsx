@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0B0B0D]">
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#0B0B0D]">
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
               {children}
             </div>
           </main>
