@@ -355,7 +355,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               </p>
             </div>
           ) : (
-            <div className="relative w-full overflow-hidden">
+            <div className="relative w-full">
               <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible">
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -403,26 +403,35 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                     ))}
               </div>
 
-              {/* Hover Tooltip Overlay */}
-              {hoveredPoint && (
-                <div
-                  className="absolute bg-[#1C1C22] border border-red-500/30 text-white p-2.5 rounded-xl shadow-2xl text-xs z-30 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-2 animate-in fade-in duration-150"
-                  style={{
-                    left: `${(hoveredPoint.x / svgWidth) * 100}%`,
-                    top: `${(hoveredPoint.y / svgHeight) * 100}%`
-                  }}
-                >
-                  <p className="font-bold text-zinc-300 border-b border-white/10 pb-1 mb-1 text-[11px]">
-                    {hoveredPoint.dateLabel}
-                  </p>
-                  <p className="text-emerald-400 font-semibold">
-                    Faturamento: R$ {hoveredPoint.revenue.toFixed(2).replace(".", ",")}
-                  </p>
-                  <p className="text-blue-400 text-[11px]">
-                    Vendas: {hoveredPoint.salesCount} {hoveredPoint.salesCount === 1 ? "pedido" : "pedidos"}
-                  </p>
-                </div>
-              )}
+              {/* Hover Tooltip Overlay with Smart Edge Positioning */}
+              {hoveredPoint && (() => {
+                const isTop = (hoveredPoint.y / svgHeight) < 0.45;
+                const isRight = (hoveredPoint.x / svgWidth) > 0.8;
+                const isLeft = (hoveredPoint.x / svgWidth) < 0.2;
+
+                const posXClass = isRight ? "-translate-x-[90%]" : isLeft ? "-translate-x-[10%]" : "-translate-x-1/2";
+                const posYClass = isTop ? "translate-y-3 mt-1" : "-translate-y-full mb-3";
+
+                return (
+                  <div
+                    className={`absolute bg-[#1C1C22]/95 backdrop-blur-md border border-red-500/40 text-white p-2.5 rounded-xl shadow-2xl text-xs z-30 pointer-events-none transform ${posXClass} ${posYClass} animate-in fade-in duration-150`}
+                    style={{
+                      left: `${(hoveredPoint.x / svgWidth) * 100}%`,
+                      top: `${(hoveredPoint.y / svgHeight) * 100}%`
+                    }}
+                  >
+                    <p className="font-bold text-zinc-300 border-b border-white/10 pb-1 mb-1 text-[11px]">
+                      {hoveredPoint.dateLabel}
+                    </p>
+                    <p className="text-emerald-400 font-semibold">
+                      Faturamento: R$ {hoveredPoint.revenue.toFixed(2).replace(".", ",")}
+                    </p>
+                    <p className="text-blue-400 text-[11px]">
+                      Vendas: {hoveredPoint.salesCount} {hoveredPoint.salesCount === 1 ? "pedido" : "pedidos"}
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
