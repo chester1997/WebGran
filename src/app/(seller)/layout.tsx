@@ -4,7 +4,7 @@ import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  Home, 
+  LayoutDashboard, 
   Bot,
   Settings2,
   Package, 
@@ -12,7 +12,7 @@ import {
   Layers, 
   ShoppingCart, 
   Users, 
-  Wallet,
+  CreditCard,
   Settings,
   Search,
   PanelLeftClose,
@@ -20,14 +20,14 @@ import {
   Sparkles,
   ChevronUp,
   ChevronDown,
-  Image as ImageIcon
+  Image as ImageIcon,
+  LogOut
 } from "lucide-react";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [botGroupOpen, setBotGroupOpen] = useState(true);
 
   // Sub-items for "Bot Telegram" group
   const botTelegramSubItems = [
@@ -40,10 +40,10 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   ];
 
   // Root level items outside the group
-  const dashboardItem = { name: "Dashboard", href: "/seller", icon: Home };
+  const dashboardItem = { name: "Dashboard", href: "/seller", icon: LayoutDashboard };
   const bottomRootItems = [
     { name: "Pedidos", href: "/seller/orders", icon: ShoppingCart },
-    { name: "Recebimento", href: "/seller/recebimentos", icon: Wallet },
+    { name: "Recebimento", href: "/seller/recebimentos", icon: CreditCard },
     { name: "Clientes", href: "/seller/customers", icon: Users },
     { name: "Configurações", href: "/seller/settings", icon: Settings },
   ];
@@ -53,12 +53,26 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
 
-  // Auto-expand "Bot Telegram" group on child page load or navigation
+  // Expansion state initialized based on route on load (does NOT force toggle on every route change)
+  const [botGroupOpen, setBotGroupOpen] = useState(true);
+
+  // Real Seller Profile State
+  const [sellerProfile, setSellerProfile] = useState<{
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+  } | null>(null);
+
   useEffect(() => {
-    if (isBotChildActive) {
-      setBotGroupOpen(true);
-    }
-  }, [pathname, isBotChildActive]);
+    fetch("/api/seller/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user) {
+          setSellerProfile(data.user);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   // Search filter logic
   const queryLower = searchQuery.toLowerCase().trim();
@@ -89,11 +103,13 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     queryLower === "" ? true : item.name.toLowerCase().includes(queryLower)
   );
 
+  const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
+
   return (
     <div className="min-h-screen bg-[#070709] text-zinc-100 font-sans selection:bg-red-500/30">
       <div className="flex h-screen overflow-hidden">
         
-        {/* Sidebar with depth shadow, gradient border, and collapsible behavior */}
+        {/* Sidebar */}
         <aside 
           className={`bg-[#0F0F12] border-r border-white/5 flex-shrink-0 hidden md:flex flex-col relative z-30 transition-all duration-300 ease-in-out shadow-[10px_0_30px_rgba(0,0,0,0.8)] ${
             collapsed ? "w-20" : "w-64"
@@ -117,7 +133,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             {!collapsed ? (
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" strokeWidth={1.8} />
                   <input 
                     type="text" 
                     value={searchQuery}
@@ -134,7 +150,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   title="Recolher menu"
                   className="p-2 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all shrink-0 cursor-pointer"
                 >
-                  <PanelLeftClose className="w-4 h-4" />
+                  <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
                 </button>
               </div>
             ) : (
@@ -143,7 +159,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 title="Expandir menu"
                 className="w-full py-2 flex items-center justify-center text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all cursor-pointer"
               >
-                <PanelLeftOpen className="w-4 h-4" />
+                <PanelLeftOpen className="w-4 h-4" strokeWidth={1.8} />
               </button>
             )}
           </div>
@@ -155,20 +171,17 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               <Link 
                 href={dashboardItem.href}
                 title={collapsed ? dashboardItem.name : undefined}
-                className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
+                className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                   pathname === dashboardItem.href 
-                    ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
-                    : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                    ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.1)]" 
+                    : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
                 {pathname === dashboardItem.href && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
                 )}
-                {pathname === dashboardItem.href && (
-                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-500/20 blur-md rounded-full pointer-events-none" />
-                )}
-                <Home className={`w-4 h-4 shrink-0 transition-colors z-10 ${pathname === dashboardItem.href ? "text-red-500" : "text-[#8B8D93]"}`} />
-                {!collapsed && <span className="truncate z-10">{dashboardItem.name}</span>}
+                <LayoutDashboard className={`w-5 h-5 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                {!collapsed && <span className="truncate">{dashboardItem.name}</span>}
               </Link>
             )}
 
@@ -181,26 +194,26 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     <button
                       type="button"
                       onClick={() => setBotGroupOpen(!botGroupOpen)}
-                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
                         isBotChildActive
                           ? "text-white font-semibold bg-white/[0.03]"
-                          : "text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                          : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <Bot className={`w-4 h-4 shrink-0 transition-colors ${isBotChildActive ? "text-red-400" : "text-[#8B8D93]"}`} />
+                        <Bot className={`w-5 h-5 shrink-0 transition-colors ${isBotChildActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                         <span className="truncate">Bot Telegram</span>
                       </div>
                       {effectiveBotGroupOpen ? (
-                        <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200" />
+                        <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200" strokeWidth={1.8} />
                       ) : (
-                        <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200" />
+                        <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200" strokeWidth={1.8} />
                       )}
                     </button>
 
-                    {/* Submenus (Indented & Animated Expand/Collapse) */}
+                    {/* Submenus (Indented with connecting line) */}
                     {effectiveBotGroupOpen && (
-                      <div className="pl-4 space-y-0.5 transition-all duration-200 ease-in-out">
+                      <div className="ml-5 pl-3 border-l border-white/10 space-y-1 my-1 transition-all duration-200 ease-in-out">
                         {filteredBotSubItems.map((subItem) => {
                           const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                           const SubIcon = subItem.icon;
@@ -209,22 +222,17 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                             <Link
                               key={subItem.href}
                               href={subItem.href}
-                              className={`flex items-center gap-2.5 pl-5 pr-3 py-2 rounded-[8px] text-xs transition-all duration-200 relative overflow-hidden ${
+                              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                                 isSubActive
-                                  ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                                  : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                                  ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                                  : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                               }`}
                             >
-                              {/* Left glowing accent indicator bar for active sub-item */}
                               {isSubActive && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-red-500 rounded-r-[3px] shadow-[0_0_8px_#ef4444]" />
                               )}
-                              {isSubActive && (
-                                <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-red-500/20 blur-md rounded-full pointer-events-none" />
-                              )}
-
-                              <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors z-10 ${isSubActive ? "text-red-500" : "text-[#8B8D93]"}`} />
-                              <span className="truncate z-10">{subItem.name}</span>
+                              <SubIcon className={`w-[17px] h-[17px] shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                              <span className="truncate">{subItem.name}</span>
                             </Link>
                           );
                         })}
@@ -232,7 +240,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     )}
                   </>
                 ) : (
-                  /* Collapsed mode icons with tooltips */
+                  /* Collapsed mode icons */
                   filteredBotSubItems.map((subItem) => {
                     const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                     const SubIcon = subItem.icon;
@@ -242,16 +250,16 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                         key={subItem.href}
                         href={subItem.href}
                         title={`Bot Telegram - ${subItem.name}`}
-                        className={`flex items-center justify-center p-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
+                        className={`flex items-center justify-center p-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                           isSubActive
-                            ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                            : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                            ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                            : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                         }`}
                       >
                         {isSubActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
                         )}
-                        <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-[#8B8D93]"}`} />
+                        <SubIcon className={`w-5 h-5 shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                       </Link>
                     );
                   })
@@ -269,40 +277,40 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href} 
                   title={collapsed ? item.name : undefined}
-                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-[10px] text-sm transition-all duration-200 relative overflow-hidden ${
+                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                     isActive 
-                      ? "bg-gradient-to-r from-red-950/40 via-[#181820] to-[#14141A] text-red-500 font-semibold border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
-                      : "bg-transparent text-[#8B8D93] hover:bg-white/[0.03] hover:text-white"
+                      ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.1)]" 
+                      : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[22px] bg-red-500 rounded-r-full shadow-[0_0_12px_#ef4444]" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
                   )}
 
-                  {isActive && (
-                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-500/20 blur-md rounded-full pointer-events-none" />
-                  )}
-
-                  <ItemIcon className={`w-4 h-4 shrink-0 transition-colors z-10 ${isActive ? "text-red-500" : "text-[#8B8D93]"}`} />
+                  <ItemIcon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                   
                   {!collapsed && (
-                    <span className="truncate z-10">{item.name}</span>
+                    <span className="truncate">{item.name}</span>
                   )}
                 </Link>
               );
             })}
           </nav>
 
-          {/* User Footer with dropdown style */}
+          {/* User Footer with real seller profile avatar and data */}
           <div className="border-t border-white/5 p-3">
-            <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} p-2 rounded-xl bg-[#16161C] border border-white/5`}>
+            <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} p-2.5 rounded-xl bg-[#16161C] border border-white/5`}>
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 shrink-0 font-bold text-xs text-white">
-                  W
+                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 shrink-0 font-bold text-xs text-white overflow-hidden">
+                  {sellerProfile?.avatarUrl ? (
+                    <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    initialLetter
+                  )}
                 </div>
                 {!collapsed && (
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate">Sua Loja</p>
+                    <p className="text-xs font-bold text-white truncate">{sellerProfile?.name || "Vendedor"}</p>
                     <p className="text-[11px] text-zinc-500 truncate">Vendedor</p>
                   </div>
                 )}
@@ -310,7 +318,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               
               {!collapsed && (
                 <Link href="/api/auth/signout" className="text-zinc-500 hover:text-white p-1 rounded-md transition-colors" title="Sair">
-                  <ChevronUp className="w-4 h-4" />
+                  <LogOut className="w-4 h-4" strokeWidth={1.8} />
                 </Link>
               )}
             </div>
