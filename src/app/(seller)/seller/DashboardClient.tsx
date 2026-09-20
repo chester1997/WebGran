@@ -452,22 +452,24 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 {data.channels.map((chan) => (
                   <div key={chan.channel} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-white flex items-center gap-2">
-                        {chan.channel === "telegram" ? (
+                      <span className="font-semibold text-white flex items-center gap-2 min-w-0">
+                        {chan.photoUrl ? (
+                          <img src={chan.photoUrl} className="w-4 h-4 rounded-full object-cover shrink-0 border border-white/10" alt="" />
+                        ) : chan.channel !== "web" ? (
                           <Bot className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                         ) : (
                           <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         )}
-                        {chan.label}
+                        <span className="truncate">{chan.label}</span>
                       </span>
-                      <span className="font-mono text-zinc-400">{chan.percentage}%</span>
+                      <span className="font-mono text-zinc-400 shrink-0 ml-2">{chan.percentage}%</span>
                     </div>
 
                     {/* Progress Bar */}
                     <div className="h-2.5 bg-[#181820] rounded-full overflow-hidden border border-white/5 relative">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          chan.channel === "telegram" ? "bg-blue-500" : "bg-emerald-500"
+                          chan.channel === "web" ? "bg-emerald-500" : "bg-blue-500"
                         }`}
                         style={{ width: `${Math.max(chan.percentage, 4)}%` }}
                       />

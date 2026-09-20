@@ -6,7 +6,8 @@ import {
   telegramCustomers, 
   accesses, 
   categories, 
-  stores 
+  stores,
+  telegramBots
 } from "@/db/schema";
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 
@@ -31,6 +32,8 @@ export interface ChannelItem {
   revenue: number;
   salesCount: number;
   percentage: number;
+  photoUrl?: string | null;
+  username?: string | null;
 }
 
 export interface TopProductItem {
@@ -311,40 +314,109 @@ export class AnalyticsService {
       salesCount: val.salesCount
     }));
 
-    // 2. Channels Breakdown (Telegram vs Loja Online)
-    let telegramRevenue = 0;
-    let telegramCount = 0;
+    // 2. Channels Breakdown (Specific Registered Telegram Bots vs Loja Online)
+    const storeBots = await db.query.telegramBots.findMany({
+      where: eq(telegramBots.storeId, storeId)
+    });
+
+    const botStatsMap = new Map<string, {
+      id: string;
+      label: string;
+      username: string | null;
+      photoUrl: string | null;
+      revenue: number;
+      salesCount: number;
+    }>();
+
+    storeBots.forEach(b => {
+      const cleanUser = b.username ? (b.username.startsWith("@") ? b.username : `@${b.username}`) : null;
+      let label = cleanUser || b.displayName || "Bot Telegram";
+      if (b.displayName && cleanUser && b.displayName.toLowerCase() !== cleanUser.toLowerCase()) {
+        label = `${b.displayName} (${cleanUser})`;
+      }
+      botStatsMap.set(b.id, {
+        id: b.id,
+        label,
+        username: cleanUser,
+        photoUrl: b.photoUrl,
+        revenue: 0,
+        salesCount: 0
+      });
+    });
+
     let webRevenue = 0;
     let webCount = 0;
+    let fallbackTelegramRevenue = 0;
+    let fallbackTelegramCount = 0;
 
     currentPaidOrders.forEach(o => {
-      // If paymentMethod or customer has telegramUserId -> Telegram channel
-      if (o.customer?.telegramUserId || o.paymentMethod?.includes("telegram")) {
-        telegramRevenue += Number(o.total || 0);
-        telegramCount += 1;
+      const orderTotal = Number(o.total || 0);
+
+      let matchedBotId: string | null = null;
+      if (o.items && o.items.length > 0) {
+        for (const item of o.items) {
+          if (item.product?.botId) {
+            matchedBotId = item.product.botId;
+            break;
+          }
+        }
+      }
+
+      const isTelegramOrder = Boolean(o.customer?.telegramUserId || o.paymentMethod?.includes("telegram"));
+
+      if (matchedBotId && botStatsMap.has(matchedBotId)) {
+        const stats = botStatsMap.get(matchedBotId)!;
+        stats.revenue += orderTotal;
+        stats.salesCount += 1;
+      } else if (isTelegramOrder) {
+        if (storeBots.length === 1 && botStatsMap.has(storeBots[0].id)) {
+          const stats = botStatsMap.get(storeBots[0].id)!;
+          stats.revenue += orderTotal;
+          stats.salesCount += 1;
+        } else {
+          fallbackTelegramRevenue += orderTotal;
+          fallbackTelegramCount += 1;
+        }
       } else {
-        webRevenue += Number(o.total || 0);
+        webRevenue += orderTotal;
         webCount += 1;
       }
     });
 
     const totalChannelRevenue = currRevenue || 1;
-    const channels: ChannelItem[] = [
-      {
-        channel: "telegram",
+    const channels: ChannelItem[] = [];
+
+    botStatsMap.forEach(stats => {
+      channels.push({
+        channel: stats.id,
+        label: stats.label,
+        revenue: Math.round(stats.revenue * 100) / 100,
+        salesCount: stats.salesCount,
+        percentage: Math.round((stats.revenue / totalChannelRevenue) * 100),
+        photoUrl: stats.photoUrl,
+        username: stats.username
+      });
+    });
+
+    if (fallbackTelegramCount > 0 || (storeBots.length === 0 && (currSales === 0 || fallbackTelegramCount > 0))) {
+      channels.push({
+        channel: "telegram_other",
         label: "Bot Telegram",
-        revenue: telegramRevenue,
-        salesCount: telegramCount,
-        percentage: Math.round((telegramRevenue / totalChannelRevenue) * 100)
-      },
-      {
-        channel: "web",
-        label: "Loja Online / Web",
-        revenue: webRevenue,
-        salesCount: webCount,
-        percentage: Math.round((webRevenue / totalChannelRevenue) * 100)
-      }
-    ].filter(c => c.salesCount > 0 || currSales === 0);
+        revenue: Math.round(fallbackTelegramRevenue * 100) / 100,
+        salesCount: fallbackTelegramCount,
+        percentage: Math.round((fallbackTelegramRevenue / totalChannelRevenue) * 100)
+      });
+    }
+
+    channels.push({
+      channel: "web",
+      label: "Loja Online / Web",
+      revenue: Math.round(webRevenue * 100) / 100,
+      salesCount: webCount,
+      percentage: Math.round((webRevenue / totalChannelRevenue) * 100)
+    });
+
+    channels.sort((a, b) => b.revenue - a.revenue);
 
     // 3. Top Products Sold (From orderItems in current paid orders)
     const productStatsMap = new Map<string, { id: string; title: string; coverUrl: string | null; salesCount: number; revenue: number }>();
