@@ -8,13 +8,24 @@ export default async function SettingsPage() {
   const seller = await requireSeller();
   const store = await getCurrentStore();
 
-  const userRecord = await db.query.users.findFirst({
-    where: eq(users.id, seller.id),
-  });
+  let userRecord: any = null;
+  let connection: any = null;
 
-  const connection = await db.query.sellerPaymentConnections.findFirst({
-    where: eq(sellerPaymentConnections.sellerId, seller.id),
-  });
+  try {
+    userRecord = await db.query.users.findFirst({
+      where: eq(users.id, seller.id),
+    });
+  } catch (err) {
+    console.error("Error fetching user profile record:", err);
+  }
+
+  try {
+    connection = await db.query.sellerPaymentConnections.findFirst({
+      where: eq(sellerPaymentConnections.sellerId, seller.id),
+    });
+  } catch (err) {
+    console.error("Error fetching payment connection:", err);
+  }
 
   return (
     <SettingsClient
