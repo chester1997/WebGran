@@ -41,7 +41,20 @@ export function TopTenCarousel({ storeSlug, products, title = "Top 15 Hoje" }: T
   };
 
   return (
-    <HorizontalCarousel title={title}>
+    <HorizontalCarousel
+      title={
+        <div className="flex items-center gap-2">
+          <img
+            src="/icons/trophy-gold.png"
+            alt=""
+            className="w-5 h-5 object-contain shrink-0"
+          />
+          <h2 className="text-white text-base font-bold tracking-tight uppercase">
+            {title}
+          </h2>
+        </div>
+      }
+    >
       {displayProducts.map((product, index) => {
         const style = getPositionStyle(index);
         const displayPosition = String(index + 1); // 1-15 (NO leading zero)
