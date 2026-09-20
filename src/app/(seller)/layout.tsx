@@ -53,8 +53,20 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
 
-  // Expansion state initialized based on route on load (does NOT force toggle on every route change)
-  const [botGroupOpen, setBotGroupOpen] = useState(true);
+  // Manual toggle state vs default route state
+  const [userManuallyToggled, setUserManuallyToggled] = useState<boolean | null>(null);
+
+  // Reset manual toggle override when navigating to a new route
+  useEffect(() => {
+    setUserManuallyToggled(null);
+  }, [pathname]);
+
+  // Group is open if user explicitly toggled it, or (if not manually toggled) if currently on a bot child route
+  const botGroupOpen = userManuallyToggled !== null ? userManuallyToggled : isBotChildActive;
+
+  const handleToggleBotGroup = () => {
+    setUserManuallyToggled(!botGroupOpen);
+  };
 
   // Real Seller Profile State
   const [sellerProfile, setSellerProfile] = useState<{
@@ -202,7 +214,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     {/* Parent Group Header Button */}
                     <button
                       type="button"
-                      onClick={() => setBotGroupOpen(!botGroupOpen)}
+                      onClick={handleToggleBotGroup}
                       className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
                         isBotChildActive
                           ? "text-white font-semibold bg-white/[0.03]"
