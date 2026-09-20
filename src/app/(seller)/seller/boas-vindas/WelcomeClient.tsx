@@ -157,13 +157,6 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                   </button>
                 )}
               </div>
-
-              {idx === 0 && (
-                <div className="bg-[#14121F] border border-purple-500/20 rounded-xl p-3 text-xs text-purple-300 flex items-center gap-2">
-                  <span>📸</span>
-                  <span>Esta imagem é enviada pelo bot no Telegram quando o cliente digita <code className="bg-purple-500/20 px-1 py-0.5 rounded font-mono text-purple-200">/start</code>, e também aparece no topo do Mini App.</span>
-                </div>
-              )}
             </div>
           ))}
         </div>
