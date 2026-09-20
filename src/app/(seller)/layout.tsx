@@ -14,7 +14,6 @@ import {
   Users, 
   CreditCard,
   Settings,
-  Search,
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
@@ -29,7 +28,6 @@ import {
 export default function SellerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Sub-items for "Bot Telegram" group
   const botTelegramSubItems = [
@@ -98,35 +96,6 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     };
   }, [pathname]);
 
-  // Search filter logic
-  const queryLower = searchQuery.toLowerCase().trim();
-
-  const isChildSearchMatch =
-    queryLower !== "" &&
-    botTelegramSubItems.some((item) =>
-      item.name.toLowerCase().includes(queryLower)
-    );
-
-  const effectiveBotGroupOpen = botGroupOpen || isChildSearchMatch;
-
-  const isBotGroupMatch =
-    queryLower === "" ||
-    "bot telegram".includes(queryLower) ||
-    botTelegramSubItems.some((item) =>
-      item.name.toLowerCase().includes(queryLower)
-    );
-
-  const filteredBotSubItems = botTelegramSubItems.filter((item) =>
-    queryLower === "" ? true : item.name.toLowerCase().includes(queryLower)
-  );
-
-  const isDashboardMatch =
-    queryLower === "" || dashboardItem.name.toLowerCase().includes(queryLower);
-
-  const filteredBottomRootItems = bottomRootItems.filter((item) =>
-    queryLower === "" ? true : item.name.toLowerCase().includes(queryLower)
-  );
-
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
 
   return (
@@ -139,40 +108,17 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             collapsed ? "w-20" : "w-64"
           }`}
         >
-          {/* Logo Area & Collapse Toggle */}
-          <div className={`pt-6 pb-4 px-4 flex items-center justify-center ${collapsed ? "justify-center" : "justify-center"}`}>
+          {/* Logo Area Header with Divider Line & Collapse Toggle */}
+          <div className="pt-6 pb-5 px-4 flex flex-col items-center justify-center border-b border-white/10 bg-[#141416]/40 relative">
             {!collapsed ? (
-              <div className="flex items-center justify-center w-full">
-                <img src="/logo.png" alt="WebGran Logo" className="w-40 h-auto object-contain drop-shadow-md mx-auto" />
-              </div>
-            ) : (
-              <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30 text-base">
-                W
-              </div>
-            )}
-          </div>
-
-          {/* Search bar & collapse toggle button */}
-          <div className="px-3 py-2 space-y-3">
-            {!collapsed ? (
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" strokeWidth={1.8} />
-                  <input 
-                    type="text" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Buscar" 
-                    className="w-full bg-[#18181C] border border-white/5 rounded-xl py-2 pl-8 pr-7 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/50 transition-all"
-                  />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 bg-white/5 px-1.5 py-0.5 rounded font-mono">
-                    /
-                  </span>
+              <div className="flex items-center justify-between w-full relative">
+                <div className="flex-1 flex justify-center pl-6">
+                  <img src="/logo.png" alt="WebGran Logo" className="w-44 h-auto object-contain drop-shadow-md mx-auto" />
                 </div>
                 <button 
                   onClick={() => setCollapsed(!collapsed)}
                   title="Recolher menu"
-                  className="p-2 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all shrink-0 cursor-pointer"
+                  className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all shrink-0 cursor-pointer absolute right-0 top-1/2 -translate-y-1/2"
                 >
                   <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
                 </button>
@@ -181,118 +127,114 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               <button 
                 onClick={() => setCollapsed(!collapsed)}
                 title="Expandir menu"
-                className="w-full py-2 flex items-center justify-center text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-xl border border-white/5 transition-all cursor-pointer"
+                className="w-full flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer"
               >
-                <PanelLeftOpen className="w-4 h-4" strokeWidth={1.8} />
+                <PanelLeftOpen className="w-5 h-5 text-zinc-400 hover:text-white" strokeWidth={1.8} />
               </button>
             )}
           </div>
 
           {/* Navigation Items */}
-          <nav className="flex-1 overflow-y-auto py-3 custom-scrollbar px-3 space-y-1">
+          <nav className="flex-1 overflow-y-auto py-5 custom-scrollbar px-3 space-y-1">
             {/* 1. Dashboard */}
-            {isDashboardMatch && (
-              <Link 
-                href={dashboardItem.href}
-                title={collapsed ? dashboardItem.name : undefined}
-                className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
-                  pathname === dashboardItem.href 
-                    ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.1)]" 
-                    : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-                }`}
-              >
-                {pathname === dashboardItem.href && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
-                )}
-                <LayoutDashboard className={`w-5 h-5 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                {!collapsed && <span className="truncate">{dashboardItem.name}</span>}
-              </Link>
-            )}
+            <Link 
+              href={dashboardItem.href}
+              title={collapsed ? dashboardItem.name : undefined}
+              className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
+                pathname === dashboardItem.href 
+                  ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.1)]" 
+                  : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+              }`}
+            >
+              {pathname === dashboardItem.href && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
+              )}
+              <LayoutDashboard className={`w-5 h-5 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+              {!collapsed && <span className="truncate">{dashboardItem.name}</span>}
+            </Link>
 
             {/* 2. Bot Telegram Group (Expandable Parent Menu) */}
-            {isBotGroupMatch && (
-              <div className="space-y-1">
-                {!collapsed ? (
-                  <>
-                    {/* Parent Group Header Button */}
-                    <button
-                      type="button"
-                      onClick={handleToggleBotGroup}
-                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
-                        isBotChildActive
-                          ? "text-white font-semibold bg-white/[0.03]"
-                          : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+            <div className="space-y-1">
+              {!collapsed ? (
+                <>
+                  {/* Parent Group Header Button */}
+                  <button
+                    type="button"
+                    onClick={handleToggleBotGroup}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
+                      isBotChildActive
+                        ? "text-white font-semibold bg-white/[0.03]"
+                        : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Bot className={`w-5 h-5 shrink-0 transition-colors ${isBotChildActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                      <span className="truncate">Bot Telegram</span>
+                    </div>
+                    {botGroupOpen ? (
+                      <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200" strokeWidth={1.8} />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200" strokeWidth={1.8} />
+                    )}
+                  </button>
+
+                  {/* Submenus (Indented with connecting line) */}
+                  {botGroupOpen && (
+                    <div className="ml-5 pl-3 border-l border-white/10 space-y-1 my-1 transition-all duration-200 ease-in-out">
+                      {botTelegramSubItems.map((subItem) => {
+                        const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                        const SubIcon = subItem.icon;
+
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative overflow-hidden ${
+                              isSubActive
+                                ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                            }`}
+                          >
+                            {isSubActive && (
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-red-500 rounded-r-[3px] shadow-[0_0_8px_#ef4444]" />
+                            )}
+                            <SubIcon className={`w-[17px] h-[17px] shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                            <span className="truncate">{subItem.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Collapsed mode icons */
+                botTelegramSubItems.map((subItem) => {
+                  const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                  const SubIcon = subItem.icon;
+
+                  return (
+                    <Link
+                      key={subItem.href}
+                      href={subItem.href}
+                      title={`Bot Telegram - ${subItem.name}`}
+                      className={`flex items-center justify-center p-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
+                        isSubActive
+                          ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                          : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Bot className={`w-5 h-5 shrink-0 transition-colors ${isBotChildActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                        <span className="truncate">Bot Telegram</span>
-                      </div>
-                      {effectiveBotGroupOpen ? (
-                        <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200" strokeWidth={1.8} />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200" strokeWidth={1.8} />
+                      {isSubActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
                       )}
-                    </button>
-
-                    {/* Submenus (Indented with connecting line) */}
-                    {effectiveBotGroupOpen && (
-                      <div className="ml-5 pl-3 border-l border-white/10 space-y-1 my-1 transition-all duration-200 ease-in-out">
-                        {filteredBotSubItems.map((subItem) => {
-                          const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
-                          const SubIcon = subItem.icon;
-
-                          return (
-                            <Link
-                              key={subItem.href}
-                              href={subItem.href}
-                              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative overflow-hidden ${
-                                isSubActive
-                                  ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
-                                  : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-                              }`}
-                            >
-                              {isSubActive && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-red-500 rounded-r-[3px] shadow-[0_0_8px_#ef4444]" />
-                              )}
-                              <SubIcon className={`w-[17px] h-[17px] shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                              <span className="truncate">{subItem.name}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  /* Collapsed mode icons */
-                  filteredBotSubItems.map((subItem) => {
-                    const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
-                    const SubIcon = subItem.icon;
-
-                    return (
-                      <Link
-                        key={subItem.href}
-                        href={subItem.href}
-                        title={`Bot Telegram - ${subItem.name}`}
-                        className={`flex items-center justify-center p-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
-                          isSubActive
-                            ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
-                            : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-                        }`}
-                      >
-                        {isSubActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
-                        )}
-                        <SubIcon className={`w-5 h-5 shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                      </Link>
-                    );
-                  })
-                )}
-              </div>
-            )}
+                      <SubIcon className={`w-5 h-5 shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    </Link>
+                  );
+                })
+              )}
+            </div>
 
             {/* 3. Bottom Root Level Items (Pedidos, Recebimento, Clientes, Configurações) */}
-            {filteredBottomRootItems.map((item) => {
+            {bottomRootItems.map((item) => {
               const isActive = pathname === item.href;
               const ItemIcon = item.icon;
 
