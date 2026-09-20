@@ -1,10 +1,14 @@
 "use client";
 
 import React, { ReactNode, useRef, useState, useCallback } from "react";
+import { CarouselIconRenderer } from "@/lib/carousel-icons";
 
 interface HorizontalCarouselProps {
   title?: ReactNode;
   subtitle?: ReactNode;
+  indicatorType?: "BAR" | "ICON" | "NONE";
+  iconName?: string | null;
+  iconColor?: string | null;
   children: ReactNode;
   className?: string;
 }
@@ -12,6 +16,9 @@ interface HorizontalCarouselProps {
 export function HorizontalCarousel({
   title,
   subtitle,
+  indicatorType = "BAR",
+  iconName,
+  iconColor,
   children,
   className = "",
 }: HorizontalCarouselProps) {
@@ -69,7 +76,19 @@ export function HorizontalCarousel({
         <div className="flex items-center justify-between px-[var(--miniapp-content-padding-x)] mb-3">
           {typeof title === "string" ? (
             <div className="flex items-center gap-2">
-              <div className="w-1 h-4 bg-violet-600 rounded-full shrink-0"></div>
+              {indicatorType === "ICON" && (
+                <CarouselIconRenderer 
+                  iconName={iconName || "Flame"} 
+                  color={iconColor || "#8B5CF6"} 
+                  className="w-5 h-5 shrink-0"
+                  size={20}
+                />
+              )}
+              {indicatorType === "BAR" && (
+                <div className="w-1 h-4 bg-violet-600 rounded-full shrink-0" />
+              )}
+              {/* indicatorType === 'NONE': render nothing */}
+
               <h2 className="text-white text-base font-bold tracking-tight uppercase flex items-center gap-2">
                 {title}
                 {subtitle && (

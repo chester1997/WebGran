@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { HorizontalCarousel } from "./HorizontalCarousel";
+import { CarouselIconRenderer } from "@/lib/carousel-icons";
 
 interface Product {
   id: string;
@@ -13,9 +14,19 @@ interface TopTenCarouselProps {
   storeSlug: string;
   products: Product[];
   title?: string;
+  indicatorType?: "BAR" | "ICON" | "NONE";
+  iconName?: string | null;
+  iconColor?: string | null;
 }
 
-export function TopTenCarousel({ storeSlug, products, title = "Top 15 Hoje" }: TopTenCarouselProps) {
+export function TopTenCarousel({
+  storeSlug,
+  products,
+  title = "Top 15 Hoje",
+  indicatorType = "ICON",
+  iconName = "Trophy",
+  iconColor = "#FFD700",
+}: TopTenCarouselProps) {
   // Top 15 max limit
   const displayProducts = products.slice(0, 15);
   if (displayProducts.length === 0) return null;
@@ -44,11 +55,17 @@ export function TopTenCarousel({ storeSlug, products, title = "Top 15 Hoje" }: T
     <HorizontalCarousel
       title={
         <div className="flex items-center gap-2">
-          <img
-            src="/icons/trophy-gold.png"
-            alt=""
-            className="w-5 h-5 object-contain shrink-0"
-          />
+          {indicatorType === "ICON" && (
+            <CarouselIconRenderer
+              iconName={iconName || "Trophy"}
+              color={iconColor || "#FFD700"}
+              className="w-5 h-5 shrink-0"
+              size={20}
+            />
+          )}
+          {indicatorType === "BAR" && (
+            <div className="w-1 h-4 bg-violet-600 rounded-full shrink-0"></div>
+          )}
           <h2 className="text-white text-base font-bold tracking-tight uppercase">
             {title}
           </h2>

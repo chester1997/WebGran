@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit3, Check, Package } from "lucide-react";
+import { Plus, Edit3, Check } from "lucide-react";
 import { createCarouselAction, updateCarouselAction } from "./actions";
+import { IconPickerModal } from "./IconPickerModal";
 
 interface CarouselModalProps {
   products: Array<{ id: string; title: string; price: string | number }>;
@@ -12,6 +13,9 @@ interface CarouselModalProps {
     id: string;
     name: string;
     selectedProductIds: string[];
+    indicatorType?: "BAR" | "ICON" | "NONE";
+    iconName?: string | null;
+    iconColor?: string | null;
   };
   triggerText?: string;
 }
@@ -22,11 +26,17 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
   const [name, setName] = useState(carousel?.name || "");
   const [selectedIds, setSelectedIds] = useState<string[]>(carousel?.selectedProductIds || []);
 
+  const [indicatorType, setIndicatorType] = useState<"BAR" | "ICON" | "NONE">(
+    carousel?.indicatorType || "BAR"
+  );
+  const [iconName, setIconName] = useState<string>(carousel?.iconName || "Flame");
+  const [iconColor, setIconColor] = useState<string>(carousel?.iconColor || "#8B5CF6");
+
   const isEditing = !!carousel;
 
   const toggleProduct = (id: string) => {
     setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item != id) : [...prev, id]
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
 
@@ -36,14 +46,30 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
     setLoading(true);
     try {
       if (isEditing) {
-        await updateCarouselAction(carousel.id, name, selectedIds);
+        await updateCarouselAction(
+          carousel.id,
+          name,
+          selectedIds,
+          indicatorType,
+          iconName,
+          iconColor
+        );
       } else {
-        await createCarouselAction(name, selectedIds);
+        await createCarouselAction(
+          name,
+          selectedIds,
+          indicatorType,
+          iconName,
+          iconColor
+        );
       }
       setOpen(false);
       if (!isEditing) {
         setName("");
         setSelectedIds([]);
+        setIndicatorType("BAR");
+        setIconName("Flame");
+        setIconColor("#8B5CF6");
       }
     } catch (err: any) {
       alert(err.message || "Erro ao salvar carrossel");
@@ -55,17 +81,16 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {isEditing ? (
-        <DialogTrigger className="bg-transparent text-zinc-400 hover:text-white hover:bg-white/5 h-8 px-2 text-xs font-medium rounded-lg inline-flex items-center justify-center border-0">
+        <DialogTrigger className="bg-transparent text-zinc-400 hover:text-white hover:bg-white/5 h-8 px-2 text-xs font-medium rounded-lg inline-flex items-center justify-center border-0 cursor-pointer">
           <Edit3 className="w-3.5 h-3.5 mr-1" /> Editar
         </DialogTrigger>
       ) : (
-        <DialogTrigger className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl px-4 py-2.5 text-sm transition-all shadow-lg shadow-blue-600/20 inline-flex items-center justify-center border-0">
+        <DialogTrigger className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl px-4 py-2.5 text-sm transition-all shadow-lg shadow-blue-600/20 inline-flex items-center justify-center border-0 cursor-pointer">
           <Plus className="w-4 h-4 mr-2" /> {triggerText || "Novo Carrossel"}
         </DialogTrigger>
       )}
 
-
-      <DialogContent className="sm:max-w-[550px] w-full bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[85vh]">
+      <DialogContent className="sm:max-w-[580px] w-full bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[85vh]">
         <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
           <DialogTitle className="text-lg font-bold text-white">
             {isEditing ? "Editar Carrossel" : "Novo Carrossel"}
@@ -89,6 +114,16 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
               />
             </div>
 
+            {/* Visual Indicator Picker (Bar / Outline Icon / None) */}
+            <IconPickerModal
+              indicatorType={indicatorType}
+              iconName={iconName}
+              iconColor={iconColor}
+              onChangeIndicatorType={setIndicatorType}
+              onChangeIconName={setIconName}
+              onChangeIconColor={setIconColor}
+            />
+
             {/* Seleção de produtos */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -105,7 +140,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
                   Nenhum produto cadastrado na sua loja ainda.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
                   {products.map(product => {
                     const selected = selectedIds.includes(product.id);
                     return (

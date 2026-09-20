@@ -7,6 +7,7 @@ import { CarouselModal } from "./CarouselModal";
 import { DeleteCarouselButton } from "./DeleteCarouselButton";
 import { RankingModal } from "./RankingModal";
 import { getOrCreateRankingCarouselAction } from "./actions";
+import { CarouselIconRenderer } from "@/lib/carousel-icons";
 
 export default async function SellerCarouselsPage() {
   await requireSeller();
@@ -68,7 +69,17 @@ export default async function SellerCarouselsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Trophy className="w-6 h-6 text-amber-400" />
+              {rankingCarousel.indicatorType === "ICON" ? (
+                <CarouselIconRenderer 
+                  iconName={rankingCarousel.iconName || "Trophy"} 
+                  color={rankingCarousel.iconColor || "#FFD700"} 
+                  size={24} 
+                />
+              ) : rankingCarousel.indicatorType === "NONE" ? (
+                <span className="text-xs text-zinc-500 font-medium">—</span>
+              ) : (
+                <div className="w-1.5 h-6 bg-amber-400 rounded-full" />
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -110,6 +121,9 @@ export default async function SellerCarouselsPage() {
                 name: rankingCarousel.name,
                 status: rankingCarousel.status,
                 selectedProductIds: rankingSelectedIds,
+                indicatorType: rankingCarousel.indicatorType as "BAR" | "ICON" | "NONE" || "ICON",
+                iconName: rankingCarousel.iconName || "Trophy",
+                iconColor: rankingCarousel.iconColor || "#FFD700",
               }}
               products={storeProducts}
             />
@@ -189,7 +203,15 @@ export default async function SellerCarouselsPage() {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-4 bg-red-600 rounded-full"></div>
+                        {c.indicatorType === "ICON" ? (
+                          <CarouselIconRenderer 
+                            iconName={c.iconName} 
+                            color={c.iconColor} 
+                            size={18} 
+                          />
+                        ) : c.indicatorType === "NONE" ? null : (
+                          <div className="w-1.5 h-4 bg-red-600 rounded-full shrink-0"></div>
+                        )}
                         <h4 className="font-bold text-white text-base uppercase tracking-tight">{c.name}</h4>
                       </div>
                       <span className="bg-white/5 text-zinc-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-white/5">
@@ -227,6 +249,9 @@ export default async function SellerCarouselsPage() {
                         id: c.id,
                         name: c.name,
                         selectedProductIds,
+                        indicatorType: c.indicatorType as "BAR" | "ICON" | "NONE" || "BAR",
+                        iconName: c.iconName,
+                        iconColor: c.iconColor,
                       }}
                     />
                     <DeleteCarouselButton carouselId={c.id} />

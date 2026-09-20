@@ -5,7 +5,6 @@ import { eq, desc, and, asc } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
-import { RankingService } from "@/lib/catalog/ranking-service";
 import Link from "next/link";
 import { StudioHeader } from "../components/StudioHeader";
 
@@ -110,6 +109,9 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
             storeSlug={storeSlug} 
             title={rankingCarousel?.name || "Top 15 Hoje"} 
             products={rankingProducts} 
+            indicatorType={rankingCarousel?.indicatorType as "BAR" | "ICON" | "NONE" || "ICON"}
+            iconName={rankingCarousel?.iconName || "Trophy"}
+            iconColor={rankingCarousel?.iconColor || "#FFD700"}
           />
         )}
         
@@ -148,14 +150,17 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                 title={carousel.name} 
                 storeSlug={storeSlug} 
                 products={carouselProductsList} 
+                indicatorType={carousel.indicatorType as "BAR" | "ICON" | "NONE" || "BAR"}
+                iconName={carousel.iconName}
+                iconColor={carousel.iconColor}
               />
             );
           })
         ) : (
           /* Default Fallback Carousels if no custom carousel created */
           <>
-            <ProductCarousel title="Mais Recentes" storeSlug={storeSlug} products={recents} />
-            <ProductCarousel title="Mais Vendidos" storeSlug={storeSlug} products={bestSellers} />
+            <ProductCarousel title="Mais Recentes" storeSlug={storeSlug} products={recents} indicatorType="BAR" />
+            <ProductCarousel title="Mais Vendidos" storeSlug={storeSlug} products={bestSellers} indicatorType="BAR" />
           </>
         )}
       </div>

@@ -16,13 +16,13 @@ import {
   ArrowUp, 
   ArrowDown, 
   Loader2, 
-  Check, 
   AlertCircle, 
   Eye, 
   EyeOff, 
   Search 
 } from "lucide-react";
 import { updateRankingCarouselAction } from "./actions";
+import { IconPickerModal } from "./IconPickerModal";
 
 interface ProductOption {
   id: string;
@@ -36,6 +36,9 @@ interface RankingModalProps {
     name: string;
     status: string;
     selectedProductIds: string[];
+    indicatorType?: "BAR" | "ICON" | "NONE";
+    iconName?: string | null;
+    iconColor?: string | null;
   };
   products: ProductOption[];
 }
@@ -49,6 +52,12 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
   const [status, setStatus] = useState(rankingCarousel.status || "active");
   const [selectedIds, setSelectedIds] = useState<string[]>(rankingCarousel.selectedProductIds || []);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [indicatorType, setIndicatorType] = useState<"BAR" | "ICON" | "NONE">(
+    rankingCarousel.indicatorType || "ICON"
+  );
+  const [iconName, setIconName] = useState<string>(rankingCarousel.iconName || "Trophy");
+  const [iconColor, setIconColor] = useState<string>(rankingCarousel.iconColor || "#FFD700");
 
   const maxLimit = 15;
   const isLimitReached = selectedIds.length >= maxLimit;
@@ -96,7 +105,15 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
 
     startTransition(async () => {
       try {
-        await updateRankingCarouselAction(rankingCarousel.id, name.trim(), status, selectedIds);
+        await updateRankingCarouselAction(
+          rankingCarousel.id, 
+          name.trim(), 
+          status, 
+          selectedIds,
+          indicatorType,
+          iconName,
+          iconColor
+        );
         setOpen(false);
         setErrorMessage(null);
       } catch (err: any) {
@@ -119,7 +136,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
             <span>Configurar Ranking Editorial (Top 15)</span>
           </DialogTitle>
           <p className="text-xs text-zinc-400 mt-1.5 leading-normal">
-            Personalize o nome da seção e escolha manualmente a ordem exata dos até 15 produtos em destaque.
+            Personalize o nome da seção, escolha o indicador visual/ícone e selecione manualmente a ordem dos até 15 produtos.
           </p>
         </DialogHeader>
 
@@ -149,7 +166,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
               <button
                 type="button"
                 onClick={() => setStatus(status === "active" ? "inactive" : "active")}
-                className={`w-full sm:w-auto py-2 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${
+                className={`w-full sm:w-auto py-2 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
                   status === "active"
                     ? "bg-emerald-950/60 text-emerald-400 border-emerald-500/30"
                     : "bg-zinc-800 text-zinc-400 border-white/10"
@@ -160,6 +177,16 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
               </button>
             </div>
           </div>
+
+          {/* Visual Indicator Picker (Bar / Outline Icon / None) */}
+          <IconPickerModal
+            indicatorType={indicatorType}
+            iconName={iconName}
+            iconColor={iconColor}
+            onChangeIndicatorType={setIndicatorType}
+            onChangeIconName={setIconName}
+            onChangeIconColor={setIconColor}
+          />
 
           {/* Selected Products List (Max 15) */}
           <div className="space-y-3">
@@ -226,7 +253,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                           type="button"
                           onClick={() => handleMove(index, "up")}
                           disabled={index === 0}
-                          className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 transition-all"
+                          className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 transition-all cursor-pointer"
                           title="Subir posição"
                         >
                           <ArrowUp className="w-3.5 h-3.5" />
@@ -235,7 +262,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                           type="button"
                           onClick={() => handleMove(index, "down")}
                           disabled={index === selectedIds.length - 1}
-                          className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 transition-all"
+                          className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 transition-all cursor-pointer"
                           title="Descer posição"
                         >
                           <ArrowDown className="w-3.5 h-3.5" />
@@ -243,7 +270,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                         <button
                           type="button"
                           onClick={() => handleRemoveProduct(id)}
-                          className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 transition-all ml-1"
+                          className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 transition-all ml-1 cursor-pointer"
                           title="Remover do ranking"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

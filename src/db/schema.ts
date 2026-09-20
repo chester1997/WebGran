@@ -200,6 +200,9 @@ export const productCarousels = pgTable('product_carousels', {
   position: integer('position').notNull().default(0),
   status: text('status').notNull().default('active'),
   isRanking: boolean('is_ranking').default(false).notNull(),
+  indicatorType: text('indicator_type').notNull().default('BAR'),
+  iconName: text('icon_name'),
+  iconColor: text('icon_color'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

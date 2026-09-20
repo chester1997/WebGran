@@ -6,6 +6,23 @@ import { productCarousels, carouselProducts } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{3,8})$/;
+
+function validateIndicator(
+  type?: string,
+  name?: string,
+  color?: string,
+  defaultType: "BAR" | "ICON" | "NONE" = "BAR",
+  defaultColor: string = "#8B5CF6"
+) {
+  const validTypes = ["BAR", "ICON", "NONE"];
+  const indicatorType = validTypes.includes(type || "") ? (type as "BAR" | "ICON" | "NONE") : defaultType;
+  const iconName = name?.trim() || "Trophy";
+  const iconColor = color && HEX_COLOR_REGEX.test(color.trim()) ? color.trim() : defaultColor;
+
+  return { indicatorType, iconName, iconColor };
+}
+
 export async function getOrCreateRankingCarouselAction() {
   await requireSeller();
   const store = await getCurrentStore();
@@ -30,6 +47,9 @@ export async function getOrCreateRankingCarouselAction() {
         storeId: store.id,
         name: "Top 15 Hoje",
         isRanking: true,
+        indicatorType: "ICON",
+        iconName: "Trophy",
+        iconColor: "#FFD700",
         position: 0,
         status: "active",
       })
@@ -48,7 +68,10 @@ export async function updateRankingCarouselAction(
   carouselId: string,
   name: string,
   status: string,
-  productIds: string[]
+  productIds: string[],
+  indicatorType?: "BAR" | "ICON" | "NONE",
+  iconName?: string,
+  iconColor?: string
 ) {
   await requireSeller();
   const store = await getCurrentStore();
@@ -64,9 +87,14 @@ export async function updateRankingCarouselAction(
   });
   if (!existing) throw new Error("Ranking não encontrado");
 
+  const validated = validateIndicator(indicatorType, iconName, iconColor, "ICON", "#FFD700");
+
   await db.update(productCarousels).set({
     name: name.trim() || "Top 15 Hoje",
     status: status === "active" ? "active" : "inactive",
+    indicatorType: validated.indicatorType,
+    iconName: validated.iconName,
+    iconColor: validated.iconColor,
     updatedAt: new Date()
   }).where(eq(productCarousels.id, carouselId));
 
@@ -88,15 +116,26 @@ export async function updateRankingCarouselAction(
   return { success: true };
 }
 
-export async function createCarouselAction(name: string, productIds: string[]) {
+export async function createCarouselAction(
+  name: string, 
+  productIds: string[],
+  indicatorType?: "BAR" | "ICON" | "NONE",
+  iconName?: string,
+  iconColor?: string
+) {
   await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
   if (!name.trim()) throw new Error("Nome do carrossel é obrigatório");
 
+  const validated = validateIndicator(indicatorType, iconName, iconColor, "BAR", "#8B5CF6");
+
   const [carousel] = await db.insert(productCarousels).values({
     storeId: store.id,
     name: name.trim(),
+    indicatorType: validated.indicatorType,
+    iconName: validated.iconName,
+    iconColor: validated.iconColor,
     position: 1,
     status: "active",
     isRanking: false,
@@ -116,7 +155,14 @@ export async function createCarouselAction(name: string, productIds: string[]) {
   revalidatePath(`/miniapp/${store.slug}`);
 }
 
-export async function updateCarouselAction(carouselId: string, name: string, productIds: string[]) {
+export async function updateCarouselAction(
+  carouselId: string, 
+  name: string, 
+  productIds: string[],
+  indicatorType?: "BAR" | "ICON" | "NONE",
+  iconName?: string,
+  iconColor?: string
+) {
   await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
@@ -127,8 +173,13 @@ export async function updateCarouselAction(carouselId: string, name: string, pro
   });
   if (!existing) throw new Error("Carrossel não encontrado");
 
+  const validated = validateIndicator(indicatorType, iconName, iconColor, "BAR", "#8B5CF6");
+
   await db.update(productCarousels).set({
     name: name.trim(),
+    indicatorType: validated.indicatorType,
+    iconName: validated.iconName,
+    iconColor: validated.iconColor,
     updatedAt: new Date()
   }).where(eq(productCarousels.id, carouselId));
 
