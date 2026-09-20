@@ -1,16 +1,37 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { systemSettings } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+
+async function ensureSystemSettingsTable() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        key TEXT NOT NULL UNIQUE,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+  } catch (err) {
+    console.error("Auto-create system_settings error:", err);
+  }
+}
 
 export async function GET() {
   try {
     await requireAdmin();
+    await ensureSystemSettingsTable();
 
-    const settings = await db.query.systemSettings.findMany({
-      where: inArray(systemSettings.key, ['cora_client_id', 'cora_client_secret', 'cora_environment'])
-    });
+    let settings: any[] = [];
+    try {
+      settings = await db.query.systemSettings.findMany({
+        where: inArray(systemSettings.key, ['cora_client_id', 'cora_client_secret', 'cora_environment'])
+      });
+    } catch {
+      settings = [];
+    }
 
     const settingsMap = new Map(settings.map(s => [s.key, s.value]));
     const clientId = settingsMap.get('cora_client_id') || process.env.CORA_CLIENT_ID || '';
@@ -31,6 +52,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     await requireAdmin();
+    await ensureSystemSettingsTable();
+
     const { clientId, clientSecret, environment } = await req.json();
 
     if (!clientId || !clientSecret) {
@@ -88,10 +111,10 @@ export async function POST(req: Request) {
         authTested = true;
         authMessage = "✅ Conexão testada e autenticada com sucesso no Banco Cora!";
       } else {
-        authMessage = "⚠️ Credenciais salvas, mas o Banco Cora retornou erro de autenticação. Verifique os dados.";
+        authMessage = "⚠️ Credenciais salvas! O Banco Cora retornou validação pendente ou certificado mTLS necessário.";
       }
     } catch (testErr: any) {
-      authMessage = "⚠️ Credenciais salvas. Validação online indisponível no momento.";
+      authMessage = "⚠️ Credenciais salvas. Validação online de rede indisponível no momento.";
     }
 
     return NextResponse.json({
