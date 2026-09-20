@@ -49,7 +49,7 @@
 }
 
 :root {
-  --miniapp-content-padding-x: clamp(1rem, 4vw, 1.5rem); /* 16px on mobile to 24px on desktop */
+  --miniapp-content-padding-x: clamp(1.5rem, 6vw, 2.25rem); /* 24px on mobile to 36px on desktop */
   --carousel-gap: 0.75rem; /* 12px (gap-3) */
   --bottom-nav-height: 4rem; /* 64px (h-16) */
   --tg-safe-area-bottom: env(safe-area-inset-bottom, 0px);
