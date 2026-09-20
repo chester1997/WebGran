@@ -57,16 +57,16 @@ export function TopTenCarousel({ storeSlug, products, title = "Top 15 Hoje" }: T
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
               className={`relative flex items-end ${
                 isDoubleDigit 
-                  ? "pl-6 sm:pl-7 md:pl-8" 
-                  : "pl-4 sm:pl-5 md:pl-6"
+                  ? "pl-9 sm:pl-10 md:pl-12" 
+                  : "pl-6 sm:pl-7 md:pl-8"
               }`}
             >
-              {/* Subtle, elegant outline position number overlapping bottom-left edge */}
+              {/* Crisp outline position number overlapping bottom-left edge */}
               <span
-                className="absolute left-0 bottom-1 text-4xl sm:text-5xl md:text-6xl font-extrabold text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+                className="absolute left-0 bottom-1 text-5xl sm:text-6xl md:text-7xl font-extrabold text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
                 style={{
-                  WebkitTextStroke: `1.5px ${style.stroke}`,
-                  filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
+                  WebkitTextStroke: `2px ${style.stroke}`,
+                  filter: style.glow !== "transparent" ? `drop-shadow(0 0 6px ${style.glow})` : "none",
                   fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
                   letterSpacing: "-0.03em"
                 }}
