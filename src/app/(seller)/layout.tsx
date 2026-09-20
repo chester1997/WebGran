@@ -64,14 +64,23 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/seller/profile")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.user) {
-          setSellerProfile(data.user);
-        }
-      })
-      .catch(() => {});
+    const loadProfile = () => {
+      fetch(`/api/seller/profile?t=${Date.now()}`, { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.user) {
+            setSellerProfile(data.user);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadProfile();
+
+    window.addEventListener("seller-profile-updated", loadProfile);
+    return () => {
+      window.removeEventListener("seller-profile-updated", loadProfile);
+    };
   }, [pathname]);
 
   // Search filter logic

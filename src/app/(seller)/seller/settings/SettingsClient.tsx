@@ -11,13 +11,9 @@ import {
   Camera, 
   Trash2, 
   Loader2, 
-  Save, 
-  Check, 
-  Sparkles,
-  ShieldCheck
+  Save 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { updateSellerProfileAction } from "./actions";
 
 interface ConnectionInfo {
   id: string;
@@ -40,6 +36,46 @@ interface Props {
   connection: ConnectionInfo | null;
 }
 
+function resizeAvatarImage(file: File, maxWidth = 400, maxHeight = 400): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/webp", 0.85));
+        } else {
+          resolve(e.target?.result as string);
+        }
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function SettingsClient({ storeName, sellerProfile, connection }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"perfil" | "recebimento">("perfil");
@@ -60,7 +96,7 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -69,17 +105,18 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage("A imagem selecionada excede o tamanho máximo de 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage("A imagem selecionada excede o tamanho máximo de 10MB.");
       return;
     }
 
     setErrorMessage(null);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setAvatarUrl(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const resizedBase64 = await resizeAvatarImage(file);
+      setAvatarUrl(resizedBase64);
+    } catch (err) {
+      setErrorMessage("Erro ao processar imagem.");
+    }
   };
 
   const handleRemoveAvatar = () => {
@@ -97,12 +134,25 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
     setErrorMessage(null);
 
     try {
-      await updateSellerProfileAction({
-        name: name.trim(),
-        avatarUrl: avatarUrl
+      const res = await fetch("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          avatarUrl: avatarUrl
+        })
       });
-      showToast("Perfil atualizado com sucesso.");
-      router.refresh();
+
+      const data = await res.json();
+
+      if (data.success) {
+        showToast("Perfil atualizado com sucesso.");
+        // Notify sidebar & layout to refresh profile immediately
+        window.dispatchEvent(new Event("seller-profile-updated"));
+        router.refresh();
+      } else {
+        setErrorMessage(data.error || "Erro ao salvar perfil.");
+      }
     } catch (err: any) {
       setErrorMessage(err.message || "Erro ao salvar perfil.");
     } finally {
@@ -230,7 +280,7 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
             <div className="space-y-2 text-center sm:text-left min-w-0">
               <h3 className="text-base font-bold text-white">Foto de perfil</h3>
               <p className="text-xs text-zinc-400">
-                Formatos aceitos: JPG, PNG ou WEBP. Tamanho máximo: 5MB.
+                Formatos aceitos: JPG, PNG ou WEBP. Tamanho máximo: 10MB.
               </p>
               <div className="flex items-center gap-3 pt-1 justify-center sm:justify-start">
                 <label
