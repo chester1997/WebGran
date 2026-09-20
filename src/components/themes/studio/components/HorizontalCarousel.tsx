@@ -98,13 +98,27 @@ export function HorizontalCarousel({
           isMouseDown ? "cursor-grabbing" : "cursor-grab"
         }`}
         style={{
-          paddingInlineStart: "var(--miniapp-content-padding-x)",
-          paddingInlineEnd: "var(--miniapp-content-padding-x)",
+          scrollPaddingLeft: "var(--miniapp-content-padding-x)",
+          scrollPaddingRight: "var(--miniapp-content-padding-x)",
           gap: "var(--carousel-gap)",
           scrollBehavior: isMouseDown ? "auto" : "smooth",
         }}
       >
+        {/* Leading Grid Track Spacer: Forces Item 1 & Rank Number 1 to start at var(--miniapp-content-padding-x) in all WebView engines */}
+        <div
+          className="shrink-0 pointer-events-none"
+          style={{ width: "calc(var(--miniapp-content-padding-x) - var(--carousel-gap))" }}
+          aria-hidden="true"
+        />
+
         {children}
+
+        {/* Trailing Grid Track Spacer */}
+        <div
+          className="shrink-0 pointer-events-none"
+          style={{ width: "calc(var(--miniapp-content-padding-x) - var(--carousel-gap))" }}
+          aria-hidden="true"
+        />
       </div>
     </section>
   );
