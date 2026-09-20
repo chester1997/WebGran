@@ -114,13 +114,6 @@ export function TopTenCarousel({
                     {product.title}
                   </div>
                 )}
-
-                {/* Gradient Title Overlay at bottom of poster */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-2 sm:p-2.5">
-                  <span className="text-white text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 uppercase drop-shadow-md">
-                    {product.title}
-                  </span>
-                </div>
               </div>
             </Link>
           </div>
