@@ -314,7 +314,7 @@ export class AnalyticsService {
       salesCount: val.salesCount
     }));
 
-    // 2. Channels Breakdown (Specific Registered Telegram Bots vs Loja Online)
+    // 2. Channels Breakdown (Registered Telegram Bots Only)
     const storeBots = await db.query.telegramBots.findMany({
       where: eq(telegramBots.storeId, storeId)
     });
@@ -344,8 +344,6 @@ export class AnalyticsService {
       });
     });
 
-    let webRevenue = 0;
-    let webCount = 0;
     let fallbackTelegramRevenue = 0;
     let fallbackTelegramCount = 0;
 
@@ -362,13 +360,11 @@ export class AnalyticsService {
         }
       }
 
-      const isTelegramOrder = Boolean(o.customer?.telegramUserId || o.paymentMethod?.includes("telegram"));
-
       if (matchedBotId && botStatsMap.has(matchedBotId)) {
         const stats = botStatsMap.get(matchedBotId)!;
         stats.revenue += orderTotal;
         stats.salesCount += 1;
-      } else if (isTelegramOrder) {
+      } else {
         if (storeBots.length === 1 && botStatsMap.has(storeBots[0].id)) {
           const stats = botStatsMap.get(storeBots[0].id)!;
           stats.revenue += orderTotal;
@@ -377,13 +373,14 @@ export class AnalyticsService {
           fallbackTelegramRevenue += orderTotal;
           fallbackTelegramCount += 1;
         }
-      } else {
-        webRevenue += orderTotal;
-        webCount += 1;
       }
     });
 
-    const totalChannelRevenue = currRevenue || 1;
+    let botTotalRevenue = 0;
+    botStatsMap.forEach(s => { botTotalRevenue += s.revenue; });
+    botTotalRevenue += fallbackTelegramRevenue;
+    const totalBotRev = botTotalRevenue || 1;
+
     const channels: ChannelItem[] = [];
 
     botStatsMap.forEach(stats => {
@@ -392,7 +389,7 @@ export class AnalyticsService {
         label: stats.label,
         revenue: Math.round(stats.revenue * 100) / 100,
         salesCount: stats.salesCount,
-        percentage: Math.round((stats.revenue / totalChannelRevenue) * 100),
+        percentage: Math.round((stats.revenue / totalBotRev) * 100),
         photoUrl: stats.photoUrl,
         username: stats.username
       });
@@ -404,17 +401,9 @@ export class AnalyticsService {
         label: "Bot Telegram",
         revenue: Math.round(fallbackTelegramRevenue * 100) / 100,
         salesCount: fallbackTelegramCount,
-        percentage: Math.round((fallbackTelegramRevenue / totalChannelRevenue) * 100)
+        percentage: Math.round((fallbackTelegramRevenue / totalBotRev) * 100)
       });
     }
-
-    channels.push({
-      channel: "web",
-      label: "Loja Online / Web",
-      revenue: Math.round(webRevenue * 100) / 100,
-      salesCount: webCount,
-      percentage: Math.round((webRevenue / totalChannelRevenue) * 100)
-    });
 
     channels.sort((a, b) => b.revenue - a.revenue);
 
