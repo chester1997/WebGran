@@ -9,12 +9,14 @@ import { RankingModal } from "./RankingModal";
 import { getOrCreateRankingCarouselAction } from "./actions";
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
 
+import SetupStoreClient from "../SetupStoreClient";
+
 export default async function SellerCarouselsPage() {
   await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
-    return <div>Loja não encontrada.</div>;
+    return <SetupStoreClient />;
   }
 
   // Get or initialize store's Ranking Editorial Carousel (Top 15)

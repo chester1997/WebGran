@@ -23,6 +23,7 @@ export async function GET() {
           name: userRecord?.name || seller.name || "Vendedor",
           email: seller.email || "",
           avatarUrl: userRecord?.avatarUrl || null,
+          role: userRecord?.role || seller.role || "seller",
         },
         store: store ? {
           id: store.id,

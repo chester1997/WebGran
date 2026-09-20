@@ -28,6 +28,7 @@ interface SellerProfile {
   name: string;
   email: string;
   avatarUrl: string | null;
+  role?: string;
 }
 
 interface InvoiceHistoryItem {
@@ -62,6 +63,7 @@ interface SubscriptionData {
 
 interface Props {
   storeName: string;
+  isExempt?: boolean;
   sellerProfile: SellerProfile;
   subscriptionData: SubscriptionData;
 }
@@ -106,7 +108,7 @@ function resizeAvatarImage(file: File, maxWidth = 400, maxHeight = 400): Promise
   });
 }
 
-export default function SettingsClient({ storeName, sellerProfile, subscriptionData }: Props) {
+export default function SettingsClient({ storeName, isExempt, sellerProfile, subscriptionData }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"perfil" | "assinatura">("perfil");
 
@@ -445,113 +447,151 @@ export default function SettingsClient({ storeName, sellerProfile, subscriptionD
               <div>
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold text-white tracking-tight">Assinatura WebGran</h3>
-                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-bold">
-                    PLANO ÚNICO
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    isExempt || subStatus === "EXEMPT"
+                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                      : "bg-red-500/10 border border-red-500/20 text-red-400"
+                  }`}>
+                    {isExempt || subStatus === "EXEMPT" ? "PROPRIETÁRIO DA PLATAFORMA" : "PLANO ÚNICO"}
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  Gerencie sua assinatura e acompanhe seus pagamentos do WebGran SaaS.
+                  Gerencie sua assinatura e acompanhe seus dados no WebGran SaaS.
                 </p>
               </div>
 
               {/* Status Badge */}
               <div>
-                {subStatus === "ACTIVE" && (
+                {(isExempt || subStatus === "EXEMPT") ? (
                   <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-2 shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Assinatura ativa
+                    ISENTO
                   </span>
-                )}
-                {subStatus === "PENDING" && (
-                  <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    Pagamento pendente
-                  </span>
-                )}
-                {subStatus === "PAST_DUE" && (
-                  <span className="px-3.5 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-400" />
-                    Pagamento atrasado
-                  </span>
-                )}
-                {subStatus === "CANCELLED" && (
-                  <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
-                    Cancelada
-                  </span>
-                )}
-                {subStatus === "EXPIRED" && (
-                  <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
-                    Expirada
-                  </span>
+                ) : (
+                  <>
+                    {subStatus === "ACTIVE" && (
+                      <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-2 shadow-sm">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        Assinatura ativa
+                      </span>
+                    )}
+                    {subStatus === "PENDING" && (
+                      <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        Pagamento pendente
+                      </span>
+                    )}
+                    {subStatus === "PAST_DUE" && (
+                      <span className="px-3.5 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400" />
+                        Pagamento atrasado
+                      </span>
+                    )}
+                    {subStatus === "CANCELLED" && (
+                      <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
+                        Cancelada
+                      </span>
+                    )}
+                    {subStatus === "EXPIRED" && (
+                      <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
+                        Expirada
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             </div>
 
             {/* Plan Display Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-              {/* Plan Price Box */}
-              <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
-                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Plano Ativo</span>
-                <div>
-                  <p className="text-xl font-bold text-white uppercase">WebGran</p>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-extrabold text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</span>
-                    <span className="text-xs text-zinc-400 font-medium">/ mês</span>
+            {(isExempt || subStatus === "EXEMPT") ? (
+              <div className="p-6 rounded-2xl bg-[#18181C] border border-emerald-500/20 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-bold">
+                      Plano Especial
+                    </span>
+                    <h4 className="text-2xl font-black text-white mt-1">Proprietário da Plataforma</h4>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Esta conta pertence ao proprietário do WebGran e possui acesso gratuito à plataforma.
+                    </p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <span className="text-3xl font-black text-emerald-400">R$ 0,00</span>
+                    <span className="text-xs text-zinc-400 block font-medium">/ mês • ISENTO</span>
                   </div>
                 </div>
-                <div className="pt-2 text-xs text-zinc-400 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-red-500" />
-                  <span>Acesso completo ao SaaS</span>
+
+                <div className="pt-3 border-t border-white/5 flex items-center gap-2 text-xs text-zinc-300">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Acesso ilimitado e vitalício ao painel do vendedor sem nenhuma cobrança.</span>
                 </div>
               </div>
-
-              {/* Billing Period Box */}
-              <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
-                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Próxima Cobrança</span>
-                <div>
-                  <div className="flex items-center gap-2 text-white font-bold text-lg">
-                    <Calendar className="w-5 h-5 text-red-500 shrink-0" />
-                    <span>{formatDate(subscriptionData.subscription.currentPeriodEnd)}</span>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                {/* Plan Price Box */}
+                <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
+                  <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Plano Ativo</span>
+                  <div>
+                    <p className="text-xl font-bold text-white uppercase">WebGran</p>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-3xl font-extrabold text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</span>
+                      <span className="text-xs text-zinc-400 font-medium">/ mês</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-zinc-400 mt-1">Periodicidade: Mensal</p>
-                </div>
-                <div className="pt-2 text-xs text-zinc-400">
-                  <span>Renovação via PIX automático</span>
-                </div>
-              </div>
-
-              {/* Payment Method & Action Box */}
-              <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
-                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Forma de Pagamento</span>
-                <div>
-                  <div className="flex items-center gap-2 text-white font-bold text-base">
-                    <QrCode className="w-5 h-5 text-red-500 shrink-0" />
-                    <span>PIX via Cora</span>
+                  <div className="pt-2 text-xs text-zinc-400 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-red-500" />
+                    <span>Acesso completo ao SaaS</span>
                   </div>
-                  <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
                 </div>
 
-                <div className="pt-2">
-                  <Button
-                    onClick={handleGeneratePixPayment}
-                    disabled={generatingPix}
-                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
-                  >
-                    {generatingPix ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Gerando PIX...</span>
-                      </>
-                    ) : (
-                      <>
-                        <QrCode className="w-4 h-4" />
-                        <span>Pagar R$ {planPrice.toFixed(2).replace(".", ",")}</span>
-                      </>
-                    )}
-                  </Button>
+                {/* Billing Period Box */}
+                <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
+                  <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Próxima Cobrança</span>
+                  <div>
+                    <div className="flex items-center gap-2 text-white font-bold text-lg">
+                      <Calendar className="w-5 h-5 text-red-500 shrink-0" />
+                      <span>{formatDate(subscriptionData.subscription.currentPeriodEnd)}</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">Periodicidade: Mensal</p>
+                  </div>
+                  <div className="pt-2 text-xs text-zinc-400">
+                    <span>Renovação via PIX automático</span>
+                  </div>
+                </div>
+
+                {/* Payment Method & Action Box */}
+                <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
+                  <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Forma de Pagamento</span>
+                  <div>
+                    <div className="flex items-center gap-2 text-white font-bold text-base">
+                      <QrCode className="w-5 h-5 text-red-500 shrink-0" />
+                      <span>PIX via Cora</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button
+                      onClick={handleGeneratePixPayment}
+                      disabled={generatingPix}
+                      className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
+                    >
+                      {generatingPix ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Gerando PIX...</span>
+                        </>
+                      ) : (
+                        <>
+                          <QrCode className="w-4 h-4" />
+                          <span>Pagar R$ {planPrice.toFixed(2).replace(".", ",")}</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Active PIX Payment Drawer / Modal Display */}
             {activeInvoice && (

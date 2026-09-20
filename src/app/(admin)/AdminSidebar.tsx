@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   ShieldAlert,
-  LogOut
+  LogOut,
+  Store
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -122,6 +123,21 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               </Link>
             );
           })}
+
+          {/* Store Access Button for Platform Owner */}
+          <div className="pt-4 mt-4 border-t border-[#27272A]">
+            <div className="px-3 pb-2 text-[10px] font-bold text-emerald-400 tracking-wider uppercase">
+              Minha Loja
+            </div>
+            <Link
+              href="/seller"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shadow-md shadow-emerald-950/30 group"
+            >
+              <Store className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="truncate">🏪 Meu Painel de Vendedor</span>
+            </Link>
+          </div>
         </nav>
 
         {/* User Footer Card */}

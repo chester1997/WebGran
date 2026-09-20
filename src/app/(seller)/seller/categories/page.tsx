@@ -8,12 +8,14 @@ import { NewCategoryModal } from "./NewCategoryModal";
 import { CategoryActionsMenu } from "./CategoryActionsMenu";
 
 
+import SetupStoreClient from "../SetupStoreClient";
+
 export default async function SellerCategoriesPage() {
   await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
-    return <div>Loja não encontrada.</div>;
+    return <SetupStoreClient />;
   }
 
   const allCategories = await db.query.categories.findMany({

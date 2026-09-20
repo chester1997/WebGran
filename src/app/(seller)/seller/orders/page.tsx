@@ -6,12 +6,14 @@ import { Search, ShoppingCart, MoreHorizontal, Filter, Receipt, ArrowUpRight } f
 import { Button } from "@/components/ui/button";
 import { RetryDeliveryButton } from "./RetryDeliveryButton";
 
+import SetupStoreClient from "../SetupStoreClient";
+
 export default async function OrdersPage() {
   await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
-    return <div>Loja não encontrada.</div>;
+    return <SetupStoreClient />;
   }
 
   const items = await db.query.orders.findMany({

@@ -1,10 +1,15 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { getStoreBanners } from "./actions";
 import BannersClient from "./BannersClient";
+import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerBannersPage() {
   await requireSeller();
-  await getCurrentStore();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    return <SetupStoreClient />;
+  }
 
   const { banners, bannerInterval, maxLimit } = await getStoreBanners();
 

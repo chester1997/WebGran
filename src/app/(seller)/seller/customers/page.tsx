@@ -4,12 +4,14 @@ import { telegramCustomers } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import CustomersClient from "./CustomersClient";
 
+import SetupStoreClient from "../SetupStoreClient";
+
 export default async function CustomersPage() {
   await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
-    return <div className="p-8 text-zinc-400">Loja não encontrada.</div>;
+    return <SetupStoreClient />;
   }
 
   const items = await db.query.telegramCustomers.findMany({

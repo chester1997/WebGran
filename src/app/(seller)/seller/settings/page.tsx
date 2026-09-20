@@ -23,11 +23,13 @@ export default async function SettingsPage() {
   return (
     <SettingsClient
       storeName={store?.name || "Minha Loja"}
+      isExempt={Boolean(subscriptionData.isExempt)}
       sellerProfile={{
         id: seller.id,
         name: userRecord?.name || seller.name || "Vendedor",
         email: seller.email || "",
         avatarUrl: userRecord?.avatarUrl || null,
+        role: userRecord?.role || seller.role || "seller",
       }}
       subscriptionData={{
         subscription: {

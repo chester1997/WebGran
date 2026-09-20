@@ -4,16 +4,14 @@ import { products, categories, telegramBots } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import ProductsListClient from "./ProductsListClient";
 
+import SetupStoreClient from "../SetupStoreClient";
+
 export default async function SellerProductsPage() {
   await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
-    return (
-      <div className="p-8 text-zinc-400">
-        Nenhuma loja encontrada para esta conta.
-      </div>
-    );
+    return <SetupStoreClient />;
   }
 
   // Load products with their categories

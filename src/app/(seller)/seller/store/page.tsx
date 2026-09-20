@@ -7,18 +7,14 @@ import { Button } from "@/components/ui/button";
 import { BotSettingsModal } from "./BotSettingsModal";
 import { BotCard } from "./BotCard";
 
+import SetupStoreClient from "../SetupStoreClient";
+
 export default async function SellerStorePage() {
   const user = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-center">
-        <StoreIcon className="w-16 h-16 text-zinc-600 mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">Loja não encontrada</h2>
-        <p className="text-zinc-400 max-w-md">Ocorreu um problema ao localizar os dados da sua loja.</p>
-      </div>
-    );
+    return <SetupStoreClient />;
   }
 
   // Load bots (now an array as the UI suggests multiple bots side-by-side)

@@ -21,7 +21,9 @@ import {
   ChevronUp,
   ChevronDown,
   Image as ImageIcon,
-  LogOut
+  LogOut,
+  ShieldAlert,
+  ArrowLeft
 } from "lucide-react";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
@@ -73,6 +75,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     name: string;
     email: string;
     avatarUrl: string | null;
+    role?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -316,6 +319,20 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
+
+            {/* Back to Admin Button for Platform Owners */}
+            {(sellerProfile?.role === "admin" || sellerProfile?.role === "super_admin") && (
+              <div className="pt-3 border-t border-white/5 mt-3">
+                <Link
+                  href="/admin"
+                  title={collapsed ? "Voltar ao Admin" : undefined}
+                  className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all shadow-md shadow-red-950/30 group`}
+                >
+                  <ArrowLeft className="w-4 h-4 text-red-400 group-hover:-translate-x-0.5 transition-transform shrink-0" strokeWidth={2} />
+                  {!collapsed && <span className="truncate">⚙️ Voltar ao Admin</span>}
+                </Link>
+              </div>
+            )}
           </nav>
 
           {/* User Footer with real seller profile avatar and data */}

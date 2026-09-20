@@ -30,6 +30,38 @@ export async function getDefaultPlan() {
 }
 
 export async function getSellerSubscription(sellerId: string) {
+  const userRecord = await db.query.users.findFirst({
+    where: eq(users.id, sellerId),
+  });
+
+  const isExempt = Boolean(
+    userRecord && (userRecord.role === "admin" || userRecord.role === "super_admin")
+  );
+
+  if (isExempt) {
+    return {
+      isExempt: true,
+      subscription: {
+        id: "exempt-owner-subscription",
+        sellerId,
+        planId: "exempt-plan",
+        status: "EXEMPT",
+        startedAt: userRecord?.createdAt || new Date(),
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 365 * 10 * 86400000),
+      },
+      plan: {
+        id: "exempt-plan",
+        name: "Proprietário da Plataforma",
+        price: 0,
+        currency: "BRL",
+        billingInterval: "MONTHLY",
+      },
+      latestInvoice: null,
+      invoiceHistory: [],
+    };
+  }
+
   const plan = await getDefaultPlan();
 
   let sub = await db.query.subscriptions.findFirst({
@@ -80,6 +112,7 @@ export async function getSellerSubscription(sellerId: string) {
   const latestPendingInvoice = invoiceHistory.find((i) => i.status === 'PENDING');
 
   return {
+    isExempt: false,
     subscription: {
       ...sub,
       status,
@@ -107,6 +140,14 @@ export async function getSellerSubscription(sellerId: string) {
 }
 
 export async function createCoraBillingInvoice(sellerId: string) {
+  const userRecord = await db.query.users.findFirst({
+    where: eq(users.id, sellerId),
+  });
+
+  if (userRecord && (userRecord.role === "admin" || userRecord.role === "super_admin")) {
+    throw new Error("Contas do proprietário da plataforma são isentas de assinatura e não geram cobranças.");
+  }
+
   const plan = await getDefaultPlan();
   const subData = await getSellerSubscription(sellerId);
   const subscription = subData.subscription;
