@@ -5,6 +5,15 @@ import { db } from "@/db";
 import { stores, products, categories } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { AnalyticsService } from "@/lib/analytics/analytics-service";
+
+export async function getDashboardAnalyticsAction(period: string = "30D") {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  return await AnalyticsService.getStoreAnalytics(store.id, period);
+}
 
 export async function updateStoreSettings(formData: FormData) {
   const user = await requireSeller();
