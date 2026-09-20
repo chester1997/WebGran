@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { systemSettings } from "@/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { coraProvider } from "@/lib/payments/providers/cora";
 
 async function ensureSystemSettingsTable() {
   try {
@@ -19,6 +20,12 @@ async function ensureSystemSettingsTable() {
   }
 }
 
+function maskClientId(id: string): string {
+  if (!id) return "";
+  if (id.length <= 4) return "••••";
+  return `••••••••••••${id.slice(-4)}`;
+}
+
 export async function GET() {
   try {
     await requireAdmin();
@@ -27,22 +34,35 @@ export async function GET() {
     let settings: any[] = [];
     try {
       settings = await db.query.systemSettings.findMany({
-        where: inArray(systemSettings.key, ['cora_client_id', 'cora_client_secret', 'cora_environment'])
+        where: inArray(systemSettings.key, [
+          'cora_client_id', 
+          'cora_cert_pem', 
+          'cora_key_pem', 
+          'cora_environment',
+          'cora_last_verified_at'
+        ])
       });
     } catch {
       settings = [];
     }
 
     const settingsMap = new Map(settings.map(s => [s.key, s.value]));
+
     const clientId = settingsMap.get('cora_client_id') || process.env.CORA_CLIENT_ID || '';
-    const hasSecret = Boolean(settingsMap.get('cora_client_secret') || process.env.CORA_CLIENT_SECRET);
-    const environment = settingsMap.get('cora_environment') || process.env.CORA_ENV || 'production';
+    const hasCert = Boolean(settingsMap.get('cora_cert_pem') || process.env.CORA_CERT_PEM);
+    const hasKey = Boolean(settingsMap.get('cora_key_pem') || process.env.CORA_KEY_PEM);
+    const environment = (settingsMap.get('cora_environment') as 'stage' | 'production') || process.env.CORA_ENV || 'production';
+    const lastVerifiedAt = settingsMap.get('cora_last_verified_at') || null;
+
+    const isConnected = Boolean(clientId && hasCert && hasKey);
 
     return NextResponse.json({
-      clientId,
-      hasSecret,
+      clientIdMasked: maskClientId(clientId),
+      hasCert,
+      hasKey,
       environment,
-      isConnected: Boolean(clientId && hasSecret)
+      lastVerifiedAt,
+      isConnected
     });
   } catch (error: any) {
     return NextResponse.json({ error: "Erro ao buscar credenciais Cora." }, { status: 500 });
@@ -54,19 +74,46 @@ export async function POST(req: Request) {
     await requireAdmin();
     await ensureSystemSettingsTable();
 
-    const { clientId, clientSecret, environment } = await req.json();
+    const { clientId, certPem, keyPem, environment } = await req.json();
 
-    if (!clientId || !clientSecret) {
-      return NextResponse.json({ error: "Client ID e Client Secret são obrigatórios." }, { status: 400 });
+    if (!clientId || !clientId.trim()) {
+      return NextResponse.json({ error: "Client ID é obrigatório." }, { status: 400 });
+    }
+    if (!certPem || !certPem.trim()) {
+      return NextResponse.json({ error: "Certificado (.pem) é obrigatório." }, { status: 400 });
+    }
+    if (!keyPem || !keyPem.trim()) {
+      return NextResponse.json({ error: "Chave Privada (.key) é obrigatória." }, { status: 400 });
     }
 
     const env = environment === 'stage' ? 'stage' : 'production';
 
-    // 1. Save or Update in system_settings table
+    // REAL MTLS TEST WITH CORA BANK TOKEN ENDPOINT
+    try {
+      await coraProvider.authenticate({
+        clientId: clientId.trim(),
+        certPem: certPem.trim(),
+        keyPem: keyPem.trim(),
+        environment: env
+      });
+    } catch (authErr: any) {
+      console.error("Cora mTLS Real Auth Test Failed:", authErr);
+      return NextResponse.json(
+        { 
+          error: `Falha na autenticação mTLS com o Banco Cora: ${authErr.message || 'Certificado ou Client ID inválidos.'}`
+        }, 
+        { status: 400 }
+      );
+    }
+
+    // AUTH TEST PASSED -> Save in system_settings table
+    const nowIso = new Date().toISOString();
     const settingsToSave = [
       { key: 'cora_client_id', value: clientId.trim() },
-      { key: 'cora_client_secret', value: clientSecret.trim() },
-      { key: 'cora_environment', value: env }
+      { key: 'cora_cert_pem', value: certPem.trim() },
+      { key: 'cora_key_pem', value: keyPem.trim() },
+      { key: 'cora_environment', value: env },
+      { key: 'cora_last_verified_at', value: nowIso }
     ];
 
     for (const item of settingsToSave) {
@@ -87,43 +134,44 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Test OAuth authentication with Cora Bank
-    let authTested = false;
-    let authMessage = "Credenciais salvas com sucesso no banco de dados!";
-
-    try {
-      const tokenRes = await fetch(
-        env === 'stage'
-          ? 'https://matls-clients.stage.cora.com.br/token'
-          : 'https://matls-clients.api.cora.com.br/token',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            grant_type: 'client_credentials',
-            client_id: clientId.trim(),
-            client_secret: clientSecret.trim()
-          })
-        }
-      );
-
-      if (tokenRes.ok) {
-        authTested = true;
-        authMessage = "✅ Conexão testada e autenticada com sucesso no Banco Cora!";
-      } else {
-        authMessage = "⚠️ Credenciais salvas! O Banco Cora retornou validação pendente ou certificado mTLS necessário.";
-      }
-    } catch (testErr: any) {
-      authMessage = "⚠️ Credenciais salvas. Validação online de rede indisponível no momento.";
-    }
-
     return NextResponse.json({
       success: true,
-      authTested,
-      message: authMessage
+      message: "🟢 Autenticação mTLS testada e confirmada com sucesso! Conta Cora conectada.",
+      lastVerifiedAt: nowIso
     });
   } catch (error: any) {
     console.error("CORA CREDENTIALS SAVE ERROR:", error);
     return NextResponse.json({ error: error.message || "Erro ao salvar credenciais Cora." }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    await requireAdmin();
+    await ensureSystemSettingsTable();
+
+    const keysToDelete = [
+      'cora_client_id', 
+      'cora_cert_pem', 
+      'cora_key_pem', 
+      'cora_environment', 
+      'cora_last_verified_at'
+    ];
+
+    for (const key of keysToDelete) {
+      const existing = await db.query.systemSettings.findFirst({
+        where: eq(systemSettings.key, key)
+      });
+      if (existing) {
+        await db.delete(systemSettings).where(eq(systemSettings.id, existing.id));
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Conta Cora desconectada com sucesso."
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: "Erro ao desconectar conta Cora." }, { status: 500 });
   }
 }

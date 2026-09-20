@@ -83,7 +83,13 @@ export default async function AdminSettingsPage() {
   let settingsData: any[] = [];
   try {
     settingsData = await db.query.systemSettings.findMany({
-      where: inArray(systemSettings.key, ['cora_client_id', 'cora_client_secret', 'cora_environment'])
+      where: inArray(systemSettings.key, [
+        'cora_client_id', 
+        'cora_cert_pem', 
+        'cora_key_pem', 
+        'cora_environment',
+        'cora_last_verified_at'
+      ])
     });
   } catch (err) {
     console.warn("system_settings query failed, ensuring table exists...", err);
@@ -103,14 +109,24 @@ export default async function AdminSettingsPage() {
 
   const settingsMap = new Map(settingsData.map((s) => [s.key, s.value]));
   const clientId = settingsMap.get('cora_client_id') || process.env.CORA_CLIENT_ID || '';
-  const hasSecret = Boolean(settingsMap.get('cora_client_secret') || process.env.CORA_CLIENT_SECRET);
+  const hasCert = Boolean(settingsMap.get('cora_cert_pem') || process.env.CORA_CERT_PEM);
+  const hasKey = Boolean(settingsMap.get('cora_key_pem') || process.env.CORA_KEY_PEM);
   const environment = settingsMap.get('cora_environment') || process.env.CORA_ENV || 'production';
+  const lastVerifiedAt = settingsMap.get('cora_last_verified_at') || null;
+
+  function maskClientId(id: string): string {
+    if (!id) return '';
+    if (id.length <= 4) return '••••';
+    return `••••${id.slice(-4)}`;
+  }
 
   const formattedCora = {
-    clientId,
-    hasSecret,
+    clientIdMasked: clientId ? maskClientId(clientId) : '',
+    hasCert,
+    hasKey,
     environment,
-    isConnected: Boolean(clientId && hasSecret)
+    lastVerifiedAt,
+    isConnected: Boolean(clientId && hasCert && hasKey)
   };
 
   return (

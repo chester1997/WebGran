@@ -16,7 +16,9 @@ import {
   RefreshCw,
   X,
   Key,
-  Globe
+  Upload,
+  Trash2,
+  Check
 } from "lucide-react";
 
 interface PlanItem {
@@ -30,9 +32,11 @@ interface PlanItem {
 }
 
 interface CoraCredentials {
-  clientId: string;
-  hasSecret: boolean;
+  clientIdMasked: string;
+  hasCert: boolean;
+  hasKey: boolean;
   environment: string;
+  lastVerifiedAt: string | null;
   isConnected: boolean;
 }
 
@@ -72,11 +76,13 @@ export default function AdminSettingsClient({
   const [cora, setCora] = useState<CoraCredentials>(initialCora);
   const [isCoraModalOpen, setIsCoraModalOpen] = useState(false);
   const [coraForm, setCoraForm] = useState({
-    clientId: initialCora.clientId || "",
-    clientSecret: "",
+    clientId: "",
+    certPem: "",
+    keyPem: "",
     environment: initialCora.environment || "production"
   });
   const [savingCora, setSavingCora] = useState(false);
+  const [disconnectingCora, setDisconnectingCora] = useState(false);
   const [coraMessage, setCoraMessage] = useState<string | null>(null);
 
   // Open Edit Plan Modal
@@ -134,7 +140,22 @@ export default function AdminSettingsClient({
     }
   };
 
-  // Save Cora Credentials
+  // Handle File Pickers for .pem and .key
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "certPem" | "keyPem") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const content = evt.target?.result as string;
+      if (content) {
+        setCoraForm((prev) => ({ ...prev, [field]: content }));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Save & Test Cora Credentials
   const handleSaveCora = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingCora(true);
@@ -148,23 +169,60 @@ export default function AdminSettingsClient({
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha ao salvar credenciais Cora");
+      if (!res.ok) throw new Error(json.error || "Falha ao autenticar/salvar credenciais Cora.");
 
       setCoraMessage(json.message);
+      const maskedId = coraForm.clientId.length > 4 
+        ? `••••${coraForm.clientId.slice(-4)}` 
+        : "••••";
+
       setCora({
-        clientId: coraForm.clientId,
-        hasSecret: true,
+        clientIdMasked: maskedId,
+        hasCert: true,
+        hasKey: true,
         environment: coraForm.environment,
+        lastVerifiedAt: json.lastVerifiedAt || new Date().toISOString(),
         isConnected: true
       });
 
       setTimeout(() => {
         setIsCoraModalOpen(false);
+        setCoraMessage(null);
       }, 2000);
     } catch (err: any) {
-      setCoraMessage(`❌ Erro: ${err.message}`);
+      setCoraMessage(`❌ ${err.message}`);
     } finally {
       setSavingCora(false);
+    }
+  };
+
+  // Disconnect Cora
+  const handleDisconnectCora = async () => {
+    if (!confirm("Tem certeza que deseja desconectar a conta Cora Bank do WebGran?")) return;
+
+    setDisconnectingCora(true);
+    try {
+      const res = await fetch("/api/admin/cora-credentials", {
+        method: "DELETE"
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Falha ao desconectar Cora");
+
+      setCora({
+        clientIdMasked: "",
+        hasCert: false,
+        hasKey: false,
+        environment: "production",
+        lastVerifiedAt: null,
+        isConnected: false
+      });
+
+      alert("✅ Conta Cora desconectada com sucesso.");
+    } catch (err: any) {
+      alert(`Erro: ${err.message}`);
+    } finally {
+      setDisconnectingCora(false);
     }
   };
 
@@ -182,7 +240,7 @@ export default function AdminSettingsClient({
             </span>
           </div>
           <p className="text-gray-400 text-sm mt-1">
-            Gestão dinâmica de planos de assinatura, gateway Cora e tema do sistema
+            Gestão dinâmica de planos de assinatura, gateway Cora mTLS e tema do sistema
           </p>
         </div>
       </div>
@@ -294,15 +352,15 @@ export default function AdminSettingsClient({
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Integração Banco Cora</h3>
-                  <p className="text-xs text-gray-400">Conecte sua conta real para processamento PIX</p>
+                  <h3 className="text-base font-bold text-white">Integração Direta Banco Cora</h3>
+                  <p className="text-xs text-gray-400">Autenticação mTLS via Certificado & Chave RSA</p>
                 </div>
               </div>
 
               {cora.isConnected ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   <CheckCircle2 className="w-3 h-3" />
-                  Conectado
+                  Cora Conectada
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -312,31 +370,70 @@ export default function AdminSettingsClient({
               )}
             </div>
 
-            <div className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] space-y-2">
+            <div className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">Client ID Cora</span>
-                <span className="text-xs font-mono text-white max-w-[160px] truncate">
-                  {cora.clientId ? `${cora.clientId.slice(0, 10)}...` : "Não configurado"}
+                <span className="text-xs font-mono text-white font-bold">
+                  {cora.clientIdMasked || "Não configurado"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                <span className="text-xs text-gray-400">Certificado Digital (.pem)</span>
+                <span className="text-xs font-semibold text-gray-300 flex items-center gap-1">
+                  {cora.hasCert ? (
+                    <span className="text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Configurado</span>
+                  ) : (
+                    <span className="text-amber-400">Ausente</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                <span className="text-xs text-gray-400">Chave Privada (.key)</span>
+                <span className="text-xs font-semibold text-gray-300 flex items-center gap-1">
+                  {cora.hasKey ? (
+                    <span className="text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Configurada</span>
+                  ) : (
+                    <span className="text-amber-400">Ausente</span>
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
                 <span className="text-xs text-gray-400">Ambiente</span>
-                <span className="text-xs font-bold text-sky-400 uppercase">{cora.environment}</span>
+                <span className="text-xs font-bold text-sky-400 uppercase">
+                  {cora.environment === "stage" ? "Staging / Testes" : "Produção (Conta Real)"}
+                </span>
               </div>
               <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                <span className="text-xs text-gray-400">Webhook Endpoint</span>
-                <span className="text-[10px] font-mono text-gray-400">/api/billing/cora/webhook</span>
+                <span className="text-xs text-gray-400">Última Validação</span>
+                <span className="text-xs font-mono text-gray-300">
+                  {cora.lastVerifiedAt 
+                    ? new Date(cora.lastVerifiedAt).toLocaleString("pt-BR")
+                    : "Nunca"}
+                </span>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={() => setIsCoraModalOpen(true)}
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-900/30 transition-all"
-          >
-            <Key className="w-3.5 h-3.5" />
-            Conectar Minha Conta Real Cora
-          </button>
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              onClick={() => setIsCoraModalOpen(true)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-900/30 transition-all"
+            >
+              <Key className="w-3.5 h-3.5" />
+              {cora.isConnected ? "Testar / Alterar Conexão" : "Conectar Conta Real Cora"}
+            </button>
+
+            {cora.isConnected && (
+              <button
+                onClick={handleDisconnectCora}
+                disabled={disconnectingCora}
+                className="px-3 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-bold transition-all"
+                title="Desconectar Conta Cora"
+              >
+                {disconnectingCora ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* CARD 4: PERFIL ADMINISTRATIVO SUPREMO */}
@@ -447,21 +544,38 @@ export default function AdminSettingsClient({
         </div>
       )}
 
-      {/* MODAL 2: CONECTAR CONTA REAL CORA */}
+      {/* MODAL 2: CONECTAR CONTA REAL CORA (mTLS INTEGRAÇÃO DIRETA) */}
       {isCoraModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#141416] border border-[#27272A] rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#141416] border border-[#27272A] rounded-2xl w-full max-w-xl p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 my-8">
             <div className="flex items-center justify-between border-b border-[#27272A] pb-4">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-sky-400" />
-                <h3 className="text-lg font-bold text-white">Conectar Conta Real Cora Bank</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">⚡ Conectar Conta Real Cora Bank</h3>
+                  <p className="text-xs text-gray-400">Integração Direta via mTLS (Certificado + Chave RSA)</p>
+                </div>
               </div>
               <button onClick={() => setIsCoraModalOpen(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            <div className="p-3.5 rounded-xl bg-sky-500/5 border border-sky-500/20 text-sky-300 text-xs leading-relaxed space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-sky-400" />
+                Sem Client Secret • Autenticação de Alto Nível mTLS
+              </p>
+              <p className="text-[11px] text-gray-400">
+                A Integração Direta Cora utiliza o Client ID + Certificado Digital (`.pem`) e Chave Privada (`.key`). 
+                Os arquivos e chaves são armazenados com segurança no banco de dados e nunca são expostos ao navegador.
+              </p>
+            </div>
+
             <form onSubmit={handleSaveCora} className="space-y-4">
+              {/* CLIENT ID */}
               <div>
                 <label className="text-xs font-bold text-gray-300 block mb-1">Cora Client ID</label>
                 <input
@@ -469,40 +583,79 @@ export default function AdminSettingsClient({
                   required
                   value={coraForm.clientId}
                   onChange={(e) => setCoraForm({ ...coraForm, clientId: e.target.value })}
-                  placeholder="Insira o Client ID fornecido pelo Banco Cora..."
+                  placeholder="Ex: client-id-123456789..."
                   className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 font-mono focus:outline-none focus:border-sky-500"
                 />
               </div>
 
+              {/* CERTIFICADO PEM */}
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Cora Client Secret</label>
-                <input
-                  type="password"
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-gray-300">Certificado Digital (.pem)</label>
+                  <label className="cursor-pointer text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1">
+                    <Upload className="w-3 h-3" />
+                    Carregar arquivo .pem
+                    <input
+                      type="file"
+                      accept=".pem,.crt"
+                      onChange={(e) => handleFileUpload(e, "certPem")}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <textarea
+                  rows={4}
                   required
-                  value={coraForm.clientSecret}
-                  onChange={(e) => setCoraForm({ ...coraForm, clientSecret: e.target.value })}
-                  placeholder="Insira o Client Secret do Banco Cora..."
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 font-mono focus:outline-none focus:border-sky-500"
+                  value={coraForm.certPem}
+                  onChange={(e) => setCoraForm({ ...coraForm, certPem: e.target.value })}
+                  placeholder="-----BEGIN CERTIFICATE-----&#10;Cole o conteúdo do seu certificado certificado.pem aqui ou carregue o arquivo acima&#10;-----END CERTIFICATE-----"
+                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-[11px] text-white placeholder-gray-600 font-mono focus:outline-none focus:border-sky-500 leading-relaxed"
                 />
               </div>
 
+              {/* CHAVE PRIVADA KEY */}
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Ambiente</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-gray-300">Chave Privada RSA (.key)</label>
+                  <label className="cursor-pointer text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1">
+                    <Upload className="w-3 h-3" />
+                    Carregar arquivo .key
+                    <input
+                      type="file"
+                      accept=".key,.pem"
+                      onChange={(e) => handleFileUpload(e, "keyPem")}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <textarea
+                  rows={4}
+                  required
+                  value={coraForm.keyPem}
+                  onChange={(e) => setCoraForm({ ...coraForm, keyPem: e.target.value })}
+                  placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;Cole o conteúdo da sua chave privada chave.key aqui ou carregue o arquivo acima&#10;-----END RSA PRIVATE KEY-----"
+                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-[11px] text-white placeholder-gray-600 font-mono focus:outline-none focus:border-sky-500 leading-relaxed"
+                />
+              </div>
+
+              {/* AMBIENTE */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1">Ambiente de Operação</label>
                 <select
                   value={coraForm.environment}
                   onChange={(e) => setCoraForm({ ...coraForm, environment: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
                 >
-                  <option value="production">Produção (Conta Real)</option>
-                  <option value="stage">Staging / Testes</option>
+                  <option value="production">Produção (Conta Real - https://matls-clients.api.cora.com.br)</option>
+                  <option value="stage">Staging / Sandbox (https://matls-clients.stage.cora.com.br)</option>
                 </select>
               </div>
 
               {coraMessage && (
-                <div className={`p-3 rounded-xl border text-xs font-semibold ${
-                  coraMessage.includes("✅")
+                <div className={`p-3.5 rounded-xl border text-xs font-semibold leading-relaxed ${
+                  coraMessage.includes("🟢")
                     ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                    : "bg-amber-500/10 border-amber-500/20 text-amber-300"
+                    : "bg-red-500/10 border-red-500/20 text-red-300"
                 }`}>
                   {coraMessage}
                 </div>
@@ -521,7 +674,14 @@ export default function AdminSettingsClient({
                   disabled={savingCora}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-900/30 flex items-center justify-center gap-2"
                 >
-                  {savingCora ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Salvar e Testar Conexão"}
+                  {savingCora ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Testando mTLS com Cora...</span>
+                    </>
+                  ) : (
+                    "Salvar e Testar Conexão"
+                  )}
                 </button>
               </div>
             </form>
