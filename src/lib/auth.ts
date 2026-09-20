@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
     }
   },
   pages: {
-    signIn: '/login', // Will be created later or we can rely on default
+    signIn: '/login',
   },
   session: {
     strategy: "jwt",
@@ -77,7 +77,8 @@ export async function requireAdmin() {
   if (!user) {
     redirect("/login");
   }
-  if (user.role !== 'admin') {
+  const role = (user.role || '').toLowerCase();
+  if (role !== 'admin' && role !== 'super_admin') {
     redirect("/seller");
   }
   return user;
@@ -88,10 +89,8 @@ export async function requireSeller() {
   if (!user) {
     redirect("/login");
   }
-  if (user.role === 'admin') {
-    redirect("/admin");
-  }
-  if (user.role !== 'seller') {
+  const role = (user.role || '').toLowerCase();
+  if (role !== 'seller' && role !== 'admin' && role !== 'super_admin') {
     throw new Error("Unauthorized");
   }
   return user;
@@ -99,7 +98,7 @@ export async function requireSeller() {
 
 export async function getCurrentStore() {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'seller') {
+  if (!user) {
     return null;
   }
   

@@ -4,24 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   User, 
-  CreditCard, 
-  CheckCircle2, 
-  AlertCircle, 
-  Unlink, 
+  Sparkles, 
   Camera, 
   Trash2, 
   Loader2, 
-  Save 
+  Save, 
+  CheckCircle2, 
+  AlertCircle, 
+  CreditCard, 
+  QrCode, 
+  Copy, 
+  Check, 
+  Clock, 
+  Calendar, 
+  RefreshCw, 
+  ArrowRight,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface ConnectionInfo {
-  id: string;
-  status: string;
-  providerEmail: string | null;
-  providerUserId: string | null;
-  updatedAt: string | null;
-}
 
 interface SellerProfile {
   id: string;
@@ -30,10 +30,40 @@ interface SellerProfile {
   avatarUrl: string | null;
 }
 
+interface InvoiceHistoryItem {
+  id: string;
+  externalId: string | null;
+  amount: number;
+  status: string;
+  dueDate: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  qrCode?: string | null;
+  qrCodeText?: string | null;
+}
+
+interface SubscriptionData {
+  subscription: {
+    id: string;
+    status: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+  };
+  plan: {
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    billingInterval: string;
+  };
+  latestInvoice: InvoiceHistoryItem | null;
+  invoiceHistory: InvoiceHistoryItem[];
+}
+
 interface Props {
   storeName: string;
   sellerProfile: SellerProfile;
-  connection: ConnectionInfo | null;
+  subscriptionData: SubscriptionData;
 }
 
 function resizeAvatarImage(file: File, maxWidth = 400, maxHeight = 400): Promise<string> {
@@ -76,20 +106,22 @@ function resizeAvatarImage(file: File, maxWidth = 400, maxHeight = 400): Promise
   });
 }
 
-export default function SettingsClient({ storeName, sellerProfile, connection }: Props) {
+export default function SettingsClient({ storeName, sellerProfile, subscriptionData }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"perfil" | "recebimento">("perfil");
+  const [activeTab, setActiveTab] = useState<"perfil" | "assinatura">("perfil");
 
   // Profile Form States
   const [name, setName] = useState(sellerProfile.name);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(sellerProfile.avatarUrl);
-  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Payment Disconnect State
-  const [loadingDisconnect, setLoadingDisconnect] = useState(false);
-  const isConnected = connection?.status === "active";
+  // Subscription States
+  const [generatingPix, setGeneratingPix] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [activeInvoice, setActiveInvoice] = useState<any>(subscriptionData.latestInvoice);
+  const [copiedPix, setCopiedPix] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -130,7 +162,7 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
       return;
     }
 
-    setSaving(true);
+    setSavingProfile(true);
     setErrorMessage(null);
 
     try {
@@ -147,7 +179,6 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
 
       if (data.success) {
         showToast("Perfil atualizado com sucesso.");
-        // Notify sidebar & layout to refresh profile immediately
         window.dispatchEvent(new Event("seller-profile-updated"));
         router.refresh();
       } else {
@@ -156,39 +187,81 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
     } catch (err: any) {
       setErrorMessage(err.message || "Erro ao salvar perfil.");
     } finally {
-      setSaving(false);
+      setSavingProfile(false);
     }
   };
 
-  const handleConnect = () => {
-    window.location.href = "/api/payments/mercadopago/connect";
-  };
+  const handleGeneratePixPayment = async () => {
+    setGeneratingPix(true);
+    setErrorMessage(null);
 
-  const handleDisconnect = async () => {
-    if (!confirm("Deseja realmente desconectar sua conta do Mercado Pago? Suas vendas no Telegram serão pausadas até que reconecte.")) {
-      return;
-    }
-
-    setLoadingDisconnect(true);
     try {
-      const res = await fetch("/api/payments/mercadopago/disconnect", { method: "POST" });
-      if (res.ok) {
+      const res = await fetch("/api/billing/subscription", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success && data.invoice) {
+        setActiveInvoice(data.invoice);
+        showToast("Cobrança PIX gerada com sucesso via Cora.");
+      } else {
+        setErrorMessage(data.error || "Erro ao gerar PIX para assinatura.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Erro ao comunicar com servidor de pagamento.");
+    } finally {
+      setGeneratingPix(false);
+    }
+  };
+
+  const handleCopyPix = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedPix(true);
+    setTimeout(() => setCopiedPix(false), 3000);
+  };
+
+  const handleVerifyPayment = async () => {
+    if (!activeInvoice?.invoiceId && !activeInvoice?.id) return;
+    const invId = activeInvoice.invoiceId || activeInvoice.id;
+
+    setVerifyingPayment(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/billing/subscription/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: invId })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showToast("Pagamento verificado e assinatura ativada com sucesso!");
+        setActiveInvoice(null);
         router.refresh();
       } else {
-        alert("Falha ao desconectar conta.");
+        setErrorMessage(data.error || "Pagamento ainda não identificado no sistema Cora.");
       }
-    } catch (e) {
-      console.error(e);
-      alert("Erro de conexão ao tentar desconectar.");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Erro de conexão ao consultar status.");
     } finally {
-      setLoadingDisconnect(false);
+      setVerifyingPayment(false);
     }
   };
 
   const firstLetter = (name || sellerProfile.email || "V").charAt(0).toUpperCase();
+  const subStatus = subscriptionData.subscription.status;
+  const planPrice = subscriptionData.plan.price;
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto fade-in">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-sm font-semibold animate-in slide-in-from-top duration-200">
@@ -201,10 +274,10 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
           <User className="w-7 h-7 text-red-500" />
-          Perfil do vendedor
+          Configurações
         </h1>
         <p className="text-zinc-400 text-sm mt-1">
-          Gerencie as informações da sua conta.
+          Gerencie o seu perfil e a sua assinatura WebGran SaaS.
         </p>
       </div>
 
@@ -215,7 +288,7 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
           onClick={() => setActiveTab("perfil")}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all cursor-pointer ${
             activeTab === "perfil"
-              ? "border-red-500 text-white bg-red-500/10 rounded-t-xl"
+              ? "border-red-500 text-white bg-red-500/10 rounded-t-xl font-semibold"
               : "border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.02]"
           }`}
         >
@@ -225,15 +298,15 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
 
         <button
           type="button"
-          onClick={() => setActiveTab("recebimento")}
+          onClick={() => setActiveTab("assinatura")}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all cursor-pointer ${
-            activeTab === "recebimento"
-              ? "border-red-500 text-white bg-red-500/10 rounded-t-xl"
+            activeTab === "assinatura"
+              ? "border-red-500 text-white bg-red-500/10 rounded-t-xl font-semibold"
               : "border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.02]"
           }`}
         >
-          <CreditCard className="w-4 h-4" />
-          Forma de Recebimento
+          <Sparkles className="w-4 h-4" />
+          Assinatura WebGran
         </button>
       </div>
 
@@ -245,9 +318,14 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
         </div>
       )}
 
-      {/* Tab: Profile */}
+      {/* Tab 1: Perfil do Vendedor */}
       {activeTab === "perfil" && (
-        <form onSubmit={handleSaveProfile} className="bg-[#0F0F12] border border-white/5 rounded-2xl p-6 space-y-6 shadow-xl">
+        <form onSubmit={handleSaveProfile} className="bg-[#121214] border border-white/5 rounded-2xl p-6 space-y-6 shadow-xl">
+          <div className="border-b border-white/5 pb-4">
+            <h3 className="text-base font-bold text-white">Perfil do vendedor</h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Gerencie as informações da sua conta.</p>
+          </div>
+
           {/* Avatar Section */}
           <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-white/5">
             <div className="relative group shrink-0">
@@ -278,7 +356,7 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
             </div>
 
             <div className="space-y-2 text-center sm:text-left min-w-0">
-              <h3 className="text-base font-bold text-white">Foto de perfil</h3>
+              <h4 className="text-sm font-bold text-white">Foto de perfil</h4>
               <p className="text-xs text-zinc-400">
                 Formatos aceitos: JPG, PNG ou WEBP. Tamanho máximo: 10MB.
               </p>
@@ -339,10 +417,10 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
           <div className="pt-4 border-t border-white/5 flex items-center justify-end">
             <Button
               type="submit"
-              disabled={saving}
+              disabled={savingProfile}
               className="bg-red-600 hover:bg-red-500 text-white font-semibold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
             >
-              {saving ? (
+              {savingProfile ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Salvando...</span>
@@ -358,61 +436,277 @@ export default function SettingsClient({ storeName, sellerProfile, connection }:
         </form>
       )}
 
-      {/* Tab: Recebimento (Mercado Pago Integration) */}
-      {activeTab === "recebimento" && (
-        <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-6 space-y-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/5">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-bold text-white">Integração Mercado Pago</h3>
-                {isConnected ? (
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Ativo
+      {/* Tab 2: Assinatura WebGran */}
+      {activeTab === "assinatura" && (
+        <div className="space-y-6">
+          {/* Main Plan Subscription Card */}
+          <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-5">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-white tracking-tight">Assinatura WebGran</h3>
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-bold">
+                    PLANO ÚNICO
                   </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" /> Pendente
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Gerencie sua assinatura e acompanhe seus pagamentos do WebGran SaaS.
+                </p>
+              </div>
+
+              {/* Status Badge */}
+              <div>
+                {subStatus === "ACTIVE" && (
+                  <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-2 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Assinatura ativa
+                  </span>
+                )}
+                {subStatus === "PENDING" && (
+                  <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    Pagamento pendente
+                  </span>
+                )}
+                {subStatus === "PAST_DUE" && (
+                  <span className="px-3.5 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    Pagamento atrasado
+                  </span>
+                )}
+                {subStatus === "CANCELLED" && (
+                  <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
+                    Cancelada
+                  </span>
+                )}
+                {subStatus === "EXPIRED" && (
+                  <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
+                    Expirada
                   </span>
                 )}
               </div>
-              <p className="text-xs text-zinc-400">
-                Conecte sua conta do Mercado Pago para receber pagamentos via PIX e Cartão de Crédito.
-              </p>
             </div>
 
-            {isConnected ? (
-              <Button
-                variant="outline"
-                onClick={handleDisconnect}
-                disabled={loadingDisconnect}
-                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30 text-xs gap-2 shrink-0 cursor-pointer"
-              >
-                <Unlink className="w-4 h-4" />
-                {loadingDisconnect ? "Desconectando..." : "Desconectar Conta"}
-              </Button>
-            ) : (
-              <Button
-                onClick={handleConnect}
-                className="bg-blue-600 hover:bg-blue-500 text-white text-xs gap-2 shrink-0 shadow-lg shadow-blue-600/20 cursor-pointer"
-              >
-                <CreditCard className="w-4 h-4" />
-                Conectar Mercado Pago
-              </Button>
+            {/* Plan Display Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              {/* Plan Price Box */}
+              <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
+                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Plano Ativo</span>
+                <div>
+                  <p className="text-xl font-bold text-white uppercase">WebGran</p>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-3xl font-extrabold text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</span>
+                    <span className="text-xs text-zinc-400 font-medium">/ mês</span>
+                  </div>
+                </div>
+                <div className="pt-2 text-xs text-zinc-400 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-red-500" />
+                  <span>Acesso completo ao SaaS</span>
+                </div>
+              </div>
+
+              {/* Billing Period Box */}
+              <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
+                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Próxima Cobrança</span>
+                <div>
+                  <div className="flex items-center gap-2 text-white font-bold text-lg">
+                    <Calendar className="w-5 h-5 text-red-500 shrink-0" />
+                    <span>{formatDate(subscriptionData.subscription.currentPeriodEnd)}</span>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-1">Periodicidade: Mensal</p>
+                </div>
+                <div className="pt-2 text-xs text-zinc-400">
+                  <span>Renovação via PIX automático</span>
+                </div>
+              </div>
+
+              {/* Payment Method & Action Box */}
+              <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
+                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Forma de Pagamento</span>
+                <div>
+                  <div className="flex items-center gap-2 text-white font-bold text-base">
+                    <QrCode className="w-5 h-5 text-red-500 shrink-0" />
+                    <span>PIX via Cora</span>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    onClick={handleGeneratePixPayment}
+                    disabled={generatingPix}
+                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
+                  >
+                    {generatingPix ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Gerando PIX...</span>
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="w-4 h-4" />
+                        <span>Pagar R$ {planPrice.toFixed(2).replace(".", ",")}</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Active PIX Payment Drawer / Modal Display */}
+            {activeInvoice && (
+              <div className="bg-[#16161C] border border-red-500/30 rounded-2xl p-6 space-y-5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                      <QrCode className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Pagamento PIX da Assinatura</h4>
+                      <p className="text-xs text-zinc-400">Valor exacto: <strong className="text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</strong></p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
+                    Aguardando Pagamento
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  {/* QR Code Display */}
+                  <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner border border-white/10">
+                    {activeInvoice.qrCode ? (
+                      <img src={activeInvoice.qrCode} alt="QR Code PIX" className="w-48 h-48 object-contain" />
+                    ) : (
+                      <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
+                        QR Code Gerado
+                      </div>
+                    )}
+                    <span className="text-[11px] text-zinc-600 font-semibold mt-2">Escaneie o QR Code no app do seu banco</span>
+                  </div>
+
+                  {/* PIX Copia e Cola & Verification */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        PIX Copia e Cola
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={activeInvoice.qrCodeText || activeInvoice.externalId || ""}
+                          className="w-full bg-[#121214] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-300 select-all"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => handleCopyPix(activeInvoice.qrCodeText || activeInvoice.externalId || "")}
+                          className="bg-white/10 hover:bg-white/20 text-white text-xs px-4 rounded-xl shrink-0 cursor-pointer"
+                        >
+                          {copiedPix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          <span>{copiedPix ? "Copiado!" : "Copiar"}</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 space-y-2">
+                      <Button
+                        type="button"
+                        onClick={handleVerifyPayment}
+                        disabled={verifyingPayment}
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer"
+                      >
+                        {verifyingPayment ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Verificando no sistema Cora...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Já paguei</span>
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-[10px] text-zinc-500 text-center">
+                        O status do pagamento é verificado com segurança no servidor Cora.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
-          {isConnected && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[#16161C] p-4 rounded-xl border border-white/5 space-y-1">
-                <span className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">Conta Conectada</span>
-                <p className="text-sm font-semibold text-white">{connection?.providerEmail || "Email não informado"}</p>
-              </div>
-              <div className="bg-[#16161C] p-4 rounded-xl border border-white/5 space-y-1">
-                <span className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">ID Mercado Pago</span>
-                <p className="text-sm font-semibold text-white">{connection?.providerUserId || "N/A"}</p>
-              </div>
+          {/* Invoice Payment History Table */}
+          <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h3 className="text-base font-bold text-white">Histórico de pagamentos</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Histórico completo de mensalidades registradas para a sua conta.
+              </p>
             </div>
-          )}
+
+            <div className="overflow-x-auto border border-white/5 rounded-xl">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 bg-[#18181C]">
+                    <th className="py-3.5 px-4">Data</th>
+                    <th className="py-3.5 px-4">Valor</th>
+                    <th className="py-3.5 px-4">Forma</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 text-right">Identificador</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-xs">
+                  {subscriptionData.invoiceHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-zinc-500">
+                        Nenhum histórico de mensalidade registrado ainda.
+                      </td>
+                    </tr>
+                  ) : (
+                    subscriptionData.invoiceHistory.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3.5 px-4 text-zinc-300">
+                          {formatDate(inv.createdAt)}
+                        </td>
+
+                        <td className="py-3.5 px-4 font-bold text-white">
+                          R$ {inv.amount.toFixed(2).replace(".", ",")}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-zinc-400 font-medium">
+                          PIX
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center">
+                          {inv.status === "PAID" && (
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold">
+                              Pago
+                            </span>
+                          )}
+                          {inv.status === "PENDING" && (
+                            <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-bold">
+                              Pendente
+                            </span>
+                          )}
+                          {inv.status === "EXPIRED" && (
+                            <span className="px-2.5 py-1 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-[11px] font-bold">
+                              Expirado
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right font-mono text-zinc-500 text-[11px]">
+                          {inv.externalId || inv.id.slice(0, 10)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>
