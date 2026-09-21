@@ -27,7 +27,7 @@ export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: s
   });
 
   return (
-    <div className="w-full bg-[#161616] text-white p-4">
+    <div className="w-full bg-transparent text-white p-4">
       <div className="flex items-center gap-4 mb-6 pt-4">
         <Link href={`/miniapp/${storeSlug}`} className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-zinc-800 transition-colors">
           <ArrowLeft className="w-5 h-5" />

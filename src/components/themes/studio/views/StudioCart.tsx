@@ -205,7 +205,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   }
 
   return (
-    <div className="p-4 pt-6 text-white bg-[#161616] w-full">
+    <div className="p-4 pt-6 text-white bg-transparent w-full">
       <h1 className="text-2xl font-bold mb-6">Seu Carrinho</h1>
 
       <div className="space-y-4 mb-8">

@@ -129,7 +129,7 @@ export function StudioProductClient({
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#141416] text-white pb-28">
+    <div className="w-full min-h-screen bg-transparent text-white pb-28">
       {/* 1. TOP BANNER / BACKDROP AREA */}
       <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] max-h-[360px] bg-zinc-950 overflow-hidden">
         <img
