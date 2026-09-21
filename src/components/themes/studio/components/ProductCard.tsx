@@ -24,6 +24,8 @@ export function ProductCard({ storeSlug, product }: ProductCardProps) {
           <img 
             src={product.coverUrl} 
             alt={product.title} 
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

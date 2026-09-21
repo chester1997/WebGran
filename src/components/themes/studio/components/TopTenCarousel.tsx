@@ -107,6 +107,8 @@ export function TopTenCarousel({
                   <img
                     src={product.coverUrl}
                     alt={product.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover pointer-events-none"
                     draggable={false}
                   />

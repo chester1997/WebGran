@@ -23,34 +23,58 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
 
   if (!store) return null;
 
-  const allProducts = await db.query.products.findMany({
-    where: eq(products.storeId, store.id),
-    orderBy: [desc(products.createdAt)],
-    limit: 20
-  });
-
-  const storeBanners = await db.query.banners.findMany({
-    where: and(eq(banners.storeId, store.id), eq(banners.status, 'active')),
-    orderBy: [asc(banners.position), desc(banners.createdAt)],
-    limit: 5
-  });
-
-  // Fetch Editorial Ranking Carousel (Top 15)
-  const rankingCarousel = await db.query.productCarousels.findFirst({
-    where: and(
-      eq(productCarousels.storeId, store.id),
-      eq(productCarousels.isRanking, true),
-      eq(productCarousels.status, 'active')
-    ),
-    with: {
-      items: {
-        orderBy: (items, { asc }) => [asc(items.position)],
-        with: {
-          product: true
+  const [
+    allProducts,
+    storeBanners,
+    rankingCarousel,
+    standardCarousels,
+    firstBot
+  ] = await Promise.all([
+    db.query.products.findMany({
+      where: eq(products.storeId, store.id),
+      orderBy: [desc(products.createdAt)],
+      limit: 20
+    }),
+    db.query.banners.findMany({
+      where: and(eq(banners.storeId, store.id), eq(banners.status, 'active')),
+      orderBy: [asc(banners.position), desc(banners.createdAt)],
+      limit: 5
+    }),
+    db.query.productCarousels.findFirst({
+      where: and(
+        eq(productCarousels.storeId, store.id),
+        eq(productCarousels.isRanking, true),
+        eq(productCarousels.status, 'active')
+      ),
+      with: {
+        items: {
+          orderBy: (items, { asc }) => [asc(items.position)],
+          with: {
+            product: true
+          }
         }
       }
-    }
-  });
+    }),
+    db.query.productCarousels.findMany({
+      where: and(
+        eq(productCarousels.storeId, store.id),
+        eq(productCarousels.isRanking, false),
+        eq(productCarousels.status, 'active')
+      ),
+      orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
+      with: {
+        items: {
+          orderBy: (items, { asc }) => [asc(items.position)],
+          with: {
+            product: true
+          }
+        }
+      }
+    }),
+    db.query.telegramBots.findFirst({
+      where: eq(telegramBots.storeId, store.id),
+    })
+  ]);
 
   const rankingProducts = rankingCarousel
     ? rankingCarousel.items
@@ -59,28 +83,6 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         .slice(0, 15)
     : [];
 
-  // Fetch Standard Carousels configured by the seller
-  const standardCarousels = await db.query.productCarousels.findMany({
-    where: and(
-      eq(productCarousels.storeId, store.id),
-      eq(productCarousels.isRanking, false),
-      eq(productCarousels.status, 'active')
-    ),
-    orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
-    with: {
-      items: {
-        orderBy: (items, { asc }) => [asc(items.position)],
-        with: {
-          product: true
-        }
-      }
-    }
-  });
-
-  // Fetch first bot for the header logo
-  const firstBot = await db.query.telegramBots.findFirst({
-    where: eq(telegramBots.storeId, store.id),
-  });
   let headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
 
   if (!headerLogoUrl && firstBot?.tokenEncrypted) {

@@ -181,19 +181,32 @@ export class AnalyticsService {
       }
     }
 
-    // Fetch all store orders with items & customer
-    const allOrders = await db.query.orders.findMany({
-      where: eq(orders.storeId, storeId),
-      with: {
-        customer: true,
-        items: {
-          with: {
-            product: true
+    // Fetch all store data concurrently
+    const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories] = await Promise.all([
+      db.query.orders.findMany({
+        where: eq(orders.storeId, storeId),
+        with: {
+          customer: true,
+          items: {
+            with: {
+              product: true
+            }
           }
-        }
-      },
-      orderBy: [desc(orders.createdAt)]
-    });
+        },
+        orderBy: [desc(orders.createdAt)]
+      }),
+      db.query.accesses.findMany({
+        where: eq(accesses.storeId, storeId)
+      }),
+      db.query.products.findMany({
+        where: eq(products.storeId, storeId),
+        columns: { id: true, status: true }
+      }),
+      db.query.categories.findMany({
+        where: eq(categories.storeId, storeId),
+        columns: { id: true }
+      })
+    ]);
 
     const paidOrders = allOrders.filter(o => o.status === 'paid');
     const pendingOrders = allOrders.filter(o => o.status === 'pending');
@@ -481,10 +494,6 @@ export class AnalyticsService {
 
     const salesToday = paidOrders.filter(o => new Date(o.paidAt || o.createdAt) >= startOfToday).length;
 
-    const allStoreAccesses = await db.query.accesses.findMany({
-      where: eq(accesses.storeId, storeId)
-    });
-
     const activeAccesses = allStoreAccesses.filter(a => a.status === 'ACTIVE').length;
     const pendingDeliveries = allStoreAccesses.filter(a => a.deliveryStatus === 'PENDING' || a.deliveryStatus === 'FAILED').length;
     const pendingPayments = pendingOrders.length;
@@ -498,16 +507,6 @@ export class AnalyticsService {
     };
 
     // 7. Catalog Overview
-    const allStoreProducts = await db.query.products.findMany({
-      where: eq(products.storeId, storeId),
-      columns: { id: true, status: true }
-    });
-
-    const allStoreCategories = await db.query.categories.findMany({
-      where: eq(categories.storeId, storeId),
-      columns: { id: true }
-    });
-
     const catalog: CatalogOverview = {
       totalProducts: allStoreProducts.length,
       activeProducts: allStoreProducts.filter(p => p.status === 'active').length,
