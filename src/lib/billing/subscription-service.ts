@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { subscriptionPlans, subscriptions, invoices, users } from '@/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { coraProvider } from '@/lib/payments/providers/cora';
+import { mercadoPagoPlatformProvider } from '@/lib/payments/providers/mercado-pago-platform';
 
 export const WEBGRAN_PLAN_SLUG = 'webgran';
 export const WEBGRAN_PLAN_PRICE = 89.90;
@@ -88,7 +88,7 @@ export async function getSellerSubscription(sellerId: string) {
 
   if (!sub) {
     const now = new Date();
-    // Default 7-day trial or pending status on initial signup
+    // Default 7-day initial trial/grace period
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + 7);
 
@@ -97,7 +97,7 @@ export async function getSellerSubscription(sellerId: string) {
       .values({
         sellerId,
         planId: plan.id,
-        status: 'ACTIVE', // Initial access active
+        status: 'ACTIVE',
         startedAt: now,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
@@ -121,7 +121,7 @@ export async function getSellerSubscription(sellerId: string) {
     orderBy: [desc(invoices.createdAt)],
   });
 
-  // Check and process expiration for any PENDING invoice
+  // Check and process expiration for any PENDING invoice (30 MINUTES EXPIRATION)
   let latestPending = invoiceHistory.find((i) => i.status === 'PENDING');
 
   if (latestPending) {
@@ -131,22 +131,22 @@ export async function getSellerSubscription(sellerId: string) {
       const pendingId = latestPending.id;
       const externalId = latestPending.externalId;
       try {
-        let isPaidOnCora = false;
+        let isPaidOnMP = false;
         if (externalId && !isOldDummy) {
           try {
-            const coraCheck = await coraProvider.getInvoice(externalId);
-            if (coraCheck.status === 'PAID') {
-              isPaidOnCora = true;
+            const mpCheck = await mercadoPagoPlatformProvider.getInvoice(externalId);
+            if (mpCheck.status === 'PAID') {
+              isPaidOnMP = true;
               await confirmInvoicePayment(pendingId, sellerId);
               latestPending = undefined;
             } else {
-              await coraProvider.cancelInvoice(externalId);
+              await mercadoPagoPlatformProvider.cancelInvoice(externalId);
             }
-          } catch (coraErr) {
-            console.error('Error querying/cancelling invoice on Cora:', coraErr);
+          } catch (mpErr) {
+            console.error('Error querying/cancelling invoice on Mercado Pago:', mpErr);
           }
         }
-        if (!isPaidOnCora) {
+        if (!isPaidOnMP) {
           await db
             .update(invoices)
             .set({ status: 'EXPIRED', updatedAt: now })
@@ -201,9 +201,9 @@ export async function getSellerSubscription(sellerId: string) {
 }
 
 /**
- * Generate a new Cora PIX Invoice for Subscription (10 min expiration)
+ * Generate a new Mercado Pago PIX Invoice for Subscription (30 MINUTES EXPIRATION)
  */
-export async function createCoraBillingInvoice(sellerId: string, forceNew = false) {
+export async function createPlatformBillingInvoice(sellerId: string, forceNew = false) {
   const userRecord = await db.query.users.findFirst({
     where: eq(users.id, sellerId),
   });
@@ -235,13 +235,13 @@ export async function createCoraBillingInvoice(sellerId: string, forceNew = fals
     }
   }
 
-  // Calculate 10 MINUTES EXPIRATION server-side
+  // Calculate EXACT 30 MINUTES EXPIRATION server-side
   const amount = Number(plan.price);
-  const dueDate = new Date(now.getTime() + 3 * 86400000); // 3 days due date in Cora
-  const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // EXACT 10 MINUTES EXPIRATION
+  const dueDate = new Date(now.getTime() + 30 * 60 * 1000); // 30 min due date
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // EXACT 30 MINUTES EXPIRATION
 
-  // Create Invoice on Cora Bank API (REAL mTLS CALL, NO MOCK)
-  const coraRes = await coraProvider.createInvoice({
+  // Create REAL PIX Payment on Mercado Pago API (Platform Owner Account)
+  const mpRes = await mercadoPagoPlatformProvider.createInvoice({
     sellerId,
     subscriptionId: subscription.id,
     amount,
@@ -255,32 +255,35 @@ export async function createCoraBillingInvoice(sellerId: string, forceNew = fals
     .values({
       sellerId,
       subscriptionId: subscription.id,
-      provider: 'cora',
-      externalId: coraRes.id,
+      provider: 'mercado_pago',
+      externalId: mpRes.id,
       amount: amount.toFixed(2),
       status: 'PENDING',
       dueDate,
       expiresAt,
-      qrCode: coraRes.qrCode || null,
-      qrCodeText: coraRes.qrCodeText || null,
+      qrCode: mpRes.qrCode || null,
+      qrCodeText: mpRes.qrCodeText || null,
     })
     .returning();
 
   return {
     invoiceId: insertedInvoice[0].id,
-    externalId: coraRes.id,
+    externalId: mpRes.id,
     amount: amount,
     status: 'PENDING',
-    qrCode: coraRes.qrCode,
-    qrCodeText: coraRes.qrCodeText,
+    qrCode: mpRes.qrCode,
+    qrCodeText: mpRes.qrCodeText,
     dueDate: dueDate.toISOString(),
     createdAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
   };
 }
 
+// Alias for backwards compatibility
+export const createCoraBillingInvoice = createPlatformBillingInvoice;
+
 /**
- * Confirm / verify subscription invoice payment with REAL Cora API call
+ * Confirm / verify subscription invoice payment with REAL Mercado Pago API call
  */
 export async function confirmInvoicePayment(invoiceId: string, sellerId: string) {
   const inv = await db.query.invoices.findFirst({
@@ -297,14 +300,12 @@ export async function confirmInvoicePayment(invoiceId: string, sellerId: string)
 
   const now = new Date();
 
-  // Check if invoice has expired (10 minutes rule)
+  // Check if invoice has expired (30 minutes rule)
   if (inv.expiresAt && new Date(inv.expiresAt) <= now) {
-    // Check if Cora API shows it was actually paid before expiring
     if (inv.externalId) {
       try {
-        const coraCheck = await coraProvider.getInvoice(inv.externalId);
-        if (coraCheck.status === 'PAID') {
-          // Process payment
+        const mpCheck = await mercadoPagoPlatformProvider.getInvoice(inv.externalId);
+        if (mpCheck.status === 'PAID') {
           const nextPeriodEnd = new Date(now);
           nextPeriodEnd.setDate(nextPeriodEnd.getDate() + 30);
 
@@ -327,8 +328,7 @@ export async function confirmInvoicePayment(invoiceId: string, sellerId: string)
 
           return { success: true, message: 'Pagamento confirmado e assinatura ativada!' };
         } else {
-          // Cancel on Cora & mark EXPIRED
-          await coraProvider.cancelInvoice(inv.externalId);
+          await mercadoPagoPlatformProvider.cancelInvoice(inv.externalId);
           await db
             .update(invoices)
             .set({ status: 'EXPIRED', updatedAt: now })
@@ -336,15 +336,15 @@ export async function confirmInvoicePayment(invoiceId: string, sellerId: string)
         }
       } catch {}
     }
-    throw new Error('O prazo de 10 minutos deste PIX expirou. Por favor, gere um novo PIX.');
+    throw new Error('O prazo de 30 minutos deste PIX expirou. Por favor, gere um novo PIX.');
   }
 
-  // Query REAL Cora API status
+  // Query REAL Mercado Pago API status
   if (inv.externalId) {
     try {
-      const coraCheck = await coraProvider.getInvoice(inv.externalId);
+      const mpCheck = await mercadoPagoPlatformProvider.getInvoice(inv.externalId);
 
-      if (coraCheck.status === 'PAID') {
+      if (mpCheck.status === 'PAID') {
         const nextPeriodEnd = new Date(now);
         nextPeriodEnd.setDate(nextPeriodEnd.getDate() + 30);
 
@@ -358,7 +358,7 @@ export async function confirmInvoicePayment(invoiceId: string, sellerId: string)
           })
           .where(eq(invoices.id, inv.id));
 
-        // Activate Subscription
+        // Activate Subscription for 1 Month
         if (inv.subscriptionId) {
           await db
             .update(subscriptions)
@@ -377,21 +377,21 @@ export async function confirmInvoicePayment(invoiceId: string, sellerId: string)
           paidAt: now.toISOString(),
           nextPeriodEnd: nextPeriodEnd.toISOString(),
         };
-      } else if (coraCheck.status === 'CANCELLED' || coraCheck.status === 'EXPIRED') {
+      } else if (mpCheck.status === 'CANCELLED' || mpCheck.status === 'EXPIRED') {
         await db
           .update(invoices)
           .set({ status: 'EXPIRED', updatedAt: now })
           .where(eq(invoices.id, inv.id));
-        throw new Error('Esta cobrança foi cancelada ou expirou no banco Cora. Por favor, gere um novo PIX.');
+        throw new Error('Esta cobrança foi cancelada ou expirou no Mercado Pago. Por favor, gere um novo PIX.');
       }
     } catch (err: any) {
       if (err.message && err.message.includes('expirou')) {
         throw err;
       }
-      console.error('Error verifying invoice with Cora API:', err);
-      throw new Error('O pagamento ainda não foi identificado no Banco Cora. Se você já pagou, aguarde alguns segundos e tente novamente.');
+      console.error('Error verifying invoice with Mercado Pago API:', err);
+      throw new Error('O pagamento ainda não foi identificado no Mercado Pago. Se você já pagou, aguarde alguns segundos e tente novamente.');
     }
   }
 
-  throw new Error('O pagamento ainda não foi identificado no Banco Cora. Por favor, aguarde alguns instantes.');
+  throw new Error('O pagamento ainda não foi identificado no Mercado Pago. Por favor, aguarde alguns instantes.');
 }

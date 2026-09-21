@@ -16,9 +16,10 @@ import {
   RefreshCw,
   X,
   Key,
-  Upload,
   Trash2,
-  Check
+  Check,
+  ExternalLink,
+  DollarSign
 } from "lucide-react";
 
 interface PlanItem {
@@ -31,19 +32,13 @@ interface PlanItem {
   active: boolean;
 }
 
-interface CoraCredentials {
-  clientIdMasked: string;
-  hasCert: boolean;
-  hasKey: boolean;
-  environment: string;
-  lastVerifiedAt: string | null;
+interface MercadoPagoStatus {
   isConnected: boolean;
-  lastInvoice?: {
-    id: string;
-    status: string;
-    amount: number;
-    createdAt: string | null;
-  } | null;
+  status: string;
+  mpUserId: string | null;
+  mpUserEmail: string | null;
+  connectedAt: string | null;
+  updatedAt: string | null;
 }
 
 interface AdminSettingsClientProps {
@@ -56,14 +51,14 @@ interface AdminSettingsClientProps {
     name: string;
     slug: string;
   } | null;
-  initialCora: CoraCredentials;
+  initialMercadoPago: MercadoPagoStatus;
 }
 
 export default function AdminSettingsClient({
   user,
   initialPlans,
   defaultTheme,
-  initialCora
+  initialMercadoPago
 }: AdminSettingsClientProps) {
   // Plan Modal State
   const [plans, setPlans] = useState<PlanItem[]>(initialPlans);
@@ -78,18 +73,27 @@ export default function AdminSettingsClient({
   });
   const [savingPlan, setSavingPlan] = useState(false);
 
-  // Cora Modal State
-  const [cora, setCora] = useState<CoraCredentials>(initialCora);
-  const [isCoraModalOpen, setIsCoraModalOpen] = useState(false);
-  const [coraForm, setCoraForm] = useState({
-    clientId: "",
-    certPem: "",
-    keyPem: "",
-    environment: initialCora.environment || "production"
+  // Mercado Pago State
+  const [mp, setMp] = useState<MercadoPagoStatus>(initialMercadoPago);
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const [tokenForm, setTokenForm] = useState({
+    accessToken: "",
+    email: ""
   });
-  const [savingCora, setSavingCora] = useState(false);
-  const [disconnectingCora, setDisconnectingCora] = useState(false);
-  const [coraMessage, setCoraMessage] = useState<string | null>(null);
+  const [savingToken, setSavingToken] = useState(false);
+  const [disconnectingMp, setDisconnectingMp] = useState(false);
+  const [testingMp, setTestingMp] = useState(false);
+  const [mpMessage, setMpMessage] = useState<string | null>(null);
+
+  const activePlan = plans.find(p => p.slug === "webgran") || plans[0] || {
+    id: "webgran",
+    name: "WebGran",
+    slug: "webgran",
+    price: "89.90",
+    description: "Plano Único WebGran SaaS",
+    billingInterval: "month",
+    active: true
+  };
 
   // Open Edit Plan Modal
   const openEditPlan = (plan: PlanItem) => {
@@ -132,13 +136,12 @@ export default function AdminSettingsClient({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Falha ao salvar plano");
 
-      // Reload plans
       const listRes = await fetch("/api/admin/subscription-plans");
       const listJson = await listRes.json();
       if (listJson.plans) setPlans(listJson.plans);
 
       setIsPlanModalOpen(false);
-      alert("✅ Plano salvo com sucesso! O valor será refletido no painel dos vendedores.");
+      alert("✅ Plano salvo com sucesso! O valor de R$ 89,90 será refletido no painel dos vendedores.");
     } catch (err: any) {
       alert(`Erro: ${err.message}`);
     } finally {
@@ -146,115 +149,152 @@ export default function AdminSettingsClient({
     }
   };
 
-  // Handle File Pickers for .pem and .key
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "certPem" | "keyPem") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const content = evt.target?.result as string;
-      if (content) {
-        setCoraForm((prev) => ({ ...prev, [field]: content }));
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  // Save & Test Cora Credentials
-  const handleSaveCora = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingCora(true);
-    setCoraMessage(null);
-
+  // OAuth Connect Trigger
+  const handleOAuthConnect = async () => {
     try {
-      const res = await fetch("/api/admin/cora-credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(coraForm)
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha ao autenticar/salvar credenciais Cora.");
-
-      setCoraMessage(json.message);
-      const maskedId = coraForm.clientId.length > 4 
-        ? `••••${coraForm.clientId.slice(-4)}` 
-        : "••••";
-
-      setCora({
-        clientIdMasked: maskedId,
-        hasCert: true,
-        hasKey: true,
-        environment: coraForm.environment,
-        lastVerifiedAt: json.lastVerifiedAt || new Date().toISOString(),
-        isConnected: true
-      });
-
-      setTimeout(() => {
-        setIsCoraModalOpen(false);
-        setCoraMessage(null);
-      }, 2000);
+      const res = await fetch("/api/admin/payments/mercadopago/connect");
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Erro ao iniciar conexão OAuth");
+      }
     } catch (err: any) {
-      setCoraMessage(`❌ ${err.message}`);
-    } finally {
-      setSavingCora(false);
+      alert(`Erro de conexão: ${err.message}`);
     }
   };
 
-  // Disconnect Cora
-  const handleDisconnectCora = async () => {
-    if (!confirm("Tem certeza que deseja desconectar a conta Cora Bank do WebGran?")) return;
+  // Save Access Token Direct
+  const handleSaveTokenDirect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingToken(true);
+    setMpMessage(null);
 
-    setDisconnectingCora(true);
     try {
-      const res = await fetch("/api/admin/cora-credentials", {
-        method: "DELETE"
+      const res = await fetch("/api/admin/payments/mercadopago/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tokenForm)
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha ao desconectar Cora");
+      if (!res.ok) throw new Error(json.error || "Falha ao conectar token");
 
-      setCora({
-        clientIdMasked: "",
-        hasCert: false,
-        hasKey: false,
-        environment: "production",
-        lastVerifiedAt: null,
-        isConnected: false
+      setMp({
+        isConnected: true,
+        status: "CONNECTED",
+        mpUserId: json.mpUserId || "CONECTADO",
+        mpUserEmail: tokenForm.email || "Proprietário WebGran",
+        connectedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
 
-      alert("✅ Conta Cora desconectada com sucesso.");
+      setIsTokenModalOpen(false);
+      setTokenForm({ accessToken: "", email: "" });
+      alert("✅ Mercado Pago conectado com sucesso para recebimento das assinaturas!");
+    } catch (err: any) {
+      setMpMessage(err.message);
+    } finally {
+      setSavingToken(false);
+    }
+  };
+
+  // Test Connection
+  const handleTestConnection = async () => {
+    setTestingMp(true);
+    try {
+      const res = await fetch("/api/admin/payments/mercadopago/status");
+      const data = await res.json();
+      if (data.isConnected) {
+        setMp({
+          isConnected: true,
+          status: "CONNECTED",
+          mpUserId: data.mpUserId,
+          mpUserEmail: data.mpUserEmail,
+          connectedAt: data.connectedAt,
+          updatedAt: data.updatedAt
+        });
+        alert("✅ Conexão Mercado Pago ativa e operacional!");
+      } else {
+        setMp({
+          isConnected: false,
+          status: "DISCONNECTED",
+          mpUserId: null,
+          mpUserEmail: null,
+          connectedAt: null,
+          updatedAt: null
+        });
+        alert("❌ Mercado Pago desconectado.");
+      }
+    } catch (err: any) {
+      alert(`Erro ao testar conexão: ${err.message}`);
+    } finally {
+      setTestingMp(false);
+    }
+  };
+
+  // Disconnect Mercado Pago
+  const handleDisconnectMp = async () => {
+    if (!confirm("Tem certeza de que deseja desconectar sua conta Mercado Pago? As cobranças de assinatura ficarão temporariamente indisponíveis.")) {
+      return;
+    }
+
+    setDisconnectingMp(true);
+    try {
+      const res = await fetch("/api/admin/payments/mercadopago/disconnect", { method: "POST" });
+      if (!res.ok) throw new Error("Falha ao desconectar");
+
+      setMp({
+        isConnected: false,
+        status: "DISCONNECTED",
+        mpUserId: null,
+        mpUserEmail: null,
+        connectedAt: null,
+        updatedAt: null
+      });
+
+      alert("Mercado Pago desconectado.");
     } catch (err: any) {
       alert(`Erro: ${err.message}`);
     } finally {
-      setDisconnectingCora(false);
+      setDisconnectingMp(false);
     }
   };
 
-  const activePlan = plans[0] || { name: "WebGran", price: "89.90", description: "Plano Único WebGran SaaS" };
-
   return (
-    <div className="space-y-8 pb-10">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
+    <div className="space-y-8 fade-in">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#27272A] pb-6">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Configurações Globais</h1>
-            <span className="px-2.5 py-1 text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-full">
-              SaaS Admin
-            </span>
-          </div>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+            <Lock className="w-7 h-7 text-red-500" />
+            Configurações da Plataforma
+          </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Gestão dinâmica de planos de assinatura, gateway Cora mTLS e tema do sistema
+            Gerencie planos de assinatura SaaS, recebimento do proprietário no Mercado Pago e segurança global.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/subscriptions"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 text-xs font-bold transition-all shadow-md"
+          >
+            <DollarSign className="w-4 h-4" />
+            Ver Dashboard de Assinaturas
+          </Link>
+
+          <div className="px-3.5 py-2 rounded-xl bg-[#141416] border border-[#27272A] flex items-center gap-2 text-xs text-gray-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Perfil: <strong className="text-white">SUPER_ADMIN</strong></span>
+          </div>
         </div>
       </div>
 
       {/* SETTINGS CARDS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        {/* CARD 1: ASSINATURA WEBGRAN SAAS (EDITÁVEL) */}
+        {/* CARD 1: ASSINATURA WEBGRAN SAAS */}
         <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -264,7 +304,7 @@ export default function AdminSettingsClient({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">Plano de Assinatura SaaS</h3>
-                  <p className="text-xs text-gray-400">Refletido dinamicamente no painel dos lojistas</p>
+                  <p className="text-xs text-gray-400">Cobrança única de R$ 89,90 / mês para os vendedores</p>
                 </div>
               </div>
 
@@ -289,29 +329,16 @@ export default function AdminSettingsClient({
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                <span className="text-xs text-gray-400 font-medium">Intervalo</span>
-                <span className="text-xs font-semibold text-gray-300">Mensal (PIX Cora)</span>
+                <span className="text-xs text-gray-400 font-medium">Forma de Pagamento</span>
+                <span className="text-xs font-semibold text-gray-300">PIX via Mercado Pago</span>
               </div>
-              {activePlan.description && (
-                <div className="border-t border-[#27272A] pt-2 text-[11px] text-gray-400">
-                  {activePlan.description}
-                </div>
-              )}
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2">
             <span className="text-[11px] text-gray-400 italic">
-              ⚡ Alterações refletem instantaneamente no `/seller/settings`.
+              ⚡ O valor de R$ 89,90 é cobrado mensalmente via PIX.
             </span>
-
-            <button
-              onClick={openAddPlan}
-              className="flex items-center gap-1 text-xs font-bold text-gray-300 hover:text-white transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Adicionar Novo Plano
-            </button>
           </div>
         </div>
 
@@ -349,7 +376,7 @@ export default function AdminSettingsClient({
           </Link>
         </div>
 
-        {/* CARD 3: INTEGRAÇÃO BANCO CORA (CONECTAR CONTA REAL) */}
+        {/* CARD 3: MERCADO PAGO - ASSINATURAS WEBGRAN (CONTA DO PROPRIETÁRIO) */}
         <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -358,94 +385,92 @@ export default function AdminSettingsClient({
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Integração Direta Banco Cora</h3>
-                  <p className="text-xs text-gray-400">Autenticação mTLS via Certificado & Chave RSA</p>
+                  <h3 className="text-base font-bold text-white">Mercado Pago</h3>
+                  <p className="text-xs text-gray-400">Receba as assinaturas WebGran na sua conta Mercado Pago</p>
                 </div>
               </div>
 
-              {cora.isConnected ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Cora Conectada
+              {mp.isConnected ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Conectado
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <XCircle className="w-3 h-3" />
-                  Pendente
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Não conectado
                 </span>
               )}
             </div>
 
             <div className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">Client ID Cora</span>
-                <span className="text-xs font-mono text-white font-bold">
-                  {cora.clientIdMasked || "Não configurado"}
+                <span className="text-xs text-gray-400">Status</span>
+                <span className={`text-xs font-bold ${mp.isConnected ? "text-emerald-400" : "text-amber-400"}`}>
+                  {mp.isConnected ? "Ativo" : "Não conectado"}
                 </span>
               </div>
-              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                <span className="text-xs text-gray-400">Certificado Digital (.pem)</span>
-                <span className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                  {cora.hasCert ? (
-                    <span className="text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Configurado</span>
-                  ) : (
-                    <span className="text-amber-400">Ausente</span>
-                  )}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                <span className="text-xs text-gray-400">Chave Privada (.key)</span>
-                <span className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                  {cora.hasKey ? (
-                    <span className="text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Configurada</span>
-                  ) : (
-                    <span className="text-amber-400">Ausente</span>
-                  )}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                <span className="text-xs text-gray-400">Ambiente</span>
-                <span className="text-xs font-bold text-sky-400 uppercase">
-                  {cora.environment === "stage" ? "Staging / Testes" : "Produção (Conta Real)"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                <span className="text-xs text-gray-400">Última Validação</span>
-                <span className="text-xs font-mono text-gray-300">
-                  {cora.lastVerifiedAt 
-                    ? new Date(cora.lastVerifiedAt).toLocaleString("pt-BR")
-                    : "Nunca"}
-                </span>
-              </div>
-              {cora.lastInvoice && (
-                <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
-                  <span className="text-xs text-gray-400">Última Invoice Cora</span>
-                  <span className="text-xs font-mono text-emerald-400 font-bold">
-                    {cora.lastInvoice.id.slice(0, 14)}... ({cora.lastInvoice.status})
-                  </span>
-                </div>
+
+              {mp.isConnected && (
+                <>
+                  <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                    <span className="text-xs text-gray-400">Conta Mercado Pago</span>
+                    <span className="text-xs font-mono text-white font-bold truncate max-w-[200px]">
+                      {mp.mpUserEmail || mp.mpUserId || "Proprietário WebGran"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                    <span className="text-xs text-gray-400">Conectado em</span>
+                    <span className="text-xs font-mono text-gray-300">
+                      {mp.connectedAt 
+                        ? new Date(mp.connectedAt).toLocaleDateString("pt-BR")
+                        : "Ativo"}
+                    </span>
+                  </div>
+                </>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
-            <button
-              onClick={() => setIsCoraModalOpen(true)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-900/30 transition-all"
-            >
-              <Key className="w-3.5 h-3.5" />
-              {cora.isConnected ? "Testar / Alterar Conexão" : "Conectar Conta Real Cora"}
-            </button>
+          <div className="space-y-2 pt-2">
+            {!mp.isConnected ? (
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleOAuthConnect}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-md shadow-sky-900/30 transition-all cursor-pointer"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Conectar Mercado Pago (OAuth)
+                </button>
 
-            {cora.isConnected && (
-              <button
-                onClick={handleDisconnectCora}
-                disabled={disconnectingCora}
-                className="px-3 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-bold transition-all"
-                title="Desconectar Conta Cora"
-              >
-                {disconnectingCora ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-              </button>
+                <button
+                  onClick={() => setIsTokenModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-gray-300 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  <Key className="w-3.5 h-3.5 text-sky-400" />
+                  Inserir Access Token Direto
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleTestConnection}
+                  disabled={testingMp}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-bold transition-all cursor-pointer"
+                >
+                  {testingMp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Testar Conexão
+                </button>
+
+                <button
+                  onClick={handleDisconnectMp}
+                  disabled={disconnectingMp}
+                  className="px-3.5 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer"
+                  title="Desconectar Mercado Pago"
+                >
+                  {disconnectingMp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -487,7 +512,7 @@ export default function AdminSettingsClient({
 
       </div>
 
-      {/* MODAL 1: EDITAR / ADICIONAR PLANO */}
+      {/* MODAL 1: EDITAR PLANO DE ASSINATURA */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#141416] border border-[#27272A] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative animate-in fade-in zoom-in-95">
@@ -502,55 +527,53 @@ export default function AdminSettingsClient({
 
             <form onSubmit={handleSavePlan} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Nome do Plano</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Nome do Plano</label>
                 <input
                   type="text"
                   required
                   value={planForm.name}
                   onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                  placeholder="Ex: WebGran"
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Preço Mensal (R$)</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Preço Mensal (R$)</label>
                 <input
                   type="number"
                   step="0.01"
                   required
                   value={planForm.price}
                   onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-                  placeholder="89.90"
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Descrição</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Descrição</label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={planForm.description}
                   onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
-                  placeholder="Descrição do plano SaaS..."
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              <div className="pt-2 flex items-center gap-3">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#27272A]">
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(false)}
-                  className="flex-1 py-2.5 px-4 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-gray-300 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white bg-[#18181B]"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingPlan}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-900/30 flex items-center justify-center gap-2"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-2"
                 >
-                  {savingPlan ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Salvar Plano"}
+                  {savingPlan ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Salvar Plano
                 </button>
               </div>
             </form>
@@ -558,150 +581,79 @@ export default function AdminSettingsClient({
         </div>
       )}
 
-      {/* MODAL 2: CONECTAR CONTA REAL CORA (mTLS INTEGRAÇÃO DIRETA) */}
-      {isCoraModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#141416] border border-[#27272A] rounded-2xl w-full max-w-xl p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 my-8">
+      {/* MODAL 2: CONFIGURAR ACCESS TOKEN MERCADO PAGO DIRETO */}
+      {isTokenModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#141416] border border-[#27272A] rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-[#27272A] pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">⚡ Conectar Conta Real Cora Bank</h3>
-                  <p className="text-xs text-gray-400">Integração Direta via mTLS (Certificado + Chave RSA)</p>
-                </div>
-              </div>
-              <button onClick={() => setIsCoraModalOpen(false)} className="text-gray-400 hover:text-white">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Key className="w-5 h-5 text-sky-400" />
+                Configurar Mercado Pago (Proprietário)
+              </h3>
+              <button onClick={() => setIsTokenModalOpen(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-sky-500/5 border border-sky-500/20 text-sky-300 text-xs leading-relaxed space-y-1">
-              <p className="font-bold flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-sky-400" />
-                Sem Client Secret • Autenticação de Alto Nível mTLS
-              </p>
-              <p className="text-[11px] text-gray-400">
-                A Integração Direta Cora utiliza o Client ID + Certificado Digital (`.pem`) e Chave Privada (`.key`). 
-                Os arquivos e chaves são armazenados com segurança no banco de dados e nunca são expostos ao navegador.
-              </p>
-            </div>
+            {mpMessage && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold">
+                ⚠️ {mpMessage}
+              </div>
+            )}
 
-            <form onSubmit={handleSaveCora} className="space-y-4">
-              {/* CLIENT ID */}
+            <form onSubmit={handleSaveTokenDirect} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Cora Client ID</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  Access Token da sua Conta Mercado Pago
+                </label>
                 <input
-                  type="text"
+                  type="password"
                   required
-                  value={coraForm.clientId}
-                  onChange={(e) => setCoraForm({ ...coraForm, clientId: e.target.value })}
-                  placeholder="Ex: client-id-123456789..."
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 font-mono focus:outline-none focus:border-sky-500"
+                  placeholder="APP_USR-..."
+                  value={tokenForm.accessToken}
+                  onChange={(e) => setTokenForm({ ...tokenForm, accessToken: e.target.value })}
+                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Obtenha em Mercado Pago Developers -&gt; Suas Aplicações -&gt; Credenciais de Produção.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  E-mail da Conta Recebedora (Opcional)
+                </label>
+                <input
+                  type="email"
+                  placeholder="proprietario@webgran.online"
+                  value={tokenForm.email}
+                  onChange={(e) => setTokenForm({ ...tokenForm, email: e.target.value })}
+                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
 
-              {/* CERTIFICADO PEM */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-gray-300">Certificado Digital (.pem)</label>
-                  <label className="cursor-pointer text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1">
-                    <Upload className="w-3 h-3" />
-                    Carregar arquivo .pem
-                    <input
-                      type="file"
-                      accept=".pem,.crt"
-                      onChange={(e) => handleFileUpload(e, "certPem")}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <textarea
-                  rows={4}
-                  required
-                  value={coraForm.certPem}
-                  onChange={(e) => setCoraForm({ ...coraForm, certPem: e.target.value })}
-                  placeholder="-----BEGIN CERTIFICATE-----&#10;Cole o conteúdo do seu certificado certificado.pem aqui ou carregue o arquivo acima&#10;-----END CERTIFICATE-----"
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-[11px] text-white placeholder-gray-600 font-mono focus:outline-none focus:border-sky-500 leading-relaxed"
-                />
-              </div>
-
-              {/* CHAVE PRIVADA KEY */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-gray-300">Chave Privada RSA (.key)</label>
-                  <label className="cursor-pointer text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1">
-                    <Upload className="w-3 h-3" />
-                    Carregar arquivo .key
-                    <input
-                      type="file"
-                      accept=".key,.pem"
-                      onChange={(e) => handleFileUpload(e, "keyPem")}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <textarea
-                  rows={4}
-                  required
-                  value={coraForm.keyPem}
-                  onChange={(e) => setCoraForm({ ...coraForm, keyPem: e.target.value })}
-                  placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;Cole o conteúdo da sua chave privada chave.key aqui ou carregue o arquivo acima&#10;-----END RSA PRIVATE KEY-----"
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-[11px] text-white placeholder-gray-600 font-mono focus:outline-none focus:border-sky-500 leading-relaxed"
-                />
-              </div>
-
-              {/* AMBIENTE */}
-              <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">Ambiente de Operação</label>
-                <select
-                  value={coraForm.environment}
-                  onChange={(e) => setCoraForm({ ...coraForm, environment: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
-                >
-                  <option value="production">Produção (Conta Real - https://matls-clients.api.cora.com.br)</option>
-                  <option value="stage">Staging / Sandbox (https://matls-clients.stage.cora.com.br)</option>
-                </select>
-              </div>
-
-              {coraMessage && (
-                <div className={`p-3.5 rounded-xl border text-xs font-semibold leading-relaxed ${
-                  coraMessage.includes("🟢")
-                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                    : "bg-red-500/10 border-red-500/20 text-red-300"
-                }`}>
-                  {coraMessage}
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center gap-3">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#27272A]">
                 <button
                   type="button"
-                  onClick={() => setIsCoraModalOpen(false)}
-                  className="flex-1 py-2.5 px-4 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-gray-300 text-xs font-bold"
+                  onClick={() => setIsTokenModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white bg-[#18181B]"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={savingCora}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-900/30 flex items-center justify-center gap-2"
+                  disabled={savingToken}
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 flex items-center gap-2"
                 >
-                  {savingCora ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Testando mTLS com Cora...</span>
-                    </>
-                  ) : (
-                    "Salvar e Testar Conexão"
-                  )}
+                  {savingToken ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Validar e Salvar Conexão
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }

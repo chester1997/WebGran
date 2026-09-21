@@ -430,6 +430,20 @@ export const systemSettings = pgTable('system_settings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const platformPaymentConnections = pgTable('platform_payment_connections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  provider: text('provider').notNull().default('MERCADO_PAGO'), // 'MERCADO_PAGO'
+  status: text('status').notNull().default('DISCONNECTED'), // CONNECTED, DISCONNECTED, ERROR
+  mpUserId: text('mp_user_id'),
+  mpUserEmail: text('mp_user_email'),
+  accessTokenEncrypted: text('access_token_encrypted'),
+  refreshTokenEncrypted: text('refresh_token_encrypted'),
+  tokenExpiresAt: timestamp('token_expires_at'),
+  connectedAt: timestamp('connected_at'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const sellerPaymentConnectionsRelations = relations(sellerPaymentConnections, ({ one }) => ({
   seller: one(users, {
     fields: [sellerPaymentConnections.sellerId],

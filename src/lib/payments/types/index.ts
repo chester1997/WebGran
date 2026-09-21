@@ -83,7 +83,7 @@ export interface CreateInvoiceParams {
 
 export interface InvoiceResponse {
   id: string;
-  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED' | 'FAILED';
   qrCode?: string;
   qrCodeText?: string;
   url?: string;

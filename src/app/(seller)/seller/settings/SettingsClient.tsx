@@ -243,7 +243,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
 
       if (data.success && data.invoice) {
         setActiveInvoice(data.invoice);
-        showToast(forceNew ? "Novo PIX gerado com sucesso via Cora!" : "Cobrança PIX gerada com sucesso via Cora.");
+        showToast(forceNew ? "Novo PIX gerado com sucesso via Mercado Pago!" : "Cobrança PIX gerada com sucesso via Mercado Pago.");
       } else {
         setErrorMessage(data.error || "Erro ao gerar PIX para assinatura.");
       }
@@ -281,7 +281,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
         setActiveInvoice(null);
         router.refresh();
       } else {
-        setErrorMessage(data.error || "Pagamento ainda não identificado no sistema Cora.");
+        setErrorMessage(data.error || "Pagamento ainda não identificado no Mercado Pago.");
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Erro de conexão ao consultar status.");
@@ -600,12 +600,13 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                 </div>
 
                 {/* Payment Method & Action Box */}
+                {/* Payment Method & Action Box */}
                 <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
                   <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Forma de Pagamento</span>
                   <div>
                     <div className="flex items-center gap-2 text-white font-bold text-base">
                       <QrCode className="w-5 h-5 text-red-500 shrink-0" />
-                      <span>PIX via Cora</span>
+                      <span>PIX via Mercado Pago</span>
                     </div>
                     <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
                   </div>
@@ -643,8 +644,8 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                       <Clock className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Pagamento Expirado</h4>
-                      <p className="text-xs text-zinc-400">Este PIX não está mais disponível.</p>
+                      <h4 className="text-sm font-bold text-white">Este PIX expirou.</h4>
+                      <p className="text-xs text-zinc-400">Gere um novo PIX para continuar.</p>
                     </div>
                   </div>
 
@@ -662,7 +663,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                     ) : (
                       <>
                         <RefreshCw className="w-4 h-4" />
-                        <span>GERAR NOVO PIX</span>
+                        <span>Gerar novo PIX</span>
                       </>
                     )}
                   </Button>
@@ -676,7 +677,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                         <QrCode className="w-5 h-5 text-red-500" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-white">Pagamento PIX da Assinatura</h4>
+                        <h4 className="text-sm font-bold text-white">Pagamento da assinatura</h4>
                         <p className="text-xs text-zinc-400">Valor exato: <strong className="text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</strong></p>
                       </div>
                     </div>
@@ -688,7 +689,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                         </span>
                       )}
                       <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
-                        Aguardando Pagamento
+                        Aguardando pagamento
                       </span>
                     </div>
                   </div>
@@ -697,7 +698,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                     {/* QR Code Display */}
                     <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner border border-white/10">
                       {activeInvoice.qrCode ? (
-                        <img src={activeInvoice.qrCode} alt="QR Code PIX Cora" className="w-48 h-48 object-contain" />
+                        <img src={activeInvoice.qrCode} alt="QR Code PIX Mercado Pago" className="w-48 h-48 object-contain" />
                       ) : (
                         <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
                           Gerando QR Code...
@@ -710,7 +711,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                          PIX Copia e Cola (EMV Cora)
+                          Pix Copia e Cola
                         </label>
                         <div className="flex gap-2">
                           <input
@@ -740,7 +741,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                           {verifyingPayment ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              <span>Consultando Banco Cora...</span>
+                              <span>Consultando Mercado Pago...</span>
                             </>
                           ) : (
                             <>
@@ -750,7 +751,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                           )}
                         </Button>
                         <p className="text-[10px] text-zinc-500 text-center">
-                          O status do pagamento é verificado em tempo real diretamente na API da Cora.
+                          O status do pagamento é verificado em tempo real diretamente no Mercado Pago.
                         </p>
                       </div>
                     </div>
