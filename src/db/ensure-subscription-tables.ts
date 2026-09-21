@@ -83,7 +83,14 @@ async function main() {
     ON CONFLICT (slug) DO NOTHING;
   `;
 
-  console.log('✓ Subscription tables, system_settings, and default WebGran plan ensured in DB!');
+  // 6. Expire all legacy dummy/pending invoices created before 10-minute expiration refactor
+  await sql`
+    UPDATE invoices 
+    SET status = 'EXPIRED', updated_at = NOW() 
+    WHERE status = 'PENDING' AND (expires_at IS NULL OR external_id LIKE 'cora_inv_%' OR expires_at <= NOW());
+  `;
+
+  console.log('✓ Subscription tables, system_settings, legacy cleanup, and default WebGran plan ensured in DB!');
 }
 
 main().catch(console.error);

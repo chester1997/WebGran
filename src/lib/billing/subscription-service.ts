@@ -125,13 +125,14 @@ export async function getSellerSubscription(sellerId: string) {
   let latestPending = invoiceHistory.find((i) => i.status === 'PENDING');
 
   if (latestPending) {
-    const isExpired = latestPending.expiresAt && new Date(latestPending.expiresAt) <= now;
+    const isOldDummy = !latestPending.externalId || latestPending.externalId.startsWith('cora_inv_');
+    const isExpired = !latestPending.expiresAt || new Date(latestPending.expiresAt) <= now || isOldDummy;
     if (isExpired) {
       const pendingId = latestPending.id;
       const externalId = latestPending.externalId;
       try {
         let isPaidOnCora = false;
-        if (externalId) {
+        if (externalId && !isOldDummy) {
           try {
             const coraCheck = await coraProvider.getInvoice(externalId);
             if (coraCheck.status === 'PAID') {

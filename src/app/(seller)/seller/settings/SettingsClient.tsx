@@ -781,14 +781,18 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
-                  {subscriptionData.invoiceHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-zinc-500">
-                        Nenhum histórico de mensalidade registrado ainda.
-                      </td>
-                    </tr>
-                  ) : (
-                    subscriptionData.invoiceHistory.map((inv) => (
+                  {(() => {
+                    const paidInvoices = subscriptionData.invoiceHistory.filter((inv) => inv.status === "PAID" || inv.status === "paid");
+                    if (paidInvoices.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-zinc-500">
+                            Nenhum pagamento confirmado no histórico ainda.
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return paidInvoices.map((inv) => (
                       <tr key={inv.id} className="hover:bg-white/[0.02] transition-colors">
                         <td className="py-3.5 px-4 text-zinc-300">
                           {formatDate(inv.createdAt)}
@@ -803,29 +807,17 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          {inv.status === "PAID" && (
-                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold">
-                              Pago
-                            </span>
-                          )}
-                          {inv.status === "PENDING" && (
-                            <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-bold">
-                              Pendente
-                            </span>
-                          )}
-                          {inv.status === "EXPIRED" && (
-                            <span className="px-2.5 py-1 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-[11px] font-bold">
-                              Expirado
-                            </span>
-                          )}
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold">
+                            Pago
+                          </span>
                         </td>
 
                         <td className="py-3.5 px-4 text-right font-mono text-zinc-500 text-[11px]">
                           {inv.externalId || inv.id.slice(0, 10)}
                         </td>
                       </tr>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
