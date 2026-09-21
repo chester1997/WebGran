@@ -144,7 +144,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 <img 
                   src="/logo-expanded.png" 
                   alt="WebGran Logo" 
-                  className="h-10 w-auto max-w-[175px] object-contain drop-shadow-md" 
+                  className="h-12 w-auto max-w-[195px] object-contain drop-shadow-md" 
                 />
               </Link>
               <button 
