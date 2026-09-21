@@ -125,7 +125,45 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         />
       )}
 
-      <div className="relative z-20 mt-4 space-y-4">
+      <div className="relative z-20 mt-3 space-y-5">
+        {/* Categories Cards (MOVED ABOVE TOP 15 DA SEMANA) */}
+        {store.categories && store.categories.length > 0 && (
+          <section className="w-full overflow-hidden pt-1 pb-2">
+            <div 
+              className="flex overflow-x-auto scrollbar-hide w-full"
+              style={{
+                paddingInlineStart: "var(--miniapp-content-padding-x)",
+                paddingInlineEnd: "var(--miniapp-content-padding-x)",
+                gap: "0.75rem",
+              }}
+            >
+              {store.categories.map(cat => (
+                <Link 
+                  key={cat.id} 
+                  href={`/miniapp/${storeSlug}/category/${cat.slug}`} 
+                  className="shrink-0 relative min-w-[130px] sm:min-w-[150px] h-[54px] rounded-2xl overflow-hidden border border-red-500/30 bg-gradient-to-r from-[#B91C1C] via-[#991B1B] to-[#450A0A] shadow-lg shadow-red-950/40 flex items-center justify-center px-4 transition-transform active:scale-95 group"
+                >
+                  {/* Optional Background Image with Red Gradient Overlay */}
+                  {cat.imageUrl && (
+                    <img 
+                      src={cat.imageUrl} 
+                      alt={cat.name} 
+                      className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity" 
+                    />
+                  )}
+                  {/* Subtle Red Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-950/80 via-red-900/60 to-black/70 pointer-events-none" />
+                  
+                  {/* Category Title Centered */}
+                  <span className="relative z-10 text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate">
+                    {cat.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Editorial Ranking Carousel (Top 15) */}
         {rankingProducts.length > 0 && (
           <TopTenCarousel 
@@ -136,26 +174,6 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
             iconName={rankingCarousel?.iconName || "Trophy"}
             iconColor={rankingCarousel?.iconColor || "#FFD700"}
           />
-        )}
-        
-        {/* Categories Pills */}
-        {store.categories && store.categories.length > 0 && (
-          <section className="py-2 w-full overflow-hidden">
-            <div 
-              className="flex overflow-x-auto scrollbar-hide w-full"
-              style={{
-                paddingInlineStart: "var(--miniapp-content-padding-x)",
-                paddingInlineEnd: "var(--miniapp-content-padding-x)",
-                gap: "0.5rem",
-              }}
-            >
-              {store.categories.map(cat => (
-                <Link key={cat.id} href={`/miniapp/${storeSlug}/category/${cat.slug}`} className="shrink-0 px-4 py-1.5 rounded-full border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium hover:bg-white hover:text-black transition-colors">
-                  {cat.name}
-                </Link>
-              ))}
-            </div>
-          </section>
         )}
 
         {/* Custom Standard Carousels configured by seller */}
