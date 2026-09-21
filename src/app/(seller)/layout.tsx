@@ -77,6 +77,15 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     role?: string;
   } | null>(null);
 
+  // Subscription & Trial Info State
+  const [subInfo, setSubInfo] = useState<{
+    isSubscriptionActive: boolean;
+    isTrialActive: boolean;
+    trialDaysRemaining: number;
+    status: string;
+    isExempt: boolean;
+  } | null>(null);
+
   useEffect(() => {
     const loadProfile = () => {
       fetch(`/api/seller/profile?t=${Date.now()}`, { cache: "no-store" })
@@ -89,7 +98,25 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         .catch(() => {});
     };
 
+    const loadSubscription = () => {
+      fetch(`/api/billing/subscription?t=${Date.now()}`, { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data) {
+            setSubInfo({
+              isSubscriptionActive: data.data.isSubscriptionActive,
+              isTrialActive: data.data.isTrialActive,
+              trialDaysRemaining: data.data.trialDaysRemaining,
+              status: data.data.subscription.status,
+              isExempt: data.data.isExempt,
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
     loadProfile();
+    loadSubscription();
 
     window.addEventListener("seller-profile-updated", loadProfile);
     return () => {
@@ -271,6 +298,19 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               );
             })}
 
+            {/* Active Trial Badge */}
+            {!collapsed && subInfo?.isTrialActive && !subInfo?.isExempt && (
+              <div className="mx-1.5 my-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                <div className="flex items-center gap-1.5 font-bold mb-0.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                  <span>Teste Grátis Ativo</span>
+                </div>
+                <p className="text-[11px] text-amber-200/80">
+                  Restam <strong className="text-white font-bold">{subInfo.trialDaysRemaining} dia(s)</strong> de uso livre.
+                </p>
+              </div>
+            )}
+
             {/* Back to Admin Button for Platform Owners */}
             {(sellerProfile?.role === "admin" || sellerProfile?.role === "super_admin") && (
               <div className="pt-3 border-t border-white/5 mt-3">
@@ -323,7 +363,50 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#070709]">
           <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-600/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
-            {children}
+            
+            {subInfo && subInfo.isSubscriptionActive === false && !pathname.startsWith("/seller/settings") ? (
+              /* BLOCKING PAYWALL FOR EXPIRED 3-DAY TRIAL */
+              <div className="min-h-[500px] flex items-center justify-center p-6 fade-in">
+                <div className="max-w-lg w-full bg-[#121215] border border-red-500/30 rounded-3xl p-8 shadow-2xl space-y-6 text-center relative overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-60 h-60 bg-red-600/20 rounded-full blur-[80px] pointer-events-none" />
+                  
+                  <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto text-red-500 shadow-lg shadow-red-500/10">
+                    <ShieldAlert className="w-8 h-8" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black text-white tracking-tight">
+                      Seu período de teste de 3 dias expirou!
+                    </h2>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Para continuar utilizando todas as funcionalidades da sua loja e gerenciando seus produtos no Telegram, realize o pagamento da assinatura mensal.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-[#18181C] border border-white/5 space-y-3 text-left">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <span className="text-xs text-zinc-400 font-medium">Plano Único WebGran</span>
+                      <span className="text-sm font-black text-white">R$ 89,90 / mês</span>
+                    </div>
+                    <ul className="text-xs text-zinc-300 space-y-1.5">
+                      <li className="flex items-center gap-2 text-emerald-400">✓ Bot Telegram e Miniapp ativados</li>
+                      <li className="flex items-center gap-2 text-emerald-400">✓ Vendas e PIX direto na sua conta Mercado Pago</li>
+                      <li className="flex items-center gap-2 text-emerald-400">✓ Produtos, clientes e categorias ilimitados</li>
+                    </ul>
+                  </div>
+
+                  <Link
+                    href="/seller/settings?tab=assinatura"
+                    className="w-full py-3.5 px-6 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Pagar Assinatura (R$ 89,90 via PIX)
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>

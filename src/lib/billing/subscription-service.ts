@@ -54,6 +54,9 @@ export async function getSellerSubscription(sellerId: string) {
   if (isExempt) {
     return {
       isExempt: true,
+      isTrialActive: false,
+      isSubscriptionActive: true,
+      trialDaysRemaining: 0,
       subscription: {
         id: "exempt-owner-subscription",
         sellerId,
@@ -88,16 +91,15 @@ export async function getSellerSubscription(sellerId: string) {
 
   if (!sub) {
     const now = new Date();
-    // Default 7-day initial trial/grace period
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 7);
+    // Default 3-day free trial period
+    const periodEnd = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
     const created = await db
       .insert(subscriptions)
       .values({
         sellerId,
         planId: plan.id,
-        status: 'ACTIVE',
+        status: 'TRIAL',
         startedAt: now,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
@@ -112,9 +114,41 @@ export async function getSellerSubscription(sellerId: string) {
 
   const now = new Date();
   let status = sub.status;
-  if (sub.currentPeriodEnd && new Date(sub.currentPeriodEnd) < now && status === 'ACTIVE') {
-    status = 'PAST_DUE';
+  const periodEndMs = new Date(sub.currentPeriodEnd).getTime();
+
+  // Evaluate status against current date
+  if (status === 'TRIAL') {
+    if (periodEndMs <= now.getTime()) {
+      status = 'EXPIRED';
+      try {
+        await db
+          .update(subscriptions)
+          .set({ status: 'EXPIRED', updatedAt: now })
+          .where(eq(subscriptions.id, sub.id));
+      } catch (err) {
+        console.error('Error updating expired trial status:', err);
+      }
+    }
+  } else if (status === 'ACTIVE') {
+    if (periodEndMs <= now.getTime()) {
+      status = 'PAST_DUE';
+      try {
+        await db
+          .update(subscriptions)
+          .set({ status: 'PAST_DUE', updatedAt: now })
+          .where(eq(subscriptions.id, sub.id));
+      } catch (err) {
+        console.error('Error updating past due subscription status:', err);
+      }
+    }
   }
+
+  const isTrialActive = status === 'TRIAL' && periodEndMs > now.getTime();
+  const isPaidActive = status === 'ACTIVE' && periodEndMs > now.getTime();
+  const isSubscriptionActive = isExempt || isTrialActive || isPaidActive;
+  const trialDaysRemaining = isTrialActive 
+    ? Math.max(1, Math.ceil((periodEndMs - now.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   const invoiceHistory = await db.query.invoices.findMany({
     where: eq(invoices.sellerId, sellerId),
@@ -162,6 +196,9 @@ export async function getSellerSubscription(sellerId: string) {
 
   return {
     isExempt: false,
+    isTrialActive,
+    isSubscriptionActive,
+    trialDaysRemaining,
     subscription: {
       ...sub,
       status,
