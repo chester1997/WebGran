@@ -1,10 +1,21 @@
 import { db } from '@/db';
 import { subscriptionPlans, subscriptions, invoices, users } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { coraProvider } from '@/lib/payments/providers/cora';
 
 export const WEBGRAN_PLAN_SLUG = 'webgran';
 export const WEBGRAN_PLAN_PRICE = 89.90;
+
+let schemaEnsured = false;
+export async function ensureInvoiceSchema() {
+  if (schemaEnsured) return;
+  try {
+    await db.execute(sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;`);
+    schemaEnsured = true;
+  } catch (err) {
+    console.error('Error ensuring expires_at column:', err);
+  }
+}
 
 export async function getDefaultPlan() {
   let plan = await db.query.subscriptionPlans.findFirst({
@@ -30,6 +41,8 @@ export async function getDefaultPlan() {
 }
 
 export async function getSellerSubscription(sellerId: string) {
+  await ensureInvoiceSchema();
+
   const userRecord = await db.query.users.findFirst({
     where: eq(users.id, sellerId),
   });
