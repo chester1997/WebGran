@@ -116,13 +116,13 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 <img 
                   src="/logo-expanded.png" 
                   alt="WebGran Logo" 
-                  className="h-8 w-auto max-w-[145px] object-contain drop-shadow-sm" 
+                  className="h-10 w-auto max-w-[175px] object-contain drop-shadow-md" 
                 />
               </Link>
               <button 
                 onClick={() => setCollapsed(!collapsed)}
                 title="Recolher menu"
-                className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all cursor-pointer shrink-0"
+                className="p-1.5 text-zinc-400 hover:text-white bg-[#18181C] hover:bg-white/10 rounded-lg border border-white/5 transition-all cursor-pointer shrink-0 ml-1"
               >
                 <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
               </button>
@@ -136,7 +136,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               <img 
                 src="/logo-icon.png" 
                 alt="WebGran Icon" 
-                className="h-8 w-8 object-contain drop-shadow-sm mx-auto" 
+                className="h-9 w-9 object-contain drop-shadow-md mx-auto" 
               />
             </button>
           )}

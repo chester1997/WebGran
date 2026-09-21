@@ -80,7 +80,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             <img 
               src="/logo-expanded.png" 
               alt="WebGran Logo" 
-              className="h-8 w-auto max-w-[145px] object-contain drop-shadow-sm" 
+              className="h-10 w-auto max-w-[175px] object-contain drop-shadow-md" 
             />
           </Link>
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-md tracking-wider uppercase">
