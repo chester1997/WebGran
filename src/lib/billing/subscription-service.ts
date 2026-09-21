@@ -114,25 +114,34 @@ export async function getSellerSubscription(sellerId: string) {
   if (latestPending) {
     const isExpired = latestPending.expiresAt && new Date(latestPending.expiresAt) <= now;
     if (isExpired) {
+      const pendingId = latestPending.id;
+      const externalId = latestPending.externalId;
       try {
-        // Query real Cora API status
-        if (latestPending.externalId) {
-          const coraCheck = await coraProvider.getInvoice(latestPending.externalId);
-          if (coraCheck.status === 'PAID') {
-            await confirmInvoicePayment(latestPending.id, sellerId);
-            latestPending = undefined;
-          } else {
-            // Cancel on Cora & mark EXPIRED
-            await coraProvider.cancelInvoice(latestPending.externalId);
-            await db
-              .update(invoices)
-              .set({ status: 'EXPIRED', updatedAt: now })
-              .where(eq(invoices.id, latestPending.id));
-            latestPending = undefined;
+        let isPaidOnCora = false;
+        if (externalId) {
+          try {
+            const coraCheck = await coraProvider.getInvoice(externalId);
+            if (coraCheck.status === 'PAID') {
+              isPaidOnCora = true;
+              await confirmInvoicePayment(pendingId, sellerId);
+              latestPending = undefined;
+            } else {
+              await coraProvider.cancelInvoice(externalId);
+            }
+          } catch (coraErr) {
+            console.error('Error querying/cancelling invoice on Cora:', coraErr);
           }
+        }
+        if (!isPaidOnCora) {
+          await db
+            .update(invoices)
+            .set({ status: 'EXPIRED', updatedAt: now })
+            .where(eq(invoices.id, pendingId));
+          latestPending = undefined;
         }
       } catch (err) {
         console.error('Error auto-checking invoice expiration:', err);
+        latestPending = undefined;
       }
     }
   }
