@@ -11,6 +11,7 @@ interface HorizontalCarouselProps {
   iconColor?: string | null;
   children: ReactNode;
   className?: string;
+  trackClassName?: string;
 }
 
 export function HorizontalCarousel({
@@ -21,6 +22,7 @@ export function HorizontalCarousel({
   iconColor,
   children,
   className = "",
+  trackClassName = "",
 }: HorizontalCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMouseDown, setIsMouseDown] = useState(false);
@@ -113,9 +115,9 @@ export function HorizontalCarousel({
         onMouseLeave={handleMouseUpOrLeave}
         onClickCapture={handleClickCapture}
         onWheel={handleWheel}
-        className={`flex overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 w-full select-none ${
+        className={`flex overflow-x-auto scrollbar-hide snap-x snap-mandatory pt-2 pb-4 w-full select-none ${
           isMouseDown ? "cursor-grabbing" : "cursor-grab"
-        }`}
+        } ${trackClassName}`}
         style={{
           scrollPaddingLeft: "var(--miniapp-content-padding-x)",
           scrollPaddingRight: "var(--miniapp-content-padding-x)",
