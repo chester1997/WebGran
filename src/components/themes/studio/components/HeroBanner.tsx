@@ -86,14 +86,14 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
       onTouchStart={totalBanners > 1 ? handleTouchStart : undefined}
       onTouchMove={totalBanners > 1 ? handleTouchMove : undefined}
       onTouchEnd={totalBanners > 1 ? handleTouchEnd : undefined}
-      className="relative w-full aspect-[2.2/1] sm:aspect-[2.5/1] max-h-[220px] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-xl group select-none cursor-pointer"
+      className="relative w-full aspect-[2.2/1] sm:aspect-[2.5/1] max-h-[220px] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-xl group select-none cursor-pointer flex items-center justify-center"
     >
-      {/* Banner Image with Smooth Fade Transition */}
+      {/* Banner Image with Smooth Fade Transition and Perfect Fit */}
       <img
         key={currentBanner.id || currentIndex}
         src={currentBanner.imageUrl}
         alt={currentBanner.title || "Banner"}
-        className="w-full h-full object-cover transition-opacity duration-500 ease-in-out"
+        className="w-full h-full object-cover object-center transition-opacity duration-500 ease-in-out"
         onError={(e) => {
           (e.target as HTMLElement).setAttribute(
             "src",
