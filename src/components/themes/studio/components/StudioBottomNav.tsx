@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, ShoppingCart, Key } from "lucide-react";
+import { Home, Search, ShoppingBag, Key } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -35,7 +35,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
     {
       label: "Carrinho",
       href: `${basePath}/cart`,
-      icon: ShoppingCart,
+      icon: ShoppingBag,
       isActive: isCart,
       badge: true,
     },
@@ -48,30 +48,34 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   ];
 
   return (
-    <nav className="shrink-0 h-16 bg-[#161616]/95 backdrop-blur-md border-t border-white/10 grid grid-cols-4 items-center z-50 pb-[env(safe-area-inset-bottom,0px)]">
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`relative flex flex-col items-center justify-center w-full h-full text-[10px] transition-colors ${
-              item.isActive
-                ? "text-red-500 font-semibold"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <div className="relative flex items-center justify-center">
-              <Icon className={`w-5 h-5 mb-0.5 transition-transform ${item.isActive ? "scale-110 text-red-500" : "text-zinc-400"}`} />
-              {item.badge && <CartBadge />}
-            </div>
-            <span>{item.label}</span>
-            {item.isActive && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="fixed bottom-[max(12px,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[360px] sm:max-w-[380px] pointer-events-none">
+      <nav 
+        aria-label="Navegação inferior" 
+        className="pointer-events-auto h-[60px] px-2 bg-[#18181c]/85 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/40 flex items-center justify-between"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              aria-label={item.label}
+              title={item.label}
+              className={`relative flex flex-col items-center justify-center flex-1 h-[48px] mx-0.5 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                item.isActive
+                  ? "bg-red-500/15 text-red-400 font-semibold border border-red-500/20 shadow-sm shadow-red-500/10"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
+              }`}
+            >
+              <div className="relative flex items-center justify-center">
+                <Icon className={`w-5 h-5 transition-transform duration-200 ${item.isActive ? "scale-105 text-red-400" : "text-zinc-400"}`} />
+                {item.badge && <CartBadge />}
+              </div>
+              <span className="text-[10px] leading-none mt-1 font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }
