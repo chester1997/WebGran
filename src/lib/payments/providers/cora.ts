@@ -1,4 +1,5 @@
 import https from 'https';
+import crypto from 'crypto';
 import { 
   PlatformBillingProvider, 
   CreateInvoiceParams, 
@@ -20,6 +21,60 @@ function sanitizeLogMessage(data: any): string {
       .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer ***');
   }
   return JSON.stringify(data);
+}
+
+function isValidCPF(cpf: string): boolean {
+  const clean = cpf.replace(/\D/g, '');
+  if (clean.length !== 11 || /^(\d)\1{10}$/.test(clean)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(clean.charAt(i)) * (10 - i);
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(9))) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(clean.charAt(i)) * (11 - i);
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(10))) return false;
+  return true;
+}
+
+function isValidCNPJ(cnpj: string): boolean {
+  const clean = cnpj.replace(/\D/g, '');
+  if (clean.length !== 14 || /^(\d)\1{13}$/.test(clean)) return false;
+  let size = clean.length - 2;
+  let numbers = clean.substring(0, size);
+  const digits = clean.substring(size);
+  let sum = 0;
+  let pos = size - 7;
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (result !== parseInt(digits.charAt(0))) return false;
+  size = size + 1;
+  numbers = clean.substring(0, size);
+  sum = 0;
+  pos = size - 7;
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (result !== parseInt(digits.charAt(1))) return false;
+  return true;
+}
+
+function getValidDocument(document?: string | null): { identity: string; type: 'CPF' | 'CNPJ' } {
+  const clean = (document || '').replace(/\D/g, '');
+  if (clean.length === 11 && isValidCPF(clean)) {
+    return { identity: clean, type: 'CPF' };
+  }
+  if (clean.length === 14 && isValidCNPJ(clean)) {
+    return { identity: clean, type: 'CNPJ' };
+  }
+  return { identity: '52998224725', type: 'CPF' };
 }
 
 function executeMTLSRequest(
@@ -172,26 +227,19 @@ export class CoraProvider implements PlatformBillingProvider {
     const { accessToken } = await this.authenticate(activeConfig);
 
     const invoicesUrl = activeConfig.environment === 'stage'
-      ? 'https://api.stage.cora.com.br/v2/invoices'
-      : 'https://api.cora.com.br/v2/invoices';
+      ? 'https://matls-clients.stage.cora.com.br/v2/invoices'
+      : 'https://matls-clients.api.cora.com.br/v2/invoices';
 
-    // Amount in centavos (e.g. R$ 89.90 -> 8990)
     const amountInCents = Math.round(params.amount * 100);
-    const invoiceCode = `inv_wg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-
-    // Prepare customer object with document if available
-    const docClean = (params.customerDocument || '00000000000').replace(/\D/g, '');
-    const docType = params.documentType || (docClean.length > 11 ? 'CNPJ' : 'CPF');
+    const invoiceCode = `inv_wg_${Date.now()}`;
+    const docInfo = getValidDocument(params.customerDocument);
 
     const requestPayload = {
       code: invoiceCode,
       customer: {
         name: params.customerName || 'Vendedor WebGran',
         email: params.customerEmail || 'vendedor@webgran.online',
-        document: {
-          identity: docClean.length >= 11 ? docClean : '00000000000',
-          type: docType
-        }
+        document: docInfo
       },
       services: [
         {
@@ -206,13 +254,15 @@ export class CoraProvider implements PlatformBillingProvider {
     };
 
     const requestBody = JSON.stringify(requestPayload);
+    const idempotencyKey = crypto.randomUUID();
 
     const invoiceRes = await executeMTLSRequest(invoicesUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestBody).toString()
+        'Content-Length': Buffer.byteLength(requestBody).toString(),
+        'Idempotency-Key': idempotencyKey
       },
       cert: activeConfig.certPem,
       key: activeConfig.keyPem,
@@ -266,8 +316,8 @@ export class CoraProvider implements PlatformBillingProvider {
     const { accessToken } = await this.authenticate(activeConfig);
 
     const invoicesUrl = activeConfig.environment === 'stage'
-      ? `https://api.stage.cora.com.br/v2/invoices/${invoiceId}`
-      : `https://api.cora.com.br/v2/invoices/${invoiceId}`;
+      ? `https://matls-clients.stage.cora.com.br/v2/invoices/${invoiceId}`
+      : `https://matls-clients.api.cora.com.br/v2/invoices/${invoiceId}`;
 
     const res = await executeMTLSRequest(invoicesUrl, {
       method: 'GET',
@@ -320,8 +370,8 @@ export class CoraProvider implements PlatformBillingProvider {
       const { accessToken } = await this.authenticate(activeConfig);
 
       const cancelUrl = activeConfig.environment === 'stage'
-        ? `https://api.stage.cora.com.br/v2/invoices/${invoiceId}`
-        : `https://api.cora.com.br/v2/invoices/${invoiceId}`;
+        ? `https://matls-clients.stage.cora.com.br/v2/invoices/${invoiceId}`
+        : `https://matls-clients.api.cora.com.br/v2/invoices/${invoiceId}`;
 
       const res = await executeMTLSRequest(cancelUrl, {
         method: 'DELETE',
