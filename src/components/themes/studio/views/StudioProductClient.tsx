@@ -113,6 +113,7 @@ export function StudioProductClient({
   };
 
   const heroImage = product.bannerUrl || product.coverUrl || "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop";
+  const posterImage = product.coverUrl || product.bannerUrl || heroImage;
   const rawDescription = (product.description || product.shortDescription || "").trim();
   const isLongDescription = rawDescription.length > 200;
 
@@ -130,9 +131,9 @@ export function StudioProductClient({
   return (
     <div className="w-full min-h-screen bg-[#141416] text-white py-6 px-4 pb-28">
       {/* CARD PRINCIPAL FLUTUANTE DE DETALHES DO PRODUTO */}
-      <div className="w-full max-w-md mx-auto bg-[#1f1f23] border border-white/10 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4">
-        {/* 1. HERO POSTER CONTAINER INSIDE FLOATING CARD */}
-        <div className="relative w-full aspect-[16/10] bg-zinc-950 rounded-2xl overflow-hidden shadow-md">
+      <div className="w-full max-w-md mx-auto bg-[#1f1f23] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+        {/* 1. TOP BANNER / BACKDROP AREA */}
+        <div className="relative w-full aspect-[16/9] sm:aspect-[2/1] bg-zinc-950 overflow-hidden">
           <img
             src={heroImage}
             alt={product.title}
@@ -140,11 +141,10 @@ export function StudioProductClient({
             decoding="async"
             className="w-full h-full object-cover"
           />
-          
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
+          {/* Smooth Gradient Fade to Card Background */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1f1f23] via-[#1f1f23]/40 to-black/40 pointer-events-none" />
 
-          {/* Back Button over Poster */}
+          {/* Back Button */}
           <button
             type="button"
             onClick={handleBack}
@@ -155,121 +155,137 @@ export function StudioProductClient({
           </button>
         </div>
 
-        {/* 2. TITLE & METADATA BADGES */}
-        <div className="space-y-2">
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
-            {product.title}
-          </h1>
+        {/* 2. POSTER THUMB & TITLE / METADATA HEADER (OVERLAPPING BANNER) */}
+        <div className="px-5 -mt-12 sm:-mt-14 relative z-10 flex gap-4 items-end">
+          {/* Small Vertical Poster Thumbnail */}
+          <div className="w-24 sm:w-28 aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-zinc-900 border border-white/15 shadow-2xl">
+            <img
+              src={posterImage}
+              alt={product.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
-          {/* REAL METADATA BADGES */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            {product.category?.name && (
-              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 font-semibold border border-white/5">
-                {product.category.name}
-              </span>
-            )}
+          {/* Title & Metadata on the right */}
+          <div className="flex-1 space-y-1.5 pb-1">
+            {/* Category & Duration Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              {product.category?.name && (
+                <span className="px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-semibold border border-white/5 uppercase tracking-wider">
+                  {product.category.name}
+                </span>
+              )}
+              {durationBadge && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-semibold border border-white/5">
+                  <Clock className="w-3 h-3 text-zinc-400" />
+                  {durationBadge}
+                </span>
+              )}
+            </div>
 
-            {durationBadge && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 font-semibold border border-white/5">
-                <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                {durationBadge}
-              </span>
-            )}
-
-            {product.deliveryType && (
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/20">
-                Entrega Telegram
-              </span>
-            )}
+            {/* Title */}
+            <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-snug drop-shadow-sm">
+              {product.title}
+            </h1>
           </div>
         </div>
 
-        {/* 3. PRIMARY ACTION BUTTON (BUY VS ACCESS) */}
-        <div className="pt-1 space-y-3">
-          {hasAccess ? (
-            <Link
-              href={`/miniapp/${storeSlug}/accesses`}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all text-sm active:scale-95"
-            >
-              <Zap className="w-5 h-5 fill-current" />
-              <span>⚡ Acessar conteúdo</span>
-            </Link>
-          ) : (
-            <AddToCartButton 
-              storeSlug={storeSlug}
-              product={{
-                id: product.id,
-                slug: product.slug,
-                title: product.title,
-                price: Number(product.price),
-                coverUrl: product.coverUrl,
-                storeId: (product as any).storeId,
-                compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : undefined
-              }}
-              variant="full"
-            />
+        {/* 3. CARD INNER CONTENT (BUY BUTTON, ACTIONS, DESCRIPTION) */}
+        <div className="p-5 space-y-4">
+          {/* Delivery Type Badge if available */}
+          {product.deliveryType && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-semibold border border-emerald-500/20">
+              <span>Entrega Telegram</span>
+            </div>
           )}
 
-          {/* 4. ACTIONS ROW (MINHA LISTA & COMPARTILHAR) */}
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <button
-              type="button"
-              onClick={toggleMyList}
-              className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all text-xs font-semibold active:scale-95 cursor-pointer ${
-                isInMyList
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                  : "bg-[#28282d] text-zinc-300 hover:text-white border-white/10 hover:bg-white/10"
-              }`}
-            >
-              {isInMyList ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>✓ Na Minha Lista</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 text-zinc-300" />
-                  <span>+ Minha Lista</span>
-                </>
-              )}
-            </button>
+          {/* PRIMARY ACTION BUTTON (BUY VS ACCESS) */}
+          <div className="pt-1 space-y-3">
+            {hasAccess ? (
+              <Link
+                href={`/miniapp/${storeSlug}/accesses`}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all text-sm active:scale-95"
+              >
+                <Zap className="w-5 h-5 fill-current" />
+                <span>⚡ Acessar conteúdo</span>
+              </Link>
+            ) : (
+              <AddToCartButton 
+                storeSlug={storeSlug}
+                product={{
+                  id: product.id,
+                  slug: product.slug,
+                  title: product.title,
+                  price: Number(product.price),
+                  coverUrl: product.coverUrl,
+                  storeId: (product as any).storeId,
+                  compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : undefined
+                }}
+                variant="full"
+              />
+            )}
 
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#28282d] text-zinc-300 hover:text-white border border-white/10 hover:bg-white/10 transition-all text-xs font-semibold active:scale-95 cursor-pointer"
-            >
-              <Share2 className="w-4 h-4 text-zinc-300" />
-              <span>{copied ? "Link Copiado!" : "Compartilhar"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 5. DESCRIPTION SECTION */}
-        {rawDescription && (
-          <div className="pt-3 border-t border-white/10 space-y-2">
-            <h3 className="text-xs uppercase font-bold text-zinc-400 tracking-wider">
-              Descrição
-            </h3>
-            <p className="text-sm text-zinc-300 leading-relaxed break-words whitespace-pre-line">
-              {isLongDescription && !isDescriptionExpanded
-                ? `${rawDescription.slice(0, 200)}...`
-                : rawDescription}
-            </p>
-            {isLongDescription && (
+            {/* ACTIONS ROW (MINHA LISTA & COMPARTILHAR) */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer underline"
+                onClick={toggleMyList}
+                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all text-xs font-semibold active:scale-95 cursor-pointer ${
+                  isInMyList
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                    : "bg-[#28282d] text-zinc-300 hover:text-white border-white/10 hover:bg-white/10"
+                }`}
               >
-                {isDescriptionExpanded ? "Mostrar menos" : "Ler mais"}
+                {isInMyList ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>✓ Na Minha Lista</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 text-zinc-300" />
+                    <span>+ Minha Lista</span>
+                  </>
+                )}
               </button>
-            )}
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#28282d] text-zinc-300 hover:text-white border border-white/10 hover:bg-white/10 transition-all text-xs font-semibold active:scale-95 cursor-pointer"
+              >
+                <Share2 className="w-4 h-4 text-zinc-300" />
+                <span>{copied ? "Link Copiado!" : "Compartilhar"}</span>
+              </button>
+            </div>
           </div>
-        )}
+
+          {/* DESCRIPTION SECTION */}
+          {rawDescription && (
+            <div className="pt-3 border-t border-white/10 space-y-2">
+              <h3 className="text-xs uppercase font-bold text-zinc-400 tracking-wider">
+                Descrição
+              </h3>
+              <p className="text-sm text-zinc-300 leading-relaxed break-words whitespace-pre-line">
+                {isLongDescription && !isDescriptionExpanded
+                  ? `${rawDescription.slice(0, 200)}...`
+                  : rawDescription}
+              </p>
+              {isLongDescription && (
+                <button
+                  type="button"
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer underline"
+                >
+                  {isDescriptionExpanded ? "Mostrar menos" : "Ler mais"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 6. RECOMMENDED PRODUCTS CAROUSEL (OUTSIDE CARD) */}
+      {/* RECOMMENDED PRODUCTS CAROUSEL (OUTSIDE CARD) */}
       {recommendedProducts.length > 0 && (
         <div className="max-w-md mx-auto mt-8 space-y-3">
           <div className="flex items-center gap-2 px-1">
