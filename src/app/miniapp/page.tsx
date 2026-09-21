@@ -10,27 +10,27 @@ export default async function MiniAppRootPage({
 }) {
   const resolvedParams = await searchParams;
   
-  // Try to find botId from query params
-  const botId = resolvedParams.b as string;
-  
-  // Also try tgWebAppStartParam which might be passed by Telegram
-  const tgStartParam = resolvedParams.tgWebAppStartParam as string;
-  
-  const targetId = botId || tgStartParam;
+  const rawParam = (resolvedParams.b || resolvedParams.tgWebAppStartParam || resolvedParams.startapp || "") as string;
 
-  if (!targetId) {
-    return (
-      <div className="flex h-screen items-center justify-center p-4 text-center">
-        <h1>Loja não especificada. Por favor, acesse pelo bot correto.</h1>
-      </div>
-    );
+  let botId: string | null = null;
+  let productSlug: string | null = null;
+
+  if (rawParam) {
+    if (rawParam.includes("_p_")) {
+      const parts = rawParam.split("_p_");
+      botId = parts[0].replace(/^b_/, "");
+      productSlug = parts[1];
+    } else if (rawParam.startsWith("p_") || rawParam.startsWith("prod_")) {
+      productSlug = rawParam.replace(/^(p_|prod_)/, "");
+    } else {
+      botId = rawParam.replace(/^b_/, "");
+    }
   }
 
   const bot = await db.query.telegramBots.findFirst({
-    where: (bots, { eq, or }) => or(
-      eq(bots.id, targetId),
-      eq(bots.botId, targetId)
-    ),
+    where: botId 
+      ? (bots, { eq, or }) => or(eq(bots.id, botId!), eq(bots.botId, botId!))
+      : undefined,
     with: {
       store: true
     }
@@ -39,9 +39,13 @@ export default async function MiniAppRootPage({
   if (!bot || !bot.store) {
     return (
       <div className="flex h-screen items-center justify-center p-4 text-center">
-        <h1>Loja ou Bot não encontrado.</h1>
+        <h1 className="text-white font-bold">Loja ou Bot não encontrado.</h1>
       </div>
     );
+  }
+
+  if (productSlug) {
+    redirect(`/miniapp/${bot.store.slug}/product/${productSlug}`);
   }
 
   redirect(`/miniapp/${bot.store.slug}`);
