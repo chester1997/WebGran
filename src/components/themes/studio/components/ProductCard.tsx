@@ -19,7 +19,7 @@ export function ProductCard({ storeSlug, product, showButtons = true }: ProductC
   const width = "w-36 md:w-44";
   
   return (
-    <div className={`flex flex-col gap-2 ${width}`}>
+    <div className={`flex flex-col gap-1.5 ${width}`}>
       <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="block relative rounded-xl overflow-hidden bg-zinc-900 group shadow-lg aspect-[2/3]">
         {product.coverUrl ? (
           <img 
@@ -36,21 +36,21 @@ export function ProductCard({ storeSlug, product, showButtons = true }: ProductC
         )}
         
         {/* Title overlay at the bottom of the image */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-3">
-          <span className="text-white text-sm font-bold leading-tight drop-shadow-md line-clamp-3 uppercase tracking-tight">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-2.5">
+          <span className="text-white text-xs font-semibold leading-tight drop-shadow-md line-clamp-2 uppercase tracking-tight">
             {product.title}
           </span>
         </div>
       </Link>
 
       <div className="flex flex-col px-1">
-        <span className="text-emerald-400 font-bold text-sm tracking-tight mb-2">
+        <span className="text-emerald-400 font-bold text-xs tracking-tight mb-1.5">
           R$ {Number(product.price).toFixed(2).replace('.', ',')}
         </span>
         
         {showButtons && (
           <div className="flex gap-1.5 w-full">
-            <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold py-2 rounded-lg text-center transition-colors">
+            <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center">
               Ver mais
             </Link>
             <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />

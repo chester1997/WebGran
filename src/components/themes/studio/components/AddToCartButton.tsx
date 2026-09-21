@@ -33,9 +33,9 @@ export function AddToCartButton({
     return (
       <button 
         onClick={handleClick}
-        className="flex-1 bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white text-[11px] font-bold py-2 rounded-lg text-center transition-colors flex items-center justify-center gap-1"
+        className="flex-1 bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center gap-1"
       >
-        {justAdded ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : "+ Carrinho"}
+        {justAdded ? <Check className="w-3 h-3 text-emerald-400" /> : "+ Carrinho"}
       </button>
     );
   }

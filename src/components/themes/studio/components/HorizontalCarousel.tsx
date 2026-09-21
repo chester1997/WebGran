@@ -87,7 +87,7 @@ export function HorizontalCarousel({
                 />
               )}
               {indicatorType === "BAR" && (
-                <div className="w-1 h-4 bg-violet-600 rounded-full shrink-0" />
+                <div className="w-1 h-4 bg-red-600 rounded-full shrink-0" />
               )}
               {/* indicatorType === 'NONE': render nothing */}
 

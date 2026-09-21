@@ -65,7 +65,7 @@ export function TopTenCarousel({
             />
           )}
           {indicatorType === "BAR" && (
-            <div className="w-1 h-4 bg-violet-600 rounded-full shrink-0"></div>
+            <div className="w-1 h-4 bg-red-600 rounded-full shrink-0"></div>
           )}
           <h2 className="text-white text-base font-bold tracking-tight uppercase">
             {title}
