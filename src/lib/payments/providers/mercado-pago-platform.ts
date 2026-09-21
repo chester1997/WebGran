@@ -249,18 +249,6 @@ export class MercadoPagoPlatformProvider implements PlatformBillingProvider {
         };
       }
 
-      // Check process.env fallback
-      if (process.env.MP_ACCESS_TOKEN || process.env.MP_CLIENT_SECRET) {
-        return {
-          isConnected: true,
-          status: 'CONNECTED',
-          mpUserId: 'ENV_CONFIGURED',
-          mpUserEmail: 'Proprietário (Variável de Ambiente)',
-          connectedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-      }
-
       return {
         isConnected: false,
         status: 'DISCONNECTED',

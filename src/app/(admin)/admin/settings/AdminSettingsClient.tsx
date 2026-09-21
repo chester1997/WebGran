@@ -445,31 +445,50 @@ export default function AdminSettingsClient({
 
                 <button
                   onClick={() => setIsTokenModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-gray-300 text-xs font-semibold transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-gray-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
                 >
                   <Key className="w-3.5 h-3.5 text-sky-400" />
                   Inserir Access Token Direto
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleTestConnection}
-                  disabled={testingMp}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-bold transition-all cursor-pointer"
-                >
-                  {testingMp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                  Testar Conexão
-                </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={testingMp}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {testingMp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    Testar Conexão
+                  </button>
 
-                <button
-                  onClick={handleDisconnectMp}
-                  disabled={disconnectingMp}
-                  className="px-3.5 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer"
-                  title="Desconectar Mercado Pago"
-                >
-                  {disconnectingMp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                </button>
+                  <button
+                    onClick={handleDisconnectMp}
+                    disabled={disconnectingMp}
+                    className="px-3.5 py-2 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer"
+                    title="Desconectar Mercado Pago"
+                  >
+                    {disconnectingMp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1 border-t border-[#27272A]">
+                  <button
+                    onClick={handleOAuthConnect}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-sky-400 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Reconectar OAuth
+                  </button>
+                  <button
+                    onClick={() => setIsTokenModalOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-gray-300 text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    <Key className="w-3.5 h-3.5 text-sky-400" />
+                    Alterar Token
+                  </button>
+                </div>
               </div>
             )}
           </div>
