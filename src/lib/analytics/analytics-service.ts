@@ -80,6 +80,7 @@ export interface CatalogOverview {
 export interface StoreAnalyticsData {
   period: string;
   storeName: string;
+  userName?: string;
   kpis: {
     revenue: KpiMetric;
     salesCount: KpiMetric;
@@ -98,13 +99,13 @@ export interface StoreAnalyticsData {
 
 function calcChange(curr: number, prev: number): { changePercent: number | null; trend: 'up' | 'down' | 'neutral' | 'none' } {
   if (prev <= 0 && curr <= 0) return { changePercent: 0, trend: 'neutral' };
-  if (prev <= 0 && curr > 0) return { changePercent: 100, trend: 'up' };
-  if (prev <= 0) return { changePercent: null, trend: 'none' };
-  const diff = ((curr - prev) / prev) * 100;
-  const rounded = Math.round(diff * 10) / 10;
-  if (rounded > 0) return { changePercent: rounded, trend: 'up' };
-  if (rounded < 0) return { changePercent: Math.abs(rounded), trend: 'down' };
-  return { changePercent: 0, trend: 'neutral' };
+  if (prev <= 0) return { changePercent: 100, trend: 'up' };
+  const diff = curr - prev;
+  const pct = Math.round((diff / prev) * 100);
+  let trend: 'up' | 'down' | 'neutral' = 'neutral';
+  if (pct > 0) trend = 'up';
+  if (pct < 0) trend = 'down';
+  return { changePercent: pct, trend };
 }
 
 function formatTimeAgo(date: Date): string {
@@ -124,10 +125,13 @@ export class AnalyticsService {
   public static async getStoreAnalytics(storeId: string, period: string = "30D"): Promise<StoreAnalyticsData> {
     const store = await db.query.stores.findFirst({
       where: eq(stores.id, storeId),
-      columns: { id: true, name: true }
+      with: {
+        owner: true
+      }
     });
 
     const storeName = store?.name || "Minha Loja";
+    const userName = store?.owner?.name || "";
 
     const now = new Date();
     let currentStart = new Date();
@@ -514,6 +518,7 @@ export class AnalyticsService {
     return {
       period,
       storeName,
+      userName,
       kpis: {
         revenue: {
           value: currRevenue,

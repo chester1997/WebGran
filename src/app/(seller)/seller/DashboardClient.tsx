@@ -124,7 +124,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            Olá, {data.storeName} <span className="animate-pulse">👋</span>
+            Olá, {data.userName || data.storeName} <span className="animate-pulse">👋</span>
           </h2>
           <p className="text-zinc-400 text-sm mt-0.5">
             Acompanhe o desempenho da sua loja e indicadores em tempo real.
