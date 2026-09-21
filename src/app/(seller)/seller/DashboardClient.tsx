@@ -121,18 +121,18 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   return (
     <div className="space-y-6 fade-in w-full pb-16">
       {/* 1. Header & Period Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/5 pb-4 sm:pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             Olá, {data.userName || data.storeName} <span className="animate-pulse">👋</span>
           </h2>
-          <p className="text-zinc-400 text-sm mt-0.5">
+          <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
             Acompanhe o desempenho da sua loja e indicadores em tempo real.
           </p>
         </div>
 
         {/* Period Selector Tabs */}
-        <div className="bg-[#121216] p-1.5 rounded-2xl border border-white/10 flex items-center gap-1 overflow-x-auto custom-scrollbar shrink-0">
+        <div className="bg-[#121216] p-1 sm:p-1.5 rounded-2xl border border-white/10 flex items-center gap-1 overflow-x-auto scrollbar-hide shrink-0 max-w-full">
           {periodsList.map((p) => {
             const isActive = period === p.key;
             return (
@@ -141,7 +141,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 type="button"
                 onClick={() => handlePeriodChange(p.key)}
                 disabled={isPending}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
                     : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -172,31 +172,31 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
       )}
 
-      {/* 2. Main KPI Cards (4 Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. Main KPI Cards (2 Columns on Mobile, 4 Columns on Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
         {/* KPI 1: Faturamento */}
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all">
+        <div className="bg-[#121214] border border-white/5 rounded-2xl p-3 sm:p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all flex flex-col justify-between min-h-[105px] sm:min-h-[130px]">
           {isPending ? (
             <SkeletonKpi />
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Faturamento</span>
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <Wallet className="w-4 h-4 text-emerald-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">Faturamento</span>
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                  <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight truncate">
                   {data.kpis.revenue.formatted}
                 </h3>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-1.5 pt-0.5 sm:pt-1">
                   <TrendBadge 
                     percent={data.kpis.revenue.changePercent} 
                     trend={data.kpis.revenue.trend} 
                   />
-                  <span className="text-[11px] text-zinc-500 truncate">
+                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
                     {data.kpis.revenue.subtitle}
                   </span>
                 </div>
@@ -206,28 +206,28 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* KPI 2: Vendas */}
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all">
+        <div className="bg-[#121214] border border-white/5 rounded-2xl p-3 sm:p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all flex flex-col justify-between min-h-[105px] sm:min-h-[130px]">
           {isPending ? (
             <SkeletonKpi />
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Total Vendas</span>
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                  <ShoppingBag className="w-4 h-4 text-blue-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">Total Vendas</span>
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                  <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight truncate">
                   {data.kpis.salesCount.value} {data.kpis.salesCount.value === 1 ? "venda" : "vendas"}
                 </h3>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-1.5 pt-0.5 sm:pt-1">
                   <TrendBadge 
                     percent={data.kpis.salesCount.changePercent} 
                     trend={data.kpis.salesCount.trend} 
                   />
-                  <span className="text-[11px] text-zinc-500 truncate">
+                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
                     {data.kpis.salesCount.subtitle}
                   </span>
                 </div>
@@ -237,28 +237,28 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* KPI 3: Clientes */}
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all">
+        <div className="bg-[#121214] border border-white/5 rounded-2xl p-3 sm:p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all flex flex-col justify-between min-h-[105px] sm:min-h-[130px]">
           {isPending ? (
             <SkeletonKpi />
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Clientes</span>
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 text-indigo-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">Clientes</span>
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight truncate">
                   {data.kpis.customersCount.value}
                 </h3>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-1.5 pt-0.5 sm:pt-1">
                   <TrendBadge 
                     percent={data.kpis.customersCount.changePercent} 
                     trend={data.kpis.customersCount.trend} 
                   />
-                  <span className="text-[11px] text-zinc-500 truncate">
+                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
                     {data.kpis.customersCount.subtitle}
                   </span>
                 </div>
@@ -268,28 +268,28 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* KPI 4: Ticket Médio */}
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all">
+        <div className="bg-[#121214] border border-white/5 rounded-2xl p-3 sm:p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all flex flex-col justify-between min-h-[105px] sm:min-h-[130px]">
           {isPending ? (
             <SkeletonKpi />
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Ticket Médio</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                  <Activity className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">Ticket Médio</span>
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight truncate">
                   {data.kpis.averageTicket.formatted}
                 </h3>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-1.5 pt-0.5 sm:pt-1">
                   <TrendBadge 
                     percent={data.kpis.averageTicket.changePercent} 
                     trend={data.kpis.averageTicket.trend} 
                   />
-                  <span className="text-[11px] text-zinc-500 truncate">
+                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
                     {data.kpis.averageTicket.subtitle}
                   </span>
                 </div>
