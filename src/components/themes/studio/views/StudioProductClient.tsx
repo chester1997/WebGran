@@ -128,43 +128,41 @@ export function StudioProductClient({
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#161616] text-white pb-28">
-      {/* 1. HERO POSTER CONTAINER */}
-      <div className="relative w-full aspect-[16/10] sm:aspect-[2.2/1] max-h-[420px] bg-zinc-950 overflow-hidden shadow-2xl">
-        <img
-          src={heroImage}
-          alt={product.title}
-          loading="eager"
-          decoding="async"
-          className="w-full h-full object-cover"
-        />
-        
-        {/* Subtle Vignette Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#161616] via-black/30 to-black/60 pointer-events-none" />
+    <div className="w-full min-h-screen bg-[#141416] text-white py-6 px-4 pb-28">
+      {/* CARD PRINCIPAL FLUTUANTE DE DETALHES DO PRODUTO */}
+      <div className="w-full max-w-md mx-auto bg-[#1f1f23] border border-white/10 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4">
+        {/* 1. HERO POSTER CONTAINER INSIDE FLOATING CARD */}
+        <div className="relative w-full aspect-[16/10] bg-zinc-950 rounded-2xl overflow-hidden shadow-md">
+          <img
+            src={heroImage}
+            alt={product.title}
+            loading="eager"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
 
-        {/* Back Button over Hero */}
-        <div className="absolute top-4 left-4 z-20">
+          {/* Back Button over Poster */}
           <button
             type="button"
             onClick={handleBack}
             aria-label="Voltar"
-            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-all border border-white/10 active:scale-95 cursor-pointer shadow-lg"
+            className="absolute top-3 left-3 z-20 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-all border border-white/10 active:scale-95 cursor-pointer shadow-lg"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
         </div>
-      </div>
 
-      {/* 2. MAIN CONTENT BODY */}
-      <div className="px-4 -mt-8 relative z-10 space-y-5 max-w-lg mx-auto">
-        {/* TITLE */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug drop-shadow-sm">
+        {/* 2. TITLE & METADATA BADGES */}
+        <div className="space-y-2">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
             {product.title}
           </h1>
 
           {/* REAL METADATA BADGES */}
-          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             {product.category?.name && (
               <span className="px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 font-semibold border border-white/5">
                 {product.category.name}
@@ -220,7 +218,7 @@ export function StudioProductClient({
               className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all text-xs font-semibold active:scale-95 cursor-pointer ${
                 isInMyList
                   ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                  : "bg-[#222226] text-zinc-300 hover:text-white border-white/10 hover:bg-white/10"
+                  : "bg-[#28282d] text-zinc-300 hover:text-white border-white/10 hover:bg-white/10"
               }`}
             >
               {isInMyList ? (
@@ -239,7 +237,7 @@ export function StudioProductClient({
             <button
               type="button"
               onClick={handleShare}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#222226] text-zinc-300 hover:text-white border border-white/10 hover:bg-white/10 transition-all text-xs font-semibold active:scale-95 cursor-pointer"
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#28282d] text-zinc-300 hover:text-white border border-white/10 hover:bg-white/10 transition-all text-xs font-semibold active:scale-95 cursor-pointer"
             >
               <Share2 className="w-4 h-4 text-zinc-300" />
               <span>{copied ? "Link Copiado!" : "Compartilhar"}</span>
@@ -249,7 +247,7 @@ export function StudioProductClient({
 
         {/* 5. DESCRIPTION SECTION */}
         {rawDescription && (
-          <div className="pt-2 border-t border-white/10 space-y-2">
+          <div className="pt-3 border-t border-white/10 space-y-2">
             <h3 className="text-xs uppercase font-bold text-zinc-400 tracking-wider">
               Descrição
             </h3>
@@ -269,30 +267,30 @@ export function StudioProductClient({
             )}
           </div>
         )}
-
-        {/* 6. RECOMMENDED PRODUCTS CAROUSEL */}
-        {recommendedProducts.length > 0 && (
-          <div className="pt-4 border-t border-white/10 space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-tight">
-                Recomendados para você
-              </h3>
-            </div>
-
-            <HorizontalCarousel
-              indicatorType="NONE"
-              trackClassName="pt-1 pb-4"
-            >
-              {recommendedProducts.map((recProd) => (
-                <div key={recProd.id} className="snap-start shrink-0">
-                  <ProductCard storeSlug={storeSlug} product={recProd} />
-                </div>
-              ))}
-            </HorizontalCarousel>
-          </div>
-        )}
       </div>
+
+      {/* 6. RECOMMENDED PRODUCTS CAROUSEL (OUTSIDE CARD) */}
+      {recommendedProducts.length > 0 && (
+        <div className="max-w-md mx-auto mt-8 space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+              Recomendados para você
+            </h3>
+          </div>
+
+          <HorizontalCarousel
+            indicatorType="NONE"
+            trackClassName="pt-1 pb-4"
+          >
+            {recommendedProducts.map((recProd) => (
+              <div key={recProd.id} className="snap-start shrink-0">
+                <ProductCard storeSlug={storeSlug} product={recProd} showButtons={false} />
+              </div>
+            ))}
+          </HorizontalCarousel>
+        </div>
+      )}
     </div>
   );
 }

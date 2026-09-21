@@ -12,9 +12,10 @@ interface ProductCardProps {
     coverUrl: string | null;
     price: string | number;
   };
+  showButtons?: boolean;
 }
 
-export function ProductCard({ storeSlug, product }: ProductCardProps) {
+export function ProductCard({ storeSlug, product, showButtons = true }: ProductCardProps) {
   const width = "w-36 md:w-44";
   
   return (
@@ -47,12 +48,14 @@ export function ProductCard({ storeSlug, product }: ProductCardProps) {
           R$ {Number(product.price).toFixed(2).replace('.', ',')}
         </span>
         
-        <div className="flex gap-1.5 w-full">
-          <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold py-2 rounded-lg text-center transition-colors">
-            Ver mais
-          </Link>
-          <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
-        </div>
+        {showButtons && (
+          <div className="flex gap-1.5 w-full">
+            <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold py-2 rounded-lg text-center transition-colors">
+              Ver mais
+            </Link>
+            <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
+          </div>
+        )}
       </div>
     </div>
   );
