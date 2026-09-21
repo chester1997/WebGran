@@ -53,11 +53,17 @@ async function main() {
       status TEXT NOT NULL DEFAULT 'PENDING',
       due_date TIMESTAMP NOT NULL,
       paid_at TIMESTAMP,
+      expires_at TIMESTAMP,
       qr_code TEXT,
       qr_code_text TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
+  `;
+
+  // Ensure expires_at column exists if table was created previously
+  await sql`
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
   `;
 
   // 4. Create system_settings table

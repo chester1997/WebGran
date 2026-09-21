@@ -416,6 +416,7 @@ export const invoices = pgTable('invoices', {
   status: text('status').notNull().default('PENDING'), // PENDING, PAID, EXPIRED, CANCELLED, FAILED
   dueDate: timestamp('due_date').notNull(),
   paidAt: timestamp('paid_at'),
+  expiresAt: timestamp('expires_at'),
   qrCode: text('qr_code'),
   qrCodeText: text('qr_code_text'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

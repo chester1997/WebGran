@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { systemSettings } from "@/db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { systemSettings, invoices } from "@/db/schema";
+import { eq, inArray, sql, desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 import { coraProvider } from "@/lib/payments/providers/cora";
 
@@ -56,13 +56,24 @@ export async function GET() {
 
     const isConnected = Boolean(clientId && hasCert && hasKey);
 
+    const lastInvoice = await db.query.invoices.findFirst({
+      where: eq(invoices.provider, 'cora'),
+      orderBy: [desc(invoices.createdAt)],
+    });
+
     return NextResponse.json({
       clientIdMasked: maskClientId(clientId),
       hasCert,
       hasKey,
       environment,
       lastVerifiedAt,
-      isConnected
+      isConnected,
+      lastInvoice: lastInvoice ? {
+        id: lastInvoice.externalId || lastInvoice.id,
+        status: lastInvoice.status,
+        amount: Number(lastInvoice.amount),
+        createdAt: lastInvoice.createdAt ? new Date(lastInvoice.createdAt).toISOString() : null,
+      } : null,
     });
   } catch (error: any) {
     return NextResponse.json({ error: "Erro ao buscar credenciais Cora." }, { status: 500 });

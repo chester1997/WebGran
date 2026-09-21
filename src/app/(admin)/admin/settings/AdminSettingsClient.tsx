@@ -38,6 +38,12 @@ interface CoraCredentials {
   environment: string;
   lastVerifiedAt: string | null;
   isConnected: boolean;
+  lastInvoice?: {
+    id: string;
+    status: string;
+    amount: number;
+    createdAt: string | null;
+  } | null;
 }
 
 interface AdminSettingsClientProps {
@@ -411,6 +417,14 @@ export default function AdminSettingsClient({
                     : "Nunca"}
                 </span>
               </div>
+              {cora.lastInvoice && (
+                <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                  <span className="text-xs text-gray-400">Última Invoice Cora</span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">
+                    {cora.lastInvoice.id.slice(0, 14)}... ({cora.lastInvoice.status})
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

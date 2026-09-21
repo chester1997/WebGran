@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   User, 
@@ -124,6 +124,42 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [activeInvoice, setActiveInvoice] = useState<any>(subscriptionData.latestInvoice);
   const [copiedPix, setCopiedPix] = useState(false);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number | null>(null);
+
+  // 10-Minute Server-Based Countdown Timer
+  useEffect(() => {
+    if (!activeInvoice || activeInvoice.status !== 'PENDING' || !activeInvoice.expiresAt) {
+      setTimeLeftSeconds(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const expiresMs = new Date(activeInvoice.expiresAt).getTime();
+      const nowMs = Date.now();
+      return Math.max(0, Math.floor((expiresMs - nowMs) / 1000));
+    };
+
+    const initial = calculateTimeLeft();
+    setTimeLeftSeconds(initial);
+
+    if (initial <= 0) return;
+
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft();
+      setTimeLeftSeconds(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [activeInvoice]);
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -193,17 +229,21 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
     }
   };
 
-  const handleGeneratePixPayment = async () => {
+  const handleGeneratePixPayment = async (forceNew = false) => {
     setGeneratingPix(true);
     setErrorMessage(null);
 
     try {
-      const res = await fetch("/api/billing/subscription", { method: "POST" });
+      const res = await fetch("/api/billing/subscription", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forceNew })
+      });
       const data = await res.json();
 
       if (data.success && data.invoice) {
         setActiveInvoice(data.invoice);
-        showToast("Cobrança PIX gerada com sucesso via Cora.");
+        showToast(forceNew ? "Novo PIX gerado com sucesso via Cora!" : "Cobrança PIX gerada com sucesso via Cora.");
       } else {
         setErrorMessage(data.error || "Erro ao gerar PIX para assinatura.");
       }
@@ -572,7 +612,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
 
                   <div className="pt-2">
                     <Button
-                      onClick={handleGeneratePixPayment}
+                      onClick={() => handleGeneratePixPayment(false)}
                       disabled={generatingPix}
                       className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
                     >
@@ -595,85 +635,128 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
 
             {/* Active PIX Payment Drawer / Modal Display */}
             {activeInvoice && (
-              <div className="bg-[#16161C] border border-red-500/30 rounded-2xl p-6 space-y-5 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-                      <QrCode className="w-5 h-5 text-red-500" />
+              (activeInvoice.status === 'EXPIRED' || (timeLeftSeconds !== null && timeLeftSeconds <= 0)) ? (
+                /* EXPIRED PIX DISPLAY */
+                <div className="bg-[#16161C] border border-amber-500/30 rounded-2xl p-6 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Pagamento PIX da Assinatura</h4>
-                      <p className="text-xs text-zinc-400">Valor exacto: <strong className="text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</strong></p>
+                      <h4 className="text-sm font-bold text-white">Pagamento Expirado</h4>
+                      <p className="text-xs text-zinc-400">Este PIX não está mais disponível.</p>
                     </div>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
-                    Aguardando Pagamento
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  {/* QR Code Display */}
-                  <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner border border-white/10">
-                    {activeInvoice.qrCode ? (
-                      <img src={activeInvoice.qrCode} alt="QR Code PIX" className="w-48 h-48 object-contain" />
+                  <Button
+                    type="button"
+                    onClick={() => handleGeneratePixPayment(true)}
+                    disabled={generatingPix}
+                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
+                  >
+                    {generatingPix ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Gerando novo PIX...</span>
+                      </>
                     ) : (
-                      <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
-                        QR Code Gerado
-                      </div>
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        <span>GERAR NOVO PIX</span>
+                      </>
                     )}
-                    <span className="text-[11px] text-zinc-600 font-semibold mt-2">Escaneie o QR Code no app do seu banco</span>
+                  </Button>
+                </div>
+              ) : (
+                /* ACTIVE PENDING PIX DISPLAY */
+                <div className="bg-[#16161C] border border-red-500/30 rounded-2xl p-6 space-y-5 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-4 gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                        <QrCode className="w-5 h-5 text-red-500" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">Pagamento PIX da Assinatura</h4>
+                        <p className="text-xs text-zinc-400">Valor exato: <strong className="text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</strong></p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {timeLeftSeconds !== null && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono font-bold">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Expira em: {formatCountdown(timeLeftSeconds)}</span>
+                        </span>
+                      )}
+                      <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
+                        Aguardando Pagamento
+                      </span>
+                    </div>
                   </div>
 
-                  {/* PIX Copia e Cola & Verification */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                        PIX Copia e Cola
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={activeInvoice.qrCodeText || activeInvoice.externalId || ""}
-                          className="w-full bg-[#121214] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-300 select-all"
-                        />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    {/* QR Code Display */}
+                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner border border-white/10">
+                      {activeInvoice.qrCode ? (
+                        <img src={activeInvoice.qrCode} alt="QR Code PIX Cora" className="w-48 h-48 object-contain" />
+                      ) : (
+                        <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
+                          Gerando QR Code...
+                        </div>
+                      )}
+                      <span className="text-[11px] text-zinc-600 font-semibold mt-2">Escaneie o QR Code no app do seu banco</span>
+                    </div>
+
+                    {/* PIX Copia e Cola & Verification */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                          PIX Copia e Cola (EMV Cora)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={activeInvoice.qrCodeText || ""}
+                            className="w-full bg-[#121214] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-300 select-all"
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => handleCopyPix(activeInvoice.qrCodeText || "")}
+                            className="bg-white/10 hover:bg-white/20 text-white text-xs px-4 rounded-xl shrink-0 cursor-pointer"
+                          >
+                            {copiedPix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                            <span>{copiedPix ? "Copiado!" : "Copiar"}</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 space-y-2">
                         <Button
                           type="button"
-                          onClick={() => handleCopyPix(activeInvoice.qrCodeText || activeInvoice.externalId || "")}
-                          className="bg-white/10 hover:bg-white/20 text-white text-xs px-4 rounded-xl shrink-0 cursor-pointer"
+                          onClick={handleVerifyPayment}
+                          disabled={verifyingPayment}
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer"
                         >
-                          {copiedPix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                          <span>{copiedPix ? "Copiado!" : "Copiar"}</span>
+                          {verifyingPayment ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Consultando Banco Cora...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Já paguei</span>
+                            </>
+                          )}
                         </Button>
+                        <p className="text-[10px] text-zinc-500 text-center">
+                          O status do pagamento é verificado em tempo real diretamente na API da Cora.
+                        </p>
                       </div>
-                    </div>
-
-                    <div className="pt-2 space-y-2">
-                      <Button
-                        type="button"
-                        onClick={handleVerifyPayment}
-                        disabled={verifyingPayment}
-                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer"
-                      >
-                        {verifyingPayment ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Verificando no sistema Cora...</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>Já paguei</span>
-                          </>
-                        )}
-                      </Button>
-                      <p className="text-[10px] text-zinc-500 text-center">
-                        O status do pagamento é verificado com segurança no servidor Cora.
-                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
+              )
             )}
           </div>
 

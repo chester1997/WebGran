@@ -75,6 +75,10 @@ export interface CreateInvoiceParams {
   subscriptionId: string;
   amount: number;
   dueDate: Date;
+  customerName?: string;
+  customerEmail?: string;
+  customerDocument?: string;
+  documentType?: 'CPF' | 'CNPJ';
 }
 
 export interface InvoiceResponse {

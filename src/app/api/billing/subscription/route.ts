@@ -18,10 +18,16 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const seller = await requireSeller();
-    const invoice = await createCoraBillingInvoice(seller.id);
+    let forceNew = false;
+    try {
+      const body = await req.json();
+      forceNew = Boolean(body?.forceNew);
+    } catch {}
+
+    const invoice = await createCoraBillingInvoice(seller.id, forceNew);
 
     return NextResponse.json({
       success: true,
