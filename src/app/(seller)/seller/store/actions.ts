@@ -103,9 +103,12 @@ export async function saveBotAction(formData: FormData) {
         secretToken = crypto.randomBytes(32).toString("hex");
       }
 
+      const photoUrl = await botService.getProfilePhotoUrl();
+
       await db.update(telegramBots).set({ 
         secretToken,
         buttonText: buttonName,
+        photoUrl: photoUrl ?? existingBot.photoUrl,
         updatedAt: new Date()
       }).where(eq(telegramBots.id, existingBot.id));
 

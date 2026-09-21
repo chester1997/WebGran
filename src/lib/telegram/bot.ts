@@ -59,22 +59,46 @@ export class TelegramBotService {
 
   /**
    * Fetches the bot's profile photo URL.
-   * Returns null if the bot has no photo.
+   * Uses Telegram getChat API (primary for bot avatars) and getUserProfilePhotos as fallback.
    */
   async getProfilePhotoUrl(): Promise<string | null> {
     try {
       const me = await this.getMe();
-      const photos = await telegramFetch<any>(this.token, 'getUserProfilePhotos', { user_id: me.id, limit: 1 });
-      if (!photos?.photos?.length) return null;
-      
-      const fileId = photos.photos[0][0].file_id;
+      if (!me?.id) return null;
+
+      let fileId: string | null = null;
+
+      // Method 1: getChat (Official & reliable for Bot accounts on Telegram)
+      try {
+        const chatInfo = await telegramFetch<any>(this.token, 'getChat', { chat_id: me.id });
+        if (chatInfo?.photo?.big_file_id || chatInfo?.photo?.small_file_id) {
+          fileId = chatInfo.photo.big_file_id || chatInfo.photo.small_file_id;
+        }
+      } catch (err) {
+        console.warn("[TelegramBotService] getChat photo error:", err);
+      }
+
+      // Method 2: getUserProfilePhotos (Fallback)
+      if (!fileId) {
+        try {
+          const photos = await telegramFetch<any>(this.token, 'getUserProfilePhotos', { user_id: me.id, limit: 1 });
+          if (photos?.photos?.length && photos.photos[0]?.length) {
+            const sizes = photos.photos[0];
+            fileId = sizes[sizes.length - 1].file_id; // Get highest resolution
+          }
+        } catch (err) {
+          console.warn("[TelegramBotService] getUserProfilePhotos error:", err);
+        }
+      }
+
+      if (!fileId) return null;
+
       const fileInfo = await telegramFetch<any>(this.token, 'getFile', { file_id: fileId });
       if (!fileInfo?.file_path) return null;
-      
-      // Extract token from the instance (use raw fetch URL)
-      const token = this.token;
-      return `https://api.telegram.org/file/bot${token}/${fileInfo.file_path}`;
-    } catch {
+
+      return `https://api.telegram.org/file/bot${this.token}/${fileInfo.file_path}`;
+    } catch (err) {
+      console.error("[TelegramBotService] Error in getProfilePhotoUrl:", err);
       return null;
     }
   }

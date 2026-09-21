@@ -8,6 +8,9 @@ import { TopTenCarousel } from "../components/TopTenCarousel";
 import Link from "next/link";
 import { StudioHeader } from "../components/StudioHeader";
 
+import { decrypt } from "@/lib/encryption";
+import { TelegramBotService } from "@/lib/telegram/bot";
+
 export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   const store = await db.query.stores.findFirst({
     where: eq(stores.slug, storeSlug),
@@ -74,12 +77,30 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     }
   });
 
-  // Fetch first bot's photo for the header logo
+  // Fetch first bot for the header logo
   const firstBot = await db.query.telegramBots.findFirst({
     where: eq(telegramBots.storeId, store.id),
-    columns: { photoUrl: true }
   });
-  const headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
+  let headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
+
+  if (!headerLogoUrl && firstBot?.tokenEncrypted) {
+    try {
+      const token = decrypt(firstBot.tokenEncrypted);
+      const botService = new TelegramBotService(token);
+      const fetchedPhoto = await botService.getProfilePhotoUrl();
+      if (fetchedPhoto) {
+        headerLogoUrl = fetchedPhoto;
+        // Asynchronously update DB so future requests hit cache
+        db.update(telegramBots)
+          .set({ photoUrl: fetchedPhoto, updatedAt: new Date() })
+          .where(eq(telegramBots.id, firstBot.id))
+          .then(() => {})
+          .catch(() => {});
+      }
+    } catch (e) {
+      console.error("[StudioHome] Failed to auto-fetch bot photo:", e);
+    }
+  }
 
   // Fallbacks for default sections if no custom carousels created
   const recents = allProducts.slice(0, 8);
