@@ -3,7 +3,7 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { categories, products } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createCategoryAction(formData: FormData) {
@@ -19,8 +19,9 @@ export async function createCategoryAction(formData: FormData) {
   const description = formData.get("description") as string;
   const imageUrl = (formData.get("imageUrl") as string) || null;
   const status = (formData.get("status") as string) || "active";
+  const selectedProductIds = formData.getAll("selectedProductIds").map(id => String(id));
 
-  await db.insert(categories).values({
+  const inserted = await db.insert(categories).values({
     storeId: store.id,
     name,
     slug,
@@ -28,7 +29,16 @@ export async function createCategoryAction(formData: FormData) {
     imageUrl,
     status,
     position: 0,
-  });
+  }).returning();
+
+  const newCategory = inserted[0];
+
+  if (newCategory && selectedProductIds.length > 0) {
+    await db
+      .update(products)
+      .set({ categoryId: newCategory.id })
+      .where(and(eq(products.storeId, store.id), inArray(products.id, selectedProductIds)));
+  }
 
   revalidatePath("/seller/categories");
 }
@@ -46,6 +56,7 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
   const description = formData.get("description") as string;
   const imageUrl = (formData.get("imageUrl") as string) || null;
   const status = (formData.get("status") as string) || "active";
+  const selectedProductIds = formData.getAll("selectedProductIds").map(id => String(id));
 
   await db.update(categories).set({
     name,
@@ -55,6 +66,20 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
     status,
     updatedAt: new Date()
   }).where(and(eq(categories.id, categoryId), eq(categories.storeId, store.id)));
+
+  // 1. Remove category assignment for products currently in this category
+  await db
+    .update(products)
+    .set({ categoryId: null })
+    .where(and(eq(products.storeId, store.id), eq(products.categoryId, categoryId)));
+
+  // 2. Assign selected products to this category
+  if (selectedProductIds.length > 0) {
+    await db
+      .update(products)
+      .set({ categoryId: categoryId })
+      .where(and(eq(products.storeId, store.id), inArray(products.id, selectedProductIds)));
+  }
 
   revalidatePath("/seller/categories");
 }

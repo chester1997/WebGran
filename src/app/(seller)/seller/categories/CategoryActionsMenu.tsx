@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EditCategoryModal } from "./EditCategoryModal";
 import { deleteCategoryAction } from "./actions";
 
-export function CategoryActionsMenu({ category }: { category: any }) {
+export function CategoryActionsMenu({ category, storeProducts = [] }: { category: any; storeProducts?: any[] }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -36,7 +36,7 @@ export function CategoryActionsMenu({ category }: { category: any }) {
           setOpen(!open);
           setConfirmDelete(false);
         }}
-        className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg"
+        className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg cursor-pointer"
       >
         <MoreHorizontal className="w-4 h-4" />
       </Button>
@@ -51,11 +51,11 @@ export function CategoryActionsMenu({ category }: { category: any }) {
             }} 
           />
           <div className="absolute right-0 mt-1 w-44 bg-[#1A1A1E] border border-white/10 rounded-xl shadow-2xl z-50 p-1 space-y-1">
-            <EditCategoryModal category={category} />
+            <EditCategoryModal category={category} storeProducts={storeProducts} />
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 rounded-md transition-colors ${
+              className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 rounded-md transition-colors cursor-pointer ${
                 confirmDelete 
                   ? "bg-red-500/20 text-red-400 font-bold" 
                   : "text-red-400 hover:bg-red-500/10"

@@ -1,13 +1,11 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { categories } from "@/db/schema";
+import { categories, products } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { Tags, Plus, Search, MoreHorizontal, GripVertical, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewCategoryModal } from "./NewCategoryModal";
 import { CategoryActionsMenu } from "./CategoryActionsMenu";
-
-
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerCategoriesPage() {
@@ -23,6 +21,19 @@ export default async function SellerCategoriesPage() {
     orderBy: [asc(categories.position)]
   });
 
+  const storeProducts = await db.query.products.findMany({
+    where: eq(products.storeId, store.id),
+    orderBy: [asc(products.title)]
+  });
+
+  const serializedProducts = storeProducts.map((p) => ({
+    id: p.id,
+    title: p.title,
+    price: p.price,
+    coverUrl: p.coverUrl,
+    categoryId: p.categoryId,
+  }));
+
   return (
     <div className="space-y-8 fade-in w-full">
       
@@ -32,7 +43,7 @@ export default async function SellerCategoriesPage() {
           <h2 className="text-2xl font-bold text-white tracking-tight">Categorias</h2>
           <p className="text-zinc-400 text-sm mt-1">Organize seus produtos e facilite a navegação no Mini App.</p>
         </div>
-        <NewCategoryModal />
+        <NewCategoryModal storeProducts={serializedProducts} />
       </div>
 
       {/* Filters Area */}
@@ -46,7 +57,6 @@ export default async function SellerCategoriesPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          {/* Future select components for Status */}
           <select className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[120px]">
             <option>Todos Status</option>
             <option>Ativos</option>
@@ -80,57 +90,62 @@ export default async function SellerCategoriesPage() {
                       </div>
                       <p className="text-zinc-300 font-medium text-base mb-1">Nenhuma categoria criada</p>
                       <p className="text-zinc-600 text-sm max-w-sm mb-6">Você precisa de categorias para organizar seus produtos na vitrine da loja.</p>
-                      <NewCategoryModal isCard />
+                      <NewCategoryModal isCard storeProducts={serializedProducts} />
                     </div>
                   </td>
                 </tr>
               ) : (
                 /* Map Categories */
-                allCategories.map((cat) => (
-                  <tr key={cat.id} className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="py-4 pl-4 text-center">
-                      <button className="text-zinc-600 hover:text-white cursor-grab active:cursor-grabbing p-1 rounded-md hover:bg-white/5">
-                        <GripVertical className="w-4 h-4" />
-                      </button>
-                    </td>
-                    <td className="py-4 pl-4">
-                      <div className="flex items-center gap-3">
-                        {cat.imageUrl ? (
-                          <img src={cat.imageUrl} alt={cat.name} className="w-10 h-10 rounded-lg object-cover border border-white/10" />
+                allCategories.map((cat) => {
+                  const productCount = serializedProducts.filter(p => p.categoryId === cat.id).length;
+                  return (
+                    <tr key={cat.id} className="group hover:bg-white/[0.02] transition-colors">
+                      <td className="py-4 pl-4 text-center">
+                        <button className="text-zinc-600 hover:text-white cursor-grab active:cursor-grabbing p-1 rounded-md hover:bg-white/5">
+                          <GripVertical className="w-4 h-4" />
+                        </button>
+                      </td>
+                      <td className="py-4 pl-4">
+                        <div className="flex items-center gap-3">
+                          {cat.imageUrl ? (
+                            <img src={cat.imageUrl} alt={cat.name} className="w-10 h-10 rounded-lg object-cover border border-white/10" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5">
+                              <ImageIcon className="w-4 h-4 text-zinc-600" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-zinc-200 font-medium">{cat.name}</p>
+                            <p className="text-zinc-500 text-xs truncate max-w-[200px]">{cat.description || "Sem descrição"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 text-zinc-500 font-mono text-xs">/{cat.slug}</td>
+                      <td className="py-4">
+                        {cat.status === 'active' ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                            <span className="text-emerald-400 text-xs font-medium">Ativa</span>
+                          </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5">
-                            <ImageIcon className="w-4 h-4 text-zinc-600" />
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
+                            <span className="text-zinc-500 text-xs font-medium">Inativa</span>
                           </div>
                         )}
-                        <div>
-                          <p className="text-zinc-200 font-medium">{cat.name}</p>
-                          <p className="text-zinc-500 text-xs truncate max-w-[200px]">{cat.description || "Sem descrição"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 text-zinc-500 font-mono text-xs">/{cat.slug}</td>
-                    <td className="py-4">
-                      {cat.status === 'active' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                          <span className="text-emerald-400 text-xs font-medium">Ativa</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                          <span className="text-zinc-500 text-xs font-medium">Inativa</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 text-zinc-400 font-medium">
-                      0
-                    </td>
-                    <td className="py-4 text-right pr-6">
-                      <CategoryActionsMenu category={cat} />
-                    </td>
+                      </td>
+                      <td className="py-4 text-zinc-400 font-medium">
+                        <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/5 text-xs text-white font-bold">
+                          {productCount} {productCount === 1 ? "produto" : "produtos"}
+                        </span>
+                      </td>
+                      <td className="py-4 text-right pr-6">
+                        <CategoryActionsMenu category={cat} storeProducts={serializedProducts} />
+                      </td>
 
-                  </tr>
-                ))
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
