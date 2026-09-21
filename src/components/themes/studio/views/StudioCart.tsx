@@ -122,7 +122,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
 
   if (pixState) {
     return (
-      <div className="p-4 pt-6 text-white bg-zinc-950 w-full max-w-lg mx-auto flex flex-col items-center space-y-6">
+      <div className="p-4 pt-6 text-white bg-[#161616] w-full max-w-lg mx-auto flex flex-col items-center space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold">Pagamento via PIX</h1>
           <p className="text-xs text-zinc-400">Escaneie o QR Code ou copie o código PIX abaixo</p>
@@ -205,7 +205,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   }
 
   return (
-    <div className="p-4 pt-6 text-white bg-zinc-950 w-full">
+    <div className="p-4 pt-6 text-white bg-[#161616] w-full">
       <h1 className="text-2xl font-bold mb-6">Seu Carrinho</h1>
 
       <div className="space-y-4 mb-8">
@@ -224,7 +224,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
               <p className="text-red-500 font-medium mb-auto">R$ {Number(item.price || 0).toFixed(2)}</p>
               
               <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-3 bg-zinc-950 rounded-full border border-zinc-800 px-2 py-1">
+                <div className="flex items-center gap-3 bg-[#161616] rounded-full border border-zinc-800 px-2 py-1">
                   <button 
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
                     disabled={item.quantity <= 1}

@@ -15,7 +15,7 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-zinc-950 text-white font-sans overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-[#161616] text-white font-sans overflow-hidden relative">
       {/* Scrollable Center Content Area (Only scrollable container) */}
       <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(var(--bottom-nav-height)+1.5rem+env(safe-area-inset-bottom,0px))]">
         {children}

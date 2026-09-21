@@ -72,7 +72,7 @@ export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
   );
 
   return (
-    <div className="p-4 pt-8 text-white bg-zinc-950 w-full min-h-[80vh]">
+    <div className="p-4 pt-8 text-white bg-[#161616] w-full min-h-[80vh]">
       <h1 className="text-2xl font-bold mb-6">Meus Acessos</h1>
       
       {accessesWithDestinations.length === 0 ? (

@@ -48,7 +48,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   ];
 
   return (
-    <nav className="shrink-0 h-16 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 grid grid-cols-4 items-center z-50 pb-[env(safe-area-inset-bottom,0px)]">
+    <nav className="shrink-0 h-16 bg-[#161616]/95 backdrop-blur-md border-t border-white/10 grid grid-cols-4 items-center z-50 pb-[env(safe-area-inset-bottom,0px)]">
       {navItems.map((item) => {
         const Icon = item.icon;
         return (

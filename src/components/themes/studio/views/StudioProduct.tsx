@@ -26,7 +26,7 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
   const bgImage = product.bannerUrl || product.coverUrl || "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop";
 
   return (
-    <div className="w-full min-h-screen bg-zinc-950 text-white pb-24">
+    <div className="w-full min-h-screen bg-[#161616] text-white pb-24">
       {/* Back Button */}
       <div className="absolute top-4 left-4 z-50">
         <Link href={`/miniapp/${storeSlug}`} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center hover:bg-black/80 transition-colors">
@@ -37,7 +37,7 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
       {/* Top Banner */}
       <div className="relative w-full aspect-video md:h-[50vh] max-h-[600px]">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#161616] via-[#161616]/20 to-transparent" />
       </div>
 
       <div className="px-4 -mt-12 relative z-10 space-y-6">

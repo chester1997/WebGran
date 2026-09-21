@@ -41,7 +41,7 @@ export default async function OrderStatusPage({
   const isCancelled = order.status === 'cancelled';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 pt-8 pb-24 flex flex-col items-center justify-center max-w-lg mx-auto space-y-6">
+    <div className="min-h-screen bg-[#161616] text-white p-4 pt-8 pb-24 flex flex-col items-center justify-center max-w-lg mx-auto space-y-6">
       {/* Icon and Status Badge */}
       <div className="text-center space-y-3">
         {isPaid && (

@@ -19,7 +19,7 @@ export function MiniAppThemeProvider({
 }) {
   return (
     <ThemeContext.Provider value={{ theme: defaultTheme }}>
-      <div className={`theme-${defaultTheme} min-h-screen bg-background text-foreground`}>
+      <div className={`theme-${defaultTheme} min-h-screen bg-[#161616] text-foreground`}>
         {children}
       </div>
     </ThemeContext.Provider>

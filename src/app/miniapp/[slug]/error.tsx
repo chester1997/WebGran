@@ -15,7 +15,7 @@ export default function MiniAppError({
   }, [error]);
 
   return (
-    <div className="w-full h-[100vh] bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-white">
+    <div className="w-full h-[100vh] bg-[#161616] flex flex-col items-center justify-center p-6 text-center text-white">
       <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
       <h2 className="text-xl font-bold mb-2">Ops! Algo deu errado.</h2>
       <p className="text-zinc-400 mb-2 max-w-sm">

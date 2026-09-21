@@ -6,7 +6,7 @@ import { PackageX } from "lucide-react";
 
 export default function MiniAppNotFound() {
   return (
-    <div className="w-full h-[100vh] bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-white">
+    <div className="w-full h-[100vh] bg-[#161616] flex flex-col items-center justify-center p-6 text-center text-white">
       <PackageX className="w-12 h-12 text-zinc-500 mb-4" />
       <h2 className="text-xl font-bold mb-2">Página não encontrada</h2>
       <p className="text-zinc-400 mb-6 max-w-sm">
