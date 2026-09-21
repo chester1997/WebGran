@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, 
   Bot,
@@ -305,9 +306,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               </div>
               
               {!collapsed && (
-                <Link href="/api/auth/signout" className="text-zinc-500 hover:text-white p-1 rounded-md transition-colors" title="Sair">
+                <button 
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/login" })} 
+                  className="text-zinc-500 hover:text-white p-1 rounded-md transition-colors cursor-pointer" 
+                  title="Sair"
+                >
                   <LogOut className="w-4 h-4" strokeWidth={1.8} />
-                </Link>
+                </button>
               )}
             </div>
           </div>
