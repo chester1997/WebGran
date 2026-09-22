@@ -28,11 +28,16 @@ export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: s
 
   return (
     <div className="w-full bg-transparent text-white p-4">
-      <div className="flex items-center gap-4 mb-6 pt-4">
-        <Link href={`/miniapp/${storeSlug}`} className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-zinc-800 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
+      <div className="flex items-center gap-3 mb-6 pt-2">
+        <Link 
+          href={`/miniapp/${storeSlug}`} 
+          className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
         </Link>
-        <h1 className="text-2xl font-bold">{category.name}</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
+          {category.name}
+        </h1>
       </div>
 
       <div className="grid grid-cols-3 gap-3 md:gap-4">
