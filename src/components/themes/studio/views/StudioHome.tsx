@@ -126,7 +126,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       )}
 
       <div className="relative z-20 mt-3 space-y-5">
-        {/* Categories Cards (Square 1:1 Cards) */}
+        {/* Categories Cards (Transparent PNG Artwork) */}
         {store.categories && store.categories.length > 0 && (
           <section className="w-full overflow-hidden pt-1 pb-2">
             <div 
@@ -141,16 +141,20 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                 <Link 
                   key={cat.id} 
                   href={`/miniapp/${storeSlug}/category/${cat.slug}`} 
-                  className="shrink-0 relative w-[135px] sm:w-[160px] md:w-[180px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group hover:border-red-500/40"
+                  className={
+                    cat.imageUrl 
+                      ? "shrink-0 relative w-[135px] sm:w-[160px] md:w-[180px] aspect-square flex items-center justify-center bg-transparent border-0 shadow-none outline-none transition-transform duration-200 active:scale-95 group"
+                      : "shrink-0 relative w-[135px] sm:w-[160px] md:w-[180px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group hover:border-red-500/40"
+                  }
                 >
                   {cat.imageUrl ? (
                     <img 
                       src={cat.imageUrl} 
                       alt={cat.name} 
-                      className="w-full h-full object-contain pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+                      className="w-full h-full object-contain bg-transparent pointer-events-none transition-transform duration-300 group-hover:scale-105" 
                     />
                   ) : (
-                    <div className="w-full h-full p-4 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center">
+                    <div className="w-full h-full p-4 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center rounded-2xl">
                       <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate max-w-full">
                         {cat.name}
                       </span>
