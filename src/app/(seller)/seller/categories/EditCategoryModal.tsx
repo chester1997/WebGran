@@ -96,16 +96,16 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
         <Edit3 className="w-3.5 h-3.5 text-blue-400" /> Editar Categoria
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[600px] w-full bg-[#121214] border border-white/10 p-0 overflow-hidden text-zinc-100 shadow-2xl">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <DialogTitle className="text-xl font-bold tracking-tight text-white">Editar Categoria</DialogTitle>
+      <DialogContent className="sm:max-w-[600px] w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/10 p-0 overflow-hidden text-zinc-100 shadow-2xl rounded-2xl">
+        <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between">
+          <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-white">Editar Categoria</DialogTitle>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[75vh] custom-scrollbar">
-          <form id={`edit-category-form-${category.id}`} onSubmit={handleSubmit} className="space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden max-h-[75vh] custom-scrollbar w-full max-w-full">
+          <form id={`edit-category-form-${category.id}`} onSubmit={handleSubmit} className="space-y-5 sm:space-y-6 w-full">
             
             {/* Nome e Status */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Nome da Categoria *</label>
                 <input 
@@ -114,16 +114,12 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
                   defaultValue={category.name}
                   required
                   placeholder="Ex: Fantasia, Ação"
-                  className="w-full bg-[#1A1A1E] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                  className="w-full bg-[#1A1A1E] border border-white/10 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
-                <select 
-                  name="status" 
-                  defaultValue={category.status}
-                  className="w-full bg-[#1A1A1E] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
-                >
+                <select name="status" defaultValue={category.status} className="w-full bg-[#1A1A1E] border border-white/10 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="active">Ativo na Loja</option>
                   <option value="inactive">Inativo (Oculto)</option>
                 </select>
