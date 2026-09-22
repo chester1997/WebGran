@@ -126,7 +126,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       )}
 
       <div className="relative z-20 mt-3 space-y-5">
-        {/* Categories Cards (MOVED ABOVE TOP 15 DA SEMANA) */}
+        {/* Categories Cards (Square 1:1 Cards) */}
         {store.categories && store.categories.length > 0 && (
           <section className="w-full overflow-hidden pt-1 pb-2">
             <div 
@@ -141,23 +141,21 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                 <Link 
                   key={cat.id} 
                   href={`/miniapp/${storeSlug}/category/${cat.slug}`} 
-                  className="shrink-0 relative min-w-[130px] sm:min-w-[150px] h-[54px] rounded-2xl overflow-hidden border border-red-500/30 bg-gradient-to-r from-[#B91C1C] via-[#991B1B] to-[#450A0A] shadow-lg shadow-red-950/40 flex items-center justify-center px-4 transition-transform active:scale-95 group"
+                  className="shrink-0 relative w-[135px] sm:w-[160px] md:w-[180px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group hover:border-red-500/40"
                 >
-                  {/* Optional Background Image with Red Gradient Overlay */}
-                  {cat.imageUrl && (
+                  {cat.imageUrl ? (
                     <img 
                       src={cat.imageUrl} 
                       alt={cat.name} 
-                      className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity" 
+                      className="w-full h-full object-contain pointer-events-none transition-transform duration-300 group-hover:scale-105" 
                     />
+                  ) : (
+                    <div className="w-full h-full p-4 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center">
+                      <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate max-w-full">
+                        {cat.name}
+                      </span>
+                    </div>
                   )}
-                  {/* Subtle Red Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-red-950/80 via-red-900/60 to-black/70 pointer-events-none" />
-                  
-                  {/* Category Title Centered */}
-                  <span className="relative z-10 text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate">
-                    {cat.name}
-                  </span>
                 </Link>
               ))}
             </div>
