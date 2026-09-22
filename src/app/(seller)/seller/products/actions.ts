@@ -64,6 +64,7 @@ export async function createProductAction(formData: FormData) {
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
   const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
+  const bannerUrl = (formData.get("bannerUrl") as string) || null;
 
   await db.insert(products).values({
     storeId: store.id,
@@ -78,12 +79,14 @@ export async function createProductAction(formData: FormData) {
     status,
     duration,
     coverUrl,
+    bannerUrl,
     deliveryType,
     deliveryValue,
     position: 0,
   });
 
   revalidatePath("/seller/products");
+  revalidatePath("/miniapp/[slug]", "layout");
   return { success: true };
 }
 
@@ -144,6 +147,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
   const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
+  const bannerUrl = (formData.get("bannerUrl") as string) || null;
 
   await db.update(products).set({
     botId: botId || null,
@@ -156,12 +160,14 @@ export async function updateProductAction(productId: string, formData: FormData)
     status,
     duration,
     coverUrl,
+    bannerUrl,
     deliveryType,
     deliveryValue,
     updatedAt: new Date(),
   }).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
 
   revalidatePath("/seller/products");
+  revalidatePath("/miniapp/[slug]", "layout");
   return { success: true };
 }
 
