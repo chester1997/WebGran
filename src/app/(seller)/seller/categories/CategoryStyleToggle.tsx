@@ -26,7 +26,7 @@ export function CategoryStyleToggle({ initialStyle }: CategoryStyleToggleProps) 
 
   return (
     <div className="bg-[#121214] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-white tracking-wide uppercase flex items-center gap-2">
             Estilo das Categorias no Mini App
@@ -36,35 +36,35 @@ export function CategoryStyleToggle({ initialStyle }: CategoryStyleToggleProps) 
           </p>
         </div>
 
-        <div className="inline-flex items-center p-1 bg-[#0A0A0C] border border-white/10 rounded-xl gap-1 shrink-0 self-start sm:self-auto">
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#0A0A0C] border border-white/10 rounded-xl shrink-0 w-full md:w-auto">
           <button
             type="button"
             onClick={() => handleSelect("IMAGE")}
             disabled={isPending}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
               style === "IMAGE"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
                 : "text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
-            <ImageIcon className="w-4 h-4" />
-            <span>Imagens (1:1 Transparentes)</span>
-            {style === "IMAGE" && <Check className="w-3.5 h-3.5 ml-1" />}
+            <ImageIcon className="w-4 h-4 shrink-0" />
+            <span className="truncate">Imagens (1:1)</span>
+            {style === "IMAGE" && <Check className="w-3.5 h-3.5 ml-0.5 shrink-0" />}
           </button>
 
           <button
             type="button"
             onClick={() => handleSelect("ICON")}
             disabled={isPending}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
               style === "ICON"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
                 : "text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Ícones + Nomes</span>
-            {style === "ICON" && <Check className="w-3.5 h-3.5 ml-1" />}
+            <LayoutGrid className="w-4 h-4 shrink-0" />
+            <span className="truncate">Ícones + Nomes</span>
+            {style === "ICON" && <Check className="w-3.5 h-3.5 ml-0.5 shrink-0" />}
           </button>
         </div>
       </div>
