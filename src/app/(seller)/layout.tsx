@@ -353,7 +353,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070709] text-zinc-100 font-sans selection:bg-red-500/30">
+    <div className="min-h-screen bg-[#070709] text-zinc-100 font-sans selection:bg-red-500/30 overflow-x-hidden max-w-full">
       
       {/* Mobile Top Header (Sticky / Fixed) */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-[#0F0F12] border-b border-white/10 z-40 px-4 flex items-center justify-between shadow-lg">
@@ -393,8 +393,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile Drawer Side-Over Panel */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[300px] bg-[#0F0F12] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:hidden ${
-          mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[300px] bg-[#0F0F12] border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out md:hidden ${
+          mobileDrawerOpen ? "translate-x-0 opacity-100 pointer-events-auto visible" : "-translate-x-full opacity-0 pointer-events-none invisible"
         }`}
       >
         <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-[#101114]">
@@ -418,7 +418,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         {renderNavContent(true)}
       </aside>
 
-      <div className="flex h-screen overflow-hidden pt-14 md:pt-0">
+      <div className="flex h-screen overflow-x-hidden max-w-full pt-14 md:pt-0">
         
         {/* Desktop Sidebar (Preserved exactly as is for >= md) */}
         <aside 
@@ -464,8 +464,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#070709]">
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar relative">
+        <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden bg-[#070709]">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 custom-scrollbar relative w-full max-w-full">
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-600/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
             
             {subInfo && subInfo.isSubscriptionActive === false && !pathname.startsWith("/seller/settings") ? (

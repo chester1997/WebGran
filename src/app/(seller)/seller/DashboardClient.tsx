@@ -119,9 +119,9 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   }
 
   return (
-    <div className="space-y-6 fade-in w-full pb-16">
+    <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-16">
       {/* 1. Header & Period Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/5 pb-4 sm:pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/5 pb-4 sm:pb-5 w-full max-w-full">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             Olá, {data.userName || data.storeName} <span className="animate-pulse">👋</span>
@@ -132,7 +132,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* Period Selector Tabs */}
-        <div className="bg-[#121216] p-1 sm:p-1.5 rounded-2xl border border-white/10 flex items-center gap-1 overflow-x-auto scrollbar-hide shrink-0 max-w-full">
+        <div className="bg-[#121216] p-1 sm:p-1.5 rounded-2xl border border-white/10 flex items-center gap-1 overflow-x-auto scrollbar-hide shrink-0 max-w-full w-full sm:w-auto">
           {periodsList.map((p) => {
             const isActive = period === p.key;
             return (
@@ -156,7 +156,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
       {/* Error Retry Banner */}
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3 shadow-xl">
+        <div className="p-4 rounded-2xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3 shadow-xl w-full max-w-full">
           <div className="flex items-center gap-2.5">
             <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
             <span>{errorMsg}</span>
@@ -173,7 +173,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       )}
 
       {/* 2. Main KPI Cards (2 Columns on Mobile, 4 Columns on Desktop) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6 w-full max-w-full">
         {/* KPI 1: Faturamento */}
         <div className="bg-[#121214] border border-white/5 rounded-2xl p-3 sm:p-5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-all flex flex-col justify-between min-h-[105px] sm:min-h-[130px]">
           {isPending ? (
@@ -355,8 +355,8 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               </p>
             </div>
           ) : (
-            <div className="relative w-full">
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible">
+            <div className="relative w-full max-w-full overflow-hidden">
+              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto max-w-full block overflow-hidden">
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#EF4444" stopOpacity="0.4" />
