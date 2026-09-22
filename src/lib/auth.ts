@@ -67,10 +67,12 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export async function getCurrentUser() {
+import { cache } from "react";
+
+export const getCurrentUser = cache(async () => {
   const session = await getServerSession(authOptions);
   return session?.user;
-}
+});
 
 export async function requireAdmin() {
   const user = await getCurrentUser();
@@ -96,7 +98,7 @@ export async function requireSeller() {
   return user;
 }
 
-export async function getCurrentStore() {
+export const getCurrentStore = cache(async () => {
   const user = await getCurrentUser();
   if (!user) {
     return null;
@@ -107,4 +109,4 @@ export async function getCurrentStore() {
   });
   
   return userStore || null;
-}
+});

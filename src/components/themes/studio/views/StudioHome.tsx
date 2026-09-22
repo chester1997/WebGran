@@ -12,16 +12,10 @@ import { CarouselIconRenderer } from "@/lib/carousel-icons";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
+import { getStoreBySlug } from "@/lib/store-cache";
+
 export async function StudioHome({ storeSlug }: { storeSlug: string }) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug),
-    with: {
-      categories: {
-        where: eq(categories.status, 'active'),
-        orderBy: [asc(categories.position)]
-      }
-    }
-  });
+  const store = await getStoreBySlug(storeSlug);
 
   if (!store) return null;
 

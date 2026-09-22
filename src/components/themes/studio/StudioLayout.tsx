@@ -1,14 +1,10 @@
 import React, { ReactNode } from "react";
-import { db } from "@/db";
-import { stores } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { StudioBottomNav } from "./components/StudioBottomNav";
+import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioLayout({ storeSlug, children }: { storeSlug: string, children: ReactNode }) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug)
-  });
+  const store = await getStoreBySlug(storeSlug);
 
   if (!store) {
     notFound();

@@ -11,12 +11,10 @@ import { StudioCart } from "../studio/views/StudioCart";
 import { StudioAccesses } from "../studio/views/StudioAccesses";
 import { StudioProfile } from "../studio/views/StudioProfile";
 
+import { getStoreBySlug } from "@/lib/store-cache";
+
 async function getResolvedThemeSlug(storeSlug: string) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug),
-    with: { theme: true }
-  });
-  
+  const store = await getStoreBySlug(storeSlug);
   const themeSlug = store?.theme?.slug || null;
   const config = getThemeConfig(themeSlug);
   return config.slug;
