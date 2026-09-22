@@ -6,6 +6,7 @@ import { Tags, Plus, Search, MoreHorizontal, GripVertical, Image as ImageIcon } 
 import { Button } from "@/components/ui/button";
 import { NewCategoryModal } from "./NewCategoryModal";
 import { CategoryActionsMenu } from "./CategoryActionsMenu";
+import { CategoryStyleToggle } from "./CategoryStyleToggle";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerCategoriesPage() {
@@ -45,6 +46,9 @@ export default async function SellerCategoriesPage() {
         </div>
         <NewCategoryModal storeProducts={serializedProducts} />
       </div>
+
+      {/* Category Display Style Selector */}
+      <CategoryStyleToggle initialStyle={(store.categoryDisplayStyle as "IMAGE" | "ICON") || "IMAGE"} />
 
       {/* Filters Area */}
       <div className="flex flex-col md:flex-row gap-4 bg-[#121212] p-4 border border-white/5 rounded-2xl shadow-xl">

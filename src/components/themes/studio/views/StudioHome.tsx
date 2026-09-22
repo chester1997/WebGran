@@ -7,6 +7,7 @@ import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
 import Link from "next/link";
 import { StudioHeader } from "../components/StudioHeader";
+import { CarouselIconRenderer } from "@/lib/carousel-icons";
 
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
@@ -16,7 +17,8 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     where: eq(stores.slug, storeSlug),
     with: {
       categories: {
-        where: eq(categories.status, 'active')
+        where: eq(categories.status, 'active'),
+        orderBy: [asc(categories.position)]
       }
     }
   });
@@ -126,45 +128,81 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       )}
 
       <div className="relative z-20 mt-3 space-y-5">
-        {/* Categories Cards (Transparent PNG Artwork) */}
-        {store.categories && store.categories.length > 0 && (
-          <section className="w-full overflow-hidden pt-1 pb-2">
-            <div 
-              className="flex overflow-x-auto scrollbar-hide w-full"
-              style={{
-                paddingInlineStart: "var(--miniapp-content-padding-x)",
-                paddingInlineEnd: "var(--miniapp-content-padding-x)",
-                gap: "0.75rem",
-              }}
-            >
-              {store.categories.map(cat => (
-                <Link 
-                  key={cat.id} 
-                  href={`/miniapp/${storeSlug}/category/${cat.slug}`} 
-                  className={
-                    cat.imageUrl 
-                      ? "shrink-0 relative w-[135px] sm:w-[160px] md:w-[180px] aspect-square flex items-center justify-center bg-transparent border-0 shadow-none outline-none transition-transform duration-200 active:scale-95 group"
-                      : "shrink-0 relative w-[135px] sm:w-[160px] md:w-[180px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group hover:border-red-500/40"
-                  }
-                >
-                  {cat.imageUrl ? (
-                    <img 
-                      src={cat.imageUrl} 
-                      alt={cat.name} 
-                      className="w-full h-full object-contain bg-transparent pointer-events-none transition-transform duration-300 group-hover:scale-105" 
-                    />
-                  ) : (
-                    <div className="w-full h-full p-4 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center rounded-2xl">
-                      <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate max-w-full">
-                        {cat.name}
-                      </span>
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Categories Section (Dual Display Mode: IMAGE vs ICON) */}
+        {store.categories && store.categories.length > 0 && (() => {
+          const displayStyle = store.categoryDisplayStyle || "IMAGE";
+          const isIconMode = displayStyle === "ICON";
+          const gapSize = isIconMode ? "0.625rem" : "0.875rem";
+
+          return (
+            <section className="w-full overflow-hidden pt-1 pb-2">
+              <div 
+                className="flex overflow-x-auto scrollbar-hide w-full select-none"
+                style={{
+                  scrollPaddingLeft: "var(--miniapp-content-padding-x)",
+                  scrollPaddingRight: "var(--miniapp-content-padding-x)",
+                  gap: gapSize,
+                  msOverflowStyle: "none",
+                  scrollbarWidth: "none",
+                }}
+              >
+                {/* Leading Grid Track Spacer: Ensures Category #1 starts at var(--miniapp-content-padding-x) */}
+                <div
+                  className="shrink-0 pointer-events-none"
+                  style={{ width: `calc(var(--miniapp-content-padding-x) - ${gapSize})` }}
+                  aria-hidden="true"
+                />
+
+                {store.categories.map(cat => (
+                  <Link 
+                    key={cat.id} 
+                    href={`/miniapp/${storeSlug}/category/${cat.slug}`} 
+                    className={
+                      isIconMode
+                        ? "shrink-0 relative w-[76px] sm:w-[84px] h-[66px] sm:h-[72px] rounded-xl border border-white/10 bg-[#18181B]/80 hover:bg-zinc-800/90 flex flex-col items-center justify-center p-2 text-center transition-all duration-200 active:scale-95 group shadow-sm"
+                        : cat.imageUrl 
+                          ? "shrink-0 relative w-[130px] sm:w-[150px] aspect-square flex items-center justify-center bg-transparent border-0 shadow-none outline-none transition-transform duration-200 active:scale-95 group"
+                          : "shrink-0 relative w-[130px] sm:w-[150px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group"
+                    }
+                  >
+                    {isIconMode ? (
+                      <>
+                        <CarouselIconRenderer 
+                          iconName={cat.iconName || "Tv"} 
+                          color="#E4E4E7" 
+                          className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" 
+                          size={20}
+                        />
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-200 truncate max-w-full leading-tight mt-1 group-hover:text-white">
+                          {cat.name}
+                        </span>
+                      </>
+                    ) : cat.imageUrl ? (
+                      <img 
+                        src={cat.imageUrl} 
+                        alt={cat.name} 
+                        className="w-full h-full object-contain bg-transparent pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+                      />
+                    ) : (
+                      <div className="w-full h-full p-4 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center rounded-2xl">
+                        <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate max-w-full">
+                          {cat.name}
+                        </span>
+                      </div>
+                    )}
+                  </Link>
+                ))}
+
+                {/* Trailing Grid Track Spacer */}
+                <div
+                  className="shrink-0 pointer-events-none"
+                  style={{ width: `calc(var(--miniapp-content-padding-x) - ${gapSize})` }}
+                  aria-hidden="true"
+                />
+              </div>
+            </section>
+          );
+        })()}
 
         {/* Editorial Ranking Carousel (Top 15) */}
         {rankingProducts.length > 0 && (

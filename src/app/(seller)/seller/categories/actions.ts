@@ -2,9 +2,29 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { categories, products } from "@/db/schema";
+import { categories, products, stores } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+
+export async function updateCategoryDisplayStyleAction(displayStyle: "IMAGE" | "ICON") {
+  await requireSeller();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    throw new Error("Loja não encontrada");
+  }
+
+  await db
+    .update(stores)
+    .set({
+      categoryDisplayStyle: displayStyle,
+      updatedAt: new Date(),
+    })
+    .where(eq(stores.id, store.id));
+
+  revalidatePath("/seller/categories");
+  revalidatePath("/miniapp/[slug]", "layout");
+}
 
 export async function createCategoryAction(formData: FormData) {
   const user = await requireSeller();
@@ -18,6 +38,7 @@ export async function createCategoryAction(formData: FormData) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   const description = formData.get("description") as string;
   const imageUrl = (formData.get("imageUrl") as string) || null;
+  const iconName = (formData.get("iconName") as string) || null;
   const status = (formData.get("status") as string) || "active";
   const selectedProductIds = formData.getAll("selectedProductIds").map(id => String(id));
 
@@ -27,6 +48,7 @@ export async function createCategoryAction(formData: FormData) {
     slug,
     description,
     imageUrl,
+    iconName,
     status,
     position: 0,
   }).returning();
@@ -41,6 +63,7 @@ export async function createCategoryAction(formData: FormData) {
   }
 
   revalidatePath("/seller/categories");
+  revalidatePath("/miniapp/[slug]", "layout");
 }
 
 export async function updateCategoryAction(categoryId: string, formData: FormData) {
@@ -55,6 +78,7 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || categoryId;
   const description = formData.get("description") as string;
   const imageUrl = (formData.get("imageUrl") as string) || null;
+  const iconName = (formData.get("iconName") as string) || null;
   const status = (formData.get("status") as string) || "active";
   const selectedProductIds = formData.getAll("selectedProductIds").map(id => String(id));
 
@@ -63,6 +87,7 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
     slug,
     description,
     imageUrl,
+    iconName,
     status,
     updatedAt: new Date()
   }).where(and(eq(categories.id, categoryId), eq(categories.storeId, store.id)));
@@ -82,6 +107,7 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
   }
 
   revalidatePath("/seller/categories");
+  revalidatePath("/miniapp/[slug]", "layout");
 }
 
 export async function deleteCategoryAction(categoryId: string) {
@@ -100,4 +126,5 @@ export async function deleteCategoryAction(categoryId: string) {
   );
 
   revalidatePath("/seller/categories");
+  revalidatePath("/miniapp/[slug]", "layout");
 }

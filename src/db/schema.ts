@@ -49,6 +49,7 @@ export const stores = pgTable('stores', {
   welcomeMessage: text('welcome_message'),
   welcomeBanners: jsonb('welcome_banners').default([]),
   bannerInterval: integer('banner_interval').default(5).notNull(),
+  categoryDisplayStyle: text('category_display_style').notNull().default('IMAGE'), // 'IMAGE' | 'ICON'
   supportType: text('support_type').default('telegram'),
   supportValue: text('support_value'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -77,6 +78,7 @@ export const categories = pgTable('categories', {
   slug: text('slug').notNull(),
   description: text('description'),
   imageUrl: text('image_url'),
+  iconName: text('icon_name'),
   position: integer('position').notNull().default(0),
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

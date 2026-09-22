@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit3, Upload, X, Package, Check, Search } from "lucide-react";
 import { updateCategoryAction } from "./actions";
+import { IconSelector } from "./IconSelector";
 
 interface ProductItem {
   id: string;
@@ -23,6 +24,7 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState(category?.imageUrl || "");
+  const [iconName, setIconName] = useState(category?.iconName || "Tv");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +32,7 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
   useEffect(() => {
     if (open) {
       setImageUrl(category?.imageUrl || "");
+      setIconName(category?.iconName || "Tv");
       // Pre-select products belonging to this category
       const initialAssigned = storeProducts
         .filter((p) => p.categoryId === category.id)
@@ -70,6 +73,7 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     formData.set("imageUrl", imageUrl);
+    formData.set("iconName", iconName);
     
     // Append selected product IDs
     selectedProductIds.forEach((id) => {
@@ -225,9 +229,15 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
               )}
             </div>
 
+            {/* Ícone da Categoria */}
+            <div className="pt-2 border-t border-white/5">
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Ícone da Categoria (Para exibição por Ícones)</label>
+              <IconSelector value={iconName} onChange={setIconName} />
+            </div>
+
             {/* Imagem */}
             <div className="pt-2 border-t border-white/5">
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem / Ícone (Opcional)</label>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem 1:1 Transparent PNG (Para exibição por Imagens)</label>
               
               {imageUrl && (
                 <div className="mb-3 relative w-20 h-20 rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1E]">
