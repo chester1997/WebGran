@@ -8,6 +8,7 @@ interface Product {
   slug: string;
   title: string;
   coverUrl: string | null;
+  bannerUrl?: string | null;
 }
 
 interface TopTenCarouselProps {
@@ -101,11 +102,11 @@ export function TopTenCarousel({
                 {displayPosition}
               </span>
 
-              {/* Poster Card */}
-              <div className="relative z-10 w-32 sm:w-36 md:w-40 aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
-                {product.coverUrl ? (
+              {/* Horizontal 16:9 Image Card */}
+              <div className="relative z-10 w-48 sm:w-56 md:w-64 aspect-[16/9] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
+                {product.bannerUrl || product.coverUrl ? (
                   <img
-                    src={product.coverUrl}
+                    src={product.bannerUrl || product.coverUrl!}
                     alt={product.title}
                     loading="lazy"
                     decoding="async"
