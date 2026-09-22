@@ -127,42 +127,33 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         />
       )}
 
-      <div className="relative z-20 mt-3 space-y-5">
+      <div className="relative z-20 mt-3 space-y-4">
         {/* Categories Section (Dual Display Mode: IMAGE vs ICON) */}
         {store.categories && store.categories.length > 0 && (() => {
           const displayStyle = store.categoryDisplayStyle || "IMAGE";
           const isIconMode = displayStyle === "ICON";
-          const gapSize = isIconMode ? "0.625rem" : "0.875rem";
 
           return (
-            <section className="w-full overflow-hidden pt-1 pb-2">
+            <section className="w-full overflow-hidden pt-1 pb-1">
               <div 
-                className="flex overflow-x-auto scrollbar-hide w-full select-none"
+                className={`flex overflow-x-auto scrollbar-hide w-full select-none px-4 ${
+                  isIconMode ? "gap-2 sm:gap-2.5" : "gap-1.5 sm:gap-2"
+                }`}
                 style={{
-                  scrollPaddingLeft: "var(--miniapp-content-padding-x)",
-                  scrollPaddingRight: "var(--miniapp-content-padding-x)",
-                  gap: gapSize,
                   msOverflowStyle: "none",
                   scrollbarWidth: "none",
                 }}
               >
-                {/* Leading Grid Track Spacer: Ensures Category #1 starts at var(--miniapp-content-padding-x) */}
-                <div
-                  className="shrink-0 pointer-events-none"
-                  style={{ width: `calc(var(--miniapp-content-padding-x) - ${gapSize})` }}
-                  aria-hidden="true"
-                />
-
                 {store.categories.map(cat => (
                   <Link 
                     key={cat.id} 
                     href={`/miniapp/${storeSlug}/category/${cat.slug}`} 
                     className={
                       isIconMode
-                        ? "shrink-0 relative w-[76px] sm:w-[84px] h-[66px] sm:h-[72px] rounded-xl border border-white/10 bg-[#18181B]/80 hover:bg-zinc-800/90 flex flex-col items-center justify-center p-2 text-center transition-all duration-200 active:scale-95 group shadow-sm"
+                        ? "shrink-0 relative w-[76px] sm:w-[84px] h-[64px] sm:h-[70px] rounded-xl border border-white/10 bg-[#18181B]/80 hover:bg-zinc-800/90 flex flex-col items-center justify-center p-2 text-center transition-all duration-200 active:scale-95 group shadow-sm"
                         : cat.imageUrl 
-                          ? "shrink-0 relative w-[130px] sm:w-[150px] aspect-square flex items-center justify-center bg-transparent border-0 shadow-none outline-none transition-transform duration-200 active:scale-95 group"
-                          : "shrink-0 relative w-[130px] sm:w-[150px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group"
+                          ? "shrink-0 relative w-[115px] sm:w-[135px] aspect-square flex items-center justify-center bg-transparent border-0 shadow-none outline-none transition-transform duration-200 active:scale-95 group"
+                          : "shrink-0 relative w-[115px] sm:w-[135px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121216] shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 group"
                     }
                   >
                     {isIconMode ? (
@@ -184,7 +175,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                         className="w-full h-full object-contain bg-transparent pointer-events-none transition-transform duration-300 group-hover:scale-105" 
                       />
                     ) : (
-                      <div className="w-full h-full p-4 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center rounded-2xl">
+                      <div className="w-full h-full p-3 bg-gradient-to-br from-[#B91C1C] via-[#991B1B] to-[#450A0A] flex flex-col items-center justify-center text-center rounded-2xl">
                         <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase text-center drop-shadow-md truncate max-w-full">
                           {cat.name}
                         </span>
@@ -192,13 +183,6 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                     )}
                   </Link>
                 ))}
-
-                {/* Trailing Grid Track Spacer */}
-                <div
-                  className="shrink-0 pointer-events-none"
-                  style={{ width: `calc(var(--miniapp-content-padding-x) - ${gapSize})` }}
-                  aria-hidden="true"
-                />
               </div>
             </section>
           );
