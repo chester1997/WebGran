@@ -52,7 +52,7 @@ export function IconPickerModal({
       </label>
 
       {/* Indicator Type Selector */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => onChangeIndicatorType("BAR")}
@@ -142,7 +142,7 @@ export function IconPickerModal({
                 </div>
 
                 {/* Icons Grid */}
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 my-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 my-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
                   {filteredIcons.map((item) => {
                     const isSelected = item.id === iconName;
                     return (
