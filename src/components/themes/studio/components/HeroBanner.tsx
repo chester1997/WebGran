@@ -119,6 +119,7 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
         <div className="flex items-center justify-center gap-1.5 mt-2.5">
           {activeBanners.map((_, idx) => (
             <button
+              type="button"
               key={idx}
               onClick={(e) => {
                 e.preventDefault();
