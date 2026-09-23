@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { HorizontalCarousel } from "./HorizontalCarousel";
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
+import { getProductBadge } from "@/lib/product-badge";
 
 interface Product {
   id: string;
@@ -9,6 +10,7 @@ interface Product {
   title: string;
   coverUrl: string | null;
   bannerUrl?: string | null;
+  badge?: string | null;
 }
 
 interface TopTenCarouselProps {
@@ -78,6 +80,7 @@ export function TopTenCarousel({
         const style = getPositionStyle(index);
         const displayPosition = String(index + 1); // 1-15 (NO leading zero)
         const isDoubleDigit = index >= 9; // Positions 10-15
+        const badgeConfig = getProductBadge(product.badge);
 
         return (
           <div key={product.id} className="snap-start shrink-0 relative flex items-end group">
@@ -104,6 +107,14 @@ export function TopTenCarousel({
 
               {/* Horizontal 16:9 Image Card */}
               <div className="relative z-10 w-48 sm:w-56 md:w-64 aspect-[16/9] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
+                {badgeConfig && (
+                  <div className="absolute top-2 left-2 z-20 pointer-events-none">
+                    <span className={badgeConfig.className}>
+                      {badgeConfig.label}
+                    </span>
+                  </div>
+                )}
+
                 {product.bannerUrl || product.coverUrl ? (
                   <img
                     src={product.bannerUrl || product.coverUrl!}

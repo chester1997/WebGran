@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
-import { AddToCartButton } from "./AddToCartButton"; // Assume we have or will create this
+import { AddToCartButton } from "./AddToCartButton";
+import { getProductBadge } from "@/lib/product-badge";
 
 interface ProductCardProps {
   storeSlug: string;
@@ -11,16 +12,26 @@ interface ProductCardProps {
     title: string;
     coverUrl: string | null;
     price: string | number;
+    badge?: string | null;
   };
   showButtons?: boolean;
 }
 
 export function ProductCard({ storeSlug, product, showButtons = true }: ProductCardProps) {
   const width = "w-36 md:w-44";
+  const badgeConfig = getProductBadge(product.badge);
   
   return (
     <div className={`flex flex-col gap-1.5 ${width}`}>
       <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="block relative rounded-xl overflow-hidden bg-zinc-900 group shadow-lg aspect-[2/3]">
+        {badgeConfig && (
+          <div className="absolute top-2 left-2 z-20 pointer-events-none">
+            <span className={badgeConfig.className}>
+              {badgeConfig.label}
+            </span>
+          </div>
+        )}
+
         {product.coverUrl ? (
           <img 
             src={product.coverUrl} 

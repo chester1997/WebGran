@@ -63,6 +63,7 @@ export async function createProductAction(formData: FormData) {
   const botId = (formData.get("botId") as string) || null;
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
+  const badge = (formData.get("badge") as string) || null;
   const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
   const bannerUrl = (formData.get("bannerUrl") as string) || null;
 
@@ -78,6 +79,7 @@ export async function createProductAction(formData: FormData) {
     categoryId: categoryId || null,
     status,
     duration,
+    badge,
     coverUrl,
     bannerUrl,
     deliveryType,
@@ -146,6 +148,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   const botId = (formData.get("botId") as string) || null;
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
+  const badge = (formData.get("badge") as string) || null;
   const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
   const bannerUrl = (formData.get("bannerUrl") as string) || null;
 
@@ -159,6 +162,7 @@ export async function updateProductAction(productId: string, formData: FormData)
     categoryId: categoryId || null,
     status,
     duration,
+    badge,
     coverUrl,
     bannerUrl,
     deliveryType,

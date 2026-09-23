@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock } from "lucide-rea
 import { AddToCartButton } from "../components/AddToCartButton";
 import { HorizontalCarousel } from "../components/HorizontalCarousel";
 import { ProductCard } from "../components/ProductCard";
+import { getProductBadge } from "@/lib/product-badge";
 
 interface Product {
   id: string;
@@ -19,6 +20,7 @@ interface Product {
   price: string | number;
   compareAtPrice?: string | number | null;
   duration?: string | null;
+  badge?: string | null;
   status: string;
   deliveryType?: string | null;
   category?: { id: string; name: string; slug: string } | null;
@@ -170,6 +172,15 @@ export function StudioProductClient({
           <div className="flex-1 space-y-1.5 pb-1">
             {/* Category & Duration Badges */}
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              {(() => {
+                const badgeConfig = getProductBadge(product.badge);
+                if (!badgeConfig) return null;
+                return (
+                  <span className={badgeConfig.className}>
+                    {badgeConfig.label}
+                  </span>
+                );
+              })()}
               {product.category?.name && (
                 <span className="px-2.5 py-1 rounded-md bg-white/10 text-zinc-300 font-semibold border border-white/5 uppercase tracking-wider">
                   {product.category.name}

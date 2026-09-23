@@ -18,6 +18,8 @@ import { NewProductModal } from "./NewProductModal";
 import { EditProductModal } from "./EditProductModal";
 import { deleteProductAction } from "./actions";
 
+import { getProductBadge } from "@/lib/product-badge";
+
 interface ProductItem {
   id: string;
   title: string;
@@ -29,6 +31,7 @@ interface ProductItem {
   coverUrl?: string | null;
   bannerUrl?: string | null;
   duration?: string | null;
+  badge?: string | null;
   status: string;
   deliveryType?: string | null;
   deliveryValue?: string | null;
@@ -201,8 +204,21 @@ export default function ProductsListClient({ storeName, products, categories, bo
                   </div>
                 )}
 
+                {/* Custom Product Badge (Novo, Dublado, Legendado, etc.) */}
+                {(() => {
+                  const badgeConfig = getProductBadge(prod.badge);
+                  if (!badgeConfig) return null;
+                  return (
+                    <div className="absolute top-2.5 left-2.5 z-10">
+                      <span className={badgeConfig.className}>
+                        {badgeConfig.label}
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* Status Badge */}
-                <div className="absolute top-2.5 right-2.5">
+                <div className="absolute top-2.5 right-2.5 z-10">
                   {prod.status === 'active' ? (
                     <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md border border-emerald-500/30 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Ativo

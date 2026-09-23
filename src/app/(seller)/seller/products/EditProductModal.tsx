@@ -158,8 +158,8 @@ export function EditProductModal({ categories, bots, product }: { categories: an
               />
             </div>
 
-            {/* Preço + Duração + Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
+            {/* Preço + Duração + Status + Badge */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Preço (R$) *</label>
                 <input 
@@ -184,6 +184,17 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                 <select name="status" defaultValue={product?.status || "active"} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="active">Ativo na Loja</option>
                   <option value="draft">Inativo (Rascunho)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Badge do Produto</label>
+                <select name="badge" defaultValue={product?.badge || ""} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                  <option value="">Nenhum Badge</option>
+                  <option value="novo">🟢 Novo (Verde)</option>
+                  <option value="dublado">🔵 Dublado (Azul)</option>
+                  <option value="legendado">🔴 Legendado (Vermelho)</option>
+                  <option value="em_alta">🟡 Em alta (Amarelo)</option>
+                  <option value="lancamento">🟣 Lançamento (Roxo)</option>
                 </select>
               </div>
             </div>
