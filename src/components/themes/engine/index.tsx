@@ -54,6 +54,16 @@ export async function ThemeEngineAccesses({ storeSlug }: { storeSlug: string }) 
   return <StudioAccesses storeSlug={storeSlug} />;
 }
 
+export async function ThemeEngineFavorites({ storeSlug }: { storeSlug: string }) {
+  const theme = await getResolvedThemeSlug(storeSlug);
+  if (theme === 'studio') {
+    const { StudioFavorites } = await import("../studio/views/StudioFavorites");
+    return <StudioFavorites storeSlug={storeSlug} />;
+  }
+  const { StudioFavorites } = await import("../studio/views/StudioFavorites");
+  return <StudioFavorites storeSlug={storeSlug} />;
+}
+
 export async function ThemeEngineProfile({ storeSlug }: { storeSlug: string }) {
   const theme = await getResolvedThemeSlug(storeSlug);
   if (theme === 'studio') return <StudioProfile storeSlug={storeSlug} />;

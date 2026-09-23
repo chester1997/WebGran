@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, ShoppingCart, LibraryBig, Compass } from "lucide-react";
+import { Home, Heart, ShoppingCart, LibraryBig, Compass } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -14,15 +14,16 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const pathname = usePathname() || "";
   const basePath = `/miniapp/${storeSlug}`;
 
-  const isHome     = pathname === basePath || pathname === `${basePath}/`;
-  const isSearch   = pathname.startsWith(`${basePath}/search`);
-  const isCart     = pathname.startsWith(`${basePath}/cart`);
-  const isAccesses = pathname.startsWith(`${basePath}/accesses`);
+  const isHome      = pathname === basePath || pathname === `${basePath}/`;
+  const isSearch    = pathname.startsWith(`${basePath}/search`);
+  const isFavorites = pathname.startsWith(`${basePath}/favorites`);
+  const isCart      = pathname.startsWith(`${basePath}/cart`);
+  const isAccesses  = pathname.startsWith(`${basePath}/accesses`);
 
   // Left items
   const leftItems = [
-    { label: "Início",       href: basePath,               icon: Home,       isActive: isHome },
-    { label: "Minha Lista",  href: `${basePath}/accesses`, icon: LibraryBig, isActive: isAccesses },
+    { label: "Início",     href: basePath,                icon: Home,  isActive: isHome },
+    { label: "Favoritos",  href: `${basePath}/favorites`, icon: Heart, isActive: isFavorites },
   ];
 
   // Right items — Acessos + Carrinho

@@ -46,29 +46,46 @@ export function StudioProductClient({
   const [copied, setCopied] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  // Storage key for My List
-  const myListKey = `webgran_mylist_${storeSlug}_${product.id}`;
+  // Storage key for Favorites
+  const favoritesKey = `webgran_favorites_${storeSlug}`;
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(myListKey);
-      if (saved === "true") {
-        setIsInMyList(true);
+      const stored = localStorage.getItem(favoritesKey);
+      if (stored) {
+        const list: any[] = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          setIsInMyList(list.some((item) => item.id === product.id));
+        }
       }
     } catch {
       // localStorage unavailable or restricted
     }
-  }, [myListKey]);
+  }, [favoritesKey, product.id]);
 
   const toggleMyList = () => {
-    const nextState = !isInMyList;
-    setIsInMyList(nextState);
     try {
-      if (nextState) {
-        localStorage.setItem(myListKey, "true");
+      const stored = localStorage.getItem(favoritesKey);
+      let list: any[] = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) list = [];
+
+      const exists = list.some((item) => item.id === product.id);
+
+      if (exists) {
+        list = list.filter((item) => item.id !== product.id);
+        setIsInMyList(false);
       } else {
-        localStorage.removeItem(myListKey);
+        list.push({
+          id: product.id,
+          slug: product.slug,
+          title: product.title,
+          price: product.price,
+          coverUrl: product.coverUrl,
+          badge: product.badge,
+        });
+        setIsInMyList(true);
       }
+      localStorage.setItem(favoritesKey, JSON.stringify(list));
     } catch {
       // localStorage restricted
     }
@@ -234,26 +251,26 @@ export function StudioProductClient({
             />
           )}
 
-          {/* ACTIONS ROW (MINHA LISTA & COMPARTILHAR) */}
+          {/* ACTIONS ROW (FAVORITOS & COMPARTILHAR) */}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <button
               type="button"
               onClick={toggleMyList}
               className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all text-xs font-semibold active:scale-95 cursor-pointer ${
                 isInMyList
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                  ? "bg-red-500/15 text-red-400 border-red-500/30"
                   : "bg-[#222226] text-zinc-300 hover:text-white border-white/10 hover:bg-white/10"
               }`}
             >
               {isInMyList ? (
                 <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>✓ Na Minha Lista</span>
+                  <Check className="w-4 h-4 text-red-400" />
+                  <span>Nos Favoritos</span>
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4 text-zinc-300" />
-                  <span>+ Minha Lista</span>
+                  <span>Favoritos</span>
                 </>
               )}
             </button>
