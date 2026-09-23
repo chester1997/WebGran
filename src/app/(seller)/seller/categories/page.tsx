@@ -70,7 +70,7 @@ export default async function SellerCategoriesPage() {
       </div>
 
       {/* Categories List — Desktop Table (>= md) & Mobile Cards (< md) */}
-      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl relative min-h-[260px]">
         {allCategories.length === 0 ? (
           <div className="py-16 text-center">
             <div className="flex flex-col items-center justify-center">
@@ -85,7 +85,7 @@ export default async function SellerCategoriesPage() {
         ) : (
           <>
             {/* Desktop Table (>= md) */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto custom-scrollbar rounded-2xl min-h-[240px] pb-12">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/5 text-zinc-500 text-xs font-medium uppercase tracking-wider bg-white/[0.01]">
