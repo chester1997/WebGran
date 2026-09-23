@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { PlayCircle, Lock, RefreshCw, ShoppingCart, Loader2 } from "lucide-react";
+import { RefreshCw, ShoppingCart, Loader2 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatAccessExpirationBR } from "@/lib/orders/expiration-utils";
 
 export interface AccessCardData {
@@ -11,6 +12,7 @@ export interface AccessCardData {
   deliveryStatus: string;
   expiresAt: Date | string | null;
   inviteLink: string | null;
+  createdAt: Date | string;
   product: {
     id: string;
     title: string;
@@ -19,7 +21,59 @@ export interface AccessCardData {
     deliveryType: string | null;
     deliveryValue: string | null;
     duration: string | null;
+    price: string | number | null;
   };
+  order?: {
+    id: string;
+    total: string | number | null;
+    paidAt: Date | string | null;
+    createdAt: Date | string;
+  } | null;
+}
+
+// Status badge configuration
+function getStatusBadge(
+  status: string,
+  deliveryStatus: string,
+  expInfo: ReturnType<typeof formatAccessExpirationBR>
+) {
+  if (status === "EXPIRED" || expInfo.isExpired) {
+    return { label: "Expirado", dot: "bg-red-500", text: "text-red-400", bg: "bg-red-500/15 border-red-500/30" };
+  }
+  if (deliveryStatus === "FAILED") {
+    return { label: "Falha na entrega", dot: "bg-red-500", text: "text-red-400", bg: "bg-red-500/15 border-red-500/30" };
+  }
+  if (deliveryStatus === "PENDING" || status === "PENDING") {
+    return { label: "Processando", dot: "bg-amber-400", text: "text-amber-300", bg: "bg-amber-500/15 border-amber-500/30" };
+  }
+  if (expInfo.isLifetime) {
+    return { label: "♾ Vitalício", dot: "bg-emerald-400", text: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/30" };
+  }
+  return { label: "● Ativo", dot: "bg-emerald-400", text: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/30" };
+}
+
+function formatDateTimeBR(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} • ${hours}:${minutes}`;
+}
+
+function formatPriceBR(value: string | number | null | undefined): string {
+  if (!value) return "";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "";
+  return `R$ ${num.toFixed(2).replace(".", ",")}`;
+}
+
+function getShortOrderId(orderId: string): string {
+  // Use last 6 chars of UUID (no dashes) — e.g. #WG458720
+  const clean = orderId.replace(/-/g, "");
+  return `#WG${clean.slice(-6).toUpperCase()}`;
 }
 
 export function StudioAccessCard({
@@ -36,13 +90,27 @@ export function StudioAccessCard({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState(access.status);
-  const [destinationUrl, setDestinationUrl] = useState<string | null>(initialDestinationUrl || null);
+  const [, setDestinationUrl] = useState<string | null>(initialDestinationUrl || null);
 
   const expiresAtDate = access.expiresAt ? new Date(access.expiresAt) : null;
   const expInfo = formatAccessExpirationBR(expiresAtDate, currentStatus);
-  const isExpired = currentStatus === 'EXPIRED' || expInfo.isExpired;
-  const isFailedDelivery = access.deliveryStatus === 'FAILED';
-  const isPendingDelivery = access.deliveryStatus === 'PENDING';
+  const isExpired = currentStatus === "EXPIRED" || expInfo.isExpired;
+  const isFailedDelivery = access.deliveryStatus === "FAILED";
+
+  // Short access code from access.id
+  const accessCode = getShortOrderId(access.id);
+
+  // Date/time: prefer order.paidAt, then order.createdAt, then access.createdAt
+  const displayDate =
+    access.order?.paidAt ||
+    access.order?.createdAt ||
+    access.createdAt;
+
+  // Price: prefer order.total, then product.price
+  const displayPrice =
+    access.order?.total || access.product.price;
+
+  const badge = getStatusBadge(currentStatus, access.deliveryStatus, expInfo);
 
   const handleAccessContent = async () => {
     try {
@@ -64,12 +132,12 @@ export function StudioAccessCard({
         membershipStatus: data.membershipStatus,
         accessStatus: data.status,
         destinationType: data.destinationType,
-        destinationUrl: data.destinationUrl
+        destinationUrl: data.destinationUrl,
       });
 
       if (!res.ok || !data.success) {
-        if (data.status === 'EXPIRED') {
-          setCurrentStatus('EXPIRED');
+        if (data.status === "EXPIRED") {
+          setCurrentStatus("EXPIRED");
         }
         setErrorMessage(data.error || data.message || "Não foi possível abrir o conteúdo.");
         setLoading(false);
@@ -82,7 +150,7 @@ export function StudioAccessCard({
       } else {
         setErrorMessage("Link de acesso não disponível.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[StudioAccessCard] Click error:", err);
       setErrorMessage("Erro ao processar acesso. Tente novamente.");
     } finally {
@@ -104,67 +172,94 @@ export function StudioAccessCard({
   };
 
   return (
-    <div className="relative aspect-[16/10] sm:aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 group flex flex-col justify-between">
-      <div 
-        className="absolute inset-0 bg-cover bg-center" 
-        style={{ backgroundImage: `url(${access.product.coverUrl || ''})` }} 
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
-      
-      {/* Header Status Badges */}
-      <div className="relative z-10 p-3 flex items-center justify-between">
-        {isExpired ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-red-500/20 text-red-400 px-2.5 py-1 rounded-full border border-red-500/30 backdrop-blur-md">
-            🔴 Acesso expirado
-          </span>
-        ) : isFailedDelivery || isPendingDelivery ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full border border-amber-500/30 backdrop-blur-md">
-            🟡 Entrega pendente
-          </span>
-        ) : expInfo.isLifetime ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md">
-            🟢 Acesso vitalício
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md">
-            🟢 Acesso ativo
-          </span>
-        )}
+    <div className="w-full rounded-2xl bg-[#111214] border border-white/8 overflow-hidden shadow-lg">
+      {/* Header row: access code + status badge */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <span className="text-[13px] font-bold text-white/90 tracking-wide">{accessCode}</span>
+        <span
+          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${badge.bg} ${badge.text}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} inline-block`} />
+          {badge.label}
+        </span>
       </div>
 
-      {/* Footer Content & Actions */}
-      <div className="relative z-10 p-4 flex flex-col justify-end">
-        <h3 className="font-bold text-base leading-tight text-white line-clamp-2 drop-shadow mb-1">
-          {access.product.title}
-        </h3>
+      {/* Date/time sub-header */}
+      <div className="px-4 pb-3">
+        <span className="text-[11px] text-white/35 font-medium">
+          {formatDateTimeBR(displayDate)}
+        </span>
+      </div>
 
-        {/* Expiration date text */}
-        <div className="text-xs text-zinc-400 mb-3 space-y-0.5">
-          {expInfo.isLifetime ? (
-            <p className="text-emerald-400 font-medium">Vitalício • Sem data limite</p>
-          ) : isExpired ? (
-            <p className="text-red-400 font-medium">{expInfo.dateFormatted}</p>
+      {/* Divider */}
+      <div className="mx-4 h-px bg-white/6" />
+
+      {/* Content row: poster + info */}
+      <div className="flex gap-3 px-4 py-3">
+        {/* Poster thumbnail — aspect 2/3 */}
+        <div className="relative flex-shrink-0 w-[62px] rounded-xl overflow-hidden bg-zinc-800" style={{ aspectRatio: "2/3" }}>
+          {access.product.coverUrl ? (
+            <Image
+              src={access.product.coverUrl}
+              alt={access.product.title}
+              fill
+              className="object-cover"
+              sizes="62px"
+            />
           ) : (
-            <p className="text-zinc-300">
-              {expInfo.dateFormatted}
-              {expInfo.daysRemaining !== null && (
-                <span className="text-zinc-400 ml-1.5">({expInfo.daysRemaining} {expInfo.daysRemaining === 1 ? 'dia restante' : 'dias restantes'})</span>
-              )}
-            </p>
+            <div className="absolute inset-0 bg-zinc-700 flex items-center justify-center">
+              <span className="text-zinc-500 text-xs">?</span>
+            </div>
           )}
         </div>
 
-        {errorMessage && (
-          <p className="text-xs text-red-400 mb-2 font-medium bg-red-950/60 p-1.5 rounded border border-red-800/40">
+        {/* Product info */}
+        <div className="flex flex-col justify-center gap-0.5 flex-1 min-w-0">
+          <h3 className="text-[14px] font-bold text-white leading-snug line-clamp-2">
+            {access.product.title}
+          </h3>
+          {access.product.duration && (
+            <p className="text-[12px] text-white/45 mt-0.5">{access.product.duration}</p>
+          )}
+          {displayPrice && (
+            <p className="text-[15px] font-bold text-white mt-1">
+              {formatPriceBR(displayPrice)}
+            </p>
+          )}
+          {/* Expiration info */}
+          {!isExpired && (
+            <p className={`text-[11px] mt-1 font-medium ${expInfo.isLifetime ? "text-emerald-400" : "text-white/40"}`}>
+              {expInfo.isLifetime
+                ? "Vitalício • Sem data limite"
+                : expInfo.dateFormatted +
+                  (expInfo.daysRemaining !== null && expInfo.daysRemaining > 0
+                    ? ` (${expInfo.daysRemaining}d)`
+                    : "")}
+            </p>
+          )}
+          {isExpired && (
+            <p className="text-[11px] mt-1 font-medium text-red-400">
+              {expInfo.dateFormatted}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Error message */}
+      {errorMessage && (
+        <div className="mx-4 mb-3">
+          <p className="text-xs text-red-400 font-medium bg-red-950/60 px-3 py-2 rounded-lg border border-red-800/40">
             {errorMessage}
           </p>
-        )}
+        </div>
+      )}
 
-        {/* Action Button */}
+      {/* Action button */}
+      <div className="px-4 pb-4">
         {isExpired ? (
           <Link
             href={`/miniapp/${storeSlug}/product/${access.product.slug}`}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow"
+            className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-[13px] py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
           >
             <ShoppingCart className="w-4 h-4" />
             Comprar novamente
@@ -172,17 +267,17 @@ export function StudioAccessCard({
         ) : isFailedDelivery ? (
           <Link
             href={`/miniapp/${storeSlug}/product/${access.product.slug}`}
-            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow"
+            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-[13px] py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Tentar liberar acesso
           </Link>
         ) : (
-          <button 
+          <button
             type="button"
             onClick={handleAccessContent}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow"
+            className="w-full bg-[#229ED9] hover:bg-[#1a8bc0] disabled:opacity-50 text-white font-bold text-[13px] py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
           >
             {loading ? (
               <>
@@ -191,8 +286,11 @@ export function StudioAccessCard({
               </>
             ) : (
               <>
-                <PlayCircle className="w-4 h-4" />
-                {initialDestinationType === 'DIRECT_CHAT' ? 'Entrar no Grupo' : 'Acessar Conteúdo'}
+                {/* Telegram airplane icon */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.09 13.843l-2.963-.924c-.644-.203-.657-.644.136-.953l11.57-4.461c.537-.194 1.006.131.832.916h.029z"/>
+                </svg>
+                {initialDestinationType === "DIRECT_CHAT" ? "Entrar no Grupo" : "Acessar no Telegram"}
               </>
             )}
           </button>

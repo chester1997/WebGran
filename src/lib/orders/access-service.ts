@@ -61,7 +61,8 @@ export class AccessService {
         inArray(accesses.status, ['ACTIVE', 'PENDING', 'FAILED'])
       ),
       with: {
-        product: true
+        product: true,
+        order: true,
       },
       orderBy: (accesses, { desc }) => [desc(accesses.createdAt)]
     });
