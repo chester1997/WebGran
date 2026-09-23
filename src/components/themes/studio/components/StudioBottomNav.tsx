@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, ShoppingCart, LibraryBig } from "lucide-react";
+import { Home, Search, ShoppingCart, LibraryBig, Plus } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -14,34 +14,21 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const pathname = usePathname() || "";
   const basePath = `/miniapp/${storeSlug}`;
 
-  const isHome = pathname === basePath || pathname === `${basePath}/`;
-  const isSearch = pathname.startsWith(`${basePath}/search`);
-  const isCart = pathname.startsWith(`${basePath}/cart`);
+  const isHome     = pathname === basePath || pathname === `${basePath}/`;
+  const isSearch   = pathname.startsWith(`${basePath}/search`);
+  const isCart     = pathname.startsWith(`${basePath}/cart`);
   const isAccesses = pathname.startsWith(`${basePath}/accesses`);
 
-  // Side nav items (left pair + right pair)
+  // Left items
   const leftItems = [
-    {
-      label: "Início",
-      href: basePath,
-      icon: Home,
-      isActive: isHome,
-    },
-    {
-      label: "Buscar",
-      href: `${basePath}/search`,
-      icon: Search,
-      isActive: isSearch,
-    },
+    { label: "Início",  href: basePath,               icon: Home,       isActive: isHome },
+    { label: "Buscar",  href: `${basePath}/search`,   icon: Search,     isActive: isSearch },
   ];
 
+  // Right items — Acessos + Carrinho
   const rightItems = [
-    {
-      label: "Acessos",
-      href: `${basePath}/accesses`,
-      icon: LibraryBig,
-      isActive: isAccesses,
-    },
+    { label: "Acessos",  href: `${basePath}/accesses`, icon: LibraryBig,   isActive: isAccesses, badge: false },
+    { label: "Carrinho", href: `${basePath}/cart`,     icon: ShoppingCart,  isActive: isCart,     badge: true  },
   ];
 
   return (
@@ -50,10 +37,9 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex items-end"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      {/* Bar background — full width, rounded top corners */}
       <div className="w-full h-[68px] bg-[#111114]/90 backdrop-blur-xl border-t border-white/8 flex items-center px-2 relative">
 
-        {/* Left items */}
+        {/* Left: Início + Buscar */}
         <div className="flex items-center flex-1 justify-around">
           {leftItems.map((item) => {
             const Icon = item.icon;
@@ -67,14 +53,10 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 }`}
               >
                 <Icon
-                  className={`w-[22px] h-[22px] transition-all duration-150 ${
-                    item.isActive ? "scale-110" : ""
-                  }`}
+                  className={`w-[22px] h-[22px] transition-all duration-150 ${item.isActive ? "scale-110" : ""}`}
                   strokeWidth={item.isActive ? 2 : 1.6}
                 />
-                <span className={`text-[10px] font-semibold leading-none transition-colors duration-150 ${
-                  item.isActive ? "text-red-400" : "text-zinc-500"
-                }`}>
+                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-400" : "text-zinc-500"}`}>
                   {item.label}
                 </span>
               </Link>
@@ -82,28 +64,19 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* Center — Cart button, elevated */}
+        {/* Center — + button, elevated */}
         <div className="relative flex flex-col items-center justify-end pb-1 px-3" style={{ marginTop: "-20px" }}>
-          <Link
-            href={`${basePath}/cart`}
-            aria-label="Carrinho"
-            className={`relative flex items-center justify-center w-[54px] h-[54px] rounded-full transition-all duration-150 active:scale-95 select-none ${
-              isCart
-                ? "bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.55)]"
-                : "bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] hover:bg-red-500 hover:shadow-[0_4px_24px_rgba(239,68,68,0.5)]"
-            }`}
+          <div
+            className="flex items-center justify-center w-[54px] h-[54px] rounded-full bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] select-none"
+            aria-hidden="true"
           >
-            <ShoppingCart className="w-6 h-6 text-white" strokeWidth={2} />
-            <CartBadge />
-          </Link>
-          <span className={`text-[10px] font-semibold mt-1.5 leading-none transition-colors duration-150 ${
-            isCart ? "text-red-400" : "text-zinc-500"
-          }`}>
-            Carrinho
-          </span>
+            <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+          </div>
+          {/* invisible spacer label to keep vertical alignment */}
+          <span className="text-[10px] font-semibold mt-1.5 leading-none text-transparent select-none">·</span>
         </div>
 
-        {/* Right items */}
+        {/* Right: Acessos + Carrinho */}
         <div className="flex items-center flex-1 justify-around">
           {rightItems.map((item) => {
             const Icon = item.icon;
@@ -112,30 +85,25 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 key={item.label}
                 href={item.href}
                 aria-label={item.label}
-                className={`flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 select-none ${
+                className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 select-none ${
                   item.isActive ? "text-red-400" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
-                <Icon
-                  className={`w-[22px] h-[22px] transition-all duration-150 ${
-                    item.isActive ? "scale-110" : ""
-                  }`}
-                  strokeWidth={item.isActive ? 2 : 1.6}
-                />
-                <span className={`text-[10px] font-semibold leading-none transition-colors duration-150 ${
-                  item.isActive ? "text-red-400" : "text-zinc-500"
-                }`}>
+                <div className="relative flex items-center justify-center">
+                  <Icon
+                    className={`w-[22px] h-[22px] transition-all duration-150 ${item.isActive ? "scale-110" : ""}`}
+                    strokeWidth={item.isActive ? 2 : 1.6}
+                  />
+                  {item.badge && <CartBadge />}
+                </div>
+                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-400" : "text-zinc-500"}`}>
                   {item.label}
                 </span>
               </Link>
             );
           })}
-          {/* Spacer to balance visually with left pair */}
-          <div className="px-3 py-1 flex flex-col items-center gap-1 opacity-0 pointer-events-none" aria-hidden="true">
-            <div className="w-[22px] h-[22px]" />
-            <span className="text-[10px]">·</span>
-          </div>
         </div>
+
       </div>
     </nav>
   );
