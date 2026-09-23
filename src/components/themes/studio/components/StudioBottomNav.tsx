@@ -51,7 +51,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       {/* Bar background — full width, rounded top corners */}
-      <div className="w-full h-[68px] bg-[#111114]/90 backdrop-blur-xl border-t border-white/8 rounded-tl-2xl rounded-tr-2xl flex items-center px-2 relative">
+      <div className="w-full h-[68px] bg-[#111114]/90 backdrop-blur-xl border-t border-white/8 flex items-center px-2 relative">
 
         {/* Left items */}
         <div className="flex items-center flex-1 justify-around">
