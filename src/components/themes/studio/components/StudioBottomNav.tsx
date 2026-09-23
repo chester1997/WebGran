@@ -67,7 +67,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
         {/* Center — Explorar button, elevated */}
         <div className="relative flex flex-col items-center justify-end pb-1 px-3" style={{ marginTop: "-20px" }}>
           <Link
-            href={basePath}
+            href={`${basePath}/search`}
             aria-label="Explorar"
             className="flex items-center justify-center w-[54px] h-[54px] rounded-full bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] hover:bg-red-500 transition-all duration-150 active:scale-95 select-none"
           >

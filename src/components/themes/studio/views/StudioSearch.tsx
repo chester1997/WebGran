@@ -19,24 +19,32 @@ export async function StudioSearch({ storeSlug, q }: { storeSlug: string, q: str
     searchResults = await db.query.products.findMany({
       where: and(
         eq(products.storeId, store.id),
+        eq(products.status, 'active'),
         ilike(products.title, `%${q}%`)
       ),
-      limit: 50
+      orderBy: (products, { desc }) => [desc(products.createdAt)],
+      limit: 100
+    });
+  } else {
+    searchResults = await db.query.products.findMany({
+      where: and(
+        eq(products.storeId, store.id),
+        eq(products.status, 'active')
+      ),
+      orderBy: (products, { desc }) => [desc(products.createdAt)],
+      limit: 100
     });
   }
 
   return (
-    <div className="p-4 pt-8 text-white bg-transparent w-full">
+    <div className="p-4 pt-6 text-white bg-transparent w-full">
+      <h1 className="text-xl font-bold mb-4">Explorar Catálogo</h1>
       <SearchInput storeSlug={storeSlug} initialQuery={q} />
       
-      <div className="mt-8">
-        {!q ? (
+      <div className="mt-6">
+        {searchResults.length === 0 ? (
           <div className="text-center text-zinc-500 py-10">
-            Digite algo para buscar.
-          </div>
-        ) : searchResults.length === 0 ? (
-          <div className="text-center text-zinc-500 py-10">
-            Nenhum produto encontrado para "{q}".
+            {q ? `Nenhum produto encontrado para "${q}".` : "Nenhum produto cadastrado."}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3 md:gap-4">
