@@ -82,31 +82,19 @@ export function CategoryIconCard({ category, storeSlug, isActive = false }: Cate
       className="shrink-0 flex flex-col items-center gap-2 select-none group active:scale-95 transition-transform duration-150"
       style={{ minWidth: "60px", maxWidth: "72px" }}
     >
-      {/* Icon card — square, dark, no text inside */}
+      {/* Icon card — square, dark glass with subtle border and uniform soft glow */}
       <div
-        className={`
-          w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200
-          ${isActive
-            ? "bg-white/15 border border-white/30 shadow-[0_0_14px_rgba(255,255,255,0.12)]"
-            : "bg-white/6 border border-white/10 group-hover:bg-white/10 group-hover:border-white/20"
-          }
-        `}
+        className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/[0.08] border border-white/15 shadow-[0_0_10px_rgba(255,255,255,0.06)] group-hover:bg-white/15 group-hover:border-white/30 group-hover:shadow-[0_0_14px_rgba(255,255,255,0.12)] transition-all duration-200"
       >
         <IconComp
-          className={`w-7 h-7 transition-colors duration-200 ${
-            isActive ? "text-white" : "text-white/60 group-hover:text-white/90"
-          }`}
+          className="w-7 h-7 text-white/80 group-hover:text-white transition-colors duration-200"
           strokeWidth={1.5}
         />
       </div>
 
       {/* Category name — outside the card, below */}
       <span
-        className={`
-          text-center text-[11px] font-semibold leading-tight
-          max-w-full line-clamp-2 transition-colors duration-200
-          ${isActive ? "text-white" : "text-white/55 group-hover:text-white/80"}
-        `}
+        className="text-center text-[11px] font-semibold leading-tight text-white/70 group-hover:text-white max-w-full line-clamp-2 transition-colors duration-200"
         style={{ wordBreak: "break-word" }}
       >
         {category.name}
