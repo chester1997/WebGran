@@ -86,7 +86,7 @@ export function TopTenCarousel({
           <div key={product.id} className="snap-start shrink-0 relative flex flex-col justify-end group">
             {/* Crisp outline position number overlapping bottom-left edge */}
             <span
-              className="absolute left-0 bottom-0 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+              className="absolute left-0 -bottom-2 sm:-bottom-2.5 md:-bottom-3 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
               style={{
                 WebkitTextStroke: `3px ${style.stroke}`,
                 filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
