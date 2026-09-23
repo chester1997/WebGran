@@ -15,9 +15,15 @@ interface ProductCardProps {
     badge?: string | null;
   };
   showButtons?: boolean;
+  buttonVariant?: "two-buttons" | "details";
 }
 
-export function ProductCard({ storeSlug, product, showButtons = true }: ProductCardProps) {
+export function ProductCard({ 
+  storeSlug, 
+  product, 
+  showButtons = true,
+  buttonVariant = "two-buttons"
+}: ProductCardProps) {
   const width = "w-36 md:w-44";
   const badgeConfig = getProductBadge(product.badge);
   
@@ -60,14 +66,26 @@ export function ProductCard({ storeSlug, product, showButtons = true }: ProductC
         </span>
         
         {showButtons && (
-          <div className="w-full">
-            <Link
-              href={`/miniapp/${storeSlug}/product/${product.slug}`}
-              className="w-full bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold py-1 px-2 rounded-md text-center transition-colors flex items-center justify-center gap-0.5 shadow-sm"
-            >
-              + Detalhes
-            </Link>
-          </div>
+          buttonVariant === "details" ? (
+            <div className="w-full">
+              <Link
+                href={`/miniapp/${storeSlug}/product/${product.slug}`}
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold py-1 px-2 rounded-md text-center transition-colors flex items-center justify-center gap-0.5 shadow-sm"
+              >
+                + Detalhes
+              </Link>
+            </div>
+          ) : (
+            <div className="flex gap-1.5 w-full">
+              <Link
+                href={`/miniapp/${storeSlug}/product/${product.slug}`}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center"
+              >
+                Ver mais
+              </Link>
+              <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
+            </div>
+          )
         )}
       </div>
     </div>

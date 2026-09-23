@@ -143,7 +143,7 @@ export function TopTenCarousel({
                   R$ {Number(product.price).toFixed(2).replace(".", ",")}
                 </span>
               )}
-              <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
+              <AddToCartButton product={product} storeSlug={storeSlug} variant="icon" />
             </div>
           </div>
         );

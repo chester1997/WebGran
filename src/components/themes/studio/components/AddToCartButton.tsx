@@ -12,7 +12,7 @@ export function AddToCartButton({
 }: { 
   product: any; 
   storeSlug?: string;
-  variant?: "full" | "card";
+  variant?: "full" | "card" | "icon";
 }) {
   const { items, addToCart } = useCart();
   const router = useRouter();
@@ -29,19 +29,30 @@ export function AddToCartButton({
     setTimeout(() => setJustAdded(false), 2000);
   };
 
-  if (variant === "card") {
+  if (variant === "icon") {
     return (
       <button 
         onClick={handleClick}
         aria-label="Adicionar ao Carrinho"
         title="Adicionar ao Carrinho"
-        className="bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white p-1.5 rounded-md text-center transition-colors flex items-center justify-center shrink-0"
+        className="bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white p-1.5 rounded-md text-center transition-colors flex items-center justify-center shrink-0 cursor-pointer active:scale-95"
       >
         {justAdded ? (
           <Check className="w-3.5 h-3.5 text-emerald-400" />
         ) : (
           <ShoppingCart className="w-3.5 h-3.5 text-zinc-300" />
         )}
+      </button>
+    );
+  }
+
+  if (variant === "card") {
+    return (
+      <button 
+        onClick={handleClick}
+        className="flex-1 bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+      >
+        {justAdded ? <Check className="w-3 h-3 text-emerald-400" /> : "+ Carrinho"}
       </button>
     );
   }
