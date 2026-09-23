@@ -21,8 +21,8 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
 
   // Left items
   const leftItems = [
-    { label: "Início",  href: basePath,               icon: Home,       isActive: isHome },
-    { label: "Buscar",  href: `${basePath}/search`,   icon: Search,     isActive: isSearch },
+    { label: "Início",       href: basePath,               icon: Home,       isActive: isHome },
+    { label: "Minha Lista",  href: `${basePath}/accesses`, icon: LibraryBig, isActive: isAccesses },
   ];
 
   // Right items — Acessos + Carrinho
@@ -39,7 +39,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
     >
       <div className="w-full h-[68px] bg-[#111114]/90 backdrop-blur-xl border-t border-white/8 flex items-center px-2 relative">
 
-        {/* Left: Início + Buscar */}
+        {/* Left: Início + Minha Lista */}
         <div className="flex items-center flex-1 justify-around">
           {leftItems.map((item) => {
             const Icon = item.icon;
@@ -69,11 +69,17 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           <Link
             href={`${basePath}/search`}
             aria-label="Explorar"
-            className="flex items-center justify-center w-[54px] h-[54px] rounded-full bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] hover:bg-red-500 transition-all duration-150 active:scale-95 select-none"
+            className={`flex items-center justify-center w-[54px] h-[54px] rounded-full transition-all duration-150 active:scale-95 select-none ${
+              isSearch
+                ? "bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.55)]"
+                : "bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] hover:bg-red-500"
+            }`}
           >
             <Compass className="w-7 h-7 text-white" strokeWidth={2} />
           </Link>
-          <span className="text-[10px] font-semibold mt-1.5 leading-none text-zinc-500">Explorar</span>
+          <span className={`text-[10px] font-semibold mt-1.5 leading-none ${isSearch ? "text-red-400" : "text-zinc-500"}`}>
+            Explorar
+          </span>
         </div>
 
         {/* Right: Acessos + Carrinho */}
