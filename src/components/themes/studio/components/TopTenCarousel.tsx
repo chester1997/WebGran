@@ -2,12 +2,14 @@ import React from "react";
 import Link from "next/link";
 import { HorizontalCarousel } from "./HorizontalCarousel";
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
+import { AddToCartButton } from "./AddToCartButton";
 import { getProductBadge } from "@/lib/product-badge";
 
 interface Product {
   id: string;
   slug: string;
   title: string;
+  price?: string | number;
   coverUrl: string | null;
   bannerUrl?: string | null;
   badge?: string | null;
@@ -35,8 +37,6 @@ export function TopTenCarousel({
   if (displayProducts.length === 0) return null;
 
   // Position-based deterministic color styling for Top 5 vs 6-15
-  // Top 5 (indices 0..4 -> Positions 1..5) receive warm subtle glowing colors
-  // Positions 6..15 (indices 5..14) receive neutral gray
   const getPositionStyle = (index: number) => {
     switch (index) {
       case 0: // 1º Lugar - Red
@@ -86,7 +86,7 @@ export function TopTenCarousel({
           <div key={product.id} className="snap-start shrink-0 relative flex items-end group">
             <Link
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
-              className={`relative flex items-end ${
+              className={`relative flex flex-col items-end ${
                 isDoubleDigit 
                   ? "pl-12 sm:pl-14 md:pl-16" 
                   : "pl-7 sm:pl-8 md:pl-9"
@@ -129,6 +129,18 @@ export function TopTenCarousel({
                     {product.title}
                   </div>
                 )}
+              </div>
+
+              {/* Price & Add to Cart Action Row below image card aligned with number baseline */}
+              <div className="relative z-20 w-48 sm:w-56 md:w-64 flex items-center justify-between pt-2 px-1">
+                {product.price !== undefined ? (
+                  <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight">
+                    R$ {Number(product.price).toFixed(2).replace(".", ",")}
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
               </div>
             </Link>
           </div>
