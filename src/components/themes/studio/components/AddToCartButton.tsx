@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { Play, Check, ShoppingCart } from "lucide-react";
-import { useCart, CartItem } from "@/components/miniapp/CartProvider";
-import { useRouter } from "next/navigation";
+import { useCart } from "@/components/miniapp/CartProvider";
 
 export function AddToCartButton({ 
   product, 
@@ -15,8 +14,9 @@ export function AddToCartButton({
   variant?: "full" | "card" | "icon";
 }) {
   const { items, addToCart } = useCart();
-  const router = useRouter();
   const [justAdded, setJustAdded] = useState(false);
+
+  if (!product || !product.id) return null;
 
   const isAlreadyInCart = items.some(i => i.id === product.id) || justAdded;
 
@@ -24,7 +24,16 @@ export function AddToCartButton({
     e.preventDefault();
     e.stopPropagation();
     
-    addToCart({ ...product, quantity: 1 });
+    addToCart({ 
+      id: product.id,
+      slug: product.slug || "",
+      title: product.title || "Produto",
+      price: Number(product.price || 0),
+      quantity: 1,
+      coverUrl: product.coverUrl || product.bannerUrl || null,
+      storeId: product.storeId || "",
+    });
+
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 2000);
   };
@@ -32,6 +41,7 @@ export function AddToCartButton({
   if (variant === "icon") {
     return (
       <button 
+        type="button"
         onClick={handleClick}
         aria-label="Adicionar ao Carrinho"
         title="Adicionar ao Carrinho"
@@ -49,6 +59,7 @@ export function AddToCartButton({
   if (variant === "card") {
     return (
       <button 
+        type="button"
         onClick={handleClick}
         className="flex-1 bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center gap-1 cursor-pointer active:scale-95"
       >
@@ -59,8 +70,9 @@ export function AddToCartButton({
 
   return (
     <button 
+      type="button"
       onClick={handleClick}
-      className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors"
+      className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors cursor-pointer"
     >
       {justAdded ? (
         <>
@@ -73,7 +85,7 @@ export function AddToCartButton({
         <>
           <Play className="w-5 h-5 fill-white" />
           <div className="flex flex-col items-center leading-tight">
-            <span>Comprar por R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
+            <span>Comprar por R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}</span>
           </div>
         </>
       )}

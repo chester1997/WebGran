@@ -1,26 +1,25 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
-import { PackageX } from "lucide-react";
+import { PackageX, Home } from "lucide-react";
 
 export default function MiniAppNotFound() {
   return (
-    <div className="w-full h-[100vh] bg-[#161616] flex flex-col items-center justify-center p-6 text-center text-white">
-      <PackageX className="w-12 h-12 text-zinc-500 mb-4" />
-      <h2 className="text-xl font-bold mb-2">Página não encontrada</h2>
-      <p className="text-zinc-400 mb-6 max-w-sm">
-        O item que você está procurando não existe ou foi removido desta loja.
-      </p>
-      <Link 
-        href="#"
-        onClick={(e) => {
-          e.preventDefault();
-          window.history.back();
-        }}
-        className="px-6 py-2 bg-zinc-800 text-white font-medium rounded hover:bg-zinc-700 transition-colors"
+    <div className="min-h-screen bg-[#0A0A0E] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+      <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-500 shadow-xl">
+        <PackageX className="w-8 h-8 text-zinc-500" />
+      </div>
+      <div className="space-y-1">
+        <h2 className="text-xl font-bold">Página não encontrada</h2>
+        <p className="text-xs text-zinc-400 max-w-xs">
+          O conteúdo que você procurou não existe ou foi movido.
+        </p>
+      </div>
+      <Link
+        href="/miniapp"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg shadow-red-600/30 transition-all"
       >
-        Voltar
+        <Home className="w-4 h-4" />
+        <span>Ir para o Início</span>
       </Link>
     </div>
   );

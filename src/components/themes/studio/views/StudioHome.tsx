@@ -75,7 +75,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     })
   ]);
 
-  const rankingProducts = rankingCarousel?.items?.map(i => i.product).filter(Boolean) || [];
+  const rankingProducts = rankingCarousel?.items?.map(i => i.product).filter(p => p && p.status === 'active') || [];
 
   let headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
 
