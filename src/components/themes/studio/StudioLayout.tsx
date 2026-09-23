@@ -27,7 +27,7 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
       />
 
       {/* Scrollable Center Content Area */}
-      <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(76px+1.25rem+env(safe-area-inset-bottom,0px))] relative z-10">
+      <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(68px+env(safe-area-inset-bottom,0px)+8px)] relative z-10">
         {children}
       </main>
 
