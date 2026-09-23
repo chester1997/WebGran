@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Copy, Check, Loader2, ShieldCheck } from "lucide-react";
+import {
+  ShoppingCart,
+  Trash2,
+  Plus,
+  Minus,
+  ArrowRight,
+  Copy,
+  Check,
+  Loader2,
+  ShieldCheck,
+  Tag,
+  ChevronRight,
+} from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/components/miniapp/CartProvider";
 import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
 import { useRouter } from "next/navigation";
@@ -10,26 +23,32 @@ import { useRouter } from "next/navigation";
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const { items, updateQuantity, removeFromCart, subtotal, total, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [coupon, setCoupon] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
   const [pixState, setPixState] = useState<{
     orderId: string;
     qrCode: string;
     qrCodeBase64: string;
     expiresAt: string;
   } | null>(null);
-
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [accessLink, setAccessLink] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const discount = 0; // Placeholder — coupon logic can be wired in later
+  const displayTotal = total - discount;
 
   const handleCheckout = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
     try {
-      const result = await createCheckoutSession(storeSlug, items.map(i => ({ id: i.id, quantity: i.quantity })));
-      
+      const result = await createCheckoutSession(
+        storeSlug,
+        items.map((i) => ({ id: i.id, quantity: i.quantity }))
+      );
+
       if (result.success) {
         clearCart();
         if (result.pix) {
@@ -57,16 +76,17 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   // Poll Order Status when PIX is active
   useEffect(() => {
     if (!pixState?.orderId || isPaid) return;
-
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/orders/${pixState.orderId}/status`);
         if (res.ok) {
           const data = await res.json();
-          if (data.status === 'paid') {
+          if (data.status === "paid") {
             setIsPaid(true);
             if (data.accesses && data.accesses.length > 0) {
-              setAccessLink(`/api/telegram/access/redirect?accessId=${data.accesses[0].id}&storeSlug=${storeSlug}`);
+              setAccessLink(
+                `/api/telegram/access/redirect?accessId=${data.accesses[0].id}&storeSlug=${storeSlug}`
+              );
             }
             clearInterval(interval);
           }
@@ -75,7 +95,6 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         console.error("Error polling order status:", err);
       }
     }, 3000);
-
     return () => clearInterval(interval);
   }, [pixState?.orderId, isPaid]);
 
@@ -86,6 +105,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  /* ── Paid state ── */
   if (isPaid) {
     return (
       <div className="p-4 pt-12 flex flex-col items-center justify-center min-h-[60vh] text-center text-white space-y-6">
@@ -94,15 +114,14 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         </div>
         <h1 className="text-2xl font-bold">Pagamento Confirmado!</h1>
         <p className="text-zinc-400 text-sm max-w-xs">
-          Seu pagamento via PIX foi aprovado com sucesso. Seu acesso foi liberado!
+          Seu pagamento via PIX foi aprovado. Seu acesso foi liberado!
         </p>
-
         {accessLink ? (
           <a
             href={accessLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full max-w-xs py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all text-sm"
+            className="w-full max-w-xs py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all text-sm"
           >
             <ShieldCheck className="w-5 h-5" />
             Entrar no Grupo/Canal
@@ -110,7 +129,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         ) : (
           <Link
             href={`/miniapp/${storeSlug}/accesses`}
-            className="w-full max-w-xs py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all text-sm"
+            className="w-full max-w-xs py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all text-sm"
           >
             <ShieldCheck className="w-5 h-5" />
             Acessar Meus Conteúdos
@@ -120,15 +139,15 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     );
   }
 
+  /* ── PIX state ── */
   if (pixState) {
     return (
-      <div className="p-4 pt-6 text-white bg-[#161616] w-full max-w-lg mx-auto flex flex-col items-center space-y-6">
+      <div className="p-4 pt-6 text-white w-full max-w-lg mx-auto flex flex-col items-center space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold">Pagamento via PIX</h1>
           <p className="text-xs text-zinc-400">Escaneie o QR Code ou copie o código PIX abaixo</p>
         </div>
 
-        {/* QR Code */}
         {pixState.qrCodeBase64 && (
           <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center justify-center">
             <img
@@ -139,7 +158,6 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           </div>
         )}
 
-        {/* PIX Copia e Cola Code */}
         <div className="w-full space-y-2">
           <label className="text-xs font-semibold text-zinc-400">PIX Copia e Cola:</label>
           <div className="flex gap-2">
@@ -152,23 +170,18 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
             <button
               onClick={handleCopyPix}
               className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
-                copied ? 'bg-emerald-600 text-white' : 'bg-red-600 hover:bg-red-700 text-white'
+                copied ? "bg-emerald-600 text-white" : "bg-red-600 hover:bg-red-700 text-white"
               }`}
             >
               {copied ? (
-                <>
-                  <Check className="w-4 h-4" /> Copiado!
-                </>
+                <><Check className="w-4 h-4" /> Copiado!</>
               ) : (
-                <>
-                  <Copy className="w-4 h-4" /> Copiar Código
-                </>
+                <><Copy className="w-4 h-4" /> Copiar Código</>
               )}
             </button>
           </div>
         </div>
 
-        {/* Status Indicator / Spinner */}
         <div className="w-full bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 flex items-center gap-3">
           <Loader2 className="w-5 h-5 text-red-500 animate-spin flex-shrink-0" />
           <div className="text-xs">
@@ -187,6 +200,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     );
   }
 
+  /* ── Empty state ── */
   if (items.length === 0) {
     return (
       <div className="p-4 pt-12 flex flex-col items-center justify-center min-h-[60vh] text-center text-white">
@@ -197,83 +211,175 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         <p className="text-zinc-500 mb-8 max-w-[250px]">
           Você ainda não adicionou nenhum produto ao seu carrinho.
         </p>
-        <Link href={`/miniapp/${storeSlug}`} className="bg-red-600 text-white font-semibold px-8 py-3 rounded-md hover:bg-red-700 transition-colors">
+        <Link
+          href={`/miniapp/${storeSlug}`}
+          className="bg-red-600 text-white font-semibold px-8 py-3 rounded-xl hover:bg-red-700 transition-colors"
+        >
           Explorar Catálogo
         </Link>
       </div>
     );
   }
 
+  /* ── Main cart ── */
   return (
-    <div className="p-4 pt-6 text-white bg-transparent w-full">
-      <h1 className="text-2xl font-bold mb-6">Seu Carrinho</h1>
+    <div className="p-4 pt-4 text-white w-full">
 
-      <div className="space-y-4 mb-8">
+      {/* Product list */}
+      <div className="space-y-3 mb-5">
         {items.map((item) => (
-          <div key={item.id} className="flex gap-4 bg-zinc-900/50 p-3 rounded-lg border border-zinc-800/50">
-            {item.coverUrl ? (
-              <img src={item.coverUrl} alt={item.title} className="w-20 h-28 object-cover rounded-md" />
-            ) : (
-              <div className="w-20 h-28 bg-zinc-800 rounded-md flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-zinc-600" />
+          <div
+            key={item.id}
+            className="flex gap-3 bg-[#18181c] rounded-2xl p-3 border border-white/6"
+          >
+            {/* Poster */}
+            <div className="relative w-[60px] h-[84px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-800">
+              {item.coverUrl ? (
+                <Image
+                  src={item.coverUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="60px"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-zinc-600" />
+                </div>
+              )}
+            </div>
+
+            {/* Info + controls */}
+            <div className="flex-1 flex flex-col justify-between min-w-0">
+              <div>
+                <h3 className="font-semibold text-[14px] text-white leading-snug line-clamp-2">
+                  {item.title}
+                </h3>
+                {/* duration placeholder if needed */}
               </div>
-            )}
-            
-            <div className="flex-1 flex flex-col py-1">
-              <h3 className="font-semibold text-zinc-100 leading-tight mb-1">{item.title}</h3>
-              <p className="text-red-500 font-medium mb-auto">R$ {Number(item.price || 0).toFixed(2)}</p>
-              
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-3 bg-[#161616] rounded-full border border-zinc-800 px-2 py-1">
-                  <button 
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    disabled={item.quantity <= 1}
-                    className="p-1 text-zinc-400 hover:text-white disabled:opacity-50"
+
+              <div className="flex items-center justify-between mt-2">
+                {/* Price */}
+                <p className="text-[15px] font-bold text-white">
+                  R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}
+                </p>
+
+                {/* Qty controls + remove */}
+                <div className="flex items-center gap-2">
+                  {/* − qty + */}
+                  <div className="flex items-center gap-1 bg-zinc-900 border border-white/10 rounded-full px-1.5 py-0.5">
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      disabled={item.quantity <= 1}
+                      className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white disabled:opacity-40 transition-colors"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[13px] font-semibold w-5 text-center text-white">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Remove */}
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-500 transition-colors rounded-full hover:bg-red-500/10"
+                    aria-label="Remover produto"
                   >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
-                  <button 
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="p-1 text-zinc-400 hover:text-white"
-                  >
-                    <Plus className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                
-                <button 
-                  onClick={() => removeFromCart(item.id)}
-                  className="p-2 text-zinc-500 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 mb-6 space-y-3">
-        <div className="flex justify-between text-zinc-400 text-sm">
-          <span>Subtotal</span>
-          <span>R$ {Number(subtotal || 0).toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between font-bold text-lg pt-3 border-t border-zinc-800">
-          <span>Total</span>
-          <span className="text-red-500">R$ {Number(total || 0).toFixed(2)}</span>
+      {/* Coupon */}
+      <div className="mb-5">
+        <p className="text-[13px] font-semibold text-white mb-2">Cupom de desconto</p>
+        <div className="flex gap-2">
+          <div className="flex-1 flex items-center gap-2 bg-[#18181c] border border-white/8 rounded-xl px-3 py-2.5">
+            <Tag className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+            <input
+              type="text"
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value)}
+              placeholder="Digite seu cupom"
+              className="bg-transparent text-[13px] text-white placeholder:text-zinc-500 flex-1 outline-none"
+            />
+          </div>
+          <button
+            onClick={() => setCouponApplied(!!coupon)}
+            className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-[13px] rounded-xl transition-colors"
+          >
+            Aplicar
+          </button>
         </div>
       </div>
 
+      {/* Order summary */}
+      <div className="mb-5">
+        <p className="text-[13px] font-semibold text-white mb-3">Resumo do pedido</p>
+        <div className="space-y-2">
+          <div className="flex justify-between text-[13px] text-zinc-400">
+            <span>Subtotal</span>
+            <span>R$ {Number(subtotal || 0).toFixed(2).replace(".", ",")}</span>
+          </div>
+          <div className="flex justify-between text-[13px] text-zinc-400">
+            <span>Desconto</span>
+            <span>- R$ {discount.toFixed(2).replace(".", ",")}</span>
+          </div>
+          <div className="h-px bg-white/6 my-1" />
+          <div className="flex justify-between text-[16px] font-bold">
+            <span>Total</span>
+            <span className="text-red-500">
+              R$ {Number(displayTotal || 0).toFixed(2).replace(".", ",")}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment method */}
+      <div className="mb-5">
+        <p className="text-[13px] font-semibold text-white mb-2">Método de pagamento</p>
+        <div className="flex items-center justify-between bg-[#18181c] border border-white/8 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-3">
+            {/* PIX icon */}
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6.5 17.5L3 21L6.5 17.5ZM17.5 6.5L21 3L17.5 6.5ZM6.5 6.5L3 3L6.5 6.5ZM17.5 17.5L21 21L17.5 17.5Z" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2Z" stroke="#10b981" strokeWidth="1.5"/>
+                <path d="M8 12H16M12 8V16" stroke="#10b981" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-[13px] font-semibold text-white">PIX</p>
+              <p className="text-[11px] text-zinc-500">Aprovação imediata</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-600" />
+        </div>
+      </div>
+
+      {/* Error */}
       {errorMessage && (
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3.5 rounded-xl text-xs text-center mb-4">
           <p className="font-semibold">{errorMessage}</p>
         </div>
       )}
 
-      <button 
+      {/* Checkout button */}
+      <button
         onClick={handleCheckout}
         disabled={isProcessing}
-        className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-2xl transition-colors disabled:opacity-50 text-[15px] mb-4"
       >
         {isProcessing ? (
           <>
@@ -282,11 +388,21 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           </>
         ) : (
           <>
-            Finalizar Compra
+            Finalizar compra
             <ArrowRight className="w-5 h-5" />
           </>
         )}
       </button>
+
+      {/* Telegram notice */}
+      <div className="flex items-start gap-2.5 bg-[#18181c] border border-white/6 rounded-xl px-3 py-3">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-[#229ED9] flex-shrink-0 mt-0.5">
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.09 13.843l-2.963-.924c-.644-.203-.657-.644.136-.953l11.57-4.461c.537-.194 1.006.131.832.916h.029z"/>
+        </svg>
+        <p className="text-[11px] text-zinc-400 leading-relaxed">
+          Após o pagamento, você recebe o acesso diretamente no seu Telegram.
+        </p>
+      </div>
     </div>
   );
 }
