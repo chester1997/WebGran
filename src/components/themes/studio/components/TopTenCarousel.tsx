@@ -54,7 +54,7 @@ export function TopTenCarousel({
 
   return (
     <HorizontalCarousel
-      trackClassName="pt-3 pb-10 sm:pb-11 md:pb-12"
+      trackClassName="pt-3 pb-12 sm:pb-14 md:pb-16"
       title={
         <div className="flex items-center gap-2">
           {indicatorType === "ICON" && (
@@ -91,7 +91,7 @@ export function TopTenCarousel({
             >
               {/* Crisp outline position number overlapping bottom-left edge */}
               <span
-                className="absolute left-0 -bottom-4 sm:-bottom-5 md:-bottom-6 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+                className="absolute left-0 -bottom-8 sm:-bottom-9 md:-bottom-10 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
                 style={{
                   WebkitTextStroke: `3px ${style.stroke}`,
                   filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
