@@ -94,7 +94,7 @@ export function TopTenCarousel({
             >
               {/* Crisp outline position number overlapping bottom-left edge */}
               <span
-                className="absolute left-0 -bottom-3 sm:-bottom-4 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+                className="absolute left-0 -bottom-10 sm:-bottom-12 md:-bottom-14 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
                 style={{
                   WebkitTextStroke: `3px ${style.stroke}`,
                   filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
@@ -133,17 +133,15 @@ export function TopTenCarousel({
             </Link>
 
             {/* Price & Add to Cart Action Row below image card */}
-            <div className={`relative z-20 w-48 sm:w-56 md:w-64 flex items-center justify-between pt-1.5 px-0.5 ${
+            <div className={`relative z-20 w-48 sm:w-56 md:w-64 flex items-center justify-end gap-2 pt-2 px-0.5 ${
               isDoubleDigit 
                 ? "ml-12 sm:ml-14 md:ml-16" 
                 : "ml-7 sm:ml-8 md:ml-9"
             }`}>
-              {product.price !== undefined ? (
+              {product.price !== undefined && (
                 <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight">
                   R$ {Number(product.price).toFixed(2).replace(".", ",")}
                 </span>
-              ) : (
-                <span />
               )}
               <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
             </div>
