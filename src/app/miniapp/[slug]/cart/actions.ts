@@ -1,13 +1,17 @@
 "use server";
 
 import { db } from "@/db";
-import { products, orders, orderItems, stores } from "@/db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { products, orders, orderItems, stores, coupons } from "@/db/schema";
+import { eq, inArray, and, sql } from "drizzle-orm";
 import { getMiniAppSession } from "@/lib/telegram/session";
 import { AccessService } from "@/lib/orders/access-service";
 import { paymentService } from "@/lib/payments/payment-service";
 
-export async function createCheckoutSession(storeSlug: string, items: { id: string, quantity: number }[]) {
+export async function createCheckoutSession(
+  storeSlug: string, 
+  items: { id: string, quantity: number }[],
+  couponCode?: string
+) {
   try {
     const session = await getMiniAppSession();
     if (!session) {
@@ -56,14 +60,61 @@ export async function createCheckoutSession(storeSlug: string, items: { id: stri
       });
     }
 
+    // Process Coupon Validation & Discount
+    let discountAmount = 0;
+    let appliedCouponCode: string | null = null;
+
+    if (couponCode && couponCode.trim()) {
+      const cleanCode = couponCode.trim().toUpperCase();
+      const foundCoupons = await db
+        .select()
+        .from(coupons)
+        .where(
+          and(
+            eq(coupons.storeId, storeId),
+            sql`UPPER(${coupons.code}) = ${cleanCode}`
+          )
+        );
+
+      if (foundCoupons.length > 0) {
+        const c = foundCoupons[0];
+        const isExpired = c.expiresAt && new Date(c.expiresAt) < new Date();
+        const isLimitReached = c.maxUses !== null && c.usedCount >= c.maxUses;
+        const minOrder = c.minOrderValue ? parseFloat(c.minOrderValue) : 0;
+
+        if (c.status === "active" && !isExpired && !isLimitReached && subtotal >= minOrder) {
+          const discVal = parseFloat(c.discountValue);
+          if (c.discountType === "percentage") {
+            discountAmount = (subtotal * discVal) / 100;
+          } else {
+            discountAmount = Math.min(subtotal, discVal);
+          }
+          discountAmount = Math.round(discountAmount * 100) / 100;
+          appliedCouponCode = c.code;
+
+          // Increment usedCount
+          await db
+            .update(coupons)
+            .set({
+              usedCount: c.usedCount + 1,
+              updatedAt: new Date(),
+            })
+            .where(eq(coupons.id, c.id));
+        }
+      }
+    }
+
+    const finalTotal = Math.max(0, subtotal - discountAmount);
+
     // CREATE ORDER
     const newOrderArr = await db.insert(orders).values({
       storeId,
       customerId,
       status: 'pending', // PENDING, PAID, FAILED, CANCELLED, REFUNDED
       subtotal: subtotal.toString(),
-      discount: '0',
-      total: subtotal.toString(),
+      discount: discountAmount.toString(),
+      couponCode: appliedCouponCode,
+      total: finalTotal.toString(),
       currency: 'BRL'
     }).returning();
 
@@ -91,7 +142,7 @@ export async function createCheckoutSession(storeSlug: string, items: { id: stri
       const pixPayment = await paymentService.createPixPayment({
         sellerId: storeRecord!.ownerId,
         orderId: newOrder.id,
-        amount: subtotal,
+        amount: finalTotal,
         description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
         customer: {
           name: 'Cliente Telegram',

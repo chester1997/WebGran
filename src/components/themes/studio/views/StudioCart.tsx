@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Tag,
   ChevronRight,
+  X,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -23,8 +25,18 @@ import { useRouter } from "next/navigation";
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const { items, updateQuantity, removeFromCart, subtotal, total, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [coupon, setCoupon] = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
+  
+  // Coupon States
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountType: string;
+    discountValue: number;
+    discountAmount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
   const [pixState, setPixState] = useState<{
     orderId: string;
     qrCode: string;
@@ -37,8 +49,45 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
 
-  const discount = 0; // Placeholder — coupon logic can be wired in later
-  const displayTotal = total - discount;
+  const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const displayTotal = Math.max(0, subtotal - discount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError(null);
+
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeSlug,
+          code: couponCode,
+          cartTotal: subtotal,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.coupon) {
+        setAppliedCoupon(data.coupon);
+        setCouponError(null);
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(data.error || "Cupom inválido.");
+      }
+    } catch {
+      setCouponError("Erro de conexão ao validar cupom.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError(null);
+  };
 
   const handleCheckout = async () => {
     setIsProcessing(true);
@@ -46,7 +95,8 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     try {
       const result = await createCheckoutSession(
         storeSlug,
-        items.map((i) => ({ id: i.id, quantity: i.quantity }))
+        items.map((i) => ({ id: i.id, quantity: i.quantity })),
+        appliedCoupon?.code
       );
 
       if (result.success) {
@@ -255,7 +305,6 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
                 <h3 className="font-semibold text-[14px] text-white leading-snug line-clamp-2">
                   {item.title}
                 </h3>
-                {/* duration placeholder if needed */}
               </div>
 
               <div className="flex items-center justify-between mt-2">
@@ -302,26 +351,67 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       </div>
 
       {/* Coupon */}
-      <div className="mb-5">
-        <p className="text-[13px] font-semibold text-white mb-2">Cupom de desconto</p>
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-[#18181c] border border-white/8 rounded-xl px-3 py-2.5">
-            <Tag className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-            <input
-              type="text"
-              value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
-              placeholder="Digite seu cupom"
-              className="bg-transparent text-[13px] text-white placeholder:text-zinc-500 flex-1 outline-none"
-            />
+      <div className="mb-5 space-y-2">
+        <p className="text-[13px] font-semibold text-white">Cupom de desconto</p>
+
+        {appliedCoupon ? (
+          <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3.5 py-2.5 text-xs text-emerald-400">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span className="font-mono font-bold tracking-wider uppercase text-white bg-emerald-500/20 px-2 py-0.5 rounded">
+                {appliedCoupon.code}
+              </span>
+              <span className="text-emerald-300 truncate">
+                (- R$ {appliedCoupon.discountAmount.toFixed(2).replace(".", ",")})
+              </span>
+            </div>
+            <button
+              onClick={handleRemoveCoupon}
+              className="p-1 hover:bg-emerald-500/20 rounded-lg text-emerald-400 hover:text-white transition-colors"
+              title="Remover Cupom"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setCouponApplied(!!coupon)}
-            className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-[13px] rounded-xl transition-colors"
-          >
-            Aplicar
-          </button>
-        </div>
+        ) : (
+          <div>
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center gap-2 bg-[#18181c] border border-white/8 rounded-xl px-3 py-2.5">
+                <Tag className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleApplyCoupon();
+                    }
+                  }}
+                  placeholder="Digite seu cupom"
+                  className="bg-transparent text-[13px] uppercase text-white placeholder:text-zinc-500 placeholder:normal-case flex-1 outline-none"
+                />
+              </div>
+              <button
+                onClick={handleApplyCoupon}
+                disabled={couponLoading || !couponCode.trim()}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold text-[13px] rounded-xl transition-colors flex items-center gap-1.5"
+              >
+                {couponLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Aplicar"
+                )}
+              </button>
+            </div>
+
+            {couponError && (
+              <p className="text-[11px] text-red-400 mt-1.5 font-medium">
+                {couponError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Order summary */}
@@ -334,7 +424,9 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           </div>
           <div className="flex justify-between text-[13px] text-zinc-400">
             <span>Desconto</span>
-            <span>- R$ {discount.toFixed(2).replace(".", ",")}</span>
+            <span className={discount > 0 ? "text-emerald-400 font-semibold" : ""}>
+              - R$ {discount.toFixed(2).replace(".", ",")}
+            </span>
           </div>
           <div className="h-px bg-white/6 my-1" />
           <div className="flex justify-between text-[16px] font-bold">
@@ -379,7 +471,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       <button
         onClick={handleCheckout}
         disabled={isProcessing}
-        className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-2xl transition-colors disabled:opacity-50 text-[15px] mb-4"
+        className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-2xl transition-colors disabled:opacity-50 text-[15px] mb-4 cursor-pointer"
       >
         {isProcessing ? (
           <>

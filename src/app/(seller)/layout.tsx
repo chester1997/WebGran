@@ -24,7 +24,8 @@ import {
   ShieldAlert,
   ArrowLeft,
   Menu,
-  X
+  X,
+  Ticket
 } from "lucide-react";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
@@ -40,6 +41,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     { name: "Produtos", href: "/seller/products", icon: Package },
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },
+    { name: "Cupons", href: "/seller/coupons", icon: Ticket },
   ];
 
   // Root level items outside the group

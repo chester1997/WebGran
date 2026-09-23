@@ -144,6 +144,7 @@ export const orders = pgTable('orders', {
   pixExpiresAt: timestamp('pix_expires_at'),
   platformFee: decimal('platform_fee', { precision: 10, scale: 2 }).default('0'),
   netAmount: decimal('net_amount', { precision: 10, scale: 2 }).default('0'),
+  couponCode: text('coupon_code'),
   paidAt: timestamp('paid_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -221,6 +222,23 @@ export const carouselProducts = pgTable('carousel_products', {
   carouselProductUnique: unique().on(t.carouselId, t.productId)
 }));
 
+export const coupons = pgTable('coupons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  discountType: text('discount_type').notNull().default('percentage'), // 'percentage' | 'fixed'
+  discountValue: decimal('discount_value', { precision: 10, scale: 2 }).notNull(),
+  minOrderValue: decimal('min_order_value', { precision: 10, scale: 2 }).default('0'),
+  maxUses: integer('max_uses'),
+  usedCount: integer('used_count').notNull().default(0),
+  expiresAt: timestamp('expires_at'),
+  status: text('status').notNull().default('active'), // 'active' | 'inactive'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeCodeUnique: unique().on(t.storeId, t.code)
+}));
+
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -247,6 +265,14 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   orders: many(orders),
   accesses: many(accesses),
   banners: many(banners),
+  coupons: many(coupons),
+}));
+
+export const couponsRelations = relations(coupons, ({ one }) => ({
+  store: one(stores, {
+    fields: [coupons.storeId],
+    references: [stores.id],
+  }),
 }));
 
 export const telegramBotsRelations = relations(telegramBots, ({ one }) => ({
