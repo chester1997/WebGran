@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, ShoppingCart, LibraryBig, Plus } from "lucide-react";
+import { Home, Search, ShoppingCart, LibraryBig, Compass } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -64,16 +64,16 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* Center — + button, elevated */}
+        {/* Center — Explorar button, elevated */}
         <div className="relative flex flex-col items-center justify-end pb-1 px-3" style={{ marginTop: "-20px" }}>
-          <div
-            className="flex items-center justify-center w-[54px] h-[54px] rounded-full bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] select-none"
-            aria-hidden="true"
+          <Link
+            href={basePath}
+            aria-label="Explorar"
+            className="flex items-center justify-center w-[54px] h-[54px] rounded-full bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] hover:bg-red-500 transition-all duration-150 active:scale-95 select-none"
           >
-            <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
-          </div>
-          {/* invisible spacer label to keep vertical alignment */}
-          <span className="text-[10px] font-semibold mt-1.5 leading-none text-transparent select-none">·</span>
+            <Compass className="w-7 h-7 text-white" strokeWidth={2} />
+          </Link>
+          <span className="text-[10px] font-semibold mt-1.5 leading-none text-zinc-500">Explorar</span>
         </div>
 
         {/* Right: Acessos + Carrinho */}
