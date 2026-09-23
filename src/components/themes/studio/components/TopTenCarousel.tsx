@@ -83,10 +83,10 @@ export function TopTenCarousel({
         const badgeConfig = getProductBadge(product.badge);
 
         return (
-          <div key={product.id} className="snap-start shrink-0 relative flex items-end group">
+          <div key={product.id} className="snap-start shrink-0 relative flex flex-col group">
             <Link
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
-              className={`relative flex flex-col items-end ${
+              className={`relative flex items-end ${
                 isDoubleDigit 
                   ? "pl-12 sm:pl-14 md:pl-16" 
                   : "pl-7 sm:pl-8 md:pl-9"
@@ -94,7 +94,7 @@ export function TopTenCarousel({
             >
               {/* Crisp outline position number overlapping bottom-left edge */}
               <span
-                className="absolute left-0 -bottom-8 sm:-bottom-9 md:-bottom-10 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+                className="absolute left-0 -bottom-3 sm:-bottom-4 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
                 style={{
                   WebkitTextStroke: `3px ${style.stroke}`,
                   filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
@@ -130,19 +130,23 @@ export function TopTenCarousel({
                   </div>
                 )}
               </div>
-
-              {/* Price & Add to Cart Action Row below image card aligned with number baseline */}
-              <div className="relative z-20 w-48 sm:w-56 md:w-64 flex items-center justify-between pt-2 px-1">
-                {product.price !== undefined ? (
-                  <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight">
-                    R$ {Number(product.price).toFixed(2).replace(".", ",")}
-                  </span>
-                ) : (
-                  <span />
-                )}
-                <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
-              </div>
             </Link>
+
+            {/* Price & Add to Cart Action Row below image card */}
+            <div className={`relative z-20 w-48 sm:w-56 md:w-64 flex items-center justify-between pt-1.5 px-0.5 ${
+              isDoubleDigit 
+                ? "ml-12 sm:ml-14 md:ml-16" 
+                : "ml-7 sm:ml-8 md:ml-9"
+            }`}>
+              {product.price !== undefined ? (
+                <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight">
+                  R$ {Number(product.price).toFixed(2).replace(".", ",")}
+                </span>
+              ) : (
+                <span />
+              )}
+              <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
+            </div>
           </div>
         );
       })}
