@@ -13,6 +13,7 @@ interface Product {
   coverUrl: string | null;
   bannerUrl?: string | null;
   badge?: string | null;
+  storeId?: string;
 }
 
 interface TopTenCarouselProps {

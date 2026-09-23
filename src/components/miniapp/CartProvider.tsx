@@ -47,29 +47,42 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
         if (Array.isArray(parsed)) {
           const sanitized = parsed.map((item: any) => ({
             ...item,
-            price: Number(item.price || 0),
-            quantity: Number(item.quantity || 1)
+            price: Number.isFinite(Number(item.price)) ? Number(item.price) : 0,
+            quantity: Number.isFinite(Number(item.quantity)) && Number(item.quantity) > 0 ? Number(item.quantity) : 1
           }));
           setItems(sanitized);
         }
       }
     } catch (e) {
-      console.error("Failed to load cart", e);
+      console.error("[CART DEBUG] Failed to load cart from localStorage", e);
     }
     setIsLoaded(true);
   }, [storageKey]);
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem(storageKey, JSON.stringify(items));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(items));
+        console.log("[CART DEBUG] Persisted cart to localStorage key", storageKey, items);
+      } catch (e) {
+        console.error("[CART DEBUG] Failed to persist cart", e);
+      }
     }
   }, [items, isLoaded, storageKey]);
 
   const addToCart = (newItem: CartItem) => {
+    console.log("[CART DEBUG] addToCart invoked with newItem:", newItem);
     setItems((prev) => {
-      // Prevent mixing items from different stores
-      if (prev.length > 0 && prev[0].storeId !== newItem.storeId) {
-        // Technically this shouldn't happen because of namespacing by storeSlug, but for safety:
+      console.log("[CART DEBUG] prev cart state before add:", prev);
+
+      // Prevent mixing items from different stores ONLY if both IDs exist and differ
+      if (
+        prev.length > 0 &&
+        prev[0].storeId &&
+        newItem.storeId &&
+        prev[0].storeId !== newItem.storeId
+      ) {
+        console.log("[CART DEBUG] Store mismatch detected between", prev[0].storeId, "and", newItem.storeId, "- Replacing cart.");
         return [newItem]; 
       }
 
@@ -77,9 +90,13 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
       if (existingIndex >= 0) {
         const updated = [...prev];
         updated[existingIndex].quantity += newItem.quantity;
+        console.log("[CART DEBUG] Incremented quantity for item:", updated[existingIndex]);
         return updated;
       }
-      return [...prev, newItem];
+
+      const updated = [...prev, newItem];
+      console.log("[CART DEBUG] Appended new item to cart array. New cart items:", updated);
+      return updated;
     });
   };
 
@@ -96,9 +113,14 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
 
   const clearCart = () => setItems([]);
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const total = subtotal; // Em breve, lógica de desconto aqui
-  const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
+  const subtotal = items.reduce((acc, item) => {
+    const priceVal = Number.isFinite(item.price) ? item.price : 0;
+    const qtyVal = Number.isFinite(item.quantity) ? item.quantity : 1;
+    return acc + priceVal * qtyVal;
+  }, 0);
+
+  const total = subtotal;
+  const itemCount = items.reduce((acc, item) => acc + (Number.isFinite(item.quantity) ? item.quantity : 1), 0);
 
   return (
     <CartContext.Provider

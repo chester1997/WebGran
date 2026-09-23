@@ -8,6 +8,7 @@ interface Product {
   title: string;
   coverUrl: string | null;
   price: string | number;
+  storeId?: string;
 }
 
 interface ProductCarouselProps {

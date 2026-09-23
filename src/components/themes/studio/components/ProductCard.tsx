@@ -13,6 +13,7 @@ interface ProductCardProps {
     coverUrl: string | null;
     price: string | number;
     badge?: string | null;
+    storeId?: string;
   };
   showButtons?: boolean;
   buttonVariant?: "two-buttons" | "details";
