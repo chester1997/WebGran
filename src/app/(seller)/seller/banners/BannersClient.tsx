@@ -252,7 +252,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   };
 
   return (
-    <div className="space-y-8 max-w-6xl pb-16">
+    <div className="space-y-8 w-full max-w-[1600px] mx-auto pb-16">
       {/* Toast Feedback */}
       {errorMsg && (
         <div className="p-4 rounded-xl bg-red-950/90 border border-red-500/40 text-red-200 flex items-center gap-3 animate-in fade-in shadow-xl">
@@ -271,7 +271,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Banners</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Banners</h1>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
               {bannersList.length} de {maxLimit} banners
             </span>
@@ -284,7 +284,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
         <Button
           onClick={openAddModal}
           disabled={isLimitReached}
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-5 py-2.5 shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Adicionar Banner
@@ -292,13 +292,13 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       </div>
 
       {/* Banner Size Recommendation Notice Card */}
-      <div className="bg-[#121216] border border-red-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+      <div className="bg-[#121216] border border-red-500/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0">
             <ImageIcon className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="text-xs font-bold text-white flex items-center gap-2">
+            <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
               <span>Dimensões recomendadas para os Banners</span>
             </h4>
             <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
@@ -308,7 +308,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             </div>
           </div>
         </div>
-        <span className="text-[11px] text-zinc-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5 shrink-0">
+        <span className="text-[11px] text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 shrink-0">
           ⚡ Imagens maiores se ajustam perfeitamente ao card.
         </span>
       </div>
@@ -359,18 +359,18 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`grid gap-6 sm:gap-8 ${bannersList.length === 1 ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
           {bannersList.map((banner, index) => {
             const isActive = banner.status === "active";
             return (
               <div
                 key={banner.id}
-                className={`bg-[#121216] border rounded-2xl overflow-hidden transition-all flex flex-col justify-between ${
-                  isActive ? "border-white/10 shadow-md" : "border-white/5 opacity-60"
+                className={`bg-[#121216] border rounded-2xl overflow-hidden transition-all flex flex-col justify-between shadow-xl ${
+                  isActive ? "border-white/10" : "border-white/5 opacity-60"
                 }`}
               >
-                {/* Banner Image Preview Container */}
-                <div className="relative w-full aspect-[2.2/1] bg-black/40 overflow-hidden border-b border-white/5">
+                {/* Banner Image Preview Container — Enlarged for prominent visual clarity */}
+                <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] min-h-[240px] sm:min-h-[300px] bg-black/40 overflow-hidden border-b border-white/5">
                   <img
                     src={banner.imageUrl}
                     alt={banner.title}
