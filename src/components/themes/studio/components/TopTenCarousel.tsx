@@ -83,28 +83,28 @@ export function TopTenCarousel({
         const badgeConfig = getProductBadge(product.badge);
 
         return (
-          <div key={product.id} className="snap-start shrink-0 relative flex flex-col group">
+          <div key={product.id} className="snap-start shrink-0 relative flex flex-col justify-end group">
+            {/* Crisp outline position number overlapping bottom-left edge */}
+            <span
+              className="absolute left-0 bottom-0 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+              style={{
+                WebkitTextStroke: `3px ${style.stroke}`,
+                filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
+                fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
+                letterSpacing: "-0.04em"
+              }}
+            >
+              {displayPosition}
+            </span>
+
             <Link
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
-              className={`relative flex items-end ${
+              className={`relative flex flex-col items-end ${
                 isDoubleDigit 
                   ? "pl-12 sm:pl-14 md:pl-16" 
                   : "pl-7 sm:pl-8 md:pl-9"
               }`}
             >
-              {/* Crisp outline position number overlapping bottom-left edge */}
-              <span
-                className="absolute left-0 -bottom-1 sm:-bottom-1.5 md:-bottom-2 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
-                style={{
-                  WebkitTextStroke: `3px ${style.stroke}`,
-                  filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
-                  fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
-                  letterSpacing: "-0.04em"
-                }}
-              >
-                {displayPosition}
-              </span>
-
               {/* Horizontal 16:9 Image Card */}
               <div className="relative z-10 w-48 sm:w-56 md:w-64 aspect-[16/9] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
                 {badgeConfig && (
