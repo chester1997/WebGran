@@ -5,7 +5,8 @@ import { paymentService } from '@/lib/payments/payment-service';
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'seller') {
+    const role = (user?.role || '').toLowerCase();
+    if (!user || (role !== 'seller' && role !== 'admin' && role !== 'super_admin')) {
       return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 });
     }
 
