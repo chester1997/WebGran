@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Dialog, 
@@ -30,6 +30,19 @@ export function EditProductModal({ categories, bots, product }: { categories: an
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Clear validation test result and sync product state whenever modal opens or closes
+  useEffect(() => {
+    setTestResult(null);
+    setErrorMessage(null);
+    if (open) {
+      setDeliveryType(product?.deliveryType === "external" ? "external" : "telegram");
+      setDeliveryValue(product?.deliveryValue || "");
+      setImageUrl(product?.coverUrl || "");
+      setBannerUrl(product?.bannerUrl || "");
+      setSelectedBotId(product?.botId || "");
+    }
+  }, [open, product]);
 
   const handleTestAccess = async () => {
     if (!deliveryValue.trim()) return;
@@ -338,19 +351,19 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                     </Button>
                   </div>
 
-                  {testResult && (
-                    testResult.success ? (
+                  {Boolean(testResult && deliveryValue.trim()) && (
+                    testResult!.success ? (
                       <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs space-y-1.5 font-sans">
                         <p className="font-bold text-sm text-emerald-400 flex items-center gap-1.5 mb-2">
                           ✓ Canal encontrado
                         </p>
-                        <p><strong>Nome:</strong> {testResult.chatName || "Grupo/Canal Telegram"}</p>
-                        {testResult.chatType && <p><strong>Tipo:</strong> {testResult.chatType}</p>}
+                        <p><strong>Nome:</strong> {testResult!.chatName || "Grupo/Canal Telegram"}</p>
+                        {testResult!.chatType && <p><strong>Tipo:</strong> {testResult!.chatType}</p>}
                         <p className="text-emerald-400 font-semibold mt-1">✓ Bot verificado com permissão de Administrador (pode convidar usuários)</p>
                       </div>
                     ) : (
                       <div className="p-3.5 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs whitespace-pre-line font-sans leading-relaxed">
-                        {testResult.error}
+                        {testResult!.error}
                       </div>
                     )
                   )}
