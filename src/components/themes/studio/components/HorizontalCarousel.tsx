@@ -115,7 +115,7 @@ export function HorizontalCarousel({
         onMouseLeave={handleMouseUpOrLeave}
         onClickCapture={handleClickCapture}
         onWheel={handleWheel}
-        className={`flex overflow-x-auto scrollbar-hide snap-x snap-mandatory pt-2 pb-4 w-full select-none ${
+        className={`flex overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory pt-2 pb-4 w-full select-none ${
           isMouseDown ? "cursor-grabbing" : "cursor-grab"
         } ${trackClassName}`}
         style={{
