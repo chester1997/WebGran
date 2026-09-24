@@ -359,7 +359,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           </Button>
         </div>
       ) : (
-        <div className={`grid gap-6 sm:gap-8 ${bannersList.length === 1 ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {bannersList.map((banner, index) => {
             const isActive = banner.status === "active";
             return (
@@ -369,8 +369,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                   isActive ? "border-white/10" : "border-white/5 opacity-60"
                 }`}
               >
-                {/* Banner Image Preview Container — Enlarged for prominent visual clarity */}
-                <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] min-h-[240px] sm:min-h-[300px] bg-black/40 overflow-hidden border-b border-white/5">
+                {/* Banner Image Preview Container — Compact & Balanced Height */}
+                <div className="relative w-full aspect-[2.5/1] max-h-[180px] bg-black/40 overflow-hidden border-b border-white/5">
                   <img
                     src={banner.imageUrl}
                     alt={banner.title}
