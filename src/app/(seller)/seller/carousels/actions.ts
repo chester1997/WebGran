@@ -3,7 +3,7 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { productCarousels, carouselProducts } from "@/db/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{3,8})$/;
@@ -211,3 +211,40 @@ export async function deleteCarouselAction(carouselId: string) {
   revalidatePath("/seller/carousels");
   revalidatePath(`/miniapp/${store.slug}`);
 }
+
+export async function moveCarouselPositionAction(carouselId: string, direction: "up" | "down") {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada");
+
+  const carousels = await db.query.productCarousels.findMany({
+    where: and(
+      eq(productCarousels.storeId, store.id),
+      eq(productCarousels.isRanking, false)
+    ),
+    orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)]
+  });
+
+  const index = carousels.findIndex(c => c.id === carouselId);
+  if (index === -1) return { success: false };
+
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= carousels.length) return { success: false };
+
+  // Swap in array
+  const temp = carousels[index];
+  carousels[index] = carousels[targetIndex];
+  carousels[targetIndex] = temp;
+
+  // Update position values strictly in DB
+  for (let i = 0; i < carousels.length; i++) {
+    await db.update(productCarousels)
+      .set({ position: i, updatedAt: new Date() })
+      .where(eq(productCarousels.id, carousels[i].id));
+  }
+
+  revalidatePath("/seller/carousels");
+  revalidatePath(`/miniapp/${store.slug}`);
+  return { success: true };
+}
+

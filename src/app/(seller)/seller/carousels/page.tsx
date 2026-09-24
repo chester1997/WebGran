@@ -8,6 +8,7 @@ import { DeleteCarouselButton } from "./DeleteCarouselButton";
 import { RankingModal } from "./RankingModal";
 import { getOrCreateRankingCarouselAction } from "./actions";
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
+import { ReorderCarouselButtons } from "./ReorderCarouselButtons";
 
 import SetupStoreClient from "../SetupStoreClient";
 
@@ -193,7 +194,7 @@ export default async function SellerCarouselsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {standardCarousels.map((c) => {
+            {standardCarousels.map((c, idx) => {
               const activeProducts = c.items.map((i) => i.product).filter(Boolean);
               const selectedProductIds = c.items.map((i) => i.productId);
 
@@ -244,19 +245,27 @@ export default async function SellerCarouselsPage() {
                   </div>
 
                   {/* Footer Actions */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
-                    <CarouselModal
-                      products={storeProducts}
-                      carousel={{
-                        id: c.id,
-                        name: c.name,
-                        selectedProductIds,
-                        indicatorType: c.indicatorType as "BAR" | "ICON" | "NONE" || "BAR",
-                        iconName: c.iconName,
-                        iconColor: c.iconColor,
-                      }}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+                    <ReorderCarouselButtons 
+                      carouselId={c.id} 
+                      index={idx} 
+                      total={standardCarousels.length} 
                     />
-                    <DeleteCarouselButton carouselId={c.id} />
+
+                    <div className="flex items-center gap-2">
+                      <CarouselModal
+                        products={storeProducts}
+                        carousel={{
+                          id: c.id,
+                          name: c.name,
+                          selectedProductIds,
+                          indicatorType: c.indicatorType as "BAR" | "ICON" | "NONE" || "BAR",
+                          iconName: c.iconName,
+                          iconColor: c.iconColor,
+                        }}
+                      />
+                      <DeleteCarouselButton carouselId={c.id} />
+                    </div>
                   </div>
                 </div>
               );
