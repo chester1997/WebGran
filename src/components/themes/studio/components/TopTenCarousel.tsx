@@ -89,7 +89,7 @@ export function TopTenCarousel({
             <span
               className="absolute left-0 -bottom-3 sm:-bottom-4 md:-bottom-5 text-[104px] sm:text-[118px] md:text-[128px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
               style={{
-                WebkitTextStroke: `3px.5 ${style.stroke}`,
+                WebkitTextStroke: `3.5px ${style.stroke}`,
                 filter: style.glow !== "transparent" ? `drop-shadow(0 0 6px ${style.glow})` : "none",
                 fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
                 letterSpacing: "-0.04em"
