@@ -93,9 +93,9 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
 
   return (
     <div 
-      className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-2.5 shadow-lg border border-white/20 relative group-hover:scale-110 transition-all duration-300`}
+      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-3 shadow-lg border border-white/20 relative transition-all duration-300`}
       style={{
-        boxShadow: `0 8px 16px -2px rgba(0,0,0,0.8), 0 0 12px ${glowColor}`
+        boxShadow: `0 6px 14px -2px rgba(0,0,0,0.8), 0 0 12px ${glowColor}`
       }}
     >
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/40 via-transparent to-white/25 pointer-events-none" />
@@ -108,47 +108,49 @@ export function Category3DPopoutCard({ category, storeSlug, isActive = false }: 
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
-      className="shrink-0 relative w-[105px] sm:w-[120px] pt-4 group select-none transition-all duration-300 active:scale-95 block"
+      className="shrink-0 flex flex-col items-center gap-1.5 group select-none transition-transform duration-200 active:scale-95 block"
+      style={{ minWidth: "72px", maxWidth: "88px" }}
     >
-      {/* 3D Icon popping OUT above the top edge of the card body */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-all duration-300 group-hover:-translate-y-1.5 group-hover:scale-105">
+      {/* 3D Icon / Image */}
+      <div className={`relative transition-all duration-300 group-hover:scale-105 ${
+        isActive ? "scale-105" : ""
+      }`}>
         {category.imageUrl ? (
-          <img
-            src={category.imageUrl}
-            alt={category.name}
-            className="w-full h-full object-contain filter drop-shadow-[0_8px_12px_rgba(0,0,0,0.85)]"
-          />
+          <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border transition-all duration-300 ${
+            isActive ? "border-red-500 ring-2 ring-red-500/80 shadow-[0_0_16px_rgba(239,68,68,0.5)]" : "border-white/20 shadow-md group-hover:border-white/40"
+          }`}>
+            <img
+              src={category.imageUrl}
+              alt={category.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
         ) : (
-          <Category3DIconRenderer name={category.name} iconName={category.iconName} />
+          <div className={`relative rounded-2xl transition-all duration-300 ${
+            isActive ? "ring-2 ring-red-500 rounded-2xl shadow-[0_0_18px_rgba(239,68,68,0.6)]" : ""
+          }`}>
+            <Category3DIconRenderer name={category.name} iconName={category.iconName} />
+          </div>
         )}
       </div>
 
-      {/* Dark Glass Card Body sitting underneath the 3D Icon */}
-      <div
-        className={`relative z-10 w-full pt-8 pb-2.5 px-2 rounded-2xl border transition-all duration-300 flex flex-col items-center justify-end text-center ${
+      {/* Category Name */}
+      <span
+        className={`text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-center truncate max-w-full leading-tight transition-colors duration-200 ${
           isActive
-            ? "bg-gradient-to-b from-[#221215]/95 via-[#161214]/95 to-[#0F0A0D]/95 border-red-500/80 shadow-[0_0_18px_rgba(239,68,68,0.35)]"
-            : "bg-gradient-to-b from-[#1E1E24]/90 via-[#121216]/90 to-[#0A0A0E]/95 border-white/10 shadow-lg shadow-black/70 group-hover:border-white/30 group-hover:bg-[#18181E] group-hover:shadow-black/90"
+            ? "text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+            : "text-zinc-400 group-hover:text-white"
         }`}
       >
-        {/* Category Name */}
-        <span
-          className={`text-[10px] sm:text-[11px] font-black tracking-wider uppercase truncate max-w-full leading-none transition-colors duration-200 ${
-            isActive
-              ? "text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
-              : "text-zinc-300 group-hover:text-white"
-          }`}
-        >
-          {category.name}
-        </span>
+        {category.name}
+      </span>
 
-        {/* Active Red Indicator Pill */}
-        {isActive ? (
-          <div className="w-4 h-1 mt-1.5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" />
-        ) : (
-          <div className="w-3 h-0.5 mt-1.5 bg-white/10 rounded-full group-hover:bg-white/30 transition-colors" />
-        )}
-      </div>
+      {/* Active Red Indicator Pill */}
+      {isActive ? (
+        <div className="w-4 h-1 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" />
+      ) : (
+        <div className="w-3 h-0.5 bg-white/10 rounded-full group-hover:bg-white/30 transition-colors opacity-0 group-hover:opacity-100" />
+      )}
     </Link>
   );
 }
