@@ -57,7 +57,7 @@ export function TopTenCarousel({
 
   return (
     <HorizontalCarousel
-      trackClassName="pt-3 pb-12 sm:pb-14 md:pb-16"
+      trackClassName="pt-1 pb-4 sm:pb-6"
       title={
         <div className="flex items-center gap-2">
           {indicatorType === "ICON" && (
