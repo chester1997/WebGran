@@ -40,18 +40,18 @@ export function TopTenCarousel({
   // Position-based deterministic color styling for Top 5 vs 6-15
   const getPositionStyle = (index: number) => {
     switch (index) {
-      case 0: // 1º Lugar - Red
-        return { stroke: "#EF4444", glow: "rgba(239, 68, 68, 0.18)" };
-      case 1: // 2º Lugar - Red-Orange
-        return { stroke: "#F97316", glow: "rgba(249, 115, 22, 0.18)" };
-      case 2: // 3º Lugar - Orange
-        return { stroke: "#FB923C", glow: "rgba(251, 146, 60, 0.18)" };
-      case 3: // 4º Lugar - Amber
-        return { stroke: "#FBBF24", glow: "rgba(251, 191, 36, 0.18)" };
+      case 0: // 1º Lugar - Red Neon
+        return { stroke: "#EF4444", glow: "rgba(239, 68, 68, 0.65)" };
+      case 1: // 2º Lugar - Red-Orange Neon
+        return { stroke: "#F97316", glow: "rgba(249, 115, 22, 0.65)" };
+      case 2: // 3º Lugar - Orange Neon
+        return { stroke: "#FB923C", glow: "rgba(251, 146, 60, 0.65)" };
+      case 3: // 4º Lugar - Amber Neon
+        return { stroke: "#FBBF24", glow: "rgba(251, 191, 36, 0.65)" };
       case 4: // 5º Lugar - Gold / Amarelo
-        return { stroke: "#FACC15", glow: "rgba(250, 204, 21, 0.18)" };
-      default: // 6º ao 15º - Neutro Cinza
-        return { stroke: "#71717A", glow: "transparent" };
+        return { stroke: "#FACC15", glow: "rgba(250, 204, 21, 0.65)" };
+      default: // 6º ao 15º - Neutro Cinza Neon
+        return { stroke: "#9CA3AF", glow: "rgba(156, 163, 175, 0.4)" };
     }
   };
 
@@ -85,12 +85,12 @@ export function TopTenCarousel({
 
         return (
           <div key={product.id} className="snap-start shrink-0 relative flex flex-col justify-end group">
-            {/* Crisp outline position number overlapping bottom-left edge */}
+            {/* Crisp outline position number with subtle neon glow */}
             <span
               className="absolute left-0 -bottom-3 sm:-bottom-4 md:-bottom-5 text-[104px] sm:text-[118px] md:text-[128px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
               style={{
                 WebkitTextStroke: `3.5px ${style.stroke}`,
-                filter: style.glow !== "transparent" ? `drop-shadow(0 0 6px ${style.glow})` : "none",
+                filter: `drop-shadow(0 0 5px ${style.stroke}) drop-shadow(0 0 10px ${style.glow})`,
                 fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
                 letterSpacing: "-0.04em"
               }}
