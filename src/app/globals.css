@@ -183,6 +183,20 @@ html.light nav {
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
+html.light header span,
+html.light header a span {
+  color: #09090b !important;
+}
+
+html.light header span.text-zinc-400 {
+  color: #52525b !important;
+}
+
+html.light header button {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
 html.light .bg-\[\#0d0e10\],
 html.light .bg-\[\#272727\] {
   background-color: #f4f4f7 !important;
