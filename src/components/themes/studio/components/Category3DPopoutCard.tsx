@@ -93,12 +93,8 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
 
   return (
     <div 
-      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-3 shadow-lg border border-white/20 relative transition-all duration-300`}
-      style={{
-        boxShadow: `0 6px 14px -2px rgba(0,0,0,0.8), 0 0 12px ${glowColor}`
-      }}
+      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-3 shadow-md relative transition-all duration-300`}
     >
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/40 via-transparent to-white/25 pointer-events-none" />
       <IconComp className={`w-full h-full ${iconColor} relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]`} />
     </div>
   );
@@ -114,7 +110,7 @@ export function Category3DPopoutCard({ category, storeSlug }: Category3DPopoutCa
       {/* 3D Icon / Image */}
       <div className="relative transition-all duration-300 group-hover:scale-105">
         {category.imageUrl ? (
-          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border border-white/20 shadow-md group-hover:border-white/40 transition-all duration-300">
+          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-md transition-all duration-300">
             <img
               src={category.imageUrl}
               alt={category.name}

@@ -84,7 +84,7 @@ export function CategoryIconCard({ category, storeSlug, isActive = false }: Cate
     >
       {/* Icon card — square, dark glass with subtle border and uniform soft glow */}
       <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/[0.08] border border-white/15 shadow-[0_0_10px_rgba(255,255,255,0.06)] group-hover:bg-white/15 group-hover:border-white/30 group-hover:shadow-[0_0_14px_rgba(255,255,255,0.12)] transition-all duration-200"
+        className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/[0.08] group-hover:bg-white/15 transition-all duration-200"
       >
         <IconComp
           className="w-7 h-7 text-white/80 group-hover:text-white transition-colors duration-200"
