@@ -130,12 +130,11 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                 className="flex overflow-x-auto scrollbar-hide w-full select-none px-4 py-1 gap-3"
                 style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
               >
-                {store.categories.map((cat, idx) => (
+                {store.categories.map((cat) => (
                   <CategoryIconCard
                     key={cat.id}
                     category={cat}
                     storeSlug={storeSlug}
-                    isActive={idx === 0}
                   />
                 ))}
               </div>
@@ -145,12 +144,11 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
                 className="flex overflow-x-auto scrollbar-hide w-full select-none px-4 py-1 gap-2.5 sm:gap-3"
                 style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
               >
-                {store.categories.map((cat, idx) => (
+                {store.categories.map((cat) => (
                   <Category3DPopoutCard
                     key={cat.id}
                     category={cat}
                     storeSlug={storeSlug}
-                    isActive={idx === 0}
                   />
                 ))}
               </div>

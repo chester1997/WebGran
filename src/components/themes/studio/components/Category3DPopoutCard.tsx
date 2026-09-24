@@ -104,7 +104,7 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
   );
 }
 
-export function Category3DPopoutCard({ category, storeSlug, isActive = false }: Category3DPopoutCardProps) {
+export function Category3DPopoutCard({ category, storeSlug }: Category3DPopoutCardProps) {
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
@@ -112,13 +112,9 @@ export function Category3DPopoutCard({ category, storeSlug, isActive = false }: 
       style={{ minWidth: "72px", maxWidth: "88px" }}
     >
       {/* 3D Icon / Image */}
-      <div className={`relative transition-all duration-300 group-hover:scale-105 ${
-        isActive ? "scale-105" : ""
-      }`}>
+      <div className="relative transition-all duration-300 group-hover:scale-105">
         {category.imageUrl ? (
-          <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border transition-all duration-300 ${
-            isActive ? "border-red-500/80 ring-1.5 ring-red-500/70 shadow-md" : "border-white/20 shadow-md group-hover:border-white/40"
-          }`}>
+          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border border-white/20 shadow-md group-hover:border-white/40 transition-all duration-300">
             <img
               src={category.imageUrl}
               alt={category.name}
@@ -126,31 +122,16 @@ export function Category3DPopoutCard({ category, storeSlug, isActive = false }: 
             />
           </div>
         ) : (
-          <div className={`relative rounded-2xl transition-all duration-300 ${
-            isActive ? "ring-1.5 ring-red-500/80 rounded-2xl shadow-[0_2px_8px_rgba(239,68,68,0.25)]" : ""
-          }`}>
+          <div className="relative rounded-2xl transition-all duration-300">
             <Category3DIconRenderer name={category.name} iconName={category.iconName} />
           </div>
         )}
       </div>
 
       {/* Category Name */}
-      <span
-        className={`text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-center truncate max-w-full leading-tight transition-colors duration-200 ${
-          isActive
-            ? "text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
-            : "text-zinc-400 group-hover:text-white"
-        }`}
-      >
+      <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-center truncate max-w-full leading-tight text-zinc-400 group-hover:text-white transition-colors duration-200">
         {category.name}
       </span>
-
-      {/* Active Red Indicator Pill */}
-      {isActive ? (
-        <div className="w-4 h-1 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" />
-      ) : (
-        <div className="w-3 h-0.5 bg-white/10 rounded-full group-hover:bg-white/30 transition-colors opacity-0 group-hover:opacity-100" />
-      )}
     </Link>
   );
 }
