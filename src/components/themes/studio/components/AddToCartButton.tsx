@@ -65,12 +65,12 @@ export function AddToCartButton({
         onClick={handleClick}
         aria-label="Adicionar ao Carrinho"
         title="Adicionar ao Carrinho"
-        className="bg-[#1A1A1E] border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white p-1.5 rounded-md text-center transition-colors flex items-center justify-center shrink-0 cursor-pointer active:scale-95 z-30"
+        className="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded-lg text-center transition-colors flex items-center justify-center shrink-0 cursor-pointer active:scale-95 z-30 shadow-md border border-white/20"
       >
         {justAdded ? (
-          <Check className="w-3.5 h-3.5 text-emerald-400" />
+          <Check className="w-3.5 h-3.5 text-white" />
         ) : (
-          <ShoppingCart className="w-3.5 h-3.5 text-zinc-300" />
+          <ShoppingCart className="w-3.5 h-3.5 text-white" />
         )}
       </button>
     );

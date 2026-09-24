@@ -98,43 +98,52 @@ export function TopTenCarousel({
               {displayPosition}
             </span>
 
-            <Link
-              href={`/miniapp/${storeSlug}/product/${product.slug}`}
+            {/* Vertical 2:3 Image Card Container */}
+            <div
               className={`relative flex flex-col items-end ${
                 isDoubleDigit 
                   ? "pl-10 sm:pl-12 md:pl-14" 
                   : "pl-6 sm:pl-7 md:pl-8"
               }`}
             >
-              {/* Vertical 2:3 Image Card */}
               <div className="relative z-10 w-32 sm:w-36 md:w-40 aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
-                {badgeConfig && (
-                  <div className="absolute top-2 left-2 z-20 pointer-events-none">
-                    <span className={badgeConfig.className}>
-                      {badgeConfig.label}
-                    </span>
-                  </div>
-                )}
+                <Link
+                  href={`/miniapp/${storeSlug}/product/${product.slug}`}
+                  className="block w-full h-full"
+                >
+                  {badgeConfig && (
+                    <div className="absolute top-2 left-2 z-20 pointer-events-none">
+                      <span className={badgeConfig.className}>
+                        {badgeConfig.label}
+                      </span>
+                    </div>
+                  )}
 
-                {product.coverUrl || product.bannerUrl ? (
-                  <img
-                    src={product.coverUrl || product.bannerUrl!}
-                    alt={product.title}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover pointer-events-none"
-                    draggable={false}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center p-2 text-center text-xs text-zinc-500 bg-zinc-800">
-                    {product.title}
-                  </div>
-                )}
+                  {product.coverUrl || product.bannerUrl ? (
+                    <img
+                      src={product.coverUrl || product.bannerUrl!}
+                      alt={product.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover pointer-events-none"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-2 text-center text-xs text-zinc-500 bg-zinc-800">
+                      {product.title}
+                    </div>
+                  )}
+                </Link>
+
+                {/* Red Cart Button over top-right of image */}
+                <div className="absolute top-2 right-2 z-30">
+                  <AddToCartButton product={product} storeSlug={storeSlug} variant="icon" />
+                </div>
               </div>
-            </Link>
+            </div>
 
-            {/* Price & Add to Cart Action Row below image card */}
-            <div className={`relative z-20 w-32 sm:w-36 md:w-40 flex items-center justify-between gap-1 pt-2 px-0.5 ${
+            {/* Price Row below image card aligned to the right where button was */}
+            <div className={`relative z-20 w-32 sm:w-36 md:w-40 flex items-center justify-end pt-2 px-0.5 ${
               isDoubleDigit 
                 ? "ml-10 sm:ml-12 md:ml-14" 
                 : "ml-6 sm:ml-7 md:ml-8"
@@ -144,7 +153,6 @@ export function TopTenCarousel({
                   R$ {Number(product.price).toFixed(2).replace(".", ",")}
                 </span>
               )}
-              <AddToCartButton product={product} storeSlug={storeSlug} variant="icon" />
             </div>
           </div>
         );
