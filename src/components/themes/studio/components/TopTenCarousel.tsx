@@ -87,7 +87,7 @@ export function TopTenCarousel({
           <div key={product.id} className="snap-start shrink-0 relative flex flex-col justify-end group">
             {/* Crisp outline position number overlapping bottom-left edge */}
             <span
-              className="absolute left-0 -bottom-2 sm:-bottom-2.5 md:-bottom-3 text-[84px] sm:text-[96px] md:text-[108px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+              className="absolute left-0 -bottom-2 sm:-bottom-2.5 md:-bottom-3 text-[76px] sm:text-[88px] md:text-[96px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
               style={{
                 WebkitTextStroke: `3px ${style.stroke}`,
                 filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
@@ -102,12 +102,12 @@ export function TopTenCarousel({
               href={`/miniapp/${storeSlug}/product/${product.slug}`}
               className={`relative flex flex-col items-end ${
                 isDoubleDigit 
-                  ? "pl-12 sm:pl-14 md:pl-16" 
-                  : "pl-7 sm:pl-8 md:pl-9"
+                  ? "pl-10 sm:pl-12 md:pl-14" 
+                  : "pl-6 sm:pl-7 md:pl-8"
               }`}
             >
-              {/* Horizontal 16:9 Image Card */}
-              <div className="relative z-10 w-48 sm:w-56 md:w-64 aspect-[16/9] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
+              {/* Vertical 2:3 Image Card */}
+              <div className="relative z-10 w-32 sm:w-36 md:w-40 aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
                 {badgeConfig && (
                   <div className="absolute top-2 left-2 z-20 pointer-events-none">
                     <span className={badgeConfig.className}>
@@ -116,9 +116,9 @@ export function TopTenCarousel({
                   </div>
                 )}
 
-                {product.bannerUrl || product.coverUrl ? (
+                {product.coverUrl || product.bannerUrl ? (
                   <img
-                    src={product.bannerUrl || product.coverUrl!}
+                    src={product.coverUrl || product.bannerUrl!}
                     alt={product.title}
                     loading="lazy"
                     decoding="async"
@@ -134,10 +134,10 @@ export function TopTenCarousel({
             </Link>
 
             {/* Price & Add to Cart Action Row below image card */}
-            <div className={`relative z-20 w-48 sm:w-56 md:w-64 flex items-center justify-end gap-2 pt-2 px-0.5 ${
+            <div className={`relative z-20 w-32 sm:w-36 md:w-40 flex items-center justify-between gap-1 pt-2 px-0.5 ${
               isDoubleDigit 
-                ? "ml-12 sm:ml-14 md:ml-16" 
-                : "ml-7 sm:ml-8 md:ml-9"
+                ? "ml-10 sm:ml-12 md:ml-14" 
+                : "ml-6 sm:ml-7 md:ml-8"
             }`}>
               {product.price !== undefined && (
                 <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight">
