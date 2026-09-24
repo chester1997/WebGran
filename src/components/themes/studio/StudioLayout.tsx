@@ -11,7 +11,7 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#0d0d0f] text-white font-sans overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-[#272727] text-white font-sans overflow-hidden relative">
       {/* GLOBAL CINEMATIC FILM GRAIN NOISE & RADIAL DEPTH BACKGROUND */}
       <div 
         aria-hidden="true"

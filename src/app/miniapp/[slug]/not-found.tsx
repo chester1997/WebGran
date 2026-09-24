@@ -4,7 +4,7 @@ import { PackageX, Home } from "lucide-react";
 
 export default function MiniAppNotFound() {
   return (
-    <div className="min-h-screen bg-[#0A0A0E] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+    <div className="min-h-screen bg-[#272727] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
       <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-500 shadow-xl">
         <PackageX className="w-8 h-8 text-zinc-500" />
       </div>

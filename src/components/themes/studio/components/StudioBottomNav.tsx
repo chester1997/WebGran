@@ -38,7 +38,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex items-end"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div className="w-full h-[68px] bg-[#111114]/90 backdrop-blur-xl border-t border-white/8 flex items-center px-2 relative">
+      <div className="w-full h-[68px] bg-[#272727]/95 backdrop-blur-xl border-t border-white/8 flex items-center px-2 relative">
 
         {/* Left: Início + Minha Lista */}
         <div className="flex items-center flex-1 justify-around">
