@@ -87,10 +87,10 @@ export function TopTenCarousel({
           <div key={product.id} className="snap-start shrink-0 relative flex flex-col justify-end group">
             {/* Crisp outline position number overlapping bottom-left edge */}
             <span
-              className="absolute left-0 -bottom-2 sm:-bottom-2.5 md:-bottom-3 text-[76px] sm:text-[88px] md:text-[96px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
+              className="absolute left-0 -bottom-3 sm:-bottom-4 md:-bottom-5 text-[104px] sm:text-[118px] md:text-[128px] font-black text-transparent select-none pointer-events-none z-20 leading-none transition-all duration-300"
               style={{
-                WebkitTextStroke: `3px ${style.stroke}`,
-                filter: style.glow !== "transparent" ? `drop-shadow(0 0 4px ${style.glow})` : "none",
+                WebkitTextStroke: `3px.5 ${style.stroke}`,
+                filter: style.glow !== "transparent" ? `drop-shadow(0 0 6px ${style.glow})` : "none",
                 fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
                 letterSpacing: "-0.04em"
               }}
@@ -102,8 +102,8 @@ export function TopTenCarousel({
             <div
               className={`relative flex flex-col items-end ${
                 isDoubleDigit 
-                  ? "pl-10 sm:pl-12 md:pl-14" 
-                  : "pl-6 sm:pl-7 md:pl-8"
+                  ? "pl-12 sm:pl-14 md:pl-16" 
+                  : "pl-8 sm:pl-9 md:pl-10"
               }`}
             >
               <div className="relative z-10 w-32 sm:w-36 md:w-40 aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0">
@@ -135,18 +135,18 @@ export function TopTenCarousel({
                   )}
                 </Link>
 
-                {/* Red Cart Button over top-right of image */}
-                <div className="absolute top-2 right-2 z-30">
+                {/* Red Cart Button OVER BOTTOM-RIGHT of image */}
+                <div className="absolute bottom-2 right-2 z-30">
                   <AddToCartButton product={product} storeSlug={storeSlug} variant="icon" />
                 </div>
               </div>
             </div>
 
-            {/* Price Row below image card aligned to the right where button was */}
+            {/* Price Row below image card aligned to the right */}
             <div className={`relative z-20 w-32 sm:w-36 md:w-40 flex items-center justify-end pt-2 px-0.5 ${
               isDoubleDigit 
-                ? "ml-10 sm:ml-12 md:ml-14" 
-                : "ml-6 sm:ml-7 md:ml-8"
+                ? "ml-12 sm:ml-14 md:ml-16" 
+                : "ml-8 sm:ml-9 md:ml-10"
             }`}>
               {product.price !== undefined && (
                 <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight">
