@@ -193,14 +193,29 @@ html.light .bg-black\/95 {
   background-color: rgba(255, 255, 255, 0.95) !important;
 }
 
-html.light .bg-\[\#121216\],
-html.light .bg-zinc-900,
-html.light .bg-zinc-800 {
-  background-color: #ffffff !important;
+/* Section titles and headings in light mode */
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4 {
+  color: #09090b !important;
 }
 
-html.light .text-white {
-  color: #09090b !important;
+/* ALWAYS preserve pure white text for red buttons, badges, and dark poster image overlays */
+html.light .bg-red-600,
+html.light .bg-red-600 *,
+html.light .bg-red-500,
+html.light .bg-red-500 *,
+html.light .bg-gradient-to-t *,
+html.light .bg-emerald-600 * {
+  color: #ffffff !important;
+}
+
+/* "+ Carrinho" button styling in Light Mode */
+html.light .bg-\[\#1A1A1E\] {
+  background-color: #e4e4e7 !important;
+  color: #18181b !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 html.light .text-zinc-400 {
