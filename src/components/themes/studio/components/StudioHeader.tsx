@@ -23,9 +23,9 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
     <header className="shrink-0 sticky top-0 left-0 right-0 z-40 px-4 py-2.5 flex items-center justify-between bg-[#0d0e10]/95 backdrop-blur-md border-b border-white/5 shadow-md">
       <Link href={`/miniapp/${storeSlug}/profile`} className="flex items-center gap-2.5 group select-none">
         {userPhoto ? (
-          <img src={userPhoto} alt="Perfil" className="w-9 h-9 rounded-full object-cover border border-white/20 shadow-md shrink-0" />
+          <img src={userPhoto} alt="Perfil" className="w-9 h-9 aspect-square rounded-lg object-cover border border-white/20 shadow-md shrink-0" />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-white border border-white/20 shrink-0">
+          <div className="w-9 h-9 aspect-square rounded-lg bg-zinc-800 flex items-center justify-center text-xs font-bold text-white border border-white/20 shrink-0">
             {userInitial}
           </div>
         )}
