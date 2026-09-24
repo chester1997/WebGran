@@ -117,7 +117,7 @@ export function Category3DPopoutCard({ category, storeSlug, isActive = false }: 
       }`}>
         {category.imageUrl ? (
           <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border transition-all duration-300 ${
-            isActive ? "border-red-500 ring-2 ring-red-500/80 shadow-[0_0_16px_rgba(239,68,68,0.5)]" : "border-white/20 shadow-md group-hover:border-white/40"
+            isActive ? "border-red-500/80 ring-1.5 ring-red-500/70 shadow-md" : "border-white/20 shadow-md group-hover:border-white/40"
           }`}>
             <img
               src={category.imageUrl}
@@ -127,7 +127,7 @@ export function Category3DPopoutCard({ category, storeSlug, isActive = false }: 
           </div>
         ) : (
           <div className={`relative rounded-2xl transition-all duration-300 ${
-            isActive ? "ring-2 ring-red-500 rounded-2xl shadow-[0_0_18px_rgba(239,68,68,0.6)]" : ""
+            isActive ? "ring-1.5 ring-red-500/80 rounded-2xl shadow-[0_2px_8px_rgba(239,68,68,0.25)]" : ""
           }`}>
             <Category3DIconRenderer name={category.name} iconName={category.iconName} />
           </div>

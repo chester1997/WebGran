@@ -123,11 +123,11 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       <div className="relative z-20 mt-2 space-y-4">
         {/* Categories Section */}
         {store.categories && store.categories.length > 0 && (
-          <section className="w-full overflow-hidden pt-1 pb-1">
+          <section className="w-full overflow-hidden py-2.5">
             {store.categoryDisplayStyle === 'ICON' ? (
               /* ── ICON MODE: compact 56px cards, name below ── */
               <div
-                className="flex overflow-x-auto scrollbar-hide w-full select-none px-4 gap-3"
+                className="flex overflow-x-auto scrollbar-hide w-full select-none px-4 py-1 gap-3"
                 style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
               >
                 {store.categories.map((cat, idx) => (
@@ -142,7 +142,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
             ) : (
               /* ── IMAGE MODE: 3D Popout cards (existing) ── */
               <div
-                className="flex overflow-x-auto scrollbar-hide w-full select-none px-4 gap-2.5 sm:gap-3"
+                className="flex overflow-x-auto scrollbar-hide w-full select-none px-4 py-1 gap-2.5 sm:gap-3"
                 style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
               >
                 {store.categories.map((cat, idx) => (
