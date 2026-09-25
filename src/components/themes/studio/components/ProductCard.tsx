@@ -32,7 +32,7 @@ export function ProductCard({
     <div className={`flex flex-col gap-1.5 ${width}`}>
       <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="block relative rounded-xl overflow-hidden bg-zinc-900 group shadow-lg aspect-[2/3]">
         {badgeConfig && (
-          <div className="absolute top-2 left-2 z-20 pointer-events-none">
+          <div className="absolute top-1 left-1 z-20 pointer-events-none">
             <span className={badgeConfig.className}>
               {badgeConfig.label}
             </span>

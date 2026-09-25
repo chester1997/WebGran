@@ -209,7 +209,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
                   const badgeConfig = getProductBadge(prod.badge);
                   if (!badgeConfig) return null;
                   return (
-                    <div className="absolute top-2.5 left-2.5 z-10">
+                    <div className="absolute top-1 left-1 z-10">
                       <span className={badgeConfig.className}>
                         {badgeConfig.label}
                       </span>

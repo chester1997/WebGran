@@ -112,7 +112,7 @@ export function TopTenCarousel({
                   className="block w-full h-full"
                 >
                   {badgeConfig && (
-                    <div className="absolute top-2 left-2 z-20 pointer-events-none">
+                    <div className="absolute top-1 left-1 z-20 pointer-events-none">
                       <span className={badgeConfig.className}>
                         {badgeConfig.label}
                       </span>
