@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useMemo } from "react";
 
 type ThemeType = "studio";
 
@@ -17,8 +17,10 @@ export function MiniAppThemeProvider({
   children: ReactNode;
   defaultTheme?: ThemeType;
 }) {
+  const value = useMemo(() => ({ theme: defaultTheme }), [defaultTheme]);
+
   return (
-    <ThemeContext.Provider value={{ theme: defaultTheme }}>
+    <ThemeContext.Provider value={value}>
       <div className={`theme-${defaultTheme} min-h-screen bg-[#161616] text-foreground`}>
         {children}
       </div>

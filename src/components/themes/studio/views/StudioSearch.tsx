@@ -1,15 +1,14 @@
 import React from "react";
 import { db } from "@/db";
-import { products, stores } from "@/db/schema";
+import { products } from "@/db/schema";
 import { eq, and, ilike } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ProductCard } from "../components/ProductCard";
 import { SearchInput } from "../components/SearchInput";
+import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioSearch({ storeSlug, q }: { storeSlug: string, q: string }) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug)
-  });
+  const store = await getStoreBySlug(storeSlug);
 
   if (!store) notFound();
 

@@ -148,7 +148,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener("seller-profile-updated", loadProfile);
     };
-  }, [pathname]);
+  }, []);
 
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
 

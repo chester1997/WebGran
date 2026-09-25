@@ -1,15 +1,14 @@
 import React from "react";
 import { db } from "@/db";
-import { products, stores, telegramBots } from "@/db/schema";
+import { products, telegramBots } from "@/db/schema";
 import { eq, and, ne, desc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, PackageX } from "lucide-react";
 import { StudioProductClient } from "./StudioProductClient";
+import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: string, productSlug: string }) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug)
-  });
+  const store = await getStoreBySlug(storeSlug);
 
   if (!store) {
     return (

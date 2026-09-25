@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import Script from "next/script";
 import { CartProvider } from "@/components/miniapp/CartProvider";
 
@@ -95,8 +95,15 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
     initTelegram();
   }, [storeSlug]);
 
+  const telegramContextValue = useMemo(() => ({
+    webApp,
+    user,
+    ready,
+    error
+  }), [webApp, user, ready, error]);
+
   return (
-    <TelegramContext.Provider value={{ webApp, user, ready, error }}>
+    <TelegramContext.Provider value={telegramContextValue}>
       <Script 
         src="https://telegram.org/js/telegram-web-app.js" 
         strategy="beforeInteractive" 

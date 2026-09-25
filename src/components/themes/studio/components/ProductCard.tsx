@@ -19,7 +19,7 @@ interface ProductCardProps {
   buttonVariant?: "two-buttons" | "details";
 }
 
-export function ProductCard({ 
+function ProductCardBase({ 
   storeSlug, 
   product, 
   showButtons = true,
@@ -92,3 +92,5 @@ export function ProductCard({
     </div>
   );
 }
+
+export const ProductCard = React.memo(ProductCardBase);

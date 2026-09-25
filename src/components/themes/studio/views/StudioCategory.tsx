@@ -1,16 +1,15 @@
 import React from "react";
 import { db } from "@/db";
-import { products, categories, stores } from "@/db/schema";
+import { products, categories } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ProductCard } from "../components/ProductCard";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: string, categorySlug: string }) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug)
-  });
+  const store = await getStoreBySlug(storeSlug);
 
   if (!store) notFound();
 

@@ -100,7 +100,7 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
   );
 }
 
-export function Category3DPopoutCard({ category, storeSlug }: Category3DPopoutCardProps) {
+function Category3DPopoutCardBase({ category, storeSlug }: Category3DPopoutCardProps) {
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
@@ -131,3 +131,5 @@ export function Category3DPopoutCard({ category, storeSlug }: Category3DPopoutCa
     </Link>
   );
 }
+
+export const Category3DPopoutCard = React.memo(Category3DPopoutCardBase);

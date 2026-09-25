@@ -173,7 +173,7 @@ function resolveIconAndStyle(iconName?: string | null, name?: string | null): Ic
   };
 }
 
-export function CategoryIconCard({ category, storeSlug, isActive = false }: CategoryIconCardProps) {
+function CategoryIconCardBase({ category, storeSlug, isActive = false }: CategoryIconCardProps) {
   const { IconComp, gradientClass, iconColor } = resolveIconAndStyle(category.iconName, category.name);
 
   return (
@@ -196,3 +196,5 @@ export function CategoryIconCard({ category, storeSlug, isActive = false }: Cate
     </Link>
   );
 }
+
+export const CategoryIconCard = React.memo(CategoryIconCardBase);

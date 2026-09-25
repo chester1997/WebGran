@@ -4,16 +4,15 @@ import { getMiniAppSession } from "@/lib/telegram/session";
 import { AccessService } from "@/lib/orders/access-service";
 import Link from "next/link";
 import { db } from "@/db";
-import { stores, telegramCustomers } from "@/db/schema";
+import { telegramCustomers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { StudioAccessCard } from "./StudioAccessCard";
 import { AccessLifecycleService } from "@/lib/orders/access-lifecycle-service";
+import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
-  const store = await db.query.stores.findFirst({
-    where: eq(stores.slug, storeSlug)
-  });
+  const store = await getStoreBySlug(storeSlug);
 
   if (!store) notFound();
 

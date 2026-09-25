@@ -23,17 +23,11 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   if (!store) return null;
 
   const [
-    allProducts,
     storeBanners,
     rankingCarousel,
     standardCarousels,
     firstBot
   ] = await Promise.all([
-    db.query.products.findMany({
-      where: eq(products.storeId, store.id),
-      orderBy: [desc(products.createdAt)],
-      limit: 20
-    }),
     db.query.banners.findMany({
       where: and(eq(banners.storeId, store.id), eq(banners.status, 'active')),
       orderBy: [asc(banners.position), desc(banners.createdAt)],
@@ -99,8 +93,18 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   }
 
   // Fallbacks for default sections if no custom carousels created
-  const recents = allProducts.slice(0, 8);
-  const bestSellers = allProducts.slice(0, 5);
+  let recents: any[] = [];
+  let bestSellers: any[] = [];
+
+  if (standardCarousels.length === 0) {
+    const allProducts = await db.query.products.findMany({
+      where: eq(products.storeId, store.id),
+      orderBy: [desc(products.createdAt)],
+      limit: 20
+    });
+    recents = allProducts.slice(0, 8);
+    bestSellers = allProducts.slice(0, 5);
+  }
 
   return (
     <div className="w-full">
