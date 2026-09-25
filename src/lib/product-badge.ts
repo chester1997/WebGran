@@ -36,14 +36,14 @@ export function getProductBadge(badgeValue?: string | null): BadgeConfig | null 
     case "dublado":
       return {
         value: "dublado",
-        label: "Dublado",
+        label: "DUB",
         className: "bg-blue-600 text-white font-extrabold text-[8px] px-1.25 py-[1px] rounded-[2px] shadow-sm border border-blue-400/30 tracking-wider uppercase leading-none",
         sellerBadgeClass: "bg-blue-500/20 text-blue-400 border-blue-500/30"
       };
     case "legendado":
       return {
         value: "legendado",
-        label: "Legendado",
+        label: "LEG",
         className: "bg-red-600 text-white font-extrabold text-[8px] px-1.25 py-[1px] rounded-[2px] shadow-sm border border-red-400/30 tracking-wider uppercase leading-none",
         sellerBadgeClass: "bg-red-500/20 text-red-400 border-red-500/30"
       };
