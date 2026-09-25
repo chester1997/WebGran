@@ -19,6 +19,7 @@ import {
   Link as LinkIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { optimizeBannerImage, OptimizedImageResult } from "@/lib/image-optimizer";
 import { 
   updateBannerAction, 
   deleteBannerAction, 
@@ -63,6 +64,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [selectedFileSizeMB, setSelectedFileSizeMB] = useState<string | null>(null);
+  const [isOptimizingImage, setIsOptimizingImage] = useState(false);
+  const [optimizationStats, setOptimizationStats] = useState<OptimizedImageResult | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -84,12 +87,12 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     }, 6000);
   };
 
-  // Handle File Upload Selection with 20MB validation rule
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle File Upload Selection with Automatic Optimization Pipeline
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check 20MB Size Rule
+    // Step 1: Check 20MB Size Rule
     if (file.size > MAX_BANNER_SIZE_BYTES) {
       const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
       showFeedback(
@@ -100,16 +103,29 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       return;
     }
 
-    // Convert file to Data URL
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+    try {
+      setIsOptimizingImage(true);
+      setErrorMsg(null);
+
+      // Steps 2 - 6: Validate dimension, calculate aspect, scale to max 1200x540, compress to WebP
+      const optResult = await optimizeBannerImage(file, {
+        maxWidth: 1200,
+        maxHeight: 540,
+        quality: 0.85,
+        format: "image/webp",
+      });
+
+      // Step 7: Update Form State with optimized base64 Data URL
+      setFormData((prev) => ({ ...prev, imageUrl: optResult.dataUrl }));
       setSelectedFileName(file.name);
       setSelectedFileSizeMB((file.size / (1024 * 1024)).toFixed(2));
-      setErrorMsg(null);
-    };
-    reader.readAsDataURL(file);
+      setOptimizationStats(optResult);
+    } catch (err: any) {
+      console.error("[Banner Image Optimization Error]:", err);
+      showFeedback(err.message || "Erro ao otimizar a imagem do banner.", true);
+    } finally {
+      setIsOptimizingImage(false);
+    }
   };
 
   // Handle Interval Change
@@ -135,6 +151,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     setFormData({ title: "", imageUrl: "", linkType: "none", linkValue: "" });
     setSelectedFileName(null);
     setSelectedFileSizeMB(null);
+    setOptimizationStats(null);
     setInputMode("upload");
     setEditingBanner(null);
     setIsAddModalOpen(true);
@@ -150,6 +167,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
     });
     setSelectedFileName(null);
     setSelectedFileSizeMB(null);
+    setOptimizationStats(null);
     setInputMode(b.imageUrl.startsWith("data:") ? "upload" : "url");
     setEditingBanner(b);
     setIsAddModalOpen(true);
@@ -566,12 +584,29 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                       <p className="text-amber-400">🌟 Tamanho Ideal: 1200 x 540 px (ou 1200 x 675 px)</p>
                       <p className="text-sky-400">⚡ Tamanho Mínimo: 800 x 360 px</p>
                     </div>
-                    {selectedFileName && (
+                    {isOptimizingImage ? (
+                      <div className="mt-3 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                        <span>Otimizando e gerando versão para Mini App (1200x540 WebP)...</span>
+                      </div>
+                    ) : optimizationStats ? (
+                      <div className="mt-3 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium flex flex-col gap-1 text-left">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>Imagem Otimizada para Mini App com Sucesso!</span>
+                        </div>
+                        <div className="text-[11px] text-zinc-300 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                          <span>📐 Dimensão: <strong className="text-white">{optimizationStats.width} x {optimizationStats.height} px</strong></span>
+                          <span>⚡ Tamanho: <strong className="text-white">{(optimizationStats.optimizedSizeBytes / 1024).toFixed(1)} KB</strong> (de {selectedFileSizeMB} MB)</span>
+                          <span className="text-emerald-400 font-bold">🚀 {optimizationStats.savedPercent}% de redução de espaço</span>
+                        </div>
+                      </div>
+                    ) : selectedFileName ? (
                       <div className="mt-3 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>{selectedFileName} ({selectedFileSizeMB}MB)</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
