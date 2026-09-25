@@ -105,36 +105,13 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
   );
 
   return (
-    <div className="w-full px-0 pt-0 pb-1 flex flex-col items-center">
+    <div className="w-full px-0 pt-0 flex flex-col items-center">
       {href ? (
         <Link href={href} className="block w-full">
           {BannerCard}
         </Link>
       ) : (
         BannerCard
-      )}
-
-      {/* Discrete Dot Indicators positioned BELOW the banner card */}
-      {totalBanners > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-2.5">
-          {activeBanners.map((_, idx) => (
-            <button
-              type="button"
-              key={idx}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setCurrentIndex(idx);
-              }}
-              title={`Banner ${idx + 1}`}
-              className={`transition-all duration-300 ${
-                currentIndex === idx
-                  ? "w-5 h-1.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"
-                  : "w-1.5 h-1.5 bg-zinc-600 hover:bg-zinc-400 rounded-full"
-              }`}
-            />
-          ))}
-        </div>
       )}
     </div>
   );
