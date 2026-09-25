@@ -86,7 +86,7 @@ export function HeroBanner({ storeSlug, banners = [], intervalSeconds = 5 }: Her
       onTouchStart={totalBanners > 1 ? handleTouchStart : undefined}
       onTouchMove={totalBanners > 1 ? handleTouchMove : undefined}
       onTouchEnd={totalBanners > 1 ? handleTouchEnd : undefined}
-      className="relative w-full aspect-[2.2/1] sm:aspect-[2.5/1] max-h-[260px] overflow-hidden bg-zinc-900 group select-none cursor-pointer flex items-center justify-center"
+      className="relative w-full aspect-[1200/540] overflow-hidden bg-zinc-900 group select-none cursor-pointer flex items-center justify-center"
     >
       {/* Banner Image with Smooth Fade Transition and Perfect Fit */}
       <img
