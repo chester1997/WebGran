@@ -453,8 +453,9 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                 <select name="badge" defaultValue="" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Nenhum Badge</option>
                   <option value="novo">🟢 Novo (Verde)</option>
-                  <option value="dublado">🔵 Dublado (Azul)</option>
-                  <option value="legendado">🔴 Legendado (Vermelho)</option>
+                  <option value="dublado">🔵 Dublado (DUB)</option>
+                  <option value="legendado">🔴 Legendado (LEG)</option>
+                  <option value="br">🇧🇷 BR (Verde e Amarelo)</option>
                   <option value="em_alta">🟡 Em alta (Amarelo)</option>
                   <option value="lancamento">🟣 Lançamento (Roxo)</option>
                 </select>
