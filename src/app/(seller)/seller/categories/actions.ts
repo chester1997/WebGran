@@ -34,9 +34,12 @@ export async function createCategoryAction(formData: FormData) {
     throw new Error("Loja não encontrada");
   }
 
-  const name = formData.get("name") as string;
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-  const description = formData.get("description") as string;
+  const rawName = (formData.get("name") as string) || "";
+  const name = rawName.trim();
+  const slug = name 
+    ? (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `categoria-${Date.now()}`)
+    : `categoria-${Date.now()}`;
+  const description = (formData.get("description") as string) || "";
   const imageUrl = (formData.get("imageUrl") as string) || null;
   const iconName = (formData.get("iconName") as string) || null;
   const status = (formData.get("status") as string) || "active";
@@ -74,9 +77,12 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
     throw new Error("Loja não encontrada");
   }
 
-  const name = formData.get("name") as string;
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || categoryId;
-  const description = formData.get("description") as string;
+  const rawName = (formData.get("name") as string) || "";
+  const name = rawName.trim();
+  const slug = name 
+    ? (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || categoryId)
+    : categoryId;
+  const description = (formData.get("description") as string) || "";
   const imageUrl = (formData.get("imageUrl") as string) || null;
   const iconName = (formData.get("iconName") as string) || null;
   const status = (formData.get("status") as string) || "active";

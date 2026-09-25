@@ -111,12 +111,11 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
             {/* Nome e Status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Nome da Categoria *</label>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Nome da Categoria</label>
                 <input 
                   type="text" 
                   name="name"
                   defaultValue={category.name}
-                  required
                   placeholder="Ex: Fantasia, Ação"
                   className="w-full bg-[#1A1A1E] border border-white/10 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
                 />

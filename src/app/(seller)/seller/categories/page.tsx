@@ -117,7 +117,7 @@ export default async function SellerCategoriesPage() {
                               </div>
                             )}
                             <div>
-                              <p className="text-zinc-200 font-medium">{cat.name}</p>
+                              <p className="text-zinc-200 font-medium">{cat.name || "Sem nome"}</p>
                               <p className="text-zinc-500 text-xs truncate max-w-[200px]">{cat.description || "Sem descrição"}</p>
                             </div>
                           </div>
@@ -164,14 +164,14 @@ export default async function SellerCategoriesPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         {cat.imageUrl ? (
-                          <img src={cat.imageUrl} alt={cat.name} className="w-10 h-10 rounded-lg object-contain bg-[#121214] border border-white/10 shrink-0" />
+                          <img src={cat.imageUrl} alt={cat.name || "Categoria"} className="w-10 h-10 rounded-lg object-contain bg-[#121214] border border-white/10 shrink-0" />
                         ) : (
                           <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5 shrink-0">
                             <ImageIcon className="w-4 h-4 text-zinc-500" />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-white font-semibold text-sm truncate">{cat.name}</p>
+                          <p className="text-white font-semibold text-sm truncate">{cat.name || "Sem nome"}</p>
                           <p className="text-zinc-500 font-mono text-[11px] truncate">/{cat.slug}</p>
                         </div>
                       </div>
