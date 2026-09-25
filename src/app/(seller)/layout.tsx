@@ -144,9 +144,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     loadProfile();
     loadSubscription();
 
-    window.addEventListener("seller-profile-updated", loadProfile);
+    const handleUpdate = () => {
+      loadProfile();
+      loadSubscription();
+    };
+
+    window.addEventListener("seller-profile-updated", handleUpdate);
     return () => {
-      window.removeEventListener("seller-profile-updated", loadProfile);
+      window.removeEventListener("seller-profile-updated", handleUpdate);
     };
   }, []);
 
