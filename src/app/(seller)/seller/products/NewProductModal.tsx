@@ -270,59 +270,6 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               <input type="hidden" name="coverUrl" value={imageUrl} />
             </div>
 
-            {/* Banner Horizontal (16:9 / Top 15) — Opcional */}
-            <div className="w-full pt-2 border-t border-white/5">
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                Banner Horizontal 16:9 / Top 15 <span className="text-zinc-500 font-normal lowercase">(opcional)</span>
-              </label>
-              
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start w-full">
-                <div className="relative shrink-0 w-32 sm:w-36 h-20 sm:h-22 rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1E] flex items-center justify-center self-center sm:self-start">
-                  {bannerUrl ? (
-                    <>
-                      <img src={bannerUrl} alt="Banner Preview" className="w-full h-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setBannerUrl("")}
-                        className="absolute top-1 right-1 w-6 h-6 bg-black/70 hover:bg-black rounded-full flex items-center justify-center text-white transition-colors backdrop-blur-md"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  ) : (
-                    <ImageIcon className="w-8 h-8 text-zinc-600" />
-                  )}
-                </div>
-
-                <div className="flex-1 space-y-2 w-full min-w-0">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    ref={bannerFileInputRef} 
-                    onChange={handleBannerFileChange} 
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => bannerFileInputRef.current?.click()}
-                    className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white h-10 sm:h-11 px-4 rounded-lg w-full text-xs sm:text-sm truncate"
-                  >
-                    <Upload className="w-4 h-4 mr-2 shrink-0" /> Enviar banner horizontal (16:9)
-                  </Button>
-                  <input 
-                    type="text" 
-                    value={bannerUrl.startsWith("data:") ? "" : bannerUrl}
-                    onChange={(e) => setBannerUrl(e.target.value)}
-                    placeholder="ou cole uma URL de banner horizontal aqui"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
-                  />
-                  <p className="text-[10px] text-zinc-500">Recomendado: 1200 × 675 px (16:9) - Imagem especial para Top 15</p>
-                </div>
-              </div>
-              <input type="hidden" name="bannerUrl" value={bannerUrl} />
-            </div>
-
             {/* Tipo de Entrega */}
             <div className="w-full">
               <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
