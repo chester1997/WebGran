@@ -30,35 +30,35 @@ export function getProductBadge(badgeValue?: string | null): BadgeConfig | null 
       return {
         value: "novo",
         label: "Novo",
-        className: "bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-md shadow-md border border-emerald-400/30 tracking-wide uppercase",
+        className: "bg-emerald-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-[3px] shadow-sm border border-emerald-400/30 tracking-wide uppercase",
         sellerBadgeClass: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
       };
     case "dublado":
       return {
         value: "dublado",
         label: "Dublado",
-        className: "bg-blue-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-md shadow-md border border-blue-400/30 tracking-wide uppercase",
+        className: "bg-blue-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-[3px] shadow-sm border border-blue-400/30 tracking-wide uppercase",
         sellerBadgeClass: "bg-blue-500/20 text-blue-400 border-blue-500/30"
       };
     case "legendado":
       return {
         value: "legendado",
         label: "Legendado",
-        className: "bg-red-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-md shadow-md border border-red-400/30 tracking-wide uppercase",
+        className: "bg-red-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-[3px] shadow-sm border border-red-400/30 tracking-wide uppercase",
         sellerBadgeClass: "bg-red-500/20 text-red-400 border-red-500/30"
       };
     case "em_alta":
       return {
         value: "em_alta",
         label: "Em alta",
-        className: "bg-amber-400 text-zinc-950 font-black text-[10px] px-2 py-0.5 rounded-md shadow-md border border-amber-300/60 tracking-wide uppercase",
+        className: "bg-amber-400 text-zinc-950 font-black text-[9px] px-1.5 py-0.5 rounded-[3px] shadow-sm border border-amber-300/60 tracking-wide uppercase",
         sellerBadgeClass: "bg-amber-500/20 text-amber-400 border-amber-500/30"
       };
     case "lancamento":
       return {
         value: "lancamento",
         label: "Lançamento",
-        className: "bg-purple-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-md shadow-md border border-purple-400/30 tracking-wide uppercase",
+        className: "bg-purple-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-[3px] shadow-sm border border-purple-400/30 tracking-wide uppercase",
         sellerBadgeClass: "bg-purple-500/20 text-purple-400 border-purple-500/30"
       };
     default:
