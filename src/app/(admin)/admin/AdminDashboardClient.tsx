@@ -22,23 +22,12 @@ import {
   ArrowUpRight,
   Sparkles
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const AdminChartsComponent = dynamic(
+  () => import("./AdminChartsComponent").then((m) => m.AdminChartsComponent),
+  { ssr: false }
+);
 
 type PeriodType = "today" | "7d" | "30d" | "12m";
 
@@ -260,24 +249,7 @@ export default function AdminDashboardClient() {
             {loading ? (
               <ChartSkeleton />
             ) : data?.revenueTimeSeries && data.revenueTimeSeries.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.revenueTimeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
-                  <XAxis dataKey="date" stroke="#A1A1AA" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#A1A1AA" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#18181B", borderColor: "#27272A", borderRadius: "12px", color: "#FFF" }}
-                    formatter={(val: any) => [formatCurrency(Number(val || 0)), "Faturamento"]}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#revenueGradient)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <AdminChartsComponent type="revenue" data={data.revenueTimeSeries} />
             ) : (
               <EmptyChartState message="Sem dados de faturamento para o período" />
             )}
@@ -305,18 +277,7 @@ export default function AdminDashboardClient() {
             {loading ? (
               <ChartSkeleton />
             ) : data?.ordersTimeSeries && data.ordersTimeSeries.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.ordersTimeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
-                  <XAxis dataKey="date" stroke="#A1A1AA" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#A1A1AA" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#18181B", borderColor: "#27272A", borderRadius: "12px", color: "#FFF" }}
-                    formatter={(val: any) => [`${val || 0} pedidos`, "Quantidade"]}
-                  />
-                  <Bar dataKey="count" fill="#F97316" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <AdminChartsComponent type="orders" data={data.ordersTimeSeries} />
             ) : (
               <EmptyChartState message="Sem pedidos no período" />
             )}
@@ -344,19 +305,7 @@ export default function AdminDashboardClient() {
             {loading ? (
               <ChartSkeleton />
             ) : data?.growthTimeSeries && data.growthTimeSeries.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.growthTimeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
-                  <XAxis dataKey="date" stroke="#A1A1AA" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#A1A1AA" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#18181B", borderColor: "#27272A", borderRadius: "12px", color: "#FFF" }}
-                  />
-                  <Legend wrapperStyle={{ paddingTop: "10px", fontSize: "12px" }} />
-                  <Line type="monotone" dataKey="sellers" name="Novos Vendedores" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="stores" name="Novas Lojas" stroke="#A855F7" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <AdminChartsComponent type="growth" data={data.growthTimeSeries} />
             ) : (
               <EmptyChartState message="Sem novos cadastros no período" />
             )}
@@ -379,27 +328,7 @@ export default function AdminDashboardClient() {
             {loading ? (
               <ChartSkeleton />
             ) : data?.orderStatusDistribution && data.orderStatusDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.orderStatusDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="count"
-                  >
-                    {data.orderStatusDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} stroke="#141416" strokeWidth={2} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#18181B", borderColor: "#27272A", borderRadius: "12px", color: "#FFF" }}
-                    formatter={(val: any, name: any) => [`${val || 0} pedidos`, String(name || "Status")]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <AdminChartsComponent type="pie" data={data.orderStatusDistribution} />
             ) : (
               <EmptyChartState message="Nenhum pedido registrado" />
             )}

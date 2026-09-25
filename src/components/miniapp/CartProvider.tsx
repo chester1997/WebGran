@@ -70,11 +70,8 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
     }
   }, [items, isLoaded, storageKey]);
 
-  const addToCart = (newItem: CartItem) => {
-    console.log("[CART DEBUG] addToCart invoked with newItem:", newItem);
+  const addToCart = React.useCallback((newItem: CartItem) => {
     setItems((prev) => {
-      console.log("[CART DEBUG] prev cart state before add:", prev);
-
       // Prevent mixing items from different stores ONLY if both IDs exist and differ
       if (
         prev.length > 0 &&
@@ -82,7 +79,6 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
         newItem.storeId &&
         prev[0].storeId !== newItem.storeId
       ) {
-        console.log("[CART DEBUG] Store mismatch detected between", prev[0].storeId, "and", newItem.storeId, "- Replacing cart.");
         return [newItem]; 
       }
 
@@ -90,51 +86,52 @@ export function CartProvider({ children, storeSlug }: { children: React.ReactNod
       if (existingIndex >= 0) {
         const updated = [...prev];
         updated[existingIndex].quantity += newItem.quantity;
-        console.log("[CART DEBUG] Incremented quantity for item:", updated[existingIndex]);
         return updated;
       }
 
-      const updated = [...prev, newItem];
-      console.log("[CART DEBUG] Appended new item to cart array. New cart items:", updated);
-      return updated;
+      return [...prev, newItem];
     });
-  };
+  }, []);
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = React.useCallback((productId: string) => {
     setItems((prev) => prev.filter((i) => i.id !== productId));
-  };
+  }, []);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = React.useCallback((productId: string, quantity: number) => {
     if (quantity < 1) return;
     setItems((prev) =>
       prev.map((i) => (i.id === productId ? { ...i, quantity } : i))
     );
-  };
+  }, []);
 
-  const clearCart = () => setItems([]);
+  const clearCart = React.useCallback(() => setItems([]), []);
 
-  const subtotal = items.reduce((acc, item) => {
-    const priceVal = Number.isFinite(item.price) ? item.price : 0;
-    const qtyVal = Number.isFinite(item.quantity) ? item.quantity : 1;
-    return acc + priceVal * qtyVal;
-  }, 0);
+  const subtotal = React.useMemo(() => {
+    return items.reduce((acc, item) => {
+      const priceVal = Number.isFinite(item.price) ? item.price : 0;
+      const qtyVal = Number.isFinite(item.quantity) ? item.quantity : 1;
+      return acc + priceVal * qtyVal;
+    }, 0);
+  }, [items]);
 
   const total = subtotal;
-  const itemCount = items.reduce((acc, item) => acc + (Number.isFinite(item.quantity) ? item.quantity : 1), 0);
+  const itemCount = React.useMemo(() => {
+    return items.reduce((acc, item) => acc + (Number.isFinite(item.quantity) ? item.quantity : 1), 0);
+  }, [items]);
+
+  const contextValue = React.useMemo(() => ({
+    items,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    subtotal,
+    total,
+    itemCount,
+  }), [items, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, total, itemCount]);
 
   return (
-    <CartContext.Provider
-      value={{
-        items,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        subtotal,
-        total,
-        itemCount,
-      }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );

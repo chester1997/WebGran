@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Play, Check, ShoppingCart } from "lucide-react";
 import { useCart, CartItem } from "@/components/miniapp/CartProvider";
 
-export function AddToCartButton({ 
+export const AddToCartButton = React.memo(function AddToCartButton({ 
   product, 
   storeSlug,
   variant = "full"
@@ -23,12 +23,8 @@ export function AddToCartButton({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log("[CART DEBUG] 1 - click recebido no AddToCartButton");
-    console.log("[CART DEBUG] 2 - produto recebido no botão:", product);
 
     if (!product || !product.id) {
-      console.error("[CART DEBUG] ERROR: produto sem ID válido", product);
       return;
     }
 
@@ -46,15 +42,12 @@ export function AddToCartButton({
       storeId: String(product.storeId || ""),
     };
 
-    console.log("[CART DEBUG] 3 - antes do addToCart, objeto formatado:", cartItemToInsert);
-
     try {
       addToCart(cartItemToInsert);
-      console.log("[CART DEBUG] 4 - depois do addToCart executado com sucesso");
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 2000);
     } catch (err) {
-      console.error("[CART DEBUG] ERROR na execução de addToCart:", err);
+      console.error("[CART] Error executing addToCart:", err);
     }
   };
 
@@ -111,4 +104,4 @@ export function AddToCartButton({
       )}
     </button>
   );
-}
+});
