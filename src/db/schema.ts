@@ -7,7 +7,8 @@ import {
   integer, 
   jsonb, 
   unique, 
-  decimal 
+  decimal,
+  index
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -84,7 +85,8 @@ export const categories = pgTable('categories', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
-  storeSlugUnique: unique().on(t.storeId, t.slug)
+  storeSlugUnique: unique().on(t.storeId, t.slug),
+  storeStatusIdx: index('categories_store_status_idx').on(t.storeId, t.status)
 }));
 
 export const products = pgTable('products', {
@@ -109,7 +111,9 @@ export const products = pgTable('products', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
-  storeSlugUnique: unique().on(t.storeId, t.slug)
+  storeSlugUnique: unique().on(t.storeId, t.slug),
+  storeStatusIdx: index('products_store_status_idx').on(t.storeId, t.status),
+  storeCategoryIdx: index('products_store_category_idx').on(t.storeId, t.categoryId)
 }));
 
 export const telegramCustomers = pgTable('telegram_customers', {
@@ -124,7 +128,8 @@ export const telegramCustomers = pgTable('telegram_customers', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
-  storeUserUnique: unique().on(t.storeId, t.telegramUserId)
+  storeUserUnique: unique().on(t.storeId, t.telegramUserId),
+  storeIdIdx: index('telegram_customers_store_id_idx').on(t.storeId)
 }));
 
 export const orders = pgTable('orders', {
@@ -148,7 +153,10 @@ export const orders = pgTable('orders', {
   paidAt: timestamp('paid_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  storeStatusCreatedIdx: index('orders_store_status_created_idx').on(t.storeId, t.status, t.createdAt),
+  customerIdx: index('orders_customer_idx').on(t.customerId)
+}));
 
 export const orderItems = pgTable('order_items', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -182,7 +190,8 @@ export const accesses = pgTable('accesses', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
-  accessOrderUnique: unique().on(t.storeId, t.customerId, t.productId, t.orderId)
+  accessOrderUnique: unique().on(t.storeId, t.customerId, t.productId, t.orderId),
+  storeCustomerStatusIdx: index('accesses_store_customer_status_idx').on(t.storeId, t.customerId, t.status)
 }));
 
 export const banners = pgTable('banners', {
@@ -196,7 +205,9 @@ export const banners = pgTable('banners', {
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  storeStatusIdx: index('banners_store_status_idx').on(t.storeId, t.status)
+}));
 
 export const productCarousels = pgTable('product_carousels', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -210,7 +221,9 @@ export const productCarousels = pgTable('product_carousels', {
   iconColor: text('icon_color'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  storeStatusIdx: index('product_carousels_store_status_idx').on(t.storeId, t.status)
+}));
 
 export const carouselProducts = pgTable('carousel_products', {
   id: uuid('id').primaryKey().defaultRandom(),

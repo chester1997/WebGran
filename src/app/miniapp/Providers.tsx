@@ -56,8 +56,9 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
         if (wa.initDataUnsafe?.user) {
           setUser(wa.initDataUnsafe.user);
         }
+        setReady(true);
 
-        // Validate initData with server (upsert customer, get session token)
+        // Validate initData with server in background (upsert customer, get session token)
         try {
           const initData = wa.initData || "";
           const res = await fetch("/api/telegram/auth", {
@@ -66,19 +67,15 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
             body: JSON.stringify({ initData, storeSlug })
           });
           const data = await res.json();
-          if (data.success) {
-            // Server response user overrides (has more complete data)
+          if (data.success && data.user) {
             setUser(data.user);
-            setReady(true);
-          } else {
-            // Still allow viewing store even if auth fails in Telegram context
-            setReady(true);
           }
         } catch (_err: unknown) {
-          setReady(true); // Allow viewing store even on auth failure
+          // background sync error fallback
         }
       } else {
         // Browser preview (outside Telegram)
+        setReady(true);
         try {
           const res = await fetch("/api/telegram/auth", {
             method: "POST",
@@ -86,19 +83,16 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
             body: JSON.stringify({ initData: "", storeSlug })
           });
           const data = await res.json();
-          if (data.success) {
+          if (data.success && data.user) {
             setUser(data.user);
           }
         } catch (e) {
           // ignore in preview
         }
-        setReady(true); // Always let browser preview through
       }
     };
 
-    // Give the script a small delay to attach to window
-    const timeout = setTimeout(initTelegram, 100);
-    return () => clearTimeout(timeout);
+    initTelegram();
   }, [storeSlug]);
 
   return (
@@ -108,19 +102,12 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
         strategy="beforeInteractive" 
       />
       {/* If error, show a blocking overlay */}
-      {error && (
+      {error ? (
         <div className="fixed inset-0 bg-red-50 text-red-600 flex items-center justify-center p-4 z-50">
           <div className="text-center">
             <h2 className="text-xl font-bold mb-2">Acesso Negado</h2>
             <p>{error}</p>
           </div>
-        </div>
-      )}
-      
-      {/* Wait until ready unless we have an error blocking it anyway */}
-      {(!ready && !error) ? (
-        <div className="fixed inset-0 flex items-center justify-center bg-[var(--tg-theme-bg-color,#fff)] text-[var(--tg-theme-text-color,#000)] z-40">
-          Carregando...
         </div>
       ) : (
         <CartProvider storeSlug={storeSlug}>

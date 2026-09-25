@@ -12,18 +12,11 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
 
   return (
     <div className="flex flex-col h-full w-full bg-[#0d0e10] text-white font-sans overflow-hidden relative">
-      {/* GLOBAL BLURRED AMBIENT BACKGROUND IMAGE */}
+      {/* HIGH-PERFORMANCE AMBIENT BACKGROUND */}
       <div 
         aria-hidden="true"
-        className="fixed inset-0 pointer-events-none z-0 select-none overflow-hidden"
-      >
-        <img
-          src="/miniapp-bg.png"
-          alt=""
-          className="w-full h-full object-cover blur-2xl scale-110 opacity-90"
-        />
-        <div className="absolute inset-0 bg-black/30" />
-      </div>
+        className="fixed inset-0 pointer-events-none z-0 select-none overflow-hidden bg-gradient-to-b from-[#14161f] via-[#0d0e10] to-[#08090b]"
+      />
 
       {/* Scrollable Center Content Area */}
       <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(68px+env(safe-area-inset-bottom,0px)+8px)] relative z-10">

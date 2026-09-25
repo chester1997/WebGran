@@ -181,10 +181,15 @@ export class AnalyticsService {
       }
     }
 
-    // Fetch all store data concurrently
+    // Fetch store data concurrently with date range optimization
+    const oldestDate = prevStart || currentStart;
+    const orderWhere = period === "ALL" 
+      ? eq(orders.storeId, storeId)
+      : and(eq(orders.storeId, storeId), gte(orders.createdAt, oldestDate));
+
     const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories] = await Promise.all([
       db.query.orders.findMany({
-        where: eq(orders.storeId, storeId),
+        where: orderWhere,
         with: {
           customer: true,
           items: {
@@ -193,10 +198,12 @@ export class AnalyticsService {
             }
           }
         },
-        orderBy: [desc(orders.createdAt)]
+        orderBy: [desc(orders.createdAt)],
+        limit: period === "ALL" ? 1000 : 500
       }),
       db.query.accesses.findMany({
-        where: eq(accesses.storeId, storeId)
+        where: eq(accesses.storeId, storeId),
+        columns: { id: true, status: true, deliveryStatus: true }
       }),
       db.query.products.findMany({
         where: eq(products.storeId, storeId),

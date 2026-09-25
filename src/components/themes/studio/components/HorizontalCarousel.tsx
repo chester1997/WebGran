@@ -126,6 +126,8 @@ export function HorizontalCarousel({
           WebkitOverflowScrolling: "touch",
           msOverflowStyle: "none",
           scrollbarWidth: "none",
+          contentVisibility: "auto",
+          containIntrinsicSize: "200px 250px",
         }}
       >
         {/* Leading Grid Track Spacer: Forces Item 1 & Rank Number 1 to start at var(--miniapp-content-padding-x) in all WebView engines */}
