@@ -71,7 +71,7 @@ export function ProductCard({
             <div className="w-full">
               <Link
                 href={`/miniapp/${storeSlug}/product/${product.slug}`}
-                className="w-full bg-red-600 hover:bg-red-700 text-white text-[11px] sm:text-xs font-bold py-1.5 px-3 rounded-full text-center transition-all flex items-center justify-center gap-0.5 shadow-md active:scale-95"
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-[11px] font-bold py-1 px-2.5 rounded-lg text-center transition-all flex items-center justify-center gap-0.5 shadow-sm active:scale-95"
               >
                 + Detalhes
               </Link>
