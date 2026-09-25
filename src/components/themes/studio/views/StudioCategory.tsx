@@ -46,7 +46,7 @@ export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: s
         ) : (
           categoryProducts.map(prod => (
             <div key={prod.id} className="flex justify-center">
-              <ProductCard storeSlug={storeSlug} product={prod} />
+              <ProductCard storeSlug={storeSlug} product={prod} buttonVariant="details" />
             </div>
           ))
         )}
