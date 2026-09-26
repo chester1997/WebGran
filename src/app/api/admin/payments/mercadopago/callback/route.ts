@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { connection } from "next/server";
 import { mercadoPagoPlatformProvider } from "@/lib/payments/providers/mercado-pago-platform";
 
 export async function GET(req: Request) {
+  await connection();
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");

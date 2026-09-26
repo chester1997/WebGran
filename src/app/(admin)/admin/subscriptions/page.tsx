@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/db";
 import { invoices, subscriptions, users } from "@/db/schema";
@@ -6,6 +6,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import AdminSubscriptionsClient from "./AdminSubscriptionsClient";
 
 export default async function AdminSubscriptionsPage() {
+  await connection();
   await requireAdmin();
 
   // 1. Fetch all subscription invoices with seller details

@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { db } from "@/db";
 import { telegramCustomers } from "@/db/schema";
 import { desc } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import CustomersClient from "./CustomersClient";
 
 export default async function AdminCustomersPage() {
+  await connection();
   await requireAdmin();
 
   const customersData = await db.query.telegramCustomers.findMany({

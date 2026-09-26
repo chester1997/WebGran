@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { categories, products } from "@/db/schema";
@@ -11,6 +11,7 @@ import { CategoryStyleToggle } from "./CategoryStyleToggle";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerCategoriesPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

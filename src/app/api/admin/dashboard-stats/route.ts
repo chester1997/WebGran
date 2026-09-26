@@ -13,7 +13,10 @@ import {
 import { eq, sql, gte, lte, and, desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 
+import { connection } from "next/server";
+
 export async function GET(req: Request) {
+  await connection();
   try {
     await requireAdmin();
 

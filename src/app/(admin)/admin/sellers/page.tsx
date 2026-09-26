@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import SellersClient from "./SellersClient";
 
 export default async function AdminSellersPage() {
+  await connection();
   await requireAdmin();
 
   const sellersData = await db.query.users.findMany({

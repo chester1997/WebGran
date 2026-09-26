@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -7,6 +7,7 @@ import { getSellerSubscription } from "@/lib/billing/subscription-service";
 import SettingsClient from "./SettingsClient";
 
 export default async function SettingsPage() {
+  await connection();
   const seller = await requireSeller();
   const store = await getCurrentStore();
 

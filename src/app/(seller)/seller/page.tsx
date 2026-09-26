@@ -1,10 +1,11 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { AnalyticsService } from "@/lib/analytics/analytics-service";
 import { DashboardClient } from "./DashboardClient";
 import SetupStoreClient from "./SetupStoreClient";
 
 export default async function SellerDashboardPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

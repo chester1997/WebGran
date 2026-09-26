@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connection } from 'next/server';
 import { getCurrentUser, getCurrentStore } from '@/lib/auth';
 import { paymentService } from '@/lib/payments/payment-service';
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const user = await getCurrentUser();
     const role = (user?.role || '').toLowerCase();

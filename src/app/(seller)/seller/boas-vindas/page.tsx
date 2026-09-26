@@ -1,10 +1,11 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { getWelcomeSettingsAction } from "./actions";
 import WelcomeClient from "./WelcomeClient";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function BoasVindasPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

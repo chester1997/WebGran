@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { orders, telegramCustomers } from "@/db/schema";
@@ -10,6 +10,7 @@ import { RetryDeliveryButton } from "./RetryDeliveryButton";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function OrdersPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

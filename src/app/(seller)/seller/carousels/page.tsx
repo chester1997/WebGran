@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { productCarousels, products } from "@/db/schema";
@@ -14,6 +14,7 @@ import { ReorderCarouselButtons } from "./ReorderCarouselButtons";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerCarouselsPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

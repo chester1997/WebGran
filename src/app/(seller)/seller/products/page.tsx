@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { products, categories, telegramBots } from "@/db/schema";
@@ -8,6 +8,7 @@ import ProductsListClient from "./ProductsListClient";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerProductsPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

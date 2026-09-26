@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { desc } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import OrdersClient from "./OrdersClient";
 
 export default async function AdminOrdersPage() {
+  await connection();
   await requireAdmin();
 
   const allOrders = await db.query.orders.findMany({

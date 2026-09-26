@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { db } from "@/db";
 import { themes } from "@/db/schema";
 import { desc } from "drizzle-orm";
@@ -7,6 +7,7 @@ import { ThemeList } from "./ThemeList";
 import { ThemeForm } from "./ThemeForm";
 
 export default async function AdminThemesPage() {
+  await connection();
   await requireAdmin();
 
   const allThemes = await db.query.themes.findMany({

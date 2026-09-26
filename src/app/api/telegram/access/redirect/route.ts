@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { connection } from "next/server";
 import { AccessLifecycleService } from "@/lib/orders/access-lifecycle-service";
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const url = new URL(req.url);
     const accessId = url.searchParams.get("accessId");

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import { MiniAppProviders } from "../Providers";
 import { ThemeEngineLayout } from "@/components/themes/engine";
 
@@ -13,7 +13,9 @@ export default async function MiniAppLayout({
   return (
     <MiniAppProviders storeSlug={resolvedParams.slug}>
       <ThemeEngineLayout storeSlug={resolvedParams.slug}>
-        {children}
+        <Suspense fallback={<div className="p-4 text-center text-zinc-400 animate-pulse">Carregando...</div>}>
+          {children}
+        </Suspense>
       </ThemeEngineLayout>
     </MiniAppProviders>
   );

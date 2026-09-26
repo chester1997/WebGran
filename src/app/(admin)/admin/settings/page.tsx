@@ -1,4 +1,4 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/db";
 import { themes, subscriptionPlans } from "@/db/schema";
@@ -7,6 +7,7 @@ import { mercadoPagoPlatformProvider } from "@/lib/payments/providers/mercado-pa
 import AdminSettingsClient from "./AdminSettingsClient";
 
 export default async function AdminSettingsPage() {
+  await connection();
   const user = await requireAdmin();
 
   // 1. Fetch Subscription Plans safely

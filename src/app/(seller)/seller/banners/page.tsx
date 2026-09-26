@@ -1,10 +1,11 @@
-﻿export const instant = false;
+import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { getStoreBanners } from "./actions";
 import BannersClient from "./BannersClient";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerBannersPage() {
+  await connection();
   await requireSeller();
   const store = await getCurrentStore();
 

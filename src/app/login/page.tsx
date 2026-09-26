@@ -1,5 +1,4 @@
-﻿export const instant = false;
-import { Suspense } from "react";
+﻿import { Suspense } from "react";
 import { AuthContainer } from "@/components/auth/AuthContainer";
 
 export default function LoginPage() {

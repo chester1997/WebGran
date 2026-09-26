@@ -1,11 +1,11 @@
-﻿export const instant = false;
+import { Suspense } from "react";
 import { db } from "@/db";
 import { telegramBots } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 import BotsClient from "./BotsClient";
 
-export default async function AdminBotsPage() {
+async function AdminBotsData() {
   await requireAdmin();
 
   const botsData = await db.query.telegramBots.findMany({
@@ -32,4 +32,12 @@ export default async function AdminBotsPage() {
   }));
 
   return <BotsClient initialBots={formattedBots} />;
+}
+
+export default function AdminBotsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-zinc-400">Carregando bots...</div>}>
+      <AdminBotsData />
+    </Suspense>
+  );
 }

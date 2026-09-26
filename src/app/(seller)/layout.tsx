@@ -1,7 +1,6 @@
 "use client";
-export const instant = false;
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -517,7 +516,9 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 </div>
               </div>
             ) : (
-              children
+              <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse">Carregando conteúdo...</div>}>
+                {children}
+              </Suspense>
             )}
           </main>
         </div>
