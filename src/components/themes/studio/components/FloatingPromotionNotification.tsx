@@ -169,45 +169,62 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
       <div
         className={`
           relative overflow-hidden
-          w-[min(270px,calc(100vw-24px))]
-          bg-[#19191e]/78 dark:bg-[#19191e]/78 light:bg-white/85
-          border border-white/12 dark:border-white/12 light:border-black/10
+          w-[min(265px,calc(100vw-24px))]
           rounded-2xl
-          shadow-[0_10px_35px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.08)]
-          backdrop-blur-[18px] backdrop-saturate-[140%]
-          px-3 py-2.5
-          flex items-start gap-2
-          text-white light:text-zinc-900
+          px-[11px] py-[9px]
+          flex items-start gap-[8px]
           transition-all duration-300
           motion-reduce:transform-none motion-reduce:transition-opacity
+          
+          /* Liquid Glass Background - Dark Mode default */
+          bg-[rgba(20,20,25,0.52)]
+          border border-white/14
+          shadow-[0_12px_35px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)]
+          text-zinc-100
+          
+          /* Liquid Glass Background - Light Mode (.light parent override) */
+          [.light_&]:bg-[rgba(255,255,255,0.60)]
+          [.light_&]:border-[rgba(255,255,255,0.65)]
+          [.light_&]:shadow-[0_10px_30px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.80)]
+          [.light_&]:text-zinc-900
+
+          /* Real Glass Backdrop Blur */
+          backdrop-blur-[20px] backdrop-saturate-[150%]
+          [-webkit-backdrop-filter:blur(20px)_saturate(150%)]
+
+          /* Glass Reflection Glare Overlay */
+          before:absolute before:inset-0 before:pointer-events-none
+          before:bg-[linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.02)_40%,transparent_70%)]
+          [.light_&]:before:bg-[linear-gradient(135deg,rgba(255,255,255,0.45),rgba(255,255,255,0.12)_40%,transparent_70%)]
+
           ${visible
-            ? "translate-x-0 opacity-100 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            : "translate-x-[calc(100%+24px)] opacity-0 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            ? "translate-x-0 scale-100 opacity-100 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            : "translate-x-[calc(100%+24px)] scale-[0.98] opacity-0 ease-[cubic-bezier(0.4,0,0.2,1)]"
           }
         `}
         role="status"
       >
-        {/* Red accent left bar */}
+        {/* Subtle Accent Left Pillar Bar */}
         <span
           aria-hidden="true"
-          className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full bg-red-500/80"
+          className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
         />
 
-        {/* Icon — inline, no heavy box */}
+        {/* Icon — inline, integrated directly into text flow */}
         <span
           aria-hidden="true"
-          className="text-[18px] leading-none mt-[2px] shrink-0"
+          className="text-[19px] leading-none mt-[1px] shrink-0"
         >
           {activeToast.icon}
         </span>
 
-        {/* Text block */}
-        <div className="flex flex-col min-w-0 flex-1">
-          <p className="text-[13px] font-semibold leading-[1.25] text-zinc-100 light:text-zinc-900 break-words">
+        {/* Text content block */}
+        <div className="flex flex-col min-w-0 flex-1 relative z-10">
+          <p className="text-[13px] font-semibold leading-[1.25] text-zinc-100 [.light_&]:text-zinc-900 break-words drop-shadow-sm">
             {activeToast.text}
           </p>
           {activeToast.productTitle && (
-            <p className="text-[11px] font-semibold text-red-400 dark:text-red-400 light:text-red-500 mt-0.5 truncate">
+            <p className="text-[11px] font-semibold text-red-400 [.light_&]:text-red-500 mt-0.5 truncate">
               {activeToast.productTitle}
             </p>
           )}
@@ -216,5 +233,6 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
     </aside>
   );
 }
+
 
 
