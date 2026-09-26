@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { createProductAction, testTelegramChatAccessAction } from "./actions";
+import { IndicatorTypePicker } from "./IndicatorTypePicker";
+
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
 
@@ -411,37 +413,15 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
 
             {/* Indicadores Visuais da Vitrine */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
-              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                <span>Indicadores da Vitrine (Mini App)</span>
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                Indicadores da Vitrine (Mini App)
               </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Visualizações (👁 Olho)</label>
-                  <input 
-                    type="number" 
-                    name="viewsCount"
-                    min="0"
-                    placeholder="Ex: 46600 (exibe 👁 46.6K)"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
-                  />
-                  <span className="text-[10px] text-zinc-500 mt-1 block">Número de visualizações exibido ao lado do preço</span>
-                </div>
-
-                <div className="flex flex-col justify-center">
-                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Destaque Fogo (🔥)</label>
-                  <label className="flex items-center gap-2.5 cursor-pointer bg-[#1A1A1E] border border-white/5 p-2.5 rounded-lg hover:border-white/10 transition-all">
-                    <input 
-                      type="checkbox" 
-                      name="showFire"
-                      value="true"
-                      className="w-4 h-4 rounded border-white/20 bg-black/40 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                    />
-                    <span className="text-xs font-medium text-zinc-200">Exibir ícone Destaque 🔥</span>
-                  </label>
-                </div>
-              </div>
+              <p className="text-[11px] text-zinc-500 -mt-1">
+                Escolha o ícone que aparece ao lado do preço no card do produto.
+              </p>
+              <IndicatorTypePicker nameViews="viewsCount" nameFire="showFire" initialType="none" initialViews={0} />
             </div>
+
 
           </form>
         </div>
