@@ -97,6 +97,13 @@ function resolveIconAndStyle(iconName?: string | null, name?: string | null): Ic
 
   const norm = (name || "").toLowerCase();
 
+  if (norm.includes("fantasia") || norm.includes("magia") || norm.includes("magic") || norm.includes("wand")) {
+    return {
+      IconComp: ICON_MAP["Wand2"] || Sparkles,
+      gradientClass: "from-cyan-500 via-blue-700 to-slate-950",
+      iconColor: "text-cyan-100"
+    };
+  }
   if (norm.includes("romance") || norm.includes("coração") || norm.includes("amor") || norm.includes("heart")) {
     return {
       IconComp: Heart,

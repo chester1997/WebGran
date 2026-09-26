@@ -90,7 +90,11 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
   } else {
     const norm = (name || "").toLowerCase();
 
-    if (norm.includes("romance") || norm.includes("coração") || norm.includes("heart")) {
+    if (norm.includes("fantasia") || norm.includes("magia") || norm.includes("magic") || norm.includes("wand")) {
+      IconComp = ICON_MAP["Wand2"] || Sparkles;
+      gradientClass = "from-cyan-500 via-blue-700 to-slate-950";
+      iconColor = "text-cyan-100";
+    } else if (norm.includes("romance") || norm.includes("coração") || norm.includes("heart")) {
       IconComp = Heart;
       gradientClass = "from-red-500 via-rose-600 to-pink-900";
       iconColor = "text-white";
