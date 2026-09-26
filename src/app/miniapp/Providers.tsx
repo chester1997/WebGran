@@ -30,6 +30,50 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
     // Only run on client
     if (typeof window === 'undefined') return;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const applyTheme = (waInstance?: any) => {
+      const root = document.documentElement;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wa = waInstance || (window as any).Telegram?.WebApp;
+      const savedTheme = localStorage.getItem("miniapp-theme");
+
+      let isLight = false;
+      if (savedTheme) {
+        isLight = savedTheme === "light";
+      } else if (wa?.colorScheme) {
+        isLight = wa.colorScheme === "light";
+      } else if (wa?.themeParams?.bg_color) {
+        const hex = wa.themeParams.bg_color.replace("#", "");
+        if (hex.length === 6) {
+          const r = parseInt(hex.substring(0, 2), 16);
+          const g = parseInt(hex.substring(2, 4), 16);
+          const b = parseInt(hex.substring(4, 6), 16);
+          isLight = (r * 299 + g * 587 + b * 114) / 1000 >= 128;
+        }
+      } else if (typeof window !== "undefined" && window.matchMedia) {
+        isLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      }
+
+      if (isLight) {
+        root.classList.add("light");
+        root.classList.remove("dark");
+      } else {
+        root.classList.add("dark");
+        root.classList.remove("light");
+      }
+
+      if (wa?.themeParams) {
+        if (wa.themeParams.bg_color) root.style.setProperty("--tg-theme-bg-color", wa.themeParams.bg_color);
+        if (wa.themeParams.text_color) root.style.setProperty("--tg-theme-text-color", wa.themeParams.text_color);
+        if (wa.themeParams.hint_color) root.style.setProperty("--tg-theme-hint-color", wa.themeParams.hint_color);
+        if (wa.themeParams.link_color) root.style.setProperty("--tg-theme-link-color", wa.themeParams.link_color);
+        if (wa.themeParams.button_color) root.style.setProperty("--tg-theme-button-color", wa.themeParams.button_color);
+        if (wa.themeParams.button_text_color) root.style.setProperty("--tg-theme-button-text-color", wa.themeParams.button_text_color);
+      }
+    };
+
+    applyTheme();
+
     const initTelegram = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wa = (window as any).Telegram?.WebApp;
@@ -41,15 +85,10 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
         }
         setWebApp(wa);
 
-        // Apply Theme Params directly to document root
-        if (wa.themeParams) {
-          const root = document.documentElement;
-          root.style.setProperty('--tg-theme-bg-color', wa.themeParams.bg_color);
-          root.style.setProperty('--tg-theme-text-color', wa.themeParams.text_color);
-          root.style.setProperty('--tg-theme-hint-color', wa.themeParams.hint_color);
-          root.style.setProperty('--tg-theme-link-color', wa.themeParams.link_color);
-          root.style.setProperty('--tg-theme-button-color', wa.themeParams.button_color);
-          root.style.setProperty('--tg-theme-button-text-color', wa.themeParams.button_text_color);
+        applyTheme(wa);
+
+        if (typeof wa.onEvent === 'function') {
+          wa.onEvent('themeChanged', () => applyTheme(wa));
         }
 
         // Immediately expose user from initDataUnsafe (always available inside Telegram)
@@ -86,7 +125,7 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           if (data.success && data.user) {
             setUser(data.user);
           }
-        } catch (e) {
+        } catch (_e) {
           // ignore in preview
         }
       }

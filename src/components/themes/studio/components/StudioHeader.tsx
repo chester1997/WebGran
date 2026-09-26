@@ -19,13 +19,9 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
     const savedTheme = localStorage.getItem("miniapp-theme") as "dark" | "light" | null;
     if (savedTheme) {
       setTheme(savedTheme);
-      if (savedTheme === "light") {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.classList.add("light");
-      } else {
-        document.documentElement.classList.add("dark");
-        document.documentElement.classList.remove("light");
-      }
+    } else {
+      const isLight = document.documentElement.classList.contains("light");
+      setTheme(isLight ? "light" : "dark");
     }
   }, []);
 
