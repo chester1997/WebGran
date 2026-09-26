@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
         firstName: tgUser.first_name,
         lastName: tgUser.last_name || null,
         username: tgUser.username || null,
+        photoUrl: tgUser.photo_url || existingCustomer.photoUrl || null,
         languageCode: tgUser.language_code || null,
         updatedAt: new Date()
       }).where(eq(telegramCustomers.id, existingCustomer.id));
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
         firstName: tgUser.first_name,
         lastName: tgUser.last_name || null,
         username: tgUser.username || null,
+        photoUrl: tgUser.photo_url || null,
         languageCode: tgUser.language_code || null
       }).returning({ id: telegramCustomers.id });
       

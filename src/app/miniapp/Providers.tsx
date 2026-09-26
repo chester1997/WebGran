@@ -175,7 +175,17 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           wa.onEvent("themeChanged", () => applyTheme(wa));
         }
 
-        const tgClientUser = wa.initDataUnsafe?.user || null;
+        let tgClientUser = wa.initDataUnsafe?.user || null;
+        if (!tgClientUser && wa.initData) {
+          try {
+            const params = new URLSearchParams(wa.initData);
+            const uStr = params.get("user");
+            if (uStr) {
+              tgClientUser = JSON.parse(decodeURIComponent(uStr));
+            }
+          } catch (_e) {}
+        }
+
         let foundUser = false;
 
         if (tgClientUser) {
