@@ -1,6 +1,7 @@
 import React, { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { StudioBottomNav } from "./components/StudioBottomNav";
+import { FloatingPromotionNotification } from "./components/FloatingPromotionNotification";
 import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioLayout({ storeSlug, children }: { storeSlug: string, children: ReactNode }) {
@@ -22,6 +23,9 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
       <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(68px+env(safe-area-inset-bottom,0px)+8px)] relative z-10">
         {children}
       </main>
+
+      {/* Floating Promotional Toasts */}
+      <FloatingPromotionNotification storeSlug={storeSlug} />
 
       {/* Fixed Bottom Navigation Area */}
       <StudioBottomNav storeSlug={storeSlug} />

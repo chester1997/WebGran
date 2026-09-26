@@ -25,7 +25,8 @@ import {
   ArrowLeft,
   Menu,
   X,
-  Ticket
+  Ticket,
+  Bell
 } from "lucide-react";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
@@ -41,6 +42,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     { name: "Produtos", href: "/seller/products", icon: Package },
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },
+    { name: "Notificações Flutuantes", href: "/seller/bot/notifications", icon: Bell },
     { name: "Cupons", href: "/seller/coupons", icon: Ticket },
   ];
 

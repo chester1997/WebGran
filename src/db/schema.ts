@@ -53,6 +53,11 @@ export const stores = pgTable('stores', {
   categoryDisplayStyle: text('category_display_style').notNull().default('IMAGE'), // 'IMAGE' | 'ICON'
   supportType: text('support_type').default('telegram'),
   supportValue: text('support_value'),
+  floatingNotificationsEnabled: boolean('floating_notifications_enabled').default(true).notNull(),
+  floatingNotificationsPages: jsonb('floating_notifications_pages').default(['home', 'product', 'category', 'search']),
+  floatingNotificationsDisplayDuration: integer('floating_notifications_display_duration').default(5).notNull(),
+  floatingNotificationsIntervalMin: integer('floating_notifications_interval_min').default(15).notNull(),
+  floatingNotificationsIntervalMax: integer('floating_notifications_interval_max').default(30).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -254,6 +259,24 @@ export const coupons = pgTable('coupons', {
   storeCodeUnique: unique().on(t.storeId, t.code)
 }));
 
+export const storeFloatingNotifications = pgTable('store_floating_notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+  text: text('text').notNull(),
+  icon: text('icon').default('🔥').notNull(),
+  enabled: boolean('enabled').default(true).notNull(),
+  position: integer('position').default(0).notNull(),
+  countMin: integer('count_min').default(5),
+  countMax: integer('count_max').default(18),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeIdIdx: index('store_floating_notifications_store_id_idx').on(t.storeId),
+  storeEnabledIdx: index('store_floating_notifications_store_enabled_idx').on(t.storeId, t.enabled),
+  storeProductIdx: index('store_floating_notifications_store_product_idx').on(t.storeId, t.productId),
+}));
+
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -281,12 +304,24 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   accesses: many(accesses),
   banners: many(banners),
   coupons: many(coupons),
+  floatingNotifications: many(storeFloatingNotifications),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
   store: one(stores, {
     fields: [coupons.storeId],
     references: [stores.id],
+  }),
+}));
+
+export const storeFloatingNotificationsRelations = relations(storeFloatingNotifications, ({ one }) => ({
+  store: one(stores, {
+    fields: [storeFloatingNotifications.storeId],
+    references: [stores.id],
+  }),
+  product: one(products, {
+    fields: [storeFloatingNotifications.productId],
+    references: [products.id],
   }),
 }));
 
