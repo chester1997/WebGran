@@ -1,5 +1,5 @@
-﻿export const instant = false;
 "use client";
+export const instant = false;
 
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
