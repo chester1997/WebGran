@@ -159,22 +159,56 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
   return (
     <aside
       aria-live="polite"
-      className="fixed z-40 pointer-events-none transition-all duration-300 left-3 right-3 sm:left-auto sm:right-4 bottom-[calc(68px+env(safe-area-inset-bottom,0px)+12px)] sm:bottom-6 sm:max-w-xs"
+      aria-atomic="true"
+      className="fixed z-40 pointer-events-none select-none"
+      style={{
+        /* top-right: just below the studio header (~52px) + 8px gap */
+        top: "calc(52px + 8px + env(safe-area-inset-top, 0px))",
+        right: "12px",
+        /* compact width — never full screen */
+        width: "min(296px, calc(100vw - 24px))",
+      }}
     >
       <div
-        className={`transform transition-all duration-300 ease-out bg-[#14151C]/95 backdrop-blur-md border border-white/10 shadow-2xl rounded-2xl p-3 flex items-center gap-3 text-white pointer-events-none select-none ${
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-3 scale-95"
-        }`}
+        className={`
+          relative overflow-hidden
+          bg-[#16181f]/95 dark:bg-[#16181f]/95
+          border border-white/10
+          rounded-2xl shadow-xl
+          backdrop-blur-md
+          px-3.5 py-2.5
+          flex items-start gap-2.5
+          text-white
+          transition-all duration-300 ease-out
+          motion-reduce:transition-none
+          ${visible
+            ? "opacity-100 translate-x-0 scale-100"
+            : "opacity-0 translate-x-3 scale-[0.97]"
+          }
+        `}
+        role="status"
       >
-        <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0 text-lg shadow-inner">
+        {/* Red accent left bar */}
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-red-500/70"
+        />
+
+        {/* Icon — inline, no heavy box */}
+        <span
+          aria-hidden="true"
+          className="text-[20px] leading-none mt-[1px] shrink-0"
+        >
           {activeToast.icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-zinc-100 leading-tight">
+        </span>
+
+        {/* Text block */}
+        <div className="flex flex-col min-w-0">
+          <p className="text-[13px] font-semibold text-zinc-100 leading-snug break-words">
             {activeToast.text}
           </p>
           {activeToast.productTitle && (
-            <p className="text-[11px] font-bold text-red-400 truncate mt-0.5">
+            <p className="text-[11px] font-medium text-red-400 mt-0.5 truncate">
               {activeToast.productTitle}
             </p>
           )}
@@ -183,3 +217,4 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
     </aside>
   );
 }
+
