@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useMemo } from "react";
-import Script from "next/script";
 import { CartProvider } from "@/components/miniapp/CartProvider";
 
 interface TelegramContextType {
@@ -25,38 +24,38 @@ function normalizeUser(clientUser: any, backendUser: any) {
   if (!clientUser && !backendUser) return null;
 
   const rawId = 
+    clientUser?.id || 
+    clientUser?.telegramId || 
     backendUser?.telegramUserId || 
     backendUser?.telegramId || 
-    backendUser?.id || 
-    clientUser?.id || 
-    clientUser?.telegramId;
+    backendUser?.id;
     
   const id = rawId ? String(rawId) : null;
 
   const firstName = 
-    backendUser?.firstName || 
-    backendUser?.first_name || 
     clientUser?.first_name || 
     clientUser?.firstName || 
+    backendUser?.firstName || 
+    backendUser?.first_name || 
     "";
 
   const lastName = 
-    backendUser?.lastName || 
-    backendUser?.last_name || 
     clientUser?.last_name || 
     clientUser?.lastName || 
+    backendUser?.lastName || 
+    backendUser?.last_name || 
     null;
 
   const username = 
-    backendUser?.username || 
     clientUser?.username || 
+    backendUser?.username || 
     null;
 
   const photoUrl = 
-    backendUser?.photoUrl || 
-    backendUser?.photo_url || 
     clientUser?.photo_url || 
     clientUser?.photoUrl || 
+    backendUser?.photoUrl || 
+    backendUser?.photo_url || 
     null;
 
   if (!id && !firstName) return null;
@@ -74,6 +73,48 @@ function normalizeUser(clientUser: any, backendUser: any) {
     telegramId: id,
     telegramUserId: id,
   };
+}
+
+function getFallbackInitData(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const rawHash = window.location.hash || "";
+    const rawSearch = window.location.search || "";
+    const sources = [rawHash, rawSearch];
+
+    for (const src of sources) {
+      if (!src) continue;
+      const clean = src.startsWith("#") || src.startsWith("?") ? src.slice(1) : src;
+      if (!clean) continue;
+
+      // 1. Look for tgWebAppData= in hash/search
+      const tgIndex = clean.indexOf("tgWebAppData=");
+      if (tgIndex !== -1) {
+        let rawVal = clean.slice(tgIndex + "tgWebAppData=".length);
+        const nextTgParam = rawVal.search(/&tgWebApp[A-Z]/i);
+        if (nextTgParam !== -1) {
+          rawVal = rawVal.slice(0, nextTgParam);
+        }
+
+        if (rawVal.includes("%3D") || rawVal.includes("%26") || rawVal.includes("%7B")) {
+          try {
+            rawVal = decodeURIComponent(rawVal);
+          } catch (_e) {}
+        }
+
+        if (rawVal.includes("hash=") || rawVal.includes("user=") || rawVal.includes("query_id=")) {
+          return rawVal;
+        }
+      }
+
+      // 2. Direct initData string in hash/search
+      if (clean.includes("hash=") && (clean.includes("user=") || clean.includes("query_id="))) {
+        const cleanInitData = clean.replace(/&tgWebApp[A-Za-z0-9]+=[^&]*/g, "");
+        return cleanInitData;
+      }
+    }
+  } catch (_e) {}
+  return "";
 }
 
 export function MiniAppProviders({ children, storeSlug }: { children: React.ReactNode, storeSlug: string }) {
@@ -162,26 +203,41 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
     const checkTelegram = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wa = (window as any).Telegram?.WebApp;
+      const fallbackInitData = getFallbackInitData();
+      const resolvedInitData = (wa?.initData && wa.initData.trim() !== "") ? wa.initData : fallbackInitData;
+      const resolvedSource = wa?.initData ? "native" : (fallbackInitData ? "hash/search" : "none");
 
-      if (wa) {
-        setWebApp(wa);
-        try {
-          wa.ready();
-          if (typeof wa.expand === "function") wa.expand();
-        } catch (_e) {}
+      if (typeof window !== "undefined") {
+        console.log("[Telegram WebApp] disponível:", Boolean(wa));
+        console.log("[Telegram WebApp] initData disponível:", Boolean(resolvedInitData));
+        console.log("[Telegram WebApp] initDataUnsafe.user disponível:", Boolean(wa?.initDataUnsafe?.user));
+      }
 
-        applyTheme(wa);
-        if (typeof wa.onEvent === "function") {
-          wa.onEvent("themeChanged", () => applyTheme(wa));
+      if (wa || resolvedInitData) {
+        if (wa) {
+          setWebApp(wa);
+          try {
+            wa.ready();
+            if (typeof wa.expand === "function") wa.expand();
+          } catch (_e) {}
+
+          applyTheme(wa);
+          if (typeof wa.onEvent === "function") {
+            wa.onEvent("themeChanged", () => applyTheme(wa));
+          }
         }
 
-        let tgClientUser = wa.initDataUnsafe?.user || null;
-        if (!tgClientUser && wa.initData) {
+        // 1. Try native WebApp initDataUnsafe.user
+        let tgClientUser = wa?.initDataUnsafe?.user || null;
+
+        // 2. Fallback: Parse user JSON parameter from resolved initData string
+        if (!tgClientUser && resolvedInitData) {
           try {
-            const params = new URLSearchParams(wa.initData);
+            const params = new URLSearchParams(resolvedInitData);
             const uStr = params.get("user");
             if (uStr) {
-              tgClientUser = JSON.parse(decodeURIComponent(uStr));
+              const decoded = uStr.startsWith("%") ? decodeURIComponent(uStr) : uStr;
+              tgClientUser = JSON.parse(decoded);
             }
           } catch (_e) {}
         }
@@ -198,25 +254,37 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
 
         setReady(true);
 
-        const initData = wa.initData || "";
-        if (initData && !authSent) {
-          authSent = true;
-          fetch("/api/telegram/auth", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData, storeSlug }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data?.success && data?.user) {
-                const mergedUser = normalizeUser(tgClientUser, data.user);
-                if (mergedUser) saveUser(mergedUser);
-              }
+        // 3. Server-side auth request with HMAC verification
+        if (resolvedInitData && (!authSent || (wa?.initData && resolvedInitData === wa.initData))) {
+          if (resolvedInitData.includes("hash=") || resolvedInitData.includes("user=")) {
+            authSent = true;
+            fetch("/api/telegram/auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: resolvedInitData, storeSlug }),
             })
-            .catch(() => {});
+              .then((res) => {
+                console.log("[Telegram WebApp] auth API status:", res.status);
+                if (!res.ok) {
+                  authSent = false;
+                }
+                return res.json();
+              })
+              .then((data) => {
+                if (data?.success && data?.user) {
+                  authSent = true;
+                  const mergedUser = normalizeUser(tgClientUser, data.user);
+                  if (mergedUser) saveUser(mergedUser);
+                } else {
+                  authSent = false;
+                }
+              })
+              .catch(() => {
+                authSent = false;
+              });
+          }
         }
 
-        // Return true to stop polling ONLY if we successfully obtained user data from Telegram client
         return foundUser;
       }
       return false;
@@ -230,16 +298,17 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           clearInterval(interval);
           if (checkCount >= maxChecks) {
             setReady(true);
-            // Fallback auth attempt if Telegram WebApp didn't provide client user
+            const fallbackInitData = getFallbackInitData();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const wa = (window as any).Telegram?.WebApp;
-            const initData = wa?.initData || "";
-            if (!authSent) {
+            const finalInitData = (wa?.initData && wa.initData.trim() !== "") ? wa.initData : fallbackInitData;
+
+            if (finalInitData && !authSent) {
               authSent = true;
               fetch("/api/telegram/auth", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ initData, storeSlug }),
+                body: JSON.stringify({ initData: finalInitData, storeSlug }),
               })
                 .then((res) => res.json())
                 .then((data) => {
@@ -270,7 +339,6 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
 
   return (
     <TelegramContext.Provider value={telegramContextValue}>
-      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       {/* If error, show a blocking overlay */}
       {error ? (
         <div className="fixed inset-0 bg-red-50 text-red-600 flex items-center justify-center p-4 z-50">

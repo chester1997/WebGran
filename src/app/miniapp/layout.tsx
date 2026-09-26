@@ -12,3 +12,5 @@ export default function MiniAppLayout({ children }: { children: ReactNode }) {
     </MiniAppThemeProvider>
   );
 }
+
+

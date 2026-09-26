@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { telegramBots } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -44,9 +43,20 @@ export default async function MiniAppRootPage({
     );
   }
 
-  if (productSlug) {
-    redirect(`/miniapp/${bot.store.slug}/product/${productSlug}`);
-  }
+  const targetPath = productSlug
+    ? `/miniapp/${bot.store.slug}/product/${productSlug}`
+    : `/miniapp/${bot.store.slug}`;
 
-  redirect(`/miniapp/${bot.store.slug}`);
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          (function() {
+            var target = ${JSON.stringify(targetPath)} + window.location.search + window.location.hash;
+            window.location.replace(target);
+          })();
+        `,
+      }}
+    />
+  );
 }

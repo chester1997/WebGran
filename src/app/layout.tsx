@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,6 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jbMono.variable} antialiased h-full`}>
+      <Script
+        src="https://telegram.org/js/telegram-web-app.js?63"
+        strategy="beforeInteractive"
+      />
       <body className="font-sans min-h-full flex flex-col">{children}</body>
     </html>
   );
