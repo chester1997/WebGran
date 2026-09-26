@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Trash2, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, Edit3, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EditCategoryModal } from "./EditCategoryModal";
 import { deleteCategoryAction } from "./actions";
 
 export function CategoryActionsMenu({ category, storeProducts = [] }: { category: any; storeProducts?: any[] }) {
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -20,7 +21,7 @@ export function CategoryActionsMenu({ category, storeProducts = [] }: { category
     setDeleting(true);
     try {
       await deleteCategoryAction(category.id);
-      setOpen(false);
+      setMenuOpen(false);
     } catch (err: any) {
       alert(err.message || "Erro ao excluir categoria");
       setDeleting(false);
@@ -32,8 +33,10 @@ export function CategoryActionsMenu({ category, storeProducts = [] }: { category
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => {
-          setOpen(!open);
+        aria-label="Ações da categoria"
+        onClick={(e) => {
+          e.stopPropagation();
+          setMenuOpen(!menuOpen);
           setConfirmDelete(false);
         }}
         className="text-zinc-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-lg cursor-pointer"
@@ -41,21 +44,35 @@ export function CategoryActionsMenu({ category, storeProducts = [] }: { category
         <MoreHorizontal className="w-4 h-4" />
       </Button>
 
-      {open && (
+      {menuOpen && (
         <>
           <div 
             className="fixed inset-0 z-40" 
-            onClick={() => {
-              setOpen(false);
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(false);
               setConfirmDelete(false);
             }} 
           />
-          <div className="absolute right-0 bottom-full mb-1 w-44 bg-[#1A1A1E] border border-white/10 rounded-xl shadow-2xl z-50 p-1 space-y-1">
-            <div onClick={() => setOpen(false)}>
-              <EditCategoryModal category={category} storeProducts={storeProducts} />
-            </div>
+          <div className="absolute right-0 top-full mt-1 w-48 bg-[#1A1A1E] border border-white/10 rounded-xl shadow-2xl z-50 p-1 space-y-1 select-none">
             <button
-              onClick={handleDelete}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(false);
+                setEditOpen(true);
+              }}
+              className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/5 flex items-center gap-2 rounded-md transition-colors border-0 bg-transparent cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-blue-400" /> Editar Categoria
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
               disabled={deleting}
               className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 rounded-md transition-colors cursor-pointer ${
                 confirmDelete 
@@ -76,6 +93,13 @@ export function CategoryActionsMenu({ category, storeProducts = [] }: { category
           </div>
         </>
       )}
+
+      <EditCategoryModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        category={category}
+        storeProducts={storeProducts}
+      />
     </div>
   );
 }

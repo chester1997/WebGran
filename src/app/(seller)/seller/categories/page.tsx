@@ -85,7 +85,7 @@ export default async function SellerCategoriesPage() {
         ) : (
           <>
             {/* Desktop Table (>= md) */}
-            <div className="hidden md:block overflow-x-auto custom-scrollbar rounded-2xl min-h-[240px] pb-12">
+            <div className="hidden md:block overflow-x-auto custom-scrollbar rounded-2xl min-h-[240px] pb-28">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/5 text-zinc-500 text-xs font-medium uppercase tracking-wider bg-white/[0.01]">
@@ -141,7 +141,7 @@ export default async function SellerCategoriesPage() {
                             {productCount} {productCount === 1 ? "produto" : "produtos"}
                           </span>
                         </td>
-                        <td className="py-4 text-right pr-6">
+                        <td className="py-4 text-right pr-6 relative">
                           <CategoryActionsMenu category={cat} storeProducts={serializedProducts} />
                         </td>
                       </tr>
@@ -176,7 +176,7 @@ export default async function SellerCategoriesPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 relative">
                         <CategoryActionsMenu category={cat} storeProducts={serializedProducts} />
                       </div>
                     </div>

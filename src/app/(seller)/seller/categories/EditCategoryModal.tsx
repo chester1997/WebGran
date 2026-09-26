@@ -20,8 +20,33 @@ interface ProductItem {
   categoryId?: string | null;
 }
 
-export function EditCategoryModal({ category, storeProducts = [] }: { category: any; storeProducts?: ProductItem[] }) {
-  const [open, setOpen] = useState(false);
+interface EditCategoryModalProps {
+  category: any;
+  storeProducts?: ProductItem[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
+}
+
+export function EditCategoryModal({ 
+  category, 
+  storeProducts = [],
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+  trigger
+}: EditCategoryModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  const setOpen = (newOpen: boolean) => {
+    if (isControlled) {
+      setControlledOpen?.(newOpen);
+    } else {
+      setInternalOpen(newOpen);
+    }
+  };
+
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState(category?.imageUrl || "");
   const [iconName, setIconName] = useState(category?.iconName || "Tv");
@@ -96,9 +121,11 @@ export function EditCategoryModal({ category, storeProducts = [] }: { category: 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/5 flex items-center gap-2 rounded-md transition-colors border-0 bg-transparent cursor-pointer">
-        <Edit3 className="w-3.5 h-3.5 text-blue-400" /> Editar Categoria
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger>
+          {trigger}
+        </DialogTrigger>
+      ) : null}
       
       <DialogContent className="sm:max-w-[600px] w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/10 p-0 overflow-hidden text-zinc-100 shadow-2xl rounded-2xl">
         <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between">
