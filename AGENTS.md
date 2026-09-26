@@ -7,3 +7,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Auto-Commit & Deploy Rule
+
+Sempre que concluir e validar com sucesso qualquer tarefa solicitada pelo usuário (com build verde), faça o `git add`, `git commit` com mensagem descritiva e o `git push origin main` automaticamente para enviar as alterações para a Vercel sem precisar pedir autorização manual.
+
