@@ -20,15 +20,96 @@ const TelegramContext = createContext<TelegramContextType>({
 
 export const useTelegram = () => useContext(TelegramContext);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeUser(clientUser: any, backendUser: any) {
+  if (!clientUser && !backendUser) return null;
+
+  const rawId = 
+    backendUser?.telegramUserId || 
+    backendUser?.telegramId || 
+    backendUser?.id || 
+    clientUser?.id || 
+    clientUser?.telegramId;
+    
+  const id = rawId ? String(rawId) : null;
+
+  const firstName = 
+    backendUser?.firstName || 
+    backendUser?.first_name || 
+    clientUser?.first_name || 
+    clientUser?.firstName || 
+    "";
+
+  const lastName = 
+    backendUser?.lastName || 
+    backendUser?.last_name || 
+    clientUser?.last_name || 
+    clientUser?.lastName || 
+    null;
+
+  const username = 
+    backendUser?.username || 
+    clientUser?.username || 
+    null;
+
+  const photoUrl = 
+    backendUser?.photoUrl || 
+    backendUser?.photo_url || 
+    clientUser?.photo_url || 
+    clientUser?.photoUrl || 
+    null;
+
+  if (!id && !firstName) return null;
+
+  return {
+    id,
+    firstName,
+    lastName,
+    username,
+    photoUrl,
+    // Legacy aliases for backward compatibility
+    first_name: firstName,
+    last_name: lastName || undefined,
+    photo_url: photoUrl || undefined,
+    telegramId: id,
+    telegramUserId: id,
+  };
+}
+
 export function MiniAppProviders({ children, storeSlug }: { children: React.ReactNode, storeSlug: string }) {
   const [webApp, setWebApp] = useState<unknown>(null);
-  const [user, setUser] = useState<unknown>(null);
+  const [user, setUser] = useState<unknown>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem(`webgran_tg_user_${storeSlug}`) || localStorage.getItem(`webgran_tg_user_${storeSlug}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.id || parsed.firstName || parsed.first_name)) {
+            return parsed;
+          }
+        }
+      } catch (_e) {}
+    }
+    return null;
+  });
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const saveUser = (userObj: any) => {
+    if (!userObj) return;
+    setUser(userObj);
+    if (typeof window !== "undefined") {
+      try {
+        const json = JSON.stringify(userObj);
+        sessionStorage.setItem(`webgran_tg_user_${storeSlug}`, json);
+        localStorage.setItem(`webgran_tg_user_${storeSlug}`, json);
+      } catch (_e) {}
+    }
+  };
+
   useEffect(() => {
     // Only run on client
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const applyTheme = (waInstance?: any) => {
@@ -74,63 +155,9 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
 
     applyTheme();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeUser(clientUser: any, backendUser: any) {
-  if (!clientUser && !backendUser) return null;
-
-  const rawId = 
-    backendUser?.telegramUserId || 
-    backendUser?.telegramId || 
-    backendUser?.id || 
-    clientUser?.id || 
-    clientUser?.telegramId;
-    
-  const id = rawId ? rawId : null;
-
-  const firstName = 
-    backendUser?.firstName || 
-    backendUser?.first_name || 
-    clientUser?.first_name || 
-    clientUser?.firstName || 
-    "";
-
-  const lastName = 
-    backendUser?.lastName || 
-    backendUser?.last_name || 
-    clientUser?.last_name || 
-    clientUser?.lastName || 
-    null;
-
-  const username = 
-    backendUser?.username || 
-    clientUser?.username || 
-    null;
-
-  const photoUrl = 
-    backendUser?.photoUrl || 
-    backendUser?.photo_url || 
-    clientUser?.photo_url || 
-    clientUser?.photoUrl || 
-    null;
-
-  if (!id && !firstName) return null;
-
-  return {
-    id,
-    firstName,
-    lastName,
-    username,
-    photoUrl,
-    // Legacy aliases for backward compatibility
-    first_name: firstName,
-    last_name: lastName || undefined,
-    photo_url: photoUrl || undefined,
-    telegramId: id,
-  };
-}
-
     let checkCount = 0;
-    const maxChecks = 25; // Try for 2.5s (25 * 100ms)
+    const maxChecks = 30; // Try for 3s (30 * 100ms)
+    let authSent = false;
 
     const checkTelegram = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -140,38 +167,47 @@ function normalizeUser(clientUser: any, backendUser: any) {
         setWebApp(wa);
         try {
           wa.ready();
-          if (typeof wa.expand === 'function') wa.expand();
+          if (typeof wa.expand === "function") wa.expand();
         } catch (_e) {}
 
         applyTheme(wa);
-        if (typeof wa.onEvent === 'function') {
-          wa.onEvent('themeChanged', () => applyTheme(wa));
+        if (typeof wa.onEvent === "function") {
+          wa.onEvent("themeChanged", () => applyTheme(wa));
         }
 
         const tgClientUser = wa.initDataUnsafe?.user || null;
+        let foundUser = false;
+
         if (tgClientUser) {
           const initialUser = normalizeUser(tgClientUser, null);
-          if (initialUser) setUser(initialUser);
+          if (initialUser) {
+            saveUser(initialUser);
+            foundUser = true;
+          }
         }
+
         setReady(true);
 
         const initData = wa.initData || "";
-        if (initData) {
+        if (initData && !authSent) {
+          authSent = true;
           fetch("/api/telegram/auth", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData, storeSlug })
+            body: JSON.stringify({ initData, storeSlug }),
           })
             .then((res) => res.json())
             .then((data) => {
               if (data?.success && data?.user) {
                 const mergedUser = normalizeUser(tgClientUser, data.user);
-                if (mergedUser) setUser(mergedUser);
+                if (mergedUser) saveUser(mergedUser);
               }
             })
             .catch(() => {});
         }
-        return true;
+
+        // Return true to stop polling ONLY if we successfully obtained user data from Telegram client
+        return foundUser;
       }
       return false;
     };
@@ -179,23 +215,31 @@ function normalizeUser(clientUser: any, backendUser: any) {
     if (!checkTelegram()) {
       const interval = setInterval(() => {
         checkCount++;
-        if (checkTelegram() || checkCount >= maxChecks) {
+        const found = checkTelegram();
+        if (found || checkCount >= maxChecks) {
           clearInterval(interval);
           if (checkCount >= maxChecks) {
             setReady(true);
-            fetch("/api/telegram/auth", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ initData: "", storeSlug })
-            })
-              .then((res) => res.json())
-              .then((data) => {
-                if (data?.success && data?.user) {
-                  const previewUser = normalizeUser(null, data.user);
-                  if (previewUser) setUser(previewUser);
-                }
+            // Fallback auth attempt if Telegram WebApp didn't provide client user
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const wa = (window as any).Telegram?.WebApp;
+            const initData = wa?.initData || "";
+            if (!authSent) {
+              authSent = true;
+              fetch("/api/telegram/auth", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ initData, storeSlug }),
               })
-              .catch(() => {});
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data?.success && data?.user) {
+                    const previewUser = normalizeUser(wa?.initDataUnsafe?.user, data.user);
+                    if (previewUser) saveUser(previewUser);
+                  }
+                })
+                .catch(() => {});
+            }
           }
         }
       }, 100);
@@ -204,19 +248,19 @@ function normalizeUser(clientUser: any, backendUser: any) {
     }
   }, [storeSlug]);
 
-  const telegramContextValue = useMemo(() => ({
-    webApp,
-    user,
-    ready,
-    error
-  }), [webApp, user, ready, error]);
+  const telegramContextValue = useMemo(
+    () => ({
+      webApp,
+      user,
+      ready,
+      error,
+    }),
+    [webApp, user, ready, error]
+  );
 
   return (
     <TelegramContext.Provider value={telegramContextValue}>
-      <Script 
-        src="https://telegram.org/js/telegram-web-app.js" 
-        strategy="beforeInteractive" 
-      />
+      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       {/* If error, show a blocking overlay */}
       {error ? (
         <div className="fixed inset-0 bg-red-50 text-red-600 flex items-center justify-center p-4 z-50">
@@ -226,9 +270,7 @@ function normalizeUser(clientUser: any, backendUser: any) {
           </div>
         </div>
       ) : (
-        <CartProvider storeSlug={storeSlug}>
-          {children}
-        </CartProvider>
+        <CartProvider storeSlug={storeSlug}>{children}</CartProvider>
       )}
     </TelegramContext.Provider>
   );

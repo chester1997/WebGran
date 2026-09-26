@@ -1,24 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { HelpCircle, ChevronRight } from "lucide-react";
 import { useTelegram } from "@/app/miniapp/Providers";
 
 export function StudioProfile({ storeSlug }: { storeSlug: string }) {
   const { user } = useTelegram();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [cachedUser, setCachedUser] = useState<any>(null);
 
-  const tgUser = user as {
-    first_name?: string;
-    last_name?: string;
-    username?: string;
-    photo_url?: string;
-  } | null;
+  useEffect(() => {
+    if (!user && typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem(`webgran_tg_user_${storeSlug}`) || localStorage.getItem(`webgran_tg_user_${storeSlug}`);
+        if (saved) {
+          setCachedUser(JSON.parse(saved));
+        }
+      } catch (_e) {}
+    }
+  }, [user, storeSlug]);
 
-  const fullName = tgUser
-    ? `${tgUser.first_name || ""} ${tgUser.last_name || ""}`.trim()
-    : "Usuário Telegram";
-  const initial = tgUser?.first_name ? tgUser.first_name.charAt(0).toUpperCase() : "U";
-  const photoUrl = tgUser?.photo_url || null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeUser = (user || cachedUser) as any;
+  const firstName = activeUser?.firstName || activeUser?.first_name || "";
+  const lastName = activeUser?.lastName || activeUser?.last_name || "";
+  const username = activeUser?.username || null;
+  const photoUrl = activeUser?.photoUrl || activeUser?.photo_url || null;
+
+  const fullName = firstName ? `${firstName} ${lastName}`.trim() : "Usuário Telegram";
+  const initial = firstName ? firstName.charAt(0).toUpperCase() : "U";
 
   return (
     <div className="p-4 pt-8 w-full">
@@ -36,7 +46,7 @@ export function StudioProfile({ storeSlug }: { storeSlug: string }) {
         <div>
           <h2 className="font-bold text-lg text-white">{fullName}</h2>
           <p className="text-zinc-500 text-sm">
-            {tgUser?.username ? `@${tgUser.username}` : "Sem username"}
+            {username ? `@${username}` : "Sem username"}
           </p>
         </div>
       </div>

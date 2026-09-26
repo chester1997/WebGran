@@ -14,6 +14,8 @@ interface StudioHeaderProps {
 export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: _headerLogoUrl }: StudioHeaderProps) {
   const { user } = useTelegram();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [cachedUser, setCachedUser] = useState<any>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("miniapp-theme") as "dark" | "light" | null;
@@ -23,7 +25,16 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
       const isLight = document.documentElement.classList.contains("light");
       setTheme(isLight ? "light" : "dark");
     }
-  }, []);
+
+    if (!user && typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem(`webgran_tg_user_${storeSlug}`) || localStorage.getItem(`webgran_tg_user_${storeSlug}`);
+        if (saved) {
+          setCachedUser(JSON.parse(saved));
+        }
+      } catch (_e) {}
+    }
+  }, [user, storeSlug]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -39,10 +50,10 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tgUser = user as any;
-  const userPhoto = tgUser?.photoUrl || tgUser?.photo_url || null;
-  const firstName = tgUser?.firstName || tgUser?.first_name || "Usuário";
-  const userId = tgUser?.id || tgUser?.telegramId || tgUser?.telegramUserId || null;
+  const activeUser = (user || cachedUser) as any;
+  const userPhoto = activeUser?.photoUrl || activeUser?.photo_url || null;
+  const firstName = activeUser?.firstName || activeUser?.first_name || "Usuário";
+  const userId = activeUser?.id || activeUser?.telegramId || activeUser?.telegramUserId || null;
   const userInitial = firstName ? firstName.charAt(0).toUpperCase() : "U";
 
   return (
