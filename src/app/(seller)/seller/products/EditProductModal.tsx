@@ -396,10 +396,10 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                 Escolha o ícone que aparece ao lado do preço no card do produto.
               </p>
               <IndicatorTypePicker
-                nameViews="viewsCount"
-                nameFire="showFire"
-                initialType={product?.showFire ? "fire" : (product?.viewsCount && Number(product.viewsCount) > 0 ? "views" : "none")}
-                initialViews={Number(product?.viewsCount) || 0}
+                initialShowViews={Boolean(product?.showViews)}
+                initialViewsCount={Number(product?.viewsCount) || 0}
+                initialShowFire={Boolean(product?.showFire)}
+                initialFireCount={Number(product?.fireCount) || 0}
               />
             </div>
 

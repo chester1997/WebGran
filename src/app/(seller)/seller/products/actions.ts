@@ -66,9 +66,12 @@ export async function createProductAction(formData: FormData) {
   const badge = (formData.get("badge") as string) || null;
   const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
   const bannerUrl = (formData.get("bannerUrl") as string) || null;
+  const showViews = formData.get("showViews") === "on" || formData.get("showViews") === "true" || formData.get("showViews") === "1";
   const viewsCountStr = formData.get("viewsCount") as string;
   const viewsCount = viewsCountStr ? parseInt(viewsCountStr, 10) : 0;
   const showFire = formData.get("showFire") === "on" || formData.get("showFire") === "true" || formData.get("showFire") === "1";
+  const fireCountStr = formData.get("fireCount") as string;
+  const fireCount = fireCountStr ? parseInt(fireCountStr, 10) : 0;
 
   await db.insert(products).values({
     storeId: store.id,
@@ -87,8 +90,10 @@ export async function createProductAction(formData: FormData) {
     bannerUrl,
     deliveryType,
     deliveryValue,
+    showViews,
     viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
     showFire,
+    fireCount: isNaN(fireCount) ? 0 : fireCount,
     position: 0,
   });
 
@@ -156,9 +161,12 @@ export async function updateProductAction(productId: string, formData: FormData)
   const badge = (formData.get("badge") as string) || null;
   const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
   const bannerUrl = (formData.get("bannerUrl") as string) || null;
+  const showViews = formData.get("showViews") === "on" || formData.get("showViews") === "true" || formData.get("showViews") === "1";
   const viewsCountStr = formData.get("viewsCount") as string;
   const viewsCount = viewsCountStr ? parseInt(viewsCountStr, 10) : 0;
   const showFire = formData.get("showFire") === "on" || formData.get("showFire") === "true" || formData.get("showFire") === "1";
+  const fireCountStr = formData.get("fireCount") as string;
+  const fireCount = fireCountStr ? parseInt(fireCountStr, 10) : 0;
 
   await db.update(products).set({
     botId: botId || null,
@@ -175,8 +183,10 @@ export async function updateProductAction(productId: string, formData: FormData)
     bannerUrl,
     deliveryType,
     deliveryValue,
+    showViews,
     viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
     showFire,
+    fireCount: isNaN(fireCount) ? 0 : fireCount,
     updatedAt: new Date(),
   }).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
 

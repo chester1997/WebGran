@@ -29,9 +29,10 @@ interface ProductCardProps {
     storeId?: string;
     views?: number | string | null;
     viewsCount?: number | string | null;
-    showViews?: boolean;
+    showViews?: boolean | null;
     isHot?: boolean;
     showFire?: boolean | null;
+    fireCount?: number | string | null;
   };
   showButtons?: boolean;
   buttonVariant?: "two-buttons" | "details";
@@ -39,6 +40,7 @@ interface ProductCardProps {
   showViews?: boolean;
   viewsCount?: number | string;
   showFire?: boolean | null;
+  fireCount?: number | string;
 }
 
 function ProductCardBase({ 
@@ -50,15 +52,16 @@ function ProductCardBase({
   showViews: propShowViews,
   viewsCount: propViewsCount,
   showFire: propShowFire,
+  fireCount: propFireCount,
 }: ProductCardProps) {
   const width = "w-36 md:w-44";
   const badgeConfig = getProductBadge(product.badge);
 
-  const rawViews = propViewsCount ?? product.viewsCount ?? product.views;
-  const hasViews = !isTopTen && (propShowViews || product.showViews || (rawViews !== undefined && rawViews !== null && Number(rawViews) > 0));
-  const hasFire = !isTopTen && (propShowFire || product.showFire || product.isHot || product.badge === 'em_alta' || product.badge === 'hot' || product.badge === 'destaque');
+  const hasViews = !isTopTen && (propShowViews !== undefined ? propShowViews : Boolean(product.showViews));
+  const rawViews = propViewsCount ?? product.viewsCount ?? product.views ?? 0;
 
-  const displayViews = rawViews ?? 0;
+  const hasFire = !isTopTen && (propShowFire !== undefined ? propShowFire : Boolean(product.showFire));
+  const rawFire = propFireCount ?? product.fireCount ?? 0;
 
   return (
     <div className={`flex flex-col gap-1.5 ${width}`}>
@@ -104,14 +107,14 @@ function ProductCardBase({
             <div className="flex items-center gap-1.5 text-zinc-400 text-[10px] sm:text-xs shrink-0 select-none">
               {hasViews && (
                 <span className="flex items-center gap-0.5 leading-none">
-                  <Eye className="w-3 h-3 text-zinc-400 shrink-0" />
-                  <span>{formatViewsCount(displayViews)}</span>
+                  <Eye className="w-3 h-3 text-sky-300 shrink-0" />
+                  <span>{formatViewsCount(rawViews)}</span>
                 </span>
               )}
               {hasFire && (
                 <span className="flex items-center gap-0.5 leading-none">
-                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20 shrink-0" />
-                  {Number(displayViews) > 0 && <span>{formatViewsCount(displayViews)}</span>}
+                  <Flame className="w-2.5 h-2.5 text-amber-500 fill-amber-500/20 shrink-0" />
+                  <span>{formatViewsCount(rawFire)}</span>
                 </span>
               )}
             </div>

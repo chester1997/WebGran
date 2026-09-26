@@ -113,8 +113,10 @@ export const products = pgTable('products', {
   position: integer('position').notNull().default(0),
   deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
   deliveryValue: text('delivery_value'),
+  showViews: boolean('show_views').default(false),
   viewsCount: integer('views_count').default(0),
   showFire: boolean('show_fire').default(false),
+  fireCount: integer('fire_count').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({

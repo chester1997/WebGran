@@ -419,7 +419,12 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               <p className="text-[11px] text-zinc-500 -mt-1">
                 Escolha o ícone que aparece ao lado do preço no card do produto.
               </p>
-              <IndicatorTypePicker nameViews="viewsCount" nameFire="showFire" initialType="none" initialViews={0} />
+              <IndicatorTypePicker
+                initialShowViews={false}
+                initialViewsCount={0}
+                initialShowFire={false}
+                initialFireCount={0}
+              />
             </div>
 
 
