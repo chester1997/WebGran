@@ -5,8 +5,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Clock, AlertCircle, ArrowRight, ShieldCheck, ShoppingBag } from "lucide-react";
 
-export const dynamic = 'force-dynamic';
-
 export default async function OrderStatusPage({
   params
 }: {

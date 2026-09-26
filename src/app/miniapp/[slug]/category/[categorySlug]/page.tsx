@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { ThemeEngineCategory } from "@/components/themes/engine";
 
 export default async function MiniAppCategory({ 
@@ -9,4 +8,3 @@ export default async function MiniAppCategory({
   const resolvedParams = await params;
   return <ThemeEngineCategory storeSlug={resolvedParams.slug} categorySlug={resolvedParams.categorySlug} />;
 }
-
