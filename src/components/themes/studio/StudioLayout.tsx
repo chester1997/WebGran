@@ -11,11 +11,11 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#0d0e10] text-white font-sans overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-[#0d0e10] text-white font-sans overflow-hidden relative studio-layout-root">
       {/* HIGH-PERFORMANCE AMBIENT BACKGROUND */}
       <div 
         aria-hidden="true"
-        className="fixed inset-0 pointer-events-none z-0 select-none overflow-hidden bg-gradient-to-b from-[#14161f] via-[#0d0e10] to-[#08090b]"
+        className="fixed inset-0 pointer-events-none z-0 select-none overflow-hidden studio-ambient-bg bg-gradient-to-b from-[#14161f] via-[#0d0e10] to-[#08090b]"
       />
 
       {/* Scrollable Center Content Area */}

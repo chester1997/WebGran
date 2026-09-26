@@ -167,16 +167,25 @@
   }
 }
 
-/* LIGHT MODE THEME OVERRIDES FOR MINIAPP */
+/* LIGHT MODE THEME OVERRIDES FOR MINIAPP STUDIO THEME */
 html.light {
   color-scheme: light;
 }
 
-html.light body {
+/* 1. Global App Body & Layout Root */
+html.light body,
+html.light .studio-layout-root {
   background-color: #f4f4f7 !important;
   color: #09090b !important;
 }
 
+/* 2. High-Performance Ambient Background Element (Fixed Gradient) */
+html.light .studio-ambient-bg,
+html.light .fixed.inset-0.bg-gradient-to-b {
+  background: linear-gradient(to bottom, #f8f9fc, #f4f4f7, #eef0f5) !important;
+}
+
+/* 3. Header & Bottom Navigation Bars */
 html.light header,
 html.light nav {
   background-color: rgba(255, 255, 255, 0.95) !important;
@@ -184,12 +193,9 @@ html.light nav {
 }
 
 html.light header span,
-html.light header a span {
+html.light header a span,
+html.light nav span {
   color: #09090b !important;
-}
-
-html.light header span.text-zinc-400 {
-  color: #52525b !important;
 }
 
 html.light header button {
@@ -197,17 +203,7 @@ html.light header button {
   border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
-html.light .bg-\[\#0d0e10\],
-html.light .bg-\[\#272727\] {
-  background-color: #f4f4f7 !important;
-}
-
-html.light .bg-\[\#0d0e10\]\/95,
-html.light .bg-black\/95 {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* Section titles and headings in light mode */
+/* 4. Headings (h1, h2, h3, h4) and Section Titles */
 html.light h1,
 html.light h2,
 html.light h3,
@@ -215,24 +211,12 @@ html.light h4 {
   color: #09090b !important;
 }
 
-/* ALWAYS preserve pure white text for red buttons, badges, and dark poster image overlays */
-html.light .bg-red-600,
-html.light .bg-red-600 *,
-html.light .bg-red-500,
-html.light .bg-red-500 *,
-html.light .bg-gradient-to-t *,
-html.light .bg-emerald-600 * {
-  color: #ffffff !important;
-}
-
-/* "+ Carrinho" button styling in Light Mode */
-html.light .bg-\[\#1A1A1E\] {
-  background-color: #e4e4e7 !important;
-  color: #18181b !important;
-  border-color: rgba(0, 0, 0, 0.12) !important;
-}
-
+/* 5. Muted and Secondary Text in Light Mode */
 html.light .text-zinc-400 {
+  color: #3f3f46 !important;
+}
+
+html.light .text-zinc-500 {
   color: #52525b !important;
 }
 
@@ -240,16 +224,32 @@ html.light .text-zinc-300 {
   color: #27272a !important;
 }
 
-html.light .text-zinc-500 {
-  color: #71717a !important;
+/* Category Card Labels below icons */
+html.light .group-hover\:text-white {
+  color: #09090b !important;
 }
 
-html.light .border-white\/5,
-html.light .border-white\/8,
-html.light .border-white\/10,
-html.light .border-white\/15,
-html.light .border-white\/20 {
-  border-color: rgba(0, 0, 0, 0.08) !important;
+/* 6. Product Card Prices & Indicators */
+html.light .text-emerald-400 {
+  color: #059669 !important;
+}
+
+/* 7. Dark Hex Background Overrides */
+html.light .bg-\[\#0d0e10\],
+html.light .bg-\[\#14161f\],
+html.light .bg-\[\#161616\],
+html.light .bg-\[\#18181C\],
+html.light .bg-\[\#121214\],
+html.light .bg-\[\#272727\],
+html.light .bg-zinc-900,
+html.light .bg-zinc-800 {
+  background-color: #f4f4f7 !important;
+}
+
+html.light .bg-\[\#0d0e10\]\/95,
+html.light .bg-\[\#18181C\]\/95,
+html.light .bg-black\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
 }
 
 html.light .bg-black\/30,
@@ -267,6 +267,51 @@ html.light .bg-white\/15 {
 
 html.light .bg-white\/5 {
   background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 8. Light Mode Borders */
+html.light .border-white\/5,
+html.light .border-white\/8,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 9. Top 15 Outline Ranking Numbers */
+html.light .top-ten-number {
+  color: transparent !important;
+}
+
+/* 10. PRESERVE Pure White Text for Red Buttons, Badges, and Dark Poster Image Overlays */
+html.light .bg-red-600,
+html.light .bg-red-600 *,
+html.light .bg-red-500,
+html.light .bg-red-500 *,
+html.light .bg-gradient-to-t,
+html.light .bg-gradient-to-t *,
+html.light .bg-gradient-to-br *,
+html.light .bg-emerald-600,
+html.light .bg-emerald-600 *,
+html.light [class*="bg-blue-600"],
+html.light [class*="bg-blue-600"] *,
+html.light [class*="bg-purple-600"],
+html.light [class*="bg-purple-600"] *,
+html.light [class*="bg-rose-600"],
+html.light [class*="bg-rose-600"] * {
+  color: #ffffff !important;
+}
+
+/* 11. "+ Carrinho" Button & Card Secondary Containers in Light Mode */
+html.light .bg-\[\#1A1A1E\] {
+  background-color: #e4e4e7 !important;
+  color: #18181b !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Back Buttons and Icon Containers */
+html.light .w-9.h-9.rounded-full.bg-white\/10 svg {
+  color: #09090b !important;
 }
 
 html.light img.blur-2xl {
