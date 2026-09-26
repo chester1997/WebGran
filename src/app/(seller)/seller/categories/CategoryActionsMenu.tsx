@@ -50,8 +50,10 @@ export function CategoryActionsMenu({ category, storeProducts = [] }: { category
               setConfirmDelete(false);
             }} 
           />
-          <div className="absolute right-0 mt-1 w-44 bg-[#1A1A1E] border border-white/10 rounded-xl shadow-2xl z-50 p-1 space-y-1">
-            <EditCategoryModal category={category} storeProducts={storeProducts} />
+          <div className="absolute right-0 bottom-full mb-1 w-44 bg-[#1A1A1E] border border-white/10 rounded-xl shadow-2xl z-50 p-1 space-y-1">
+            <div onClick={() => setOpen(false)}>
+              <EditCategoryModal category={category} storeProducts={storeProducts} />
+            </div>
             <button
               onClick={handleDelete}
               disabled={deleting}
