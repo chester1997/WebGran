@@ -129,69 +129,79 @@ function normalizeUser(clientUser: any, backendUser: any) {
   };
 }
 
-    const initTelegram = async () => {
+    let checkCount = 0;
+    const maxChecks = 25; // Try for 2.5s (25 * 100ms)
+
+    const checkTelegram = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wa = (window as any).Telegram?.WebApp;
 
       if (wa) {
-        wa.ready();
-        if (typeof wa.expand === 'function') {
-          wa.expand();
-        }
         setWebApp(wa);
+        try {
+          wa.ready();
+          if (typeof wa.expand === 'function') wa.expand();
+        } catch (_e) {}
 
         applyTheme(wa);
-
         if (typeof wa.onEvent === 'function') {
           wa.onEvent('themeChanged', () => applyTheme(wa));
         }
 
         const tgClientUser = wa.initDataUnsafe?.user || null;
-
-        // Immediately expose normalized user from initDataUnsafe
         if (tgClientUser) {
           const initialUser = normalizeUser(tgClientUser, null);
           if (initialUser) setUser(initialUser);
         }
         setReady(true);
 
-        // Validate initData with server in background
-        try {
-          const initData = wa.initData || "";
-          const res = await fetch("/api/telegram/auth", {
+        const initData = wa.initData || "";
+        if (initData) {
+          fetch("/api/telegram/auth", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ initData, storeSlug })
-          });
-          const data = await res.json();
-          if (data.success && data.user) {
-            const mergedUser = normalizeUser(tgClientUser, data.user);
-            if (mergedUser) setUser(mergedUser);
-          }
-        } catch (_err: unknown) {
-          // background sync error fallback
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data?.success && data?.user) {
+                const mergedUser = normalizeUser(tgClientUser, data.user);
+                if (mergedUser) setUser(mergedUser);
+              }
+            })
+            .catch(() => {});
         }
-      } else {
-        // Browser preview (outside Telegram)
-        setReady(true);
-        try {
-          const res = await fetch("/api/telegram/auth", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData: "", storeSlug })
-          });
-          const data = await res.json();
-          if (data.success && data.user) {
-            const previewUser = normalizeUser(null, data.user);
-            if (previewUser) setUser(previewUser);
-          }
-        } catch (_e) {
-          // ignore in preview
-        }
+        return true;
       }
+      return false;
     };
 
-    initTelegram();
+    if (!checkTelegram()) {
+      const interval = setInterval(() => {
+        checkCount++;
+        if (checkTelegram() || checkCount >= maxChecks) {
+          clearInterval(interval);
+          if (checkCount >= maxChecks) {
+            setReady(true);
+            fetch("/api/telegram/auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: "", storeSlug })
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data?.success && data?.user) {
+                  const previewUser = normalizeUser(null, data.user);
+                  if (previewUser) setUser(previewUser);
+                }
+              })
+              .catch(() => {});
+          }
+        }
+      }, 100);
+
+      return () => clearInterval(interval);
+    }
   }, [storeSlug]);
 
   const telegramContextValue = useMemo(() => ({
