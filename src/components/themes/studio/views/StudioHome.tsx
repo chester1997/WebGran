@@ -1,4 +1,5 @@
 import React from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { stores, products, categories, banners, telegramBots, productCarousels } from "@/db/schema";
 import { eq, desc, and, asc } from "drizzle-orm";
@@ -18,9 +19,14 @@ import { CategoryIconCard } from "../components/CategoryIconCard";
 import { getStoreBySlug } from "@/lib/store-cache";
 
 export async function StudioHome({ storeSlug }: { storeSlug: string }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(`store-home-${storeSlug}`);
+
   const store = await getStoreBySlug(storeSlug);
 
   if (!store) return null;
+
 
   const [
     storeBanners,
