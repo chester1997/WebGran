@@ -195,7 +195,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
                   <img 
                     src={prod.coverUrl} 
                     alt={prod.title} 
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" 
+                    className="w-full h-full object-cover object-center" 
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 gap-1">
