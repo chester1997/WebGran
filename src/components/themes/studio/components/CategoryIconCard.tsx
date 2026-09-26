@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { ICON_MAP } from "@/lib/carousel-icons";
 import {
   Heart,
   Ghost,
@@ -51,7 +52,50 @@ interface IconConfig {
 }
 
 function resolveIconAndStyle(iconName?: string | null, name?: string | null): IconConfig {
-  const norm = (iconName || name || "").toLowerCase();
+  if (iconName && ICON_MAP[iconName]) {
+    const IconComp = ICON_MAP[iconName];
+    const norm = iconName.toLowerCase();
+
+    if (norm.includes("heart") || norm.includes("romance")) {
+      return { IconComp, gradientClass: "from-rose-500 via-red-600 to-pink-900", iconColor: "text-white" };
+    }
+    if (norm.includes("flame") || norm.includes("fire")) {
+      return { IconComp, gradientClass: "from-red-600 via-orange-600 to-amber-500", iconColor: "text-amber-100" };
+    }
+    if (norm.includes("star") || norm.includes("trophy") || norm.includes("award")) {
+      return { IconComp, gradientClass: "from-amber-400 via-yellow-500 to-amber-900", iconColor: "text-amber-100" };
+    }
+    if (norm.includes("crown") || norm.includes("gem") || norm.includes("sparkles")) {
+      return { IconComp, gradientClass: "from-fuchsia-500 via-purple-600 to-indigo-950", iconColor: "text-white" };
+    }
+    if (norm.includes("film") || norm.includes("clapperboard") || norm.includes("video") || norm.includes("play")) {
+      return { IconComp, gradientClass: "from-blue-600 via-indigo-700 to-slate-950", iconColor: "text-blue-100" };
+    }
+    if (norm.includes("zap") || norm.includes("sword") || norm.includes("gamepad")) {
+      return { IconComp, gradientClass: "from-indigo-500 via-purple-600 to-pink-900", iconColor: "text-indigo-100" };
+    }
+    if (norm.includes("rocket") || norm.includes("ufo") || norm.includes("eye") || norm.includes("wand")) {
+      return { IconComp, gradientClass: "from-cyan-500 via-blue-700 to-slate-950", iconColor: "text-cyan-100" };
+    }
+    if (norm.includes("popcorn") || norm.includes("smile") || norm.includes("laugh")) {
+      return { IconComp, gradientClass: "from-yellow-500 via-amber-600 to-red-900", iconColor: "text-yellow-100" };
+    }
+    if (norm.includes("ghost") || norm.includes("skull")) {
+      return { IconComp, gradientClass: "from-zinc-900 via-red-950 to-black", iconColor: "text-red-400" };
+    }
+    if (norm.includes("globe") || norm.includes("users") || norm.includes("tag")) {
+      return { IconComp, gradientClass: "from-emerald-500 via-teal-700 to-slate-950", iconColor: "text-emerald-100" };
+    }
+    if (norm.includes("music") || norm.includes("headphones") || norm.includes("radio")) {
+      return { IconComp, gradientClass: "from-purple-500 via-violet-700 to-indigo-950", iconColor: "text-purple-100" };
+    }
+    if (norm.includes("baby")) {
+      return { IconComp, gradientClass: "from-sky-400 via-blue-500 to-indigo-800", iconColor: "text-sky-100" };
+    }
+    return { IconComp, gradientClass: "from-indigo-600 via-purple-700 to-slate-950", iconColor: "text-white" };
+  }
+
+  const norm = (name || "").toLowerCase();
 
   if (norm.includes("romance") || norm.includes("coração") || norm.includes("amor") || norm.includes("heart")) {
     return {

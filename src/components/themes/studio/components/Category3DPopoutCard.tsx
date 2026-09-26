@@ -21,6 +21,8 @@ import {
   LucideIcon
 } from "lucide-react";
 
+import { ICON_MAP } from "@/lib/carousel-icons";
+
 interface Category {
   id: string;
   name: string;
@@ -37,58 +39,94 @@ interface Category3DPopoutCardProps {
 
 // 3D Icon Visual Renderer with satin gradient background & 3D drop shadow depth
 function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: string | null }) {
-  const norm = (iconName || name || "").toLowerCase();
-
   let IconComp: LucideIcon = Tv;
   let gradientClass = "from-zinc-700 via-zinc-800 to-zinc-950";
   let iconColor = "text-zinc-100";
-  let glowColor = "rgba(255,255,255,0.15)";
 
-  if (norm.includes("romance") || norm.includes("coração") || norm.includes("heart")) {
-    IconComp = Heart;
-    gradientClass = "from-red-500 via-rose-600 to-pink-900";
-    iconColor = "text-white";
-    glowColor = "rgba(239, 68, 68, 0.4)";
-  } else if (norm.includes("suspense") || norm.includes("terror") || norm.includes("ghost")) {
-    IconComp = Ghost;
-    gradientClass = "from-zinc-800 via-red-950 to-black";
-    iconColor = "text-red-400";
-    glowColor = "rgba(185, 28, 28, 0.4)";
-  } else if (norm.includes("drama") || norm.includes("teatro") || norm.includes("theater")) {
-    IconComp = Theater;
-    gradientClass = "from-purple-600 via-indigo-800 to-slate-950";
-    iconColor = "text-purple-200";
-    glowColor = "rgba(147, 51, 234, 0.4)";
-  } else if (norm.includes("ação") || norm.includes("acao") || norm.includes("zap") || norm.includes("film")) {
-    IconComp = Zap;
-    gradientClass = "from-amber-500 via-orange-600 to-red-950";
-    iconColor = "text-amber-100";
-    glowColor = "rgba(245, 158, 11, 0.4)";
-  } else if (norm.includes("comédia") || norm.includes("comedia") || norm.includes("popcorn")) {
-    IconComp = Popcorn;
-    gradientClass = "from-yellow-500 via-amber-600 to-red-900";
-    iconColor = "text-yellow-100";
-    glowColor = "rgba(234, 179, 8, 0.4)";
-  } else if (norm.includes("ficção") || norm.includes("ficcao") || norm.includes("ufo") || norm.includes("rocket")) {
-    IconComp = Rocket;
-    gradientClass = "from-cyan-500 via-blue-700 to-slate-950";
-    iconColor = "text-cyan-100";
-    glowColor = "rgba(6, 182, 212, 0.4)";
-  } else if (norm.includes("bilionário") || norm.includes("bilionario") || norm.includes("ceo") || norm.includes("crown")) {
-    IconComp = Crown;
-    gradientClass = "from-amber-400 via-yellow-600 to-amber-950";
-    iconColor = "text-amber-100";
-    glowColor = "rgba(251, 191, 36, 0.4)";
-  } else if (norm.includes("brasileiras") || norm.includes("users") || norm.includes("globe")) {
-    IconComp = Globe;
-    gradientClass = "from-emerald-500 via-teal-700 to-slate-950";
-    iconColor = "text-emerald-100";
-    glowColor = "rgba(16, 185, 129, 0.4)";
-  } else if (norm.includes("lgbt") || norm.includes("sparkles") || norm.includes("gem")) {
-    IconComp = Sparkles;
-    gradientClass = "from-pink-500 via-purple-600 to-indigo-950";
-    iconColor = "text-pink-100";
-    glowColor = "rgba(236, 72, 153, 0.4)";
+  if (iconName && ICON_MAP[iconName]) {
+    IconComp = ICON_MAP[iconName];
+    const norm = iconName.toLowerCase();
+
+    if (norm.includes("heart") || norm.includes("romance")) {
+      gradientClass = "from-red-500 via-rose-600 to-pink-900";
+      iconColor = "text-white";
+    } else if (norm.includes("flame") || norm.includes("fire")) {
+      gradientClass = "from-red-600 via-orange-600 to-amber-500";
+      iconColor = "text-amber-100";
+    } else if (norm.includes("star") || norm.includes("trophy") || norm.includes("award")) {
+      gradientClass = "from-amber-400 via-yellow-500 to-amber-900";
+      iconColor = "text-amber-100";
+    } else if (norm.includes("crown") || norm.includes("gem") || norm.includes("sparkles")) {
+      gradientClass = "from-fuchsia-500 via-purple-600 to-indigo-950";
+      iconColor = "text-white";
+    } else if (norm.includes("film") || norm.includes("clapperboard") || norm.includes("video") || norm.includes("play")) {
+      gradientClass = "from-blue-600 via-indigo-700 to-slate-950";
+      iconColor = "text-blue-100";
+    } else if (norm.includes("zap") || norm.includes("sword") || norm.includes("gamepad")) {
+      gradientClass = "from-indigo-500 via-purple-600 to-pink-900";
+      iconColor = "text-indigo-100";
+    } else if (norm.includes("rocket") || norm.includes("ufo") || norm.includes("eye") || norm.includes("wand")) {
+      gradientClass = "from-cyan-500 via-blue-700 to-slate-950";
+      iconColor = "text-cyan-100";
+    } else if (norm.includes("popcorn") || norm.includes("smile") || norm.includes("laugh")) {
+      gradientClass = "from-yellow-500 via-amber-600 to-red-900";
+      iconColor = "text-yellow-100";
+    } else if (norm.includes("ghost") || norm.includes("skull")) {
+      gradientClass = "from-zinc-900 via-red-950 to-black";
+      iconColor = "text-red-400";
+    } else if (norm.includes("globe") || norm.includes("users") || norm.includes("tag")) {
+      gradientClass = "from-emerald-500 via-teal-700 to-slate-950";
+      iconColor = "text-emerald-100";
+    } else if (norm.includes("music") || norm.includes("headphones") || norm.includes("radio")) {
+      gradientClass = "from-purple-500 via-violet-700 to-indigo-950";
+      iconColor = "text-purple-100";
+    } else if (norm.includes("baby")) {
+      gradientClass = "from-sky-400 via-blue-500 to-indigo-800";
+      iconColor = "text-sky-100";
+    } else {
+      gradientClass = "from-indigo-600 via-purple-700 to-slate-950";
+      iconColor = "text-white";
+    }
+  } else {
+    const norm = (name || "").toLowerCase();
+
+    if (norm.includes("romance") || norm.includes("coração") || norm.includes("heart")) {
+      IconComp = Heart;
+      gradientClass = "from-red-500 via-rose-600 to-pink-900";
+      iconColor = "text-white";
+    } else if (norm.includes("suspense") || norm.includes("terror") || norm.includes("ghost")) {
+      IconComp = Ghost;
+      gradientClass = "from-zinc-800 via-red-950 to-black";
+      iconColor = "text-red-400";
+    } else if (norm.includes("drama") || norm.includes("teatro") || norm.includes("theater")) {
+      IconComp = Theater;
+      gradientClass = "from-purple-600 via-indigo-800 to-slate-950";
+      iconColor = "text-purple-200";
+    } else if (norm.includes("ação") || norm.includes("acao") || norm.includes("zap") || norm.includes("film")) {
+      IconComp = Zap;
+      gradientClass = "from-amber-500 via-orange-600 to-red-950";
+      iconColor = "text-amber-100";
+    } else if (norm.includes("comédia") || norm.includes("comedia") || norm.includes("popcorn")) {
+      IconComp = Popcorn;
+      gradientClass = "from-yellow-500 via-amber-600 to-red-900";
+      iconColor = "text-yellow-100";
+    } else if (norm.includes("ficção") || norm.includes("ficcao") || norm.includes("ufo") || norm.includes("rocket")) {
+      IconComp = Rocket;
+      gradientClass = "from-cyan-500 via-blue-700 to-slate-950";
+      iconColor = "text-cyan-100";
+    } else if (norm.includes("bilionário") || norm.includes("bilionario") || norm.includes("ceo") || norm.includes("crown")) {
+      IconComp = Crown;
+      gradientClass = "from-amber-400 via-yellow-600 to-amber-950";
+      iconColor = "text-amber-100";
+    } else if (norm.includes("brasileiras") || norm.includes("users") || norm.includes("globe")) {
+      IconComp = Globe;
+      gradientClass = "from-emerald-500 via-teal-700 to-slate-950";
+      iconColor = "text-emerald-100";
+    } else if (norm.includes("lgbt") || norm.includes("sparkles") || norm.includes("gem")) {
+      IconComp = Sparkles;
+      gradientClass = "from-pink-500 via-purple-600 to-indigo-950";
+      iconColor = "text-pink-100";
+    }
   }
 
   return (
