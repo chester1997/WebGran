@@ -362,6 +362,65 @@ export function EditProductModal({ categories, bots, product }: { categories: an
               </div>
             </div>
 
+            {/* Status e Badge */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
+                <select name="status" defaultValue={product?.status || "active"} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                  <option value="active">Ativo na Loja</option>
+                  <option value="draft">Inativo (Rascunho)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Badge do Produto</label>
+                <select name="badge" defaultValue={product?.badge || ""} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                  <option value="">Nenhum Badge</option>
+                  <option value="novo">🟢 Novo (Verde)</option>
+                  <option value="dublado">🔵 Dublado (DUB)</option>
+                  <option value="legendado">🔴 Legendado (LEG)</option>
+                  <option value="br">🇧🇷 BR (Verde e Amarelo)</option>
+                  <option value="em_alta">🟡 Em alta (Amarelo)</option>
+                  <option value="lancamento">🟣 Lançamento (Roxo)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Indicadores Visuais da Vitrine */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>Indicadores da Vitrine (Mini App)</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Visualizações (👁 Olho)</label>
+                  <input 
+                    type="number" 
+                    name="viewsCount"
+                    min="0"
+                    defaultValue={product?.viewsCount || 0}
+                    placeholder="Ex: 46600 (exibe 👁 46.6K)"
+                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
+                  />
+                  <span className="text-[10px] text-zinc-500 mt-1 block">Número de visualizações exibido ao lado do preço</span>
+                </div>
+
+                <div className="flex flex-col justify-center">
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Destaque Fogo (🔥)</label>
+                  <label className="flex items-center gap-2.5 cursor-pointer bg-[#1A1A1E] border border-white/5 p-2.5 rounded-lg hover:border-white/10 transition-all">
+                    <input 
+                      type="checkbox" 
+                      name="showFire"
+                      value="true"
+                      defaultChecked={Boolean(product?.showFire)}
+                      className="w-4 h-4 rounded border-white/20 bg-black/40 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-zinc-200">Exibir ícone Destaque 🔥</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
           </form>
         </div>
 

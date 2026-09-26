@@ -31,14 +31,14 @@ interface ProductCardProps {
     viewsCount?: number | string | null;
     showViews?: boolean;
     isHot?: boolean;
-    showFire?: boolean;
+    showFire?: boolean | null;
   };
   showButtons?: boolean;
   buttonVariant?: "two-buttons" | "details";
   isTopTen?: boolean;
   showViews?: boolean;
   viewsCount?: number | string;
-  showFire?: boolean;
+  showFire?: boolean | null;
 }
 
 function ProductCardBase({ 
