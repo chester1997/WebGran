@@ -25,7 +25,7 @@ export function IndicatorTypePicker({
   const options: { value: IndicatorMode; label: string; sub: string }[] = [
     { value: "none",  label: "Nenhum", sub: "Sem indicador" },
     { value: "views", label: "👁 Olho", sub: "Nº de visualizações" },
-    { value: "fire",  label: "🔥 Fogo", sub: "Ícone de destaque" },
+    { value: "fire",  label: "🔥 Fogo", sub: "Destaque com número" },
   ];
 
   return (
@@ -49,18 +49,18 @@ export function IndicatorTypePicker({
         ))}
       </div>
 
-      {/* Views number input — só aparece quando modo = views */}
-      {mode === "views" && (
+      {/* Number input — aparece tanto para Olho 👁 quanto para Fogo 🔥 */}
+      {mode !== "none" && (
         <div>
           <label className="block text-[10px] font-semibold text-zinc-500 mb-1.5 uppercase tracking-wider">
-            Número de visualizações exibido
+            {mode === "views" ? "Número de visualizações exibido (👁)" : "Número de destaque exibido (🔥)"}
           </label>
           <input
             type="number"
             min="0"
             value={views}
             onChange={e => setViews(Number(e.target.value))}
-            placeholder="Ex: 46600 → exibe 👁 46.6K"
+            placeholder={mode === "views" ? "Ex: 46600 → exibe 👁 46.6K" : "Ex: 12400 → exibe 🔥 12.4K"}
             className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
           />
           <span className="text-[10px] text-zinc-500 mt-1 block">
@@ -69,8 +69,8 @@ export function IndicatorTypePicker({
         </div>
       )}
 
-      {/* Hidden inputs that are actually submitted in the form */}
-      <input type="hidden" name={nameViews}  value={mode === "views" ? views : 0} />
+      {/* Hidden inputs submitted in form */}
+      <input type="hidden" name={nameViews}  value={mode !== "none" ? views : 0} />
       <input type="hidden" name={nameFire}   value={mode === "fire"  ? "true" : ""} />
     </div>
   );

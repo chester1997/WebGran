@@ -109,7 +109,10 @@ function ProductCardBase({
                 </span>
               )}
               {hasFire && (
-                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20 shrink-0" />
+                <span className="flex items-center gap-0.5 leading-none">
+                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20 shrink-0" />
+                  {Number(displayViews) > 0 && <span>{formatViewsCount(displayViews)}</span>}
+                </span>
               )}
             </div>
           )}
