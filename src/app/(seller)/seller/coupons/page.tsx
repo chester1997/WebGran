@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import SetupStoreClient from "../SetupStoreClient";
 import CouponsClient from "./CouponsClient";

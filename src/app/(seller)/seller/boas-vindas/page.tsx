@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { getWelcomeSettingsAction } from "./actions";
 import WelcomeClient from "./WelcomeClient";

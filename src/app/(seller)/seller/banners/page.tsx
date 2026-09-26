@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { getStoreBanners } from "./actions";
 import BannersClient from "./BannersClient";

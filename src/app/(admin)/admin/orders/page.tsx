@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { desc } from "drizzle-orm";

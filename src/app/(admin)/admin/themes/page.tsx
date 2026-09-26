@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { db } from "@/db";
 import { themes } from "@/db/schema";
 import { desc } from "drizzle-orm";

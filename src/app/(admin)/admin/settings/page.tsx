@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/db";
 import { themes, subscriptionPlans } from "@/db/schema";

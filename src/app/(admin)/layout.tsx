@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { ReactNode } from "react";
 import { requireAdmin } from "@/lib/auth";
 import AdminSidebar from "./AdminSidebar";

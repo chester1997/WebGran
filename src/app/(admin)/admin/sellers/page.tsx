@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";

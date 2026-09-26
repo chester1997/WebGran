@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { orders, telegramCustomers } from "@/db/schema";

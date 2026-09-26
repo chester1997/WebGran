@@ -1,3 +1,4 @@
+﻿export const instant = false;
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { AnalyticsService } from "@/lib/analytics/analytics-service";
 import { DashboardClient } from "./DashboardClient";
