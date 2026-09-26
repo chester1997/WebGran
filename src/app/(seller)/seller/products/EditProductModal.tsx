@@ -137,7 +137,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
         <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[820px] w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[90vh] rounded-2xl">
+      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[90vh] rounded-2xl">
         <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between shrink-0">
           <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-white">Editar Produto</DialogTitle>
         </div>
@@ -174,7 +174,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
             </div>
 
             {/* Preço + Duração + Status + Badge */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Preço (R$) *</label>
                 <input 
