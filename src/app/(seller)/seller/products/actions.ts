@@ -5,6 +5,36 @@ import { db } from "@/db";
 import { products } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, and } from "drizzle-orm";
+import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
+
+async function processImageUrl(
+  rawUrl: string | null,
+  storeId: string,
+  entityType: "products" | "banners" | "categories",
+  prefix: string
+): Promise<string | null> {
+  if (!rawUrl || !rawUrl.trim()) return null;
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith("data:")) {
+    try {
+      const parts = trimmed.split(",");
+      const meta = parts[0];
+      const base64Data = parts[1] || "";
+      const matchMime = meta.match(/data:(.*?);/);
+      const mimeType = matchMime ? matchMime[1] : "image/webp";
+      const buffer = Buffer.from(base64Data, "base64");
+
+      const storagePath = generateMultiTenantStoragePath(storeId, entityType, `${prefix}-${Date.now()}.webp`);
+      const provider = getStorageProvider();
+      const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+      return uploadRes.url;
+    } catch (err) {
+      console.error("[Storage Upload Fallback Error]:", err);
+      return trimmed;
+    }
+  }
+  return trimmed;
+}
 
 export async function createProductAction(formData: FormData) {
   await requireSeller();
@@ -64,8 +94,12 @@ export async function createProductAction(formData: FormData) {
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
   const badge = (formData.get("badge") as string) || null;
-  const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
-  const bannerUrl = (formData.get("bannerUrl") as string) || null;
+  const rawCoverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
+  const rawBannerUrl = (formData.get("bannerUrl") as string) || null;
+
+  const coverUrl = await processImageUrl(rawCoverUrl, store.id, "products", "cover");
+  const bannerUrl = await processImageUrl(rawBannerUrl, store.id, "products", "banner");
+
   const showViews = formData.get("showViews") === "on" || formData.get("showViews") === "true" || formData.get("showViews") === "1";
   const viewsCountStr = formData.get("viewsCount") as string;
   const viewsCount = viewsCountStr ? parseInt(viewsCountStr, 10) : 0;
@@ -159,8 +193,12 @@ export async function updateProductAction(productId: string, formData: FormData)
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
   const badge = (formData.get("badge") as string) || null;
-  const coverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
-  const bannerUrl = (formData.get("bannerUrl") as string) || null;
+  const rawCoverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
+  const rawBannerUrl = (formData.get("bannerUrl") as string) || null;
+
+  const coverUrl = await processImageUrl(rawCoverUrl, store.id, "products", "cover");
+  const bannerUrl = await processImageUrl(rawBannerUrl, store.id, "products", "banner");
+
   const showViews = formData.get("showViews") === "on" || formData.get("showViews") === "true" || formData.get("showViews") === "1";
   const viewsCountStr = formData.get("viewsCount") as string;
   const viewsCount = viewsCountStr ? parseInt(viewsCountStr, 10) : 0;

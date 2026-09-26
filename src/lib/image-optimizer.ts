@@ -25,7 +25,7 @@ export async function optimizeBannerImage(
   options: OptimizeImageOptions = {}
 ): Promise<OptimizedImageResult> {
   const maxWidth = options.maxWidth || 1200;
-  const maxHeight = options.maxHeight || 540;
+  const maxHeight = options.maxHeight || 1200;
   const quality = options.quality || 0.85;
   const format = options.format || 'image/webp';
 
@@ -40,7 +40,7 @@ export async function optimizeBannerImage(
       let width = img.naturalWidth || img.width;
       let height = img.naturalHeight || img.height;
 
-      // Calculate proportional dimensions (max width 1200, max height 540)
+      // Calculate proportional dimensions while keeping aspect ratio intact
       if (width > maxWidth) {
         height = Math.round((height * maxWidth) / width);
         width = maxWidth;
@@ -102,4 +102,45 @@ export async function optimizeBannerImage(
 
     img.src = objectUrl;
   });
+}
+
+/**
+ * Client-side helper: Optimizes image via Canvas AND uploads to Storage API
+ */
+export async function uploadOptimizedImage(
+  file: File,
+  entityType: 'products' | 'banners' | 'categories' | 'store' | 'profiles' = 'products',
+  options: OptimizeImageOptions = {}
+): Promise<{
+  url: string;
+  originalSizeBytes: number;
+  optimizedSizeBytes: number;
+  savedPercent: number;
+}> {
+  // 1. Optimize image locally in client canvas to WebP
+  const optimized = await optimizeBannerImage(file, options);
+
+  // 2. Send optimized WebP payload to storage upload API
+  const res = await fetch('/api/storage/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dataUrl: optimized.dataUrl,
+      name: file.name,
+      type: 'image/webp',
+      entity: entityType,
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || 'Erro ao fazer upload da imagem para a CDN.');
+  }
+
+  return {
+    url: data.url,
+    originalSizeBytes: optimized.originalSizeBytes,
+    optimizedSizeBytes: optimized.optimizedSizeBytes,
+    savedPercent: optimized.savedPercent,
+  };
 }

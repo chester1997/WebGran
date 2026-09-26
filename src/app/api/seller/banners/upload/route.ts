@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { banners } from '@/db/schema';
 import { eq, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-
+import { getStorageProvider, generateMultiTenantStoragePath } from '@/lib/storage/provider';
 
 export async function POST(req: Request) {
   try {
@@ -21,9 +21,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "A imagem do banner é obrigatória." }, { status: 400 });
     }
 
-    // 20MB payload validation
-    if (imageUrl.startsWith("data:") && imageUrl.length > 28 * 1024 * 1024) {
-      return NextResponse.json({ success: false, error: "A imagem do banner excede o tamanho máximo de 20MB." }, { status: 400 });
+    let finalImageUrl = imageUrl.trim();
+
+    // If a raw Data URL / Base64 is received for a new/edited banner, upload it via Storage Provider
+    if (finalImageUrl.startsWith("data:")) {
+      try {
+        const parts = finalImageUrl.split(",");
+        const meta = parts[0];
+        const base64Data = parts[1] || "";
+        const matchMime = meta.match(/data:(.*?);/);
+        const mimeType = matchMime ? matchMime[1] : "image/webp";
+        const buffer = Buffer.from(base64Data, "base64");
+
+        const storagePath = generateMultiTenantStoragePath(store.id, "banners", `banner-${Date.now()}.webp`);
+        const provider = getStorageProvider();
+        const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+        finalImageUrl = uploadRes.url;
+      } catch (uploadErr) {
+        console.error("[Banner Storage Upload Fallback]:", uploadErr);
+        // If storage upload fails, keep finalImageUrl as incoming string so action doesn't fail
+      }
     }
 
     // Update existing banner
@@ -40,7 +57,7 @@ export async function POST(req: Request) {
         .update(banners)
         .set({
           title: (title || existing.title).trim(),
-          imageUrl: imageUrl.trim(),
+          imageUrl: finalImageUrl,
           linkType: linkType === "none" ? null : linkType || existing.linkType,
           linkValue: linkValue?.trim() || null,
           updatedAt: new Date(),
@@ -49,7 +66,7 @@ export async function POST(req: Request) {
 
       revalidatePath("/seller/banners");
       revalidatePath(`/miniapp/${store.slug}`);
-      return NextResponse.json({ success: true, isEdit: true });
+      return NextResponse.json({ success: true, isEdit: true, imageUrl: finalImageUrl });
     }
 
     // Create new banner - Check limit (max 5)
@@ -66,7 +83,7 @@ export async function POST(req: Request) {
     await db.insert(banners).values({
       storeId: store.id,
       title: (title || `Banner ${total + 1}`).trim(),
-      imageUrl: imageUrl.trim(),
+      imageUrl: finalImageUrl,
       linkType: linkType === "none" ? null : linkType || null,
       linkValue: linkValue?.trim() || null,
       position: total,
@@ -76,7 +93,7 @@ export async function POST(req: Request) {
     revalidatePath("/seller/banners");
     revalidatePath(`/miniapp/${store.slug}`);
 
-    return NextResponse.json({ success: true, isEdit: false });
+    return NextResponse.json({ success: true, isEdit: false, imageUrl: finalImageUrl });
   } catch (err: any) {
     console.error("[Banner API Upload Error]:", err);
     return NextResponse.json({ success: false, error: err.message || "Erro ao salvar banner." }, { status: 500 });
