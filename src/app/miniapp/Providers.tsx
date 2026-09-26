@@ -74,6 +74,61 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
 
     applyTheme();
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeUser(clientUser: any, backendUser: any) {
+  if (!clientUser && !backendUser) return null;
+
+  const rawId = 
+    backendUser?.telegramUserId || 
+    backendUser?.telegramId || 
+    backendUser?.id || 
+    clientUser?.id || 
+    clientUser?.telegramId;
+    
+  const id = rawId ? rawId : null;
+
+  const firstName = 
+    backendUser?.firstName || 
+    backendUser?.first_name || 
+    clientUser?.first_name || 
+    clientUser?.firstName || 
+    "";
+
+  const lastName = 
+    backendUser?.lastName || 
+    backendUser?.last_name || 
+    clientUser?.last_name || 
+    clientUser?.lastName || 
+    null;
+
+  const username = 
+    backendUser?.username || 
+    clientUser?.username || 
+    null;
+
+  const photoUrl = 
+    backendUser?.photoUrl || 
+    backendUser?.photo_url || 
+    clientUser?.photo_url || 
+    clientUser?.photoUrl || 
+    null;
+
+  if (!id && !firstName) return null;
+
+  return {
+    id,
+    firstName,
+    lastName,
+    username,
+    photoUrl,
+    // Legacy aliases for backward compatibility
+    first_name: firstName,
+    last_name: lastName || undefined,
+    photo_url: photoUrl || undefined,
+    telegramId: id,
+  };
+}
+
     const initTelegram = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wa = (window as any).Telegram?.WebApp;
@@ -91,13 +146,16 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           wa.onEvent('themeChanged', () => applyTheme(wa));
         }
 
-        // Immediately expose user from initDataUnsafe (always available inside Telegram)
-        if (wa.initDataUnsafe?.user) {
-          setUser(wa.initDataUnsafe.user);
+        const tgClientUser = wa.initDataUnsafe?.user || null;
+
+        // Immediately expose normalized user from initDataUnsafe
+        if (tgClientUser) {
+          const initialUser = normalizeUser(tgClientUser, null);
+          if (initialUser) setUser(initialUser);
         }
         setReady(true);
 
-        // Validate initData with server in background (upsert customer, get session token)
+        // Validate initData with server in background
         try {
           const initData = wa.initData || "";
           const res = await fetch("/api/telegram/auth", {
@@ -107,7 +165,8 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           });
           const data = await res.json();
           if (data.success && data.user) {
-            setUser(data.user);
+            const mergedUser = normalizeUser(tgClientUser, data.user);
+            if (mergedUser) setUser(mergedUser);
           }
         } catch (_err: unknown) {
           // background sync error fallback
@@ -123,7 +182,8 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           });
           const data = await res.json();
           if (data.success && data.user) {
-            setUser(data.user);
+            const previewUser = normalizeUser(null, data.user);
+            if (previewUser) setUser(previewUser);
           }
         } catch (_e) {
           // ignore in preview

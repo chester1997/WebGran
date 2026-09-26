@@ -38,10 +38,11 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
     }
   };
 
-  const tgUser = user as { id?: string | number; telegramId?: string | number; photo_url?: string; first_name?: string } | null;
-  const userPhoto = tgUser?.photo_url || null;
-  const firstName = tgUser?.first_name || "Usuário";
-  const userId = tgUser?.id || tgUser?.telegramId || null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tgUser = user as any;
+  const userPhoto = tgUser?.photoUrl || tgUser?.photo_url || null;
+  const firstName = tgUser?.firstName || tgUser?.first_name || "Usuário";
+  const userId = tgUser?.id || tgUser?.telegramId || tgUser?.telegramUserId || null;
   const userInitial = firstName ? firstName.charAt(0).toUpperCase() : "U";
 
   return (
