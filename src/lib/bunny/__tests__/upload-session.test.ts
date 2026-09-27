@@ -21,7 +21,7 @@ describe("Bunny Stream Direct Upload Signature & Security", () => {
     expect(session.libraryId).toBe(mockLibraryId);
     expect(session.signature).toBeDefined();
     expect(session.expirationTime).toBeGreaterThan(Math.floor(Date.now() / 1000));
-    expect(session.uploadUrl).toBe(`https://video.bunnycdn.net/library/${mockLibraryId}/videos/${videoId}`);
+    expect(session.uploadUrl).toBe(`https://video.bunnycdn.com/library/${mockLibraryId}/videos/${videoId}`);
     expect(session.headers.AuthorizationSignature).toBe(session.signature);
     expect(session.headers.VideoId).toBe(videoId);
     expect(session.headers.LibraryId).toBe(mockLibraryId);

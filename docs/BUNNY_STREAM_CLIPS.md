@@ -52,7 +52,7 @@ Para evitar sobrecarregar os servidores da Vercel:
 
 1. O vendedor solicita uma sessão de upload via `POST /api/seller/clips/upload-session`.
 2. O servidor gera uma entrada no Neon (`status: 'UPLOADING'`) e cria uma **assinatura presigned de curta duração (SHA-256)** via `BunnyStreamService.generateDirectUploadSignature()`.
-3. O navegador faz o upload do arquivo binário **diretamente para a API do Bunny Stream** (`https://video.bunnycdn.net/library/...`).
+3. O navegador faz o upload do arquivo binário **diretamente para a API do Bunny Stream** (`https://video.bunnycdn.com/library/...`).
 4. Ao concluir, o Bunny Stream notifica o endpoint `/api/webhooks/bunny-stream`, que transiciona o clipe para `'READY'`.
 
 ---

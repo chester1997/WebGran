@@ -34,7 +34,7 @@ export class BunnyStreamService {
       libraryId,
       apiKey,
       cdnHostname: cleanCdnHostname,
-      baseUrl: `https://video.bunnycdn.net/library/${libraryId}`,
+      baseUrl: `https://video.bunnycdn.com/library/${libraryId}`,
     };
   }
 
@@ -134,7 +134,7 @@ export class BunnyStreamService {
       expirationTime,
       signature,
       uploadUrl: `${config.baseUrl}/videos/${videoId}`,
-      tusUploadUrl: `https://video.bunnycdn.net/tusupload`,
+      tusUploadUrl: `https://video.bunnycdn.com/tusupload`,
       headers: {
         AuthorizationSignature: signature,
         AuthorizationExpire: String(expirationTime),
