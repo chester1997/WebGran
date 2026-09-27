@@ -99,51 +99,51 @@ export function StudioProfile({ storeSlug }: { storeSlug: string }) {
   ];
 
   return (
-    <div className="p-4 pt-6 pb-24 w-full text-white min-h-[85vh]">
-      {/* Header User Card (Exact layout matching the reference UI) */}
-      <div className="bg-[#121316]/90 border border-white/10 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-lg backdrop-blur-md">
-        <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 border-2 border-white/15 bg-zinc-800 shadow-md flex items-center justify-center">
+    <div className="p-4 pt-6 pb-24 w-full min-h-[85vh]">
+      {/* Header User Card supporting Light & Dark mode */}
+      <div className="bg-white/80 dark:bg-[#121316]/90 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-sm dark:shadow-lg backdrop-blur-md transition-colors duration-200">
+        <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 border-2 border-zinc-200 dark:border-white/15 bg-zinc-100 dark:bg-zinc-800 shadow-sm flex items-center justify-center">
           {photoUrl ? (
             <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-xl font-bold text-white">{initial}</span>
+            <span className="text-xl font-bold text-zinc-800 dark:text-white">{initial}</span>
           )}
         </div>
 
         <div className="flex flex-col justify-center min-w-0">
-          <h2 className="font-bold text-lg text-white truncate">
+          <h2 className="font-bold text-lg text-zinc-900 dark:text-white truncate">
             Olá, {fullName}!
           </h2>
           {username && (
-            <p className="text-zinc-400 text-xs font-medium truncate mt-0.5">
+            <p className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate mt-0.5">
               @{username}
             </p>
           )}
         </div>
       </div>
 
-      {/* Profile Menu List Options */}
-      <div className="bg-[#121316]/90 border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden shadow-lg backdrop-blur-md">
+      {/* Profile Menu Options supporting Light & Dark mode */}
+      <div className="bg-white/80 dark:bg-[#121316]/90 border border-zinc-200 dark:border-white/10 rounded-2xl divide-y divide-zinc-100 dark:divide-white/5 overflow-hidden shadow-sm dark:shadow-lg backdrop-blur-md transition-colors duration-200">
         {menuItems.map((item) => {
           const IconComponent = item.icon;
           const rowContent = (
             <div
               key={item.id}
               onClick={item.onClick}
-              className="p-4 flex items-center justify-between hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer select-none"
+              className="p-4 flex items-center justify-between hover:bg-zinc-100/80 dark:hover:bg-white/5 active:bg-zinc-200/80 dark:active:bg-white/10 transition-colors cursor-pointer select-none"
             >
               <div className="flex items-center gap-3.5">
-                <IconComponent className="w-5 h-5 text-zinc-300 shrink-0" />
-                <span className="font-medium text-sm text-white">{item.label}</span>
+                <IconComponent className="w-5 h-5 text-zinc-600 dark:text-zinc-300 shrink-0" />
+                <span className="font-medium text-sm text-zinc-900 dark:text-white">{item.label}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 {item.subtitle ? (
-                  <span className="text-xs text-zinc-400 font-normal">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
                     {item.subtitle}
                   </span>
                 ) : null}
-                <ChevronRight className="w-4 h-4 text-zinc-500 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0" />
               </div>
             </div>
           );

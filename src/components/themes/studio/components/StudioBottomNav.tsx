@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Heart, ShoppingCart, LibraryBig, Compass } from "lucide-react";
+import { Home, ShoppingCart, LibraryBig, Compass } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -16,7 +16,6 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
 
   const isHome      = pathname === basePath || pathname === `${basePath}/`;
   const isSearch    = pathname.startsWith(`${basePath}/search`);
-  const isFavorites = pathname.startsWith(`${basePath}/favorites`);
   const isCart      = pathname.startsWith(`${basePath}/cart`);
   const isAccesses  = pathname.startsWith(`${basePath}/accesses`);
 
@@ -37,9 +36,9 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex items-end"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div className="w-full h-[68px] bg-[#0d0e10]/95 backdrop-blur-xl border-t border-white/8 flex items-center px-2 relative">
+      <div className="w-full h-[68px] bg-white/95 dark:bg-[#0d0e10]/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/8 flex items-center px-2 relative transition-colors duration-200">
 
-        {/* Left: Início + Minha Lista */}
+        {/* Left: Início */}
         <div className="flex items-center flex-1 justify-around">
           {leftItems.map((item) => {
             const Icon = item.icon;
@@ -49,14 +48,14 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 href={item.href}
                 aria-label={item.label}
                 className={`flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 select-none ${
-                  item.isActive ? "text-red-400" : "text-zinc-500 hover:text-zinc-300"
+                  item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 }`}
               >
                 <Icon
                   className={`w-[22px] h-[22px] transition-all duration-150 ${item.isActive ? "scale-110" : ""}`}
                   strokeWidth={item.isActive ? 2 : 1.6}
                 />
-                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-400" : "text-zinc-500"}`}>
+                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500"}`}>
                   {item.label}
                 </span>
               </Link>
@@ -77,7 +76,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           >
             <Compass className="w-7 h-7 text-white" strokeWidth={2} />
           </Link>
-          <span className={`text-[10px] font-semibold mt-1.5 leading-none ${isSearch ? "text-red-400" : "text-zinc-500"}`}>
+          <span className={`text-[10px] font-semibold mt-1.5 leading-none ${isSearch ? "text-red-500 dark:text-red-400" : "text-zinc-500"}`}>
             Explorar
           </span>
         </div>
@@ -92,7 +91,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 href={item.href}
                 aria-label={item.label}
                 className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 select-none ${
-                  item.isActive ? "text-red-400" : "text-zinc-500 hover:text-zinc-300"
+                  item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 }`}
               >
                 <div className="relative flex items-center justify-center">
@@ -102,7 +101,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                   />
                   {item.badge && <CartBadge />}
                 </div>
-                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-400" : "text-zinc-500"}`}>
+                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500"}`}>
                   {item.label}
                 </span>
               </Link>

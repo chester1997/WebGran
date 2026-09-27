@@ -29,7 +29,7 @@ export function StudioFavorites({ storeSlug }: { storeSlug: string }) {
   }
 
   return (
-    <div className="p-4 pt-6 text-white bg-transparent w-full min-h-[80vh]">
+    <div className="p-4 pt-6 text-zinc-900 dark:text-white bg-transparent w-full min-h-[80vh]">
       <div className="flex items-center gap-2 mb-6">
         <Heart className="w-6 h-6 text-red-500 fill-red-500" />
         <h1 className="text-2xl font-bold">Meus Favoritos</h1>
@@ -37,13 +37,13 @@ export function StudioFavorites({ storeSlug }: { storeSlug: string }) {
 
       {favorites.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-          <Heart className="w-16 h-16 text-zinc-800 mb-4" />
-          <p className="text-zinc-500 max-w-[250px]">
+          <Heart className="w-16 h-16 text-zinc-300 dark:text-zinc-800 mb-4" />
+          <p className="text-zinc-500 dark:text-zinc-400 max-w-[250px]">
             Você ainda não adicionou nenhum título aos seus favoritos.
           </p>
           <Link
             href={`/miniapp/${storeSlug}/search`}
-            className="mt-6 bg-red-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-red-500 transition-colors"
+            className="mt-6 bg-red-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-red-500 transition-colors shadow-md"
           >
             Explorar Catálogo
           </Link>
