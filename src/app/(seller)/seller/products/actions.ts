@@ -28,9 +28,9 @@ async function processImageUrl(
       const provider = getStorageProvider();
       const uploadRes = await provider.upload(buffer, storagePath, mimeType);
       return uploadRes.url;
-    } catch (err) {
-      console.error("[Storage Upload Fallback Error]:", err);
-      return trimmed;
+    } catch (err: any) {
+      console.error("[Storage Upload Error]:", err);
+      throw new Error(`Upload de imagem do produto falhou: ${err?.message || "Erro no storage"}`);
     }
   }
   return trimmed;

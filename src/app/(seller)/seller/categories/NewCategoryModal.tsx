@@ -30,14 +30,20 @@ export function NewCategoryModal({ isCard, storeProducts = [] }: { isCard?: bool
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setLoading(true);
+      try {
+        const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+        const result = await uploadOptimizedImage(file, "categories");
+        setImageUrl(result.url);
+      } catch (err: any) {
+        console.error(err);
+        alert(err.message || "Erro ao fazer upload da imagem de categoria.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

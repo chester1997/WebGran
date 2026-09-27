@@ -181,11 +181,15 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
     }
 
     setErrorMessage(null);
+    setSavingProfile(true);
     try {
-      const resizedBase64 = await resizeAvatarImage(file);
-      setAvatarUrl(resizedBase64);
-    } catch (err) {
-      setErrorMessage("Erro ao processar imagem.");
+      const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+      const res = await uploadOptimizedImage(file, "profiles");
+      setAvatarUrl(res.url);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Erro ao processar upload da imagem de perfil.");
+    } finally {
+      setSavingProfile(false);
     }
   };
 

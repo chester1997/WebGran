@@ -5,6 +5,36 @@ import { db } from "@/db";
 import { categories, products, stores } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
+
+async function processImageUrl(
+  rawUrl: string | null,
+  storeId: string,
+  entityType: "products" | "banners" | "categories" | "store",
+  prefix: string
+): Promise<string | null> {
+  if (!rawUrl || !rawUrl.trim()) return null;
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith("data:")) {
+    try {
+      const parts = trimmed.split(",");
+      const meta = parts[0];
+      const base64Data = parts[1] || "";
+      const matchMime = meta.match(/data:(.*?);/);
+      const mimeType = matchMime ? matchMime[1] : "image/webp";
+      const buffer = Buffer.from(base64Data, "base64");
+
+      const storagePath = generateMultiTenantStoragePath(storeId, entityType, `${prefix}-${Date.now()}.webp`);
+      const provider = getStorageProvider();
+      const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+      return uploadRes.url;
+    } catch (err: any) {
+      console.error("[Storage Upload Error]:", err);
+      throw new Error(`Upload de imagem da categoria falhou: ${err?.message || "Erro no storage"}`);
+    }
+  }
+  return trimmed;
+}
 
 export async function updateCategoryDisplayStyleAction(displayStyle: "IMAGE" | "ICON") {
   await requireSeller();
@@ -40,7 +70,8 @@ export async function createCategoryAction(formData: FormData) {
     ? (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `categoria-${Date.now()}`)
     : `categoria-${Date.now()}`;
   const description = (formData.get("description") as string) || "";
-  const imageUrl = (formData.get("imageUrl") as string) || null;
+  const rawImageUrl = (formData.get("imageUrl") as string) || null;
+  const imageUrl = await processImageUrl(rawImageUrl, store.id, "categories", "category");
   const iconName = (formData.get("iconName") as string) || null;
   const status = (formData.get("status") as string) || "active";
   const selectedProductIds = formData.getAll("selectedProductIds").map(id => String(id));
@@ -83,7 +114,8 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
     ? (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || categoryId)
     : categoryId;
   const description = (formData.get("description") as string) || "";
-  const imageUrl = (formData.get("imageUrl") as string) || null;
+  const rawImageUrl = (formData.get("imageUrl") as string) || null;
+  const imageUrl = await processImageUrl(rawImageUrl, store.id, "categories", "category");
   const iconName = (formData.get("iconName") as string) || null;
   const status = (formData.get("status") as string) || "active";
   const selectedProductIds = formData.getAll("selectedProductIds").map(id => String(id));

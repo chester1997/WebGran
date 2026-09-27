@@ -29,20 +29,46 @@ export class BunnyStorageProvider implements StorageProvider {
 
   async upload(file: Buffer, path: string, contentType: string): Promise<StorageUploadResult> {
     const cleanPath = path.replace(/^\//, "");
-    const url = `https://storage.bunny.net/${this.zoneName}/${cleanPath}`;
+    const regions = [
+      process.env.BUNNY_STORAGE_REGION ? `${process.env.BUNNY_STORAGE_REGION}.storage.bunnycdn.com` : null,
+      "br.storage.bunnycdn.com",
+      "storage.bunnycdn.com",
+      "ny.storage.bunnycdn.com",
+      "la.storage.bunnycdn.com",
+      "sg.storage.bunnycdn.com",
+      "uk.storage.bunnycdn.com",
+      "se.storage.bunnycdn.com",
+    ].filter(Boolean) as string[];
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        AccessKey: this.apiKey,
-        "Content-Type": contentType || "application/octet-stream",
-      },
-      body: new Uint8Array(file),
-    });
+    let lastError: Error | null = null;
+    let uploaded = false;
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      throw new Error(`Bunny Storage upload failed (${response.status}): ${errorText}`);
+    for (const host of [...new Set(regions)]) {
+      const url = `https://${host}/${this.zoneName}/${cleanPath}`;
+      try {
+        const response = await fetch(url, {
+          method: "PUT",
+          headers: {
+            AccessKey: this.apiKey,
+            "Content-Type": contentType || "application/octet-stream",
+          },
+          body: new Uint8Array(file),
+        });
+
+        if (response.ok) {
+          uploaded = true;
+          break;
+        }
+
+        const errorText = await response.text().catch(() => "");
+        lastError = new Error(`Bunny Storage upload to ${host} failed (${response.status}): ${errorText}`);
+      } catch (err: any) {
+        lastError = err;
+      }
+    }
+
+    if (!uploaded) {
+      throw lastError || new Error("Bunny Storage upload failed on all regional endpoints");
     }
 
     const publicUrl = `${this.cdnUrl}/${cleanPath}`;
@@ -55,19 +81,27 @@ export class BunnyStorageProvider implements StorageProvider {
 
   async delete(path: string): Promise<boolean> {
     const cleanPath = path.replace(/^\//, "");
-    const url = `https://storage.bunny.net/${this.zoneName}/${cleanPath}`;
+    const regions = [
+      process.env.BUNNY_STORAGE_REGION ? `${process.env.BUNNY_STORAGE_REGION}.storage.bunnycdn.com` : null,
+      "br.storage.bunnycdn.com",
+      "storage.bunnycdn.com",
+    ].filter(Boolean) as string[];
 
-    try {
-      const response = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          AccessKey: this.apiKey,
-        },
-      });
-      return response.ok;
-    } catch {
-      return false;
+    for (const host of [...new Set(regions)]) {
+      const url = `https://${host}/${this.zoneName}/${cleanPath}`;
+      try {
+        const response = await fetch(url, {
+          method: "DELETE",
+          headers: {
+            AccessKey: this.apiKey,
+          },
+        });
+        if (response.ok) return true;
+      } catch {
+        // try next
+      }
     }
+    return false;
   }
 
   async exists(path: string): Promise<boolean> {
@@ -128,6 +162,11 @@ export function getStorageProvider(): StorageProvider {
   }
 
   // Graceful fallback for local development or unconfigured CDN
+  if (typeof window === "undefined") {
+    console.warn(
+      "[StorageProvider] Warning: BUNNY_STORAGE_API_KEY, BUNNY_STORAGE_ZONE_NAME or BUNNY_CDN_URL not set. Falling back to Data URL / Base64 WebP format."
+    );
+  }
   return new FallbackStorageProvider();
 }
 

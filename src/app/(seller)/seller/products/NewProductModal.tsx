@@ -62,35 +62,45 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage("A imagem deve ter no máximo 5MB.");
+      if (file.size > 10 * 1024 * 1024) {
+        setErrorMessage("A imagem deve ter no máximo 10MB.");
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-        setErrorMessage(null);
-      };
-      reader.readAsDataURL(file);
+      setErrorMessage(null);
+      setLoading(true);
+      try {
+        const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+        const res = await uploadOptimizedImage(file, "products");
+        setImageUrl(res.url);
+      } catch (err: any) {
+        setErrorMessage(err?.message || "Erro ao fazer upload da imagem do produto.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage("O banner deve ter no máximo 5MB.");
+      if (file.size > 10 * 1024 * 1024) {
+        setErrorMessage("O banner deve ter no máximo 10MB.");
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerUrl(reader.result as string);
-        setErrorMessage(null);
-      };
-      reader.readAsDataURL(file);
+      setErrorMessage(null);
+      setLoading(true);
+      try {
+        const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+        const res = await uploadOptimizedImage(file, "products");
+        setBannerUrl(res.url);
+      } catch (err: any) {
+        setErrorMessage(err?.message || "Erro ao fazer upload do banner do produto.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

@@ -37,9 +37,9 @@ export async function POST(req: Request) {
         const provider = getStorageProvider();
         const uploadRes = await provider.upload(buffer, storagePath, mimeType);
         finalImageUrl = uploadRes.url;
-      } catch (uploadErr) {
-        console.error("[Banner Storage Upload Fallback]:", uploadErr);
-        // If storage upload fails, keep finalImageUrl as incoming string so action doesn't fail
+      } catch (uploadErr: any) {
+        console.error("[Banner Storage Upload Error]:", uploadErr);
+        return NextResponse.json({ success: false, error: uploadErr?.message || "Erro no upload do banner para o Storage CDN." }, { status: 500 });
       }
     }
 

@@ -50,7 +50,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "O nome é obrigatório." }, { status: 400 });
     }
 
-    const updatedAvatar = avatarUrl !== undefined ? (avatarUrl ? avatarUrl.trim() : null) : undefined;
+    let updatedAvatar = avatarUrl !== undefined ? (avatarUrl ? avatarUrl.trim() : null) : undefined;
+
+    if (updatedAvatar && updatedAvatar.startsWith("data:")) {
+      try {
+        const parts = updatedAvatar.split(",");
+        const meta = parts[0];
+        const base64Data = parts[1] || "";
+        const matchMime = meta.match(/data:(.*?);/);
+        const mimeType = matchMime ? matchMime[1] : "image/webp";
+        const buffer = Buffer.from(base64Data, "base64");
+
+        const { getStorageProvider, generateMultiTenantStoragePath } = await import("@/lib/storage/provider");
+        const storagePath = generateMultiTenantStoragePath(seller.id, "profiles", `avatar-${Date.now()}.webp`);
+        const provider = getStorageProvider();
+        const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+        updatedAvatar = uploadRes.url;
+      } catch (err: any) {
+        console.error("[Avatar Storage Upload Error]:", err);
+        return NextResponse.json({ success: false, error: err?.message || "Erro no upload da foto de perfil para o Storage." }, { status: 500 });
+      }
+    }
 
     await db
       .update(users)

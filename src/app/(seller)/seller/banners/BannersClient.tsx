@@ -107,22 +107,20 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       setIsOptimizingImage(true);
       setErrorMsg(null);
 
-      // Steps 2 - 6: Validate dimension, calculate aspect, scale to max 1200x540, compress to WebP
-      const optResult = await optimizeBannerImage(file, {
+      const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+      const uploadRes = await uploadOptimizedImage(file, "banners", {
         maxWidth: 1200,
         maxHeight: 540,
         quality: 0.85,
         format: "image/webp",
       });
 
-      // Step 7: Update Form State with optimized base64 Data URL
-      setFormData((prev) => ({ ...prev, imageUrl: optResult.dataUrl }));
+      setFormData((prev) => ({ ...prev, imageUrl: uploadRes.url }));
       setSelectedFileName(file.name);
       setSelectedFileSizeMB((file.size / (1024 * 1024)).toFixed(2));
-      setOptimizationStats(optResult);
     } catch (err: any) {
-      console.error("[Banner Image Optimization Error]:", err);
-      showFeedback(err.message || "Erro ao otimizar a imagem do banner.", true);
+      console.error("[Banner Image Optimization/Upload Error]:", err);
+      showFeedback(err.message || "Erro ao fazer upload da imagem do banner.", true);
     } finally {
       setIsOptimizingImage(false);
     }
