@@ -33,7 +33,27 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
     >
       <div className="pointer-events-auto flex items-center gap-2 select-none mx-auto max-w-[95vw]">
         
-        {/* A) MAIN PILL CAPSULE — CLEAN LIQUID GLASS */}
+        {/* A) SEPARATED CIRCULAR "+" BUTTON — ON THE LEFT SIDE */}
+        <Link
+          href={`${basePath}/search`}
+          aria-label="Adicionar / Explorar"
+          className="relative w-[48px] h-[48px] shrink-0 rounded-full flex items-center justify-center
+                     transition-all duration-200 active:scale-95 group
+                     
+                     /* Clean Liquid Glass Base */
+                     bg-white/50 dark:bg-black/40
+                     backdrop-blur-md
+                     
+                     /* Subtle Glass Rim Border */
+                     border border-white/30 dark:border-white/10
+                     
+                     /* Soft Drop Shadow */
+                     shadow-lg shadow-black/10 dark:shadow-black/40"
+        >
+          <Plus className="relative z-10 w-[22px] h-[22px] text-red-600 dark:text-red-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
+        </Link>
+
+        {/* B) MAIN PILL CAPSULE — 3 BUTTONS (EXPLORAR, INÍCIO, CARRINHO) */}
         <div
           className="relative flex items-center justify-around h-[50px] px-2 py-1.5 rounded-full 
                      transition-all duration-300 gap-2
@@ -102,26 +122,6 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             );
           })}
         </div>
-
-        {/* B) SEPARATED CIRCULAR "+" BUTTON — CLEAN LIQUID GLASS WITH ALWAYS RED ICON */}
-        <Link
-          href={`${basePath}/search`}
-          aria-label="Adicionar / Explorar"
-          className="relative w-[48px] h-[48px] shrink-0 rounded-full flex items-center justify-center
-                     transition-all duration-200 active:scale-95 group
-                     
-                     /* Clean Liquid Glass Base */
-                     bg-white/50 dark:bg-black/40
-                     backdrop-blur-md
-                     
-                     /* Subtle Glass Rim Border */
-                     border border-white/30 dark:border-white/10
-                     
-                     /* Soft Drop Shadow */
-                     shadow-lg shadow-black/10 dark:shadow-black/40"
-        >
-          <Plus className="relative z-10 w-[22px] h-[22px] text-red-600 dark:text-red-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
-        </Link>
 
       </div>
     </nav>
