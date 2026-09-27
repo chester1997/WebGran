@@ -58,7 +58,7 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
 
   return (
     <header className="shrink-0 sticky top-2 z-40 w-full max-w-[460px] mx-auto px-4 select-none bg-transparent border-none shadow-none">
-      <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-[#111214]/80 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm dark:shadow-black/30 transition-colors duration-200">
+      <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white/80 dark:bg-[#111214]/80 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm dark:shadow-black/30 transition-colors duration-200">
         {/* Left: User Profile */}
         <Link href={`/miniapp/${storeSlug}/profile`} className="flex items-center gap-2.5 group select-none min-w-0">
           {userPhoto ? (
