@@ -186,15 +186,19 @@ html.light .fixed.inset-0.bg-gradient-to-b {
 }
 
 /* 3. Header & Bottom Navigation Bars */
-html.light header,
-html.light nav {
+html.light header {
   background-color: rgba(255, 255, 255, 0.95) !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
+html.light nav {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
 html.light header span,
-html.light header a span,
-html.light nav span {
+html.light header a span {
   color: #09090b !important;
 }
 
