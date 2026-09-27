@@ -1,3 +1,5 @@
+import * as tus from "tus-js-client";
+
 export interface UploadProgress {
   bytesUploaded: number;
   totalBytes: number;
@@ -6,74 +8,83 @@ export interface UploadProgress {
 
 export interface DirectUploadOptions {
   file: File;
-  uploadUrl: string;
+  tusUploadUrl?: string;
+  uploadUrl?: string;
   headers: Record<string, string>;
   onProgress?: (progress: UploadProgress) => void;
   signal?: AbortSignal;
 }
 
 /**
- * Uploads a video file directly from the browser to Bunny Stream using XMLHttpRequest
- * (to track real-time byte progress) and presigned authorization headers.
- * NEVER routes binary file payload through Vercel.
+ * Client-side TUS Resumable Video Uploader for Bunny Stream.
+ * Uploads directly from browser to Bunny Stream TUS endpoint (https://video.bunnycdn.com/tusupload)
+ * using presigned authorization headers. Binary file payload NEVER passes through Vercel.
  */
-export function uploadVideoDirectly({
-  file,
-  uploadUrl,
-  headers,
-  onProgress,
-  signal,
-}: DirectUploadOptions): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+export class TusVideoUploader {
+  private upload: tus.Upload | null = null;
 
-    if (signal) {
-      signal.addEventListener("abort", () => {
-        xhr.abort();
-        reject(new Error("Upload cancelado pelo usuário."));
-      });
-    }
+  public uploadVideo({
+    file,
+    tusUploadUrl = "https://video.bunnycdn.com/tusupload",
+    headers,
+    onProgress,
+    signal,
+  }: DirectUploadOptions): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        return reject(new Error("Upload cancelado pelo usuário."));
+      }
 
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable && onProgress) {
-        const percentage = Math.round((e.loaded / e.total) * 100);
-        onProgress({
-          bytesUploaded: e.loaded,
-          totalBytes: e.total,
-          percentage,
+      if (signal) {
+        signal.addEventListener("abort", () => {
+          this.abort();
+          reject(new Error("Upload cancelado pelo usuário."));
         });
       }
+
+      this.upload = new tus.Upload(file, {
+        endpoint: tusUploadUrl,
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        headers,
+        chunkSize: 5 * 1024 * 1024, // 5MB chunk size recommended for Bunny Stream TUS
+        metadata: {
+          filename: file.name,
+          filetype: file.type || "video/mp4",
+        },
+        onError: (error) => {
+          let msg = error?.message || "Erro no upload resumível (TUS) para o Bunny Stream.";
+          reject(new Error(msg));
+        },
+        onProgress: (bytesUploaded, totalBytes) => {
+          if (onProgress && totalBytes > 0) {
+            const percentage = Math.round((bytesUploaded / totalBytes) * 100);
+            onProgress({
+              bytesUploaded,
+              totalBytes,
+              percentage,
+            });
+          }
+        },
+        onSuccess: () => {
+          resolve();
+        },
+      });
+
+      this.upload.start();
     });
+  }
 
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        let errMessage = `Falha no upload direto para o Bunny Stream (HTTP ${xhr.status})`;
-        try {
-          const resp = JSON.parse(xhr.responseText);
-          if (resp.message) errMessage = resp.message;
-        } catch (_) {}
-        reject(new Error(errMessage));
-      }
-    });
+  public abort(): void {
+    if (this.upload) {
+      this.upload.abort();
+    }
+  }
+}
 
-    xhr.addEventListener("error", () => {
-      reject(new Error("Erro de rede durante o upload direto para o Bunny Stream."));
-    });
-
-    xhr.addEventListener("abort", () => {
-      reject(new Error("Upload cancelado."));
-    });
-
-    xhr.open("PUT", uploadUrl, true);
-
-    // Attach presigned authorization headers (AuthorizationSignature, AuthorizationExpire, VideoId, LibraryId)
-    Object.entries(headers).forEach(([key, val]) => {
-      xhr.setRequestHeader(key, val);
-    });
-
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    xhr.send(file);
-  });
+/**
+ * Functional helper wrapper for TUS direct upload.
+ */
+export function uploadVideoDirectly(options: DirectUploadOptions): Promise<void> {
+  const uploader = new TusVideoUploader();
+  return uploader.uploadVideo(options);
 }

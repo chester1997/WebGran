@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BunnyStreamService } from "../stream";
-import { resolveClipStatusTransition } from "../webhook-utils";
+import { TusVideoUploader } from "../client-upload";
 
-describe("Bunny Stream Direct Upload Signature & Security", () => {
+describe("Bunny Stream Direct Upload Signature & TUS Security", () => {
   const mockLibraryId = "763931";
   const mockApiKey = "23d07e69-8a7f-4227-b0edbd3591e8-a312-4772";
   const mockCdnHostname = "vz-73b50578-eab.b-cdn.net";
@@ -13,7 +13,7 @@ describe("Bunny Stream Direct Upload Signature & Security", () => {
     process.env.BUNNY_STREAM_CDN_HOSTNAME = mockCdnHostname;
   });
 
-  it("generates direct upload signature without exposing administrative API key", () => {
+  it("generates TUS direct upload signature without exposing administrative API key", () => {
     const videoId = "test-video-guid-12345";
     const session = BunnyStreamService.generateDirectUploadSignature(videoId);
 
@@ -21,7 +21,7 @@ describe("Bunny Stream Direct Upload Signature & Security", () => {
     expect(session.libraryId).toBe(mockLibraryId);
     expect(session.signature).toBeDefined();
     expect(session.expirationTime).toBeGreaterThan(Math.floor(Date.now() / 1000));
-    expect(session.uploadUrl).toBe(`https://video.bunnycdn.com/library/${mockLibraryId}/videos/${videoId}`);
+    expect(session.tusUploadUrl).toBe("https://video.bunnycdn.com/tusupload");
     expect(session.headers.AuthorizationSignature).toBe(session.signature);
     expect(session.headers.VideoId).toBe(videoId);
     expect(session.headers.LibraryId).toBe(mockLibraryId);
@@ -29,6 +29,13 @@ describe("Bunny Stream Direct Upload Signature & Security", () => {
     // CRITICAL SECURITY ASSERTION: Administrative API key MUST NOT appear in returned session object
     const sessionJsonStr = JSON.stringify(session);
     expect(sessionJsonStr).not.toContain(mockApiKey);
+  });
+
+  it("instantiates TusVideoUploader and supports aborting uploads", () => {
+    const uploader = new TusVideoUploader();
+    expect(uploader).toBeDefined();
+    expect(typeof uploader.abort).toBe("function");
+    expect(() => uploader.abort()).not.toThrow();
   });
 });
 

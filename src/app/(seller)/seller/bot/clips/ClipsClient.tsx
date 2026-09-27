@@ -22,7 +22,7 @@ import {
   FileVideo,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { uploadVideoDirectly } from "@/lib/bunny/client-upload";
+import { TusVideoUploader, uploadVideoDirectly } from "@/lib/bunny/client-upload";
 
 export interface ClipItem {
   id: string;
@@ -295,22 +295,26 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
 
       const { uploadSession, clip } = sessionData;
 
-      // Step 2: Browser -> Bunny Stream Direct HTTP PUT Upload
+      // Step 2: Browser -> Bunny Stream Direct TUS Resumable Upload
       setUploadStep("UPLOADING");
-      setUploadProgressText("Enviando vídeo diretamente para o Bunny Stream...");
+      setUploadProgressText("Enviando vídeo diretamente para o Bunny Stream (TUS)...");
 
       uploadAbortControllerRef.current = new AbortController();
+      const uploader = new TusVideoUploader();
+      uploadAbortControllerRef.current.signal.addEventListener("abort", () => {
+        uploader.abort();
+      });
 
-      await uploadVideoDirectly({
+      await uploader.uploadVideo({
         file: selectedFile,
-        uploadUrl: uploadSession.uploadUrl,
+        tusUploadUrl: uploadSession.tusUploadUrl || "https://video.bunnycdn.com/tusupload",
         headers: uploadSession.headers,
         signal: uploadAbortControllerRef.current.signal,
         onProgress: (p) => {
           setUploadProgressPercent(p.percentage);
           const uploadedMB = (p.bytesUploaded / (1024 * 1024)).toFixed(1);
           const totalMB = (p.totalBytes / (1024 * 1024)).toFixed(1);
-          setUploadProgressText(`Enviando vídeo: ${uploadedMB} MB de ${totalMB} MB (${p.percentage}%)`);
+          setUploadProgressText(`Enviando vídeo (TUS): ${uploadedMB} MB de ${totalMB} MB (${p.percentage}%)`);
         },
       });
 
