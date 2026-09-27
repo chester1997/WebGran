@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { X } from "lucide-react";
 
 interface NotificationItem {
   id: string;
@@ -57,7 +58,6 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
 
   // Handle display logic & page routing
   useEffect(() => {
-    // Clear any existing timers
     if (displayTimeoutRef.current) clearTimeout(displayTimeoutRef.current);
     if (intervalTimeoutRef.current) clearTimeout(intervalTimeoutRef.current);
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
@@ -69,7 +69,6 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
       return;
     }
 
-    // Determine current page type
     const isHome = pathname === `/miniapp/${storeSlug}` || pathname === `/miniapp/${storeSlug}/`;
     const isProduct = pathname.includes(`/miniapp/${storeSlug}/product/`);
     const isCategory = pathname.includes(`/miniapp/${storeSlug}/category/`);
@@ -90,22 +89,17 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
     const scheduleNext = () => {
       if (!config.notifications.length) return;
 
-      // Pick next notification item (rotate or random)
       const item = config.notifications[activeIndex % config.notifications.length];
       activeIndex++;
 
-      // Generate random count between min and max
       const countMin = item.countMin || 5;
       const countMax = item.countMax || 18;
       const generatedCount = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
 
-      // Replace {count} in text
       let text = item.text.replace(/\{count\}/g, String(generatedCount));
 
-      // Handle product title display
       let showProductTitle: string | null = null;
       if (item.productTitle) {
-        // Only show productTitle on second line if not already mentioned in text
         if (!text.toLowerCase().includes(item.productTitle.toLowerCase())) {
           showProductTitle = item.productTitle;
         }
@@ -117,20 +111,16 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
         productTitle: showProductTitle,
       });
 
-      // Animate In
       setVisible(true);
 
-      // Display duration
       const displayMs = (config.displayDuration || 5) * 1000;
 
       displayTimeoutRef.current = setTimeout(() => {
-        // Animate Out
         setVisible(false);
 
         hideTimeoutRef.current = setTimeout(() => {
           setActiveToast(null);
 
-          // Calculate random next interval
           const minSec = config.intervalMin || 15;
           const maxSec = config.intervalMax || 30;
           const randomIntervalSec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
@@ -138,11 +128,10 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
           intervalTimeoutRef.current = setTimeout(() => {
             scheduleNext();
           }, randomIntervalSec * 1000);
-        }, 300); // 300ms transition time
+        }, 220);
       }, displayMs);
     };
 
-    // First appearance after a short initial delay (e.g. 3 seconds)
     intervalTimeoutRef.current = setTimeout(() => {
       scheduleNext();
     }, 3000);
@@ -154,85 +143,73 @@ export function FloatingPromotionNotification({ storeSlug }: { storeSlug: string
     };
   }, [config, pathname, storeSlug]);
 
+  const handleClose = () => {
+    setVisible(false);
+    if (displayTimeoutRef.current) clearTimeout(displayTimeoutRef.current);
+  };
+
   if (!activeToast) return null;
 
   return (
     <aside
       aria-live="polite"
       aria-atomic="true"
-      className="fixed z-40 pointer-events-none select-none overflow-hidden right-0 pr-3"
+      className="fixed z-40 pointer-events-none select-none right-3"
       style={{
-        top: "calc(52px + 8px + env(safe-area-inset-top, 0px))",
-        maxWidth: "100vw",
+        top: "calc(54px + 10px + env(safe-area-inset-top, 0px))",
       }}
     >
       <div
+        role="status"
         className={`
-          relative overflow-hidden
-          w-[min(265px,calc(100vw-24px))]
-          rounded-2xl
-          px-[11px] py-[9px]
-          flex items-start gap-[8px]
-          transition-all duration-300
+          pointer-events-auto relative overflow-hidden
+          w-[calc(100vw-24px)] max-w-[280px]
+          min-h-[54px] max-h-[68px]
+          rounded-2xl px-3 py-2.5
+          flex items-center gap-2.5
+          transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1)
           motion-reduce:transform-none motion-reduce:transition-opacity
-          
-          /* Liquid Glass Background - Dark Mode default */
-          bg-[rgba(20,20,25,0.52)]
-          border border-white/14
-          shadow-[0_12px_35px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)]
-          text-zinc-100
-          
-          /* Liquid Glass Background - Light Mode (.light parent override) */
-          [.light_&]:bg-[rgba(255,255,255,0.60)]
-          [.light_&]:border-[rgba(255,255,255,0.65)]
-          [.light_&]:shadow-[0_10px_30px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.80)]
-          [.light_&]:text-zinc-900
 
-          /* Real Glass Backdrop Blur */
-          backdrop-blur-[20px] backdrop-saturate-[150%]
-          [-webkit-backdrop-filter:blur(20px)_saturate(150%)]
+          /* Liquid Glass Background - Light & Dark Mode */
+          bg-white/80 dark:bg-zinc-900/80
+          border border-white/60 dark:border-white/12
+          backdrop-blur-xl backdrop-saturate-150
+          shadow-[0_6px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.30)]
 
-          /* Glass Reflection Glare Overlay */
-          before:absolute before:inset-0 before:pointer-events-none
-          before:bg-[linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.02)_40%,transparent_70%)]
-          [.light_&]:before:bg-[linear-gradient(135deg,rgba(255,255,255,0.45),rgba(255,255,255,0.12)_40%,transparent_70%)]
-
-          ${visible
-            ? "translate-x-0 scale-100 opacity-100 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            : "translate-x-[calc(100%+24px)] scale-[0.98] opacity-0 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          ${
+            visible
+              ? "translate-x-0 opacity-100"
+              : "translate-x-3 opacity-0"
           }
         `}
-        role="status"
       >
-        {/* Subtle Accent Left Pillar Bar */}
-        <span
-          aria-hidden="true"
-          className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-        />
-
-        {/* Icon — inline, integrated directly into text flow */}
-        <span
-          aria-hidden="true"
-          className="text-[19px] leading-none mt-[1px] shrink-0"
-        >
+        {/* Left Icon Area (32px) */}
+        <div className="w-8 h-8 rounded-xl shrink-0 bg-zinc-100 dark:bg-white/10 border border-black/5 dark:border-white/10 flex items-center justify-center text-sm shadow-sm">
           {activeToast.icon}
-        </span>
+        </div>
 
-        {/* Text content block */}
-        <div className="flex flex-col min-w-0 flex-1 relative z-10">
-          <p className="text-[13px] font-semibold leading-[1.25] text-zinc-100 [.light_&]:text-zinc-900 break-words drop-shadow-sm">
+        {/* Text Content */}
+        <div className="flex flex-col min-w-0 flex-1 pr-4">
+          <p className="text-[11px] font-semibold leading-tight text-zinc-900 dark:text-zinc-100 truncate">
             {activeToast.text}
           </p>
           {activeToast.productTitle && (
-            <p className="text-[11px] font-semibold text-red-400 [.light_&]:text-red-500 mt-0.5 truncate">
+            <p className="text-[10px] font-medium leading-tight text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
               {activeToast.productTitle}
             </p>
           )}
         </div>
+
+        {/* Close Button ("×") */}
+        <button
+          onClick={handleClose}
+          type="button"
+          aria-label="Fechar notificação"
+          className="absolute top-1.5 right-1.5 p-1 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
     </aside>
   );
 }
-
-
-
