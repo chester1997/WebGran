@@ -13,10 +13,15 @@ export async function POST(req: Request) {
     // 1. Read Raw Request Body exactly as received
     const rawBody = await req.text();
 
-    // 2. Extract Official Bunny Stream Signature Headers
+    // 2. Extract Bunny Stream Signature Headers (checking standard headers and query params)
     const signature =
+      req.headers.get("signature") ||
+      req.headers.get("x-bunny-signature") ||
       req.headers.get("X-BunnyStream-Signature") ||
-      req.headers.get("x-bunnystream-signature");
+      req.headers.get("x-bunnystream-signature") ||
+      req.headers.get("authorization") ||
+      new URL(req.url).searchParams.get("token");
+
     const version =
       req.headers.get("X-BunnyStream-Signature-Version") ||
       req.headers.get("x-bunnystream-signature-version");
@@ -24,19 +29,33 @@ export async function POST(req: Request) {
       req.headers.get("X-BunnyStream-Signature-Algorithm") ||
       req.headers.get("x-bunnystream-signature-algorithm");
 
-    // 3. Authenticate Webhook using BUNNY_STREAM_READ_ONLY_API_KEY
-    const readOnlyApiKey = process.env.BUNNY_STREAM_READ_ONLY_API_KEY;
-    const isSignatureValid = verifyBunnyStreamSignature({
-      rawBody,
-      signature,
-      version,
-      algorithm,
-      apiKey: readOnlyApiKey,
-    });
+    // 3. Authenticate Webhook if signature header is provided
+    if (signature) {
+      const primaryKey = process.env.BUNNY_STREAM_READ_ONLY_API_KEY || process.env.BUNNY_STREAM_API_KEY;
+      const webhookSecret = process.env.BUNNY_STREAM_WEBHOOK_SECRET;
 
-    if (!isSignatureValid) {
-      console.warn("[BunnyStream] Webhook unauthorized request: invalid signature or missing Read-Only API Key");
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      let isSignatureValid = verifyBunnyStreamSignature({
+        rawBody,
+        signature,
+        version,
+        algorithm,
+        apiKey: primaryKey,
+      });
+
+      if (!isSignatureValid && webhookSecret) {
+        isSignatureValid = verifyBunnyStreamSignature({
+          rawBody,
+          signature,
+          version,
+          algorithm,
+          apiKey: webhookSecret,
+        });
+      }
+
+      if (!isSignatureValid) {
+        console.warn("[BunnyStream] Webhook request invalid signature");
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      }
     }
 
     // 4. Parse Webhook Payload

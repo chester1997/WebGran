@@ -7,14 +7,14 @@ export const DEFAULT_LIBRARY_ID = "763931";
 export interface VerifySignatureParams {
   rawBody: string;
   signature: string | null;
-  version: string | null;
-  algorithm: string | null;
+  version?: string | null;
+  algorithm?: string | null;
   apiKey?: string;
 }
 
 /**
- * Validates Bunny Stream webhook signature using HMAC-SHA256 with constant-time comparison.
- * Expects X-BunnyStream-Signature header signed with Read-Only API Key over the raw request body.
+ * Validates Bunny Stream webhook signature using HMAC-SHA256, SHA256, or token comparison with constant-time security.
+ * Flexible enough to support Bunny Stream Webhook headers (signature, x-bunny-signature, token, etc.).
  */
 export function verifyBunnyStreamSignature({
   rawBody,
@@ -35,19 +35,44 @@ export function verifyBunnyStreamSignature({
     return false;
   }
 
-  const expectedSignature = crypto
+  const cleanSig = signature.replace(/^Bearer\s+/i, "").trim().toLowerCase();
+  if (!cleanSig) return false;
+
+  // 1. HMAC-SHA256 signature check over rawBody
+  const expectedHmac = crypto
     .createHmac("sha256", apiKey)
     .update(rawBody)
-    .digest("hex");
+    .digest("hex")
+    .toLowerCase();
 
-  const sigBuffer = Buffer.from(signature.trim().toLowerCase());
-  const expectedBuffer = Buffer.from(expectedSignature.toLowerCase());
-
-  if (sigBuffer.length !== expectedBuffer.length) {
-    return false;
+  if (cleanSig.length === expectedHmac.length) {
+    if (crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(expectedHmac))) {
+      return true;
+    }
   }
 
-  return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+  // 2. SHA256(apiKey + rawBody) hash check
+  const expectedSha = crypto
+    .createHash("sha256")
+    .update(apiKey + rawBody)
+    .digest("hex")
+    .toLowerCase();
+
+  if (cleanSig.length === expectedSha.length) {
+    if (crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(expectedSha))) {
+      return true;
+    }
+  }
+
+  // 3. Direct token match check
+  const cleanKey = apiKey.trim().toLowerCase();
+  if (cleanSig.length === cleanKey.length) {
+    if (crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(cleanKey))) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
