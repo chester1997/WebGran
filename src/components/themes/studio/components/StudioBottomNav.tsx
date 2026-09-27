@@ -52,7 +52,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                      border border-white/30 dark:border-white/10
                      shadow-lg shadow-black/10 dark:shadow-black/40"
         >
-          {/* 1. Explorar — ICON ONLY */}
+          {/* 1. Explorar */}
           <Link
             href={`${basePath}/search`}
             prefetch={true}
@@ -60,18 +60,21 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             aria-label="Explorar"
             className="relative z-10 flex items-center justify-center transition-transform duration-100 active:scale-95 group"
           >
-            <div
-              className={`w-[42px] h-[42px] rounded-full flex items-center justify-center transition-all duration-150 ${
-                activeExplorar
-                  ? "bg-white/70 dark:bg-white/20 border border-white/40 dark:border-white/20 text-red-600 dark:text-red-400 shadow-sm"
-                  : "text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
-              }`}
-            >
-              <Compass className="w-[20px] h-[20px]" strokeWidth={activeExplorar ? 2.0 : 1.8} />
-            </div>
+            {activeExplorar ? (
+              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40 transition-all duration-150">
+                <Compass className="w-[20px] h-[20px] stroke-[2] shrink-0" />
+                <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
+                  Explorar
+                </span>
+              </div>
+            ) : (
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-150">
+                <Compass className="w-[20px] h-[20px]" strokeWidth={1.8} />
+              </div>
+            )}
           </Link>
 
-          {/* 2. Início — ICON + NAME ("Início") */}
+          {/* 2. Início */}
           <Link
             href={basePath}
             prefetch={true}
@@ -79,21 +82,21 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             aria-label="Início"
             className="relative z-10 flex items-center justify-center transition-transform duration-100 active:scale-95 group"
           >
-            <div
-              className={`h-[42px] px-3.5 rounded-full flex items-center gap-2 text-white transition-all duration-150 ${
-                activeHome
-                  ? "bg-red-600 shadow-md shadow-red-600/40"
-                  : "bg-red-600/90 hover:bg-red-600 shadow-md shadow-red-600/30 group-hover:scale-105"
-              }`}
-            >
-              <Home className="w-[20px] h-[20px] stroke-[2] shrink-0" />
-              <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
-                Início
-              </span>
-            </div>
+            {activeHome ? (
+              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40 transition-all duration-150">
+                <Home className="w-[20px] h-[20px] stroke-[2] shrink-0" />
+                <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
+                  Início
+                </span>
+              </div>
+            ) : (
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-150">
+                <Home className="w-[20px] h-[20px]" strokeWidth={1.8} />
+              </div>
+            )}
           </Link>
 
-          {/* 3. Carrinho — ICON ONLY */}
+          {/* 3. Carrinho */}
           <Link
             href={`${basePath}/cart`}
             prefetch={true}
@@ -101,18 +104,24 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             aria-label="Carrinho"
             className="relative z-10 flex items-center justify-center transition-transform duration-100 active:scale-95 group"
           >
-            <div
-              className={`w-[42px] h-[42px] rounded-full flex items-center justify-center transition-all duration-150 ${
-                activeCart
-                  ? "bg-white/70 dark:bg-white/20 border border-white/40 dark:border-white/20 text-red-600 dark:text-red-400 shadow-sm"
-                  : "text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
-              }`}
-            >
-              <div className="relative flex items-center justify-center">
-                <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={activeCart ? 2.0 : 1.8} />
-                <CartBadge />
+            {activeCart ? (
+              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40 transition-all duration-150">
+                <div className="relative flex items-center justify-center shrink-0">
+                  <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={2.0} />
+                  <CartBadge />
+                </div>
+                <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
+                  Carrinho
+                </span>
               </div>
-            </div>
+            ) : (
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-150">
+                <div className="relative flex items-center justify-center">
+                  <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={1.8} />
+                  <CartBadge />
+                </div>
+              </div>
+            )}
           </Link>
         </div>
 
