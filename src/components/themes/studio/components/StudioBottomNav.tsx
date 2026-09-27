@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ShoppingCart, Compass, Plus } from "lucide-react";
+import { Home, ShoppingCart, Compass, Film } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -25,6 +25,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const activeHome      = (activeHref === basePath || activeHref === `${basePath}/`);
   const activeExplorar  = activeHref.startsWith(`${basePath}/search`);
   const activeCart      = activeHref.startsWith(`${basePath}/cart`);
+  const activeClips     = activeHref.startsWith(`${basePath}/clips`);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     setActiveHref(href);
@@ -119,19 +120,21 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           </Link>
         </div>
 
-        {/* B) SEPARATED CIRCULAR "+" BUTTON — ANCHORED AT FAR RIGHT EDGE */}
+        {/* B) SEPARATED CIRCULAR CLIPS BUTTON — ANCHORED AT FAR RIGHT EDGE */}
         <Link
-          href={`${basePath}/search`}
+          href={`${basePath}/clips`}
           prefetch={true}
-          onClick={(e) => handleNavClick(e, `${basePath}/search`)}
-          aria-label="Adicionar / Explorar"
-          className="relative w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center
-                     bg-white/50 dark:bg-black/40
-                     backdrop-blur-md
-                     border border-white/30 dark:border-white/10
-                     shadow-lg shadow-black/10 dark:shadow-black/40"
+          onClick={(e) => handleNavClick(e, `${basePath}/clips`)}
+          aria-label="Clips"
+          className={`relative w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center
+                     backdrop-blur-md transition-all duration-200
+                     border shadow-lg ${
+                       activeClips
+                         ? "bg-red-600 border-red-500 text-white shadow-red-600/40"
+                         : "bg-white/50 dark:bg-black/40 border-white/30 dark:border-white/10 shadow-black/10 dark:shadow-black/40 text-red-600 dark:text-red-500 hover:text-red-500"
+                     }`}
         >
-          <Plus className="relative z-10 w-[24px] h-[24px] text-red-600 dark:text-red-500" strokeWidth={2.2} />
+          <Film className="relative z-10 w-[24px] h-[24px]" strokeWidth={2.2} />
         </Link>
 
       </div>

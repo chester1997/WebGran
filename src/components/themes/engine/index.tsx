@@ -89,3 +89,14 @@ export async function ThemeEngineCategory({ storeSlug, categorySlug }: { storeSl
   const { StudioCategory } = await import("../studio/views/StudioCategory");
   return <StudioCategory storeSlug={storeSlug} categorySlug={categorySlug} />;
 }
+
+export async function ThemeEngineClips({ storeSlug }: { storeSlug: string }) {
+  const theme = await getResolvedThemeSlug(storeSlug);
+  if (theme === 'studio') {
+    const { StudioClips } = await import("../studio/views/StudioClips");
+    return <StudioClips storeSlug={storeSlug} />;
+  }
+  const { StudioClips } = await import("../studio/views/StudioClips");
+  return <StudioClips storeSlug={storeSlug} />;
+}
+
