@@ -307,6 +307,7 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   banners: many(banners),
   coupons: many(coupons),
   floatingNotifications: many(storeFloatingNotifications),
+  clips: many(clips),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -556,5 +557,32 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
   subscription: one(subscriptions, {
     fields: [invoices.subscriptionId],
     references: [subscriptions.id],
+  }),
+}));
+
+export const clips = pgTable('clips', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  bunnyVideoId: text('bunny_video_id').notNull(),
+  thumbnailUrl: text('thumbnail_url'),
+  duration: integer('duration'),
+  status: text('status').notNull().default('UPLOADING'), // 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
+  position: integer('position').notNull().default(0),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  bunnyVideoIdIdx: index('clips_bunny_video_id_idx').on(t.bunnyVideoId),
+  storeIdIdx: index('clips_store_id_idx').on(t.storeId),
+  statusIdx: index('clips_status_idx').on(t.status),
+  storePositionIdx: index('clips_store_position_idx').on(t.storeId, t.position),
+}));
+
+export const clipsRelations = relations(clips, ({ one }) => ({
+  store: one(stores, {
+    fields: [clips.storeId],
+    references: [stores.id],
   }),
 }));
