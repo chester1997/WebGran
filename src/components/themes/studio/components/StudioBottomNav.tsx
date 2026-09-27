@@ -58,17 +58,14 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             prefetch={true}
             onClick={(e) => handleNavClick(e, `${basePath}/search`)}
             aria-label="Explorar"
-            className="relative z-10 flex items-center justify-center transition-transform duration-100 active:scale-95 group"
+            className="relative z-10 flex items-center justify-center"
           >
             {activeExplorar ? (
-              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40 transition-all duration-150">
-                <Compass className="w-[20px] h-[20px] stroke-[2] shrink-0" />
-                <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
-                  Explorar
-                </span>
+              <div className="w-[42px] h-[42px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/40">
+                <Compass className="w-[20px] h-[20px] stroke-[2]" />
               </div>
             ) : (
-              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-150">
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white">
                 <Compass className="w-[20px] h-[20px]" strokeWidth={1.8} />
               </div>
             )}
@@ -80,17 +77,17 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             prefetch={true}
             onClick={(e) => handleNavClick(e, basePath)}
             aria-label="Início"
-            className="relative z-10 flex items-center justify-center transition-transform duration-100 active:scale-95 group"
+            className="relative z-10 flex items-center justify-center"
           >
             {activeHome ? (
-              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40 transition-all duration-150">
+              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40">
                 <Home className="w-[20px] h-[20px] stroke-[2] shrink-0" />
                 <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
                   Início
                 </span>
               </div>
             ) : (
-              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-150">
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white">
                 <Home className="w-[20px] h-[20px]" strokeWidth={1.8} />
               </div>
             )}
@@ -102,20 +99,17 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             prefetch={true}
             onClick={(e) => handleNavClick(e, `${basePath}/cart`)}
             aria-label="Carrinho"
-            className="relative z-10 flex items-center justify-center transition-transform duration-100 active:scale-95 group"
+            className="relative z-10 flex items-center justify-center"
           >
             {activeCart ? (
-              <div className="h-[42px] px-3.5 rounded-full bg-red-600 text-white font-semibold flex items-center gap-2 shadow-md shadow-red-600/40 transition-all duration-150">
-                <div className="relative flex items-center justify-center shrink-0">
+              <div className="w-[42px] h-[42px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/40">
+                <div className="relative flex items-center justify-center">
                   <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={2.0} />
                   <CartBadge />
                 </div>
-                <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
-                  Carrinho
-                </span>
               </div>
             ) : (
-              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-150">
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white">
                 <div className="relative flex items-center justify-center">
                   <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={1.8} />
                   <CartBadge />
@@ -132,13 +126,12 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           onClick={(e) => handleNavClick(e, `${basePath}/search`)}
           aria-label="Adicionar / Explorar"
           className="relative w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center
-                     transition-transform duration-100 active:scale-95 group
                      bg-white/50 dark:bg-black/40
                      backdrop-blur-md
                      border border-white/30 dark:border-white/10
                      shadow-lg shadow-black/10 dark:shadow-black/40"
         >
-          <Plus className="relative z-10 w-[24px] h-[24px] text-red-600 dark:text-red-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
+          <Plus className="relative z-10 w-[24px] h-[24px] text-red-600 dark:text-red-500" strokeWidth={2.2} />
         </Link>
 
       </div>
