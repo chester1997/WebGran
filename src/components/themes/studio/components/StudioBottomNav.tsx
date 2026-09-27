@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, ShoppingCart, Compass, Plus } from "lucide-react";
@@ -14,9 +14,16 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const pathname = usePathname() || "";
   const basePath = `/miniapp/${storeSlug}`;
 
-  const isHome      = pathname === basePath || pathname === `${basePath}/`;
-  const isExplorar  = pathname.startsWith(`${basePath}/search`);
-  const isCart      = pathname.startsWith(`${basePath}/cart`);
+  // Optimistic UI state for 0ms instant touch feedback
+  const [activeHref, setActiveHref] = useState<string>(pathname);
+
+  useEffect(() => {
+    setActiveHref(pathname);
+  }, [pathname]);
+
+  const isHome      = (activeHref === basePath || activeHref === `${basePath}/`);
+  const isExplorar  = activeHref.startsWith(`${basePath}/search`);
+  const isCart      = activeHref.startsWith(`${basePath}/cart`);
 
   // Main Pill Items: Explorar (Esquerda), Início (Centro/Destaque), Carrinho (Direita)
   const navItems = [
@@ -36,10 +43,10 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
         {/* LEFT SPACER — Keeps main pill perfectly centered */}
         <div className="w-[52px] h-[52px] shrink-0 invisible pointer-events-none" aria-hidden="true" />
 
-        {/* A) MAIN PILL CAPSULE — FLUID SMOOTH GLASS DOCK (54px Height) */}
+        {/* A) MAIN PILL CAPSULE — INSTANT 0MS OPTIMISTIC DOCK GLASS */}
         <div
           className="relative flex items-center justify-around h-[54px] px-2 py-1.5 rounded-full 
-                     transition-all duration-300 ease-out gap-1.5
+                     transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] gap-1.5
                      
                      /* Clean Liquid Glass Base */
                      bg-white/50 dark:bg-black/40
@@ -58,11 +65,13 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
               <Link
                 key={item.label}
                 href={item.href}
+                prefetch={true}
+                onClick={() => setActiveHref(item.href)}
                 aria-label={item.label}
-                className="relative z-10 flex items-center justify-center transition-all duration-300 ease-out active:scale-95 group"
+                className="relative z-10 flex items-center justify-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-95 group"
               >
                 <div
-                  className={`h-[42px] rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
+                  className={`h-[42px] rounded-full flex items-center justify-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     item.isCentral
                       ? item.isActive
                         ? "bg-red-600 text-white px-3.5 shadow-md shadow-red-600/40"
@@ -74,7 +83,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 >
                   <div className="relative flex items-center justify-center shrink-0">
                     <Icon
-                      className={`w-[20px] h-[20px] transition-transform duration-300 ease-out ${
+                      className={`w-[20px] h-[20px] transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                         item.isActive ? "scale-105" : ""
                       }`}
                       strokeWidth={item.isActive ? 2.0 : 1.8}
@@ -82,9 +91,9 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                     {item.badge && <CartBadge />}
                   </div>
 
-                  {/* Ultra-smooth Label Expand & Fade Transition */}
+                  {/* 0ms Instant Expand & Fade Label */}
                   <div
-                    className={`overflow-hidden transition-all duration-300 ease-out flex items-center ${
+                    className={`overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center ${
                       item.isActive
                         ? "max-w-[100px] opacity-100 ml-2"
                         : "max-w-0 opacity-0 ml-0"
@@ -103,6 +112,8 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
         {/* B) SEPARATED CIRCULAR "+" BUTTON — 52px LARGER CIRCLE */}
         <Link
           href={`${basePath}/search`}
+          prefetch={true}
+          onClick={() => setActiveHref(`${basePath}/search`)}
           aria-label="Adicionar / Explorar"
           className="relative w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center
                      transition-all duration-200 active:scale-95 group
