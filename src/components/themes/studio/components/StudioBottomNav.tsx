@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, LibraryBig, Compass } from "lucide-react";
+import { Home, Heart, ShoppingCart, LibraryBig, Compass } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -15,100 +15,99 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const basePath = `/miniapp/${storeSlug}`;
 
   const isHome      = pathname === basePath || pathname === `${basePath}/`;
+  const isFavorites = pathname.startsWith(`${basePath}/favorites`);
   const isSearch    = pathname.startsWith(`${basePath}/search`);
-  const isCart      = pathname.startsWith(`${basePath}/cart`);
   const isAccesses  = pathname.startsWith(`${basePath}/accesses`);
+  const isCart      = pathname.startsWith(`${basePath}/cart`);
 
-  // Left items
-  const leftItems = [
-    { label: "Início", href: basePath, icon: Home, isActive: isHome },
-  ];
-
-  // Right items — Acessos + Carrinho
-  const rightItems = [
-    { label: "Acessos",  href: `${basePath}/accesses`, icon: LibraryBig,   isActive: isAccesses, badge: false },
-    { label: "Carrinho", href: `${basePath}/cart`,     icon: ShoppingCart,  isActive: isCart,     badge: true  },
+  const navItems = [
+    { label: "Início",     href: basePath,                icon: Home,       isActive: isHome,      badge: false, isCenter: false },
+    { label: "Favoritos",  href: `${basePath}/favorites`, icon: Heart,      isActive: isFavorites, badge: false, isCenter: false },
+    { label: "Explorar",   href: `${basePath}/search`,    icon: Compass,    isActive: isSearch,    badge: false, isCenter: true  },
+    { label: "Acessos",    href: `${basePath}/accesses`,  icon: LibraryBig,  isActive: isAccesses,  badge: false, isCenter: false },
+    { label: "Carrinho",   href: `${basePath}/cart`,      icon: ShoppingCart, isActive: isCart,      badge: true,  isCenter: false },
   ];
 
   return (
     <nav
       aria-label="Navegação inferior"
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-end"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))]"
     >
-      <div className="w-full h-[68px] bg-white/95 dark:bg-[#0d0e10]/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/8 flex items-center px-2 relative transition-colors duration-200">
+      {/* Liquid Glass Pill Container */}
+      <div
+        className="pointer-events-auto w-[calc(100%-20px)] max-w-md h-[64px] px-1.5 rounded-full 
+                   bg-white/75 dark:bg-zinc-900/65 
+                   backdrop-blur-xl backdrop-saturate-150
+                   border border-white/60 dark:border-white/12 
+                   shadow-[0_8px_32px_rgba(0,0,0,0.12),0_1px_2px_rgba(255,255,255,0.8)_inset] 
+                   dark:shadow-[0_8px_32px_rgba(0,0,0,0.45),0_1px_1px_rgba(255,255,255,0.08)_inset] 
+                   flex items-center justify-between transition-all duration-200 select-none"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
 
-        {/* Left: Início */}
-        <div className="flex items-center flex-1 justify-around">
-          {leftItems.map((item) => {
-            const Icon = item.icon;
+          if (item.isCenter) {
             return (
               <Link
                 key={item.label}
                 href={item.href}
                 aria-label={item.label}
-                className={`flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 select-none ${
-                  item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                }`}
+                className="flex-1 flex flex-col items-center justify-center py-1 transition-transform duration-150 active:scale-95 group"
               >
-                <Icon
-                  className={`w-[22px] h-[22px] transition-all duration-150 ${item.isActive ? "scale-110" : ""}`}
-                  strokeWidth={item.isActive ? 2 : 1.6}
-                />
-                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500"}`}>
+                <div
+                  className={`w-[42px] h-[42px] rounded-full flex items-center justify-center transition-all duration-200 ${
+                    item.isActive
+                      ? "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_0_16px_rgba(239,68,68,0.55)] scale-105"
+                      : "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.35)] group-hover:scale-105"
+                  }`}
+                >
+                  <Icon className="w-5 h-5 text-white stroke-[2.2]" />
+                </div>
+                <span
+                  className={`text-[10px] font-semibold mt-0.5 leading-none transition-colors ${
+                    item.isActive ? "text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
                   {item.label}
                 </span>
               </Link>
             );
-          })}
-        </div>
+          }
 
-        {/* Center — Explorar button, elevated */}
-        <div className="relative flex flex-col items-center justify-end pb-1 px-3" style={{ marginTop: "-20px" }}>
-          <Link
-            href={`${basePath}/search`}
-            aria-label="Explorar"
-            className={`flex items-center justify-center w-[54px] h-[54px] rounded-full transition-all duration-150 active:scale-95 select-none ${
-              isSearch
-                ? "bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.55)]"
-                : "bg-red-600 shadow-[0_4px_20px_rgba(239,68,68,0.35)] hover:bg-red-500"
-            }`}
-          >
-            <Compass className="w-7 h-7 text-white" strokeWidth={2} />
-          </Link>
-          <span className={`text-[10px] font-semibold mt-1.5 leading-none ${isSearch ? "text-red-500 dark:text-red-400" : "text-zinc-500"}`}>
-            Explorar
-          </span>
-        </div>
-
-        {/* Right: Acessos + Carrinho */}
-        <div className="flex items-center flex-1 justify-around">
-          {rightItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                aria-label={item.label}
-                className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 select-none ${
-                  item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              aria-label={item.label}
+              className="flex-1 flex items-center justify-center py-1"
+            >
+              <div
+                className={`w-full h-full min-h-[44px] px-1.5 py-1 rounded-full flex flex-col items-center justify-center gap-0.5 transition-all duration-200 active:scale-95 ${
+                  item.isActive
+                    ? "bg-black/8 dark:bg-white/12 text-red-600 dark:text-red-400 shadow-inner"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
                 }`}
               >
                 <div className="relative flex items-center justify-center">
                   <Icon
-                    className={`w-[22px] h-[22px] transition-all duration-150 ${item.isActive ? "scale-110" : ""}`}
-                    strokeWidth={item.isActive ? 2 : 1.6}
+                    className={`w-[19px] h-[19px] transition-transform duration-200 ${
+                      item.isActive ? "scale-110" : ""
+                    }`}
+                    strokeWidth={item.isActive ? 2.2 : 1.7}
                   />
                   {item.badge && <CartBadge />}
                 </div>
-                <span className={`text-[10px] font-semibold leading-none ${item.isActive ? "text-red-500 dark:text-red-400" : "text-zinc-500"}`}>
+                <span
+                  className={`text-[10px] leading-none transition-colors ${
+                    item.isActive ? "font-semibold text-red-600 dark:text-red-400" : "font-medium"
+                  }`}
+                >
                   {item.label}
                 </span>
-              </Link>
-            );
-          })}
-        </div>
-
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
