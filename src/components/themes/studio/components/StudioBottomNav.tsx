@@ -39,8 +39,11 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))]"
       style={{ backgroundColor: "transparent", border: "none", boxShadow: "none" }}
     >
-      <div className="pointer-events-auto flex items-center justify-center gap-2 select-none mx-auto max-w-[95vw]">
+      <div className="pointer-events-auto w-full max-w-[460px] px-4 mx-auto flex items-center justify-between select-none">
         
+        {/* LEFT SPACER — Keeps 3-button main pill mathematically 100% centered */}
+        <div className="w-[52px] h-[52px] shrink-0 invisible pointer-events-none" aria-hidden="true" />
+
         {/* A) MAIN PILL CAPSULE — 3 BUTTONS (EXPLORAR, INÍCIO, CARRINHO) */}
         <div
           className="relative flex items-center justify-around h-[54px] px-2 py-1.5 rounded-full gap-2
@@ -113,7 +116,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           </Link>
         </div>
 
-        {/* B) SEPARATED CIRCULAR "+" BUTTON */}
+        {/* B) SEPARATED CIRCULAR "+" BUTTON — ANCHORED AT FAR RIGHT EDGE */}
         <Link
           href={`${basePath}/search`}
           prefetch={true}
