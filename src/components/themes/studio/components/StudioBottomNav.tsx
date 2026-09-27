@@ -31,8 +31,11 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))]"
       style={{ backgroundColor: "transparent", border: "none", boxShadow: "none" }}
     >
-      <div className="pointer-events-auto flex items-center gap-2 select-none mx-auto max-w-[95vw]">
+      <div className="pointer-events-auto w-full max-w-[440px] px-4 mx-auto flex items-center justify-between select-none">
         
+        {/* LEFT SPACER — Keeps main pill perfectly centered */}
+        <div className="w-[48px] h-[48px] shrink-0 invisible pointer-events-none" aria-hidden="true" />
+
         {/* A) MAIN PILL CAPSULE — 3 BUTTONS (EXPLORAR, INÍCIO, CARRINHO) */}
         <div
           className="relative flex items-center justify-around h-[50px] px-2 py-1.5 rounded-full 
@@ -103,7 +106,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* B) SEPARATED CIRCULAR "+" BUTTON — ON THE RIGHT SIDE */}
+        {/* B) SEPARATED CIRCULAR "+" BUTTON — ANCHORED AT FAR RIGHT */}
         <Link
           href={`${basePath}/search`}
           aria-label="Adicionar / Explorar"
