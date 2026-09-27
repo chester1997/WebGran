@@ -18,11 +18,11 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const isExplorar  = pathname.startsWith(`${basePath}/search`);
   const isCart      = pathname.startsWith(`${basePath}/cart`);
 
-  // Main Pill Items: Início, Explorar, Carrinho
+  // Main Pill Items: Explorar (Esquerda), Início (Centro/Destaque), Carrinho (Direita)
   const navItems = [
-    { label: "Início",   href: basePath,             icon: Home,         isActive: isHome,     badge: false, isExplorar: false },
-    { label: "Explorar", href: `${basePath}/search`,  icon: Compass,      isActive: isExplorar, badge: false, isExplorar: true  },
-    { label: "Carrinho", href: `${basePath}/cart`,    icon: ShoppingCart, isActive: isCart,     badge: true,  isExplorar: false },
+    { label: "Explorar", href: `${basePath}/search`,  icon: Compass,      isActive: isExplorar, badge: false, isCentral: false },
+    { label: "Início",   href: basePath,             icon: Home,         isActive: isHome,     badge: false, isCentral: true  },
+    { label: "Carrinho", href: `${basePath}/cart`,    icon: ShoppingCart, isActive: isCart,     badge: true,  isCentral: false },
   ];
 
   return (
@@ -33,7 +33,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
     >
       <div className="pointer-events-auto flex items-center gap-2 select-none mx-auto max-w-[95vw]">
         
-        {/* A) MAIN PILL CAPSULE — CLEAN LIQUID GLASS WITH ACTIVE EXPANDING LABEL */}
+        {/* A) MAIN PILL CAPSULE — CLEAN LIQUID GLASS */}
         <div
           className="relative flex items-center justify-around h-[50px] px-2 py-1.5 rounded-full 
                      transition-all duration-300 gap-2
@@ -51,8 +51,8 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
 
-            // Explorar Item (Central Highlight inside Main Pill)
-            if (item.isExplorar) {
+            // Início Item (Central Highlight inside Main Pill)
+            if (item.isCentral) {
               return (
                 <Link
                   key={item.label}
@@ -61,12 +61,12 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                   className="relative z-10 flex items-center justify-center transition-all duration-300 active:scale-95 group"
                 >
                   {item.isActive ? (
-                    <div className="flex items-center gap-2 px-3.5 h-[38px] rounded-full bg-red-600 text-white font-semibold text-xs shadow-md shadow-red-600/30 transition-all duration-300">
+                    <div className="flex items-center gap-2 px-3.5 h-[38px] rounded-full bg-red-600 text-white font-semibold text-xs shadow-md shadow-red-600/40 transition-all duration-300">
                       <Icon className="w-[18px] h-[18px] text-white stroke-[2]" />
                       <span className="text-[12px] font-medium tracking-tight whitespace-nowrap">{item.label}</span>
                     </div>
                   ) : (
-                    <div className="w-[38px] h-[38px] rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-all duration-200">
+                    <div className="w-[38px] h-[38px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/30 group-hover:scale-105 transition-all duration-200">
                       <Icon className="w-[18px] h-[18px] text-white stroke-[2]" />
                     </div>
                   )}
@@ -74,7 +74,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
               );
             }
 
-            // Standard Nav Item (Início, Carrinho)
+            // Standard Nav Items (Explorar na Esquerda, Carrinho na Direita)
             return (
               <Link
                 key={item.label}
@@ -103,7 +103,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* B) SEPARATED CIRCULAR "+" BUTTON — CLEAN LIQUID GLASS */}
+        {/* B) SEPARATED CIRCULAR "+" BUTTON — CLEAN LIQUID GLASS WITH ALWAYS RED ICON */}
         <Link
           href={`${basePath}/search`}
           aria-label="Adicionar / Explorar"
@@ -118,10 +118,9 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                      border border-white/30 dark:border-white/10
                      
                      /* Soft Drop Shadow */
-                     shadow-lg shadow-black/10 dark:shadow-black/40
-                     text-red-600 dark:text-red-400"
+                     shadow-lg shadow-black/10 dark:shadow-black/40"
         >
-          <Plus className="relative z-10 w-[22px] h-[22px] transition-transform duration-200 group-hover:scale-110" strokeWidth={2.0} />
+          <Plus className="relative z-10 w-[22px] h-[22px] text-red-600 dark:text-red-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
         </Link>
 
       </div>
