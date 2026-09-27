@@ -105,14 +105,14 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
               <div className="w-[42px] h-[42px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/40">
                 <div className="relative flex items-center justify-center">
                   <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={2.0} />
-                  <CartBadge />
+                  <CartBadge active={true} />
                 </div>
               </div>
             ) : (
               <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white">
                 <div className="relative flex items-center justify-center">
                   <ShoppingCart className="w-[20px] h-[20px]" strokeWidth={1.8} />
-                  <CartBadge />
+                  <CartBadge active={false} />
                 </div>
               </div>
             )}
