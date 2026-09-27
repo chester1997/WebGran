@@ -12,21 +12,21 @@ export function CartBadge({ active = false }: CartBadgeProps) {
 
   if (itemCount === 0) return null;
 
-  const bg = active ? "#ffffff" : "#dc2626";
-  const fg = active ? "#cc0000" : "#ffffff";
-
   return (
     <div
-      className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-0.5 rounded-full flex items-center justify-center shadow-md z-20 pointer-events-none"
+      className={`absolute top-1 right-2 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+        active ? "bg-white !text-red-600" : "bg-red-600 !text-white"
+      }`}
       style={{
-        backgroundColor: bg,
+        backgroundColor: active ? "#ffffff" : "#dc2626",
+        color: active ? "#dc2626" : "#ffffff",
       }}
     >
       <span
-        className="text-[10px] font-black leading-none select-none tracking-tighter"
         style={{
-          color: fg,
+          color: active ? "#dc2626" : "#ffffff",
         }}
+        className={active ? "!text-red-600" : "!text-white"}
       >
         {itemCount > 9 ? "9+" : itemCount}
       </span>
