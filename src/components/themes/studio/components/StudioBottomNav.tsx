@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Heart, ShoppingCart, LibraryBig, Compass, Search } from "lucide-react";
+import { Home, ShoppingCart, Compass, Search } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -15,18 +15,14 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   const basePath = `/miniapp/${storeSlug}`;
 
   const isHome      = pathname === basePath || pathname === `${basePath}/`;
-  const isFavorites = pathname.startsWith(`${basePath}/favorites`);
   const isSearch    = pathname.startsWith(`${basePath}/search`);
-  const isAccesses  = pathname.startsWith(`${basePath}/accesses`);
   const isCart      = pathname.startsWith(`${basePath}/cart`);
 
-  // Main Pill 5 Items
+  // Main Pill Items: Início, Explorar, Carrinho
   const navItems = [
-    { label: "Início",     href: basePath,                icon: Home,       isActive: isHome,      badge: false, isExplorar: false },
-    { label: "Favoritos",  href: `${basePath}/favorites`, icon: Heart,      isActive: isFavorites, badge: false, isExplorar: false },
-    { label: "Explorar",   href: `${basePath}/search`,    icon: Compass,    isActive: isSearch,    badge: false, isExplorar: true  },
-    { label: "Acessos",    href: `${basePath}/accesses`,  icon: LibraryBig,  isActive: isAccesses,  badge: false, isExplorar: false },
-    { label: "Carrinho",   href: `${basePath}/cart`,      icon: ShoppingCart, isActive: isCart,      badge: true,  isExplorar: false },
+    { label: "Início",   href: basePath,             icon: Home,         isActive: isHome,    badge: false, isExplorar: false },
+    { label: "Explorar", href: `${basePath}/search`,  icon: Compass,      isActive: isSearch,  badge: false, isExplorar: true  },
+    { label: "Carrinho", href: `${basePath}/cart`,    icon: ShoppingCart, isActive: isCart,    badge: true,  isExplorar: false },
   ];
 
   return (
@@ -37,9 +33,9 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
     >
       <div className="pointer-events-auto w-[calc(100%-16px)] max-w-md mx-auto flex items-center gap-2 select-none">
         
-        {/* A) MAIN PILL CAPSULE (5 Items - 58px Height) */}
+        {/* A) MAIN PILL CAPSULE (Início, Explorar, Carrinho) */}
         <div
-          className="flex-1 h-[58px] px-1.5 py-1 rounded-full 
+          className="flex-1 h-[58px] px-2 py-1 rounded-full 
                      bg-white/75 dark:bg-zinc-900/65 
                      backdrop-blur-xl backdrop-saturate-150
                      border border-white/60 dark:border-white/12 
@@ -79,7 +75,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
               );
             }
 
-            // Standard Nav Item (Início, Favoritos, Acessos, Carrinho)
+            // Standard Nav Item (Início, Carrinho)
             return (
               <Link
                 key={item.label}

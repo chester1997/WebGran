@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Settings, HelpCircle, FileText, ChevronRight, Bookmark } from "lucide-react";
+import { Settings, HelpCircle, FileText, ChevronRight, Bookmark, LibraryBig } from "lucide-react";
 import { useTelegram } from "@/app/miniapp/Providers";
 
 export function StudioProfile({ storeSlug }: { storeSlug: string }) {
@@ -53,6 +53,13 @@ export function StudioProfile({ storeSlug }: { storeSlug: string }) {
       subtitle: `${favoritesCount} ${favoritesCount === 1 ? "título" : "títulos"}`,
       icon: Bookmark,
       href: `/miniapp/${storeSlug}/favorites`,
+    },
+    {
+      id: "accesses",
+      label: "Meus Acessos",
+      subtitle: "",
+      icon: LibraryBig,
+      href: `/miniapp/${storeSlug}/accesses`,
     },
     {
       id: "settings",
