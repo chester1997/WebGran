@@ -39,6 +39,9 @@ export async function GET() {
       },
     });
   } catch (error: any) {
+    if (error?.message === "Unauthorized" || error?.digest === "HANGING_PROMISE_REJECTION") {
+      return NextResponse.json({ success: false, error: "Não autorizado" }, { status: 401 });
+    }
     console.error("[Seller Clips GET Error]:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Erro ao carregar clips." },
