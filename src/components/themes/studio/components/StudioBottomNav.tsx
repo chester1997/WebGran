@@ -22,8 +22,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
 
   // Left items
   const leftItems = [
-    { label: "Início",     href: basePath,                icon: Home,  isActive: isHome },
-    { label: "Favoritos",  href: `${basePath}/favorites`, icon: Heart, isActive: isFavorites },
+    { label: "Início", href: basePath, icon: Home, isActive: isHome },
   ];
 
   // Right items — Acessos + Carrinho
