@@ -36,10 +36,10 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
         {/* LEFT SPACER — Keeps main pill perfectly centered */}
         <div className="w-[52px] h-[52px] shrink-0 invisible pointer-events-none" aria-hidden="true" />
 
-        {/* A) MAIN PILL CAPSULE — LARGER COMPACT DOCK GLASS (54px Height) */}
+        {/* A) MAIN PILL CAPSULE — FLUID SMOOTH GLASS DOCK (54px Height) */}
         <div
-          className="relative flex items-center justify-around h-[54px] px-2.5 py-1.5 rounded-full 
-                     transition-all duration-300 gap-2.5
+          className="relative flex items-center justify-around h-[54px] px-2 py-1.5 rounded-full 
+                     transition-all duration-300 ease-out gap-1.5
                      
                      /* Clean Liquid Glass Base */
                      bg-white/50 dark:bg-black/40
@@ -54,53 +54,47 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
 
-            // Início Item (Central Highlight inside Main Pill)
-            if (item.isCentral) {
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  aria-label={item.label}
-                  className="relative z-10 flex items-center justify-center transition-all duration-300 active:scale-95 group"
-                >
-                  {item.isActive ? (
-                    <div className="flex items-center gap-2 px-4 h-[42px] rounded-full bg-red-600 text-white font-semibold text-xs shadow-md shadow-red-600/40 transition-all duration-300">
-                      <Icon className="w-[20px] h-[20px] text-white stroke-[2]" />
-                      <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">{item.label}</span>
-                    </div>
-                  ) : (
-                    <div className="w-[42px] h-[42px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/30 group-hover:scale-105 transition-all duration-200">
-                      <Icon className="w-[20px] h-[20px] text-white stroke-[2]" />
-                    </div>
-                  )}
-                </Link>
-              );
-            }
-
-            // Standard Nav Items (Explorar na Esquerda, Carrinho na Direita)
             return (
               <Link
                 key={item.label}
                 href={item.href}
                 aria-label={item.label}
-                className="relative z-10 flex items-center justify-center transition-all duration-300"
+                className="relative z-10 flex items-center justify-center transition-all duration-300 ease-out active:scale-95 group"
               >
-                {item.isActive ? (
-                  <div className="flex items-center gap-2 px-4 h-[42px] rounded-full bg-white/70 dark:bg-white/20 border border-white/40 dark:border-white/20 text-red-600 dark:text-red-400 font-semibold text-xs shadow-sm transition-all duration-300">
-                    <div className="relative flex items-center justify-center">
-                      <Icon className="w-[20px] h-[20px]" strokeWidth={2.0} />
-                      {item.badge && <CartBadge />}
-                    </div>
-                    <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">{item.label}</span>
+                <div
+                  className={`h-[42px] rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
+                    item.isCentral
+                      ? item.isActive
+                        ? "bg-red-600 text-white px-3.5 shadow-md shadow-red-600/40"
+                        : "bg-red-600 text-white w-[42px] shadow-md shadow-red-600/30 group-hover:scale-105"
+                      : item.isActive
+                      ? "bg-white/70 dark:bg-white/20 border border-white/40 dark:border-white/20 text-red-600 dark:text-red-400 px-3.5 shadow-sm"
+                      : "text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white w-[42px]"
+                  }`}
+                >
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <Icon
+                      className={`w-[20px] h-[20px] transition-transform duration-300 ease-out ${
+                        item.isActive ? "scale-105" : ""
+                      }`}
+                      strokeWidth={item.isActive ? 2.0 : 1.8}
+                    />
+                    {item.badge && <CartBadge />}
                   </div>
-                ) : (
-                  <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-200 active:scale-95">
-                    <div className="relative flex items-center justify-center">
-                      <Icon className="w-[20px] h-[20px]" strokeWidth={1.8} />
-                      {item.badge && <CartBadge />}
-                    </div>
+
+                  {/* Ultra-smooth Label Expand & Fade Transition */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-out flex items-center ${
+                      item.isActive
+                        ? "max-w-[100px] opacity-100 ml-2"
+                        : "max-w-0 opacity-0 ml-0"
+                    }`}
+                  >
+                    <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">
+                      {item.label}
+                    </span>
                   </div>
-                )}
+                </div>
               </Link>
             );
           })}
