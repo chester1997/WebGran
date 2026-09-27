@@ -32,14 +32,14 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   return (
     <nav
       aria-label="Navegação inferior"
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))]"
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(8px+env(safe-area-inset-bottom,0px))]"
       style={{ backgroundColor: "transparent" }}
     >
       <div className="pointer-events-auto w-[calc(100%-16px)] max-w-md mx-auto flex items-center gap-2 select-none">
         
-        {/* A) MAIN PILL CAPSULE (5 Items) */}
+        {/* A) MAIN PILL CAPSULE (5 Items - 58px Height) */}
         <div
-          className="flex-1 h-[66px] px-1 rounded-full 
+          className="flex-1 h-[58px] px-1.5 py-1 rounded-full 
                      bg-white/75 dark:bg-zinc-900/65 
                      backdrop-blur-xl backdrop-saturate-150
                      border border-white/60 dark:border-white/12 
@@ -57,19 +57,19 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                   key={item.label}
                   href={item.href}
                   aria-label={item.label}
-                  className="flex-1 flex flex-col items-center justify-center py-1 transition-transform duration-150 active:scale-95 group"
+                  className="flex-1 flex flex-col items-center justify-center min-h-[48px] py-0.5 transition-transform duration-150 active:scale-95 group"
                 >
                   <div
                     className={`w-[38px] h-[38px] rounded-full flex items-center justify-center transition-all duration-200 ${
                       item.isActive
-                        ? "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_0_14px_rgba(239,68,68,0.55)] scale-105"
-                        : "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_3px_10px_rgba(239,68,68,0.35)] group-hover:scale-105"
+                        ? "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)] scale-105"
+                        : "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_2px_8px_rgba(239,68,68,0.3)] group-hover:scale-105"
                     }`}
                   >
-                    <Icon className="w-[18px] h-[18px] text-white stroke-[2.2]" />
+                    <Icon className="w-[20px] h-[20px] text-white stroke-[2]" />
                   </div>
                   <span
-                    className={`text-[10px] font-semibold mt-0.5 leading-none transition-colors ${
+                    className={`text-[10px] font-semibold mt-[2px] leading-none transition-colors truncate ${
                       item.isActive ? "text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400"
                     }`}
                   >
@@ -85,26 +85,26 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 key={item.label}
                 href={item.href}
                 aria-label={item.label}
-                className="flex-1 flex items-center justify-center py-1"
+                className="flex-1 flex items-center justify-center"
               >
                 <div
-                  className={`w-full h-full min-h-[44px] px-1 py-1 rounded-full flex flex-col items-center justify-center gap-0.5 transition-all duration-200 active:scale-95 ${
+                  className={`w-full h-[42px] min-h-[48px] px-2 py-1 rounded-full flex flex-col items-center justify-center gap-[2px] transition-all duration-200 active:scale-95 ${
                     item.isActive
-                      ? "bg-black/8 dark:bg-white/12 text-red-600 dark:text-red-400 shadow-inner"
-                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                      ? "bg-black/7 dark:bg-white/12 text-red-600 dark:text-red-400 shadow-inner"
+                      : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                   }`}
                 >
                   <div className="relative flex items-center justify-center">
                     <Icon
-                      className={`w-[19px] h-[19px] transition-transform duration-200 ${
-                        item.isActive ? "scale-110" : ""
+                      className={`w-[20px] h-[20px] transition-transform duration-200 ${
+                        item.isActive ? "scale-105" : ""
                       }`}
-                      strokeWidth={item.isActive ? 2.2 : 1.7}
+                      strokeWidth={item.isActive ? 2.0 : 1.8}
                     />
                     {item.badge && <CartBadge />}
                   </div>
                   <span
-                    className={`text-[10px] leading-none transition-colors ${
+                    className={`text-[10px] leading-none transition-colors truncate ${
                       item.isActive ? "font-semibold text-red-600 dark:text-red-400" : "font-medium"
                     }`}
                   >
@@ -116,7 +116,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* B) SEPARATED CIRCULAR SEARCH BUTTON (RIGHT SIDE) */}
+        {/* B) SEPARATED CIRCULAR SEARCH BUTTON (RIGHT SIDE - 54px) */}
         <Link
           href={`${basePath}/search`}
           aria-label="Pesquisar"
@@ -132,7 +132,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                          : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
                      }`}
         >
-          <Search className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
+          <Search className="w-[20px] h-[20px] transition-transform duration-200 group-hover:scale-110" strokeWidth={2.0} />
         </Link>
 
       </div>
