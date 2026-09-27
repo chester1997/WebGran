@@ -31,15 +31,15 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))]"
       style={{ backgroundColor: "transparent", border: "none", boxShadow: "none" }}
     >
-      <div className="pointer-events-auto w-full max-w-[440px] px-4 mx-auto flex items-center justify-between select-none">
+      <div className="pointer-events-auto w-full max-w-[460px] px-4 mx-auto flex items-center justify-between select-none">
         
         {/* LEFT SPACER — Keeps main pill perfectly centered */}
-        <div className="w-[48px] h-[48px] shrink-0 invisible pointer-events-none" aria-hidden="true" />
+        <div className="w-[52px] h-[52px] shrink-0 invisible pointer-events-none" aria-hidden="true" />
 
-        {/* A) MAIN PILL CAPSULE — 3 BUTTONS (EXPLORAR, INÍCIO, CARRINHO) */}
+        {/* A) MAIN PILL CAPSULE — LARGER COMPACT DOCK GLASS (54px Height) */}
         <div
-          className="relative flex items-center justify-around h-[50px] px-2 py-1.5 rounded-full 
-                     transition-all duration-300 gap-2
+          className="relative flex items-center justify-around h-[54px] px-2.5 py-1.5 rounded-full 
+                     transition-all duration-300 gap-2.5
                      
                      /* Clean Liquid Glass Base */
                      bg-white/50 dark:bg-black/40
@@ -64,13 +64,13 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                   className="relative z-10 flex items-center justify-center transition-all duration-300 active:scale-95 group"
                 >
                   {item.isActive ? (
-                    <div className="flex items-center gap-2 px-3.5 h-[38px] rounded-full bg-red-600 text-white font-semibold text-xs shadow-md shadow-red-600/40 transition-all duration-300">
-                      <Icon className="w-[18px] h-[18px] text-white stroke-[2]" />
-                      <span className="text-[12px] font-medium tracking-tight whitespace-nowrap">{item.label}</span>
+                    <div className="flex items-center gap-2 px-4 h-[42px] rounded-full bg-red-600 text-white font-semibold text-xs shadow-md shadow-red-600/40 transition-all duration-300">
+                      <Icon className="w-[20px] h-[20px] text-white stroke-[2]" />
+                      <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">{item.label}</span>
                     </div>
                   ) : (
-                    <div className="w-[38px] h-[38px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/30 group-hover:scale-105 transition-all duration-200">
-                      <Icon className="w-[18px] h-[18px] text-white stroke-[2]" />
+                    <div className="w-[42px] h-[42px] rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/30 group-hover:scale-105 transition-all duration-200">
+                      <Icon className="w-[20px] h-[20px] text-white stroke-[2]" />
                     </div>
                   )}
                 </Link>
@@ -86,17 +86,17 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 className="relative z-10 flex items-center justify-center transition-all duration-300"
               >
                 {item.isActive ? (
-                  <div className="flex items-center gap-2 px-3.5 h-[38px] rounded-full bg-white/70 dark:bg-white/20 border border-white/40 dark:border-white/20 text-red-600 dark:text-red-400 font-semibold text-xs shadow-sm transition-all duration-300">
+                  <div className="flex items-center gap-2 px-4 h-[42px] rounded-full bg-white/70 dark:bg-white/20 border border-white/40 dark:border-white/20 text-red-600 dark:text-red-400 font-semibold text-xs shadow-sm transition-all duration-300">
                     <div className="relative flex items-center justify-center">
-                      <Icon className="w-[18px] h-[18px]" strokeWidth={2.0} />
+                      <Icon className="w-[20px] h-[20px]" strokeWidth={2.0} />
                       {item.badge && <CartBadge />}
                     </div>
-                    <span className="text-[12px] font-medium tracking-tight whitespace-nowrap">{item.label}</span>
+                    <span className="text-[13px] font-semibold tracking-tight whitespace-nowrap">{item.label}</span>
                   </div>
                 ) : (
-                  <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-200 active:scale-95">
+                  <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all duration-200 active:scale-95">
                     <div className="relative flex items-center justify-center">
-                      <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                      <Icon className="w-[20px] h-[20px]" strokeWidth={1.8} />
                       {item.badge && <CartBadge />}
                     </div>
                   </div>
@@ -106,11 +106,11 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* B) SEPARATED CIRCULAR "+" BUTTON — ANCHORED AT FAR RIGHT */}
+        {/* B) SEPARATED CIRCULAR "+" BUTTON — 52px LARGER CIRCLE */}
         <Link
           href={`${basePath}/search`}
           aria-label="Adicionar / Explorar"
-          className="relative w-[48px] h-[48px] shrink-0 rounded-full flex items-center justify-center
+          className="relative w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center
                      transition-all duration-200 active:scale-95 group
                      
                      /* Clean Liquid Glass Base */
@@ -123,7 +123,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                      /* Soft Drop Shadow */
                      shadow-lg shadow-black/10 dark:shadow-black/40"
         >
-          <Plus className="relative z-10 w-[22px] h-[22px] text-red-600 dark:text-red-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
+          <Plus className="relative z-10 w-[24px] h-[24px] text-red-600 dark:text-red-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={2.2} />
         </Link>
 
       </div>
