@@ -20,10 +20,10 @@ export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
   
   if (!session) {
     return (
-      <div className="p-4 pt-8 min-h-[80vh] flex flex-col items-center justify-center text-center text-white">
-        <Lock className="w-16 h-16 text-zinc-800 mb-4" />
+      <div className="p-4 pt-8 min-h-[80vh] flex flex-col items-center justify-center text-center text-zinc-900 dark:text-white">
+        <Lock className="w-16 h-16 text-zinc-400 dark:text-zinc-800 mb-4" />
         <h1 className="text-xl font-bold mb-2">Acesso Negado</h1>
-        <p className="text-zinc-500">Sessão expirada ou não encontrada.</p>
+        <p className="text-zinc-600 dark:text-zinc-500">Sessão expirada ou não encontrada.</p>
       </div>
     );
   }
@@ -71,16 +71,16 @@ export async function StudioAccesses({ storeSlug }: { storeSlug: string }) {
   );
 
   return (
-    <div className="p-4 pt-8 text-white bg-transparent w-full min-h-[80vh]">
+    <div className="p-4 pt-8 text-zinc-900 dark:text-white bg-transparent w-full min-h-[80vh]">
       <h1 className="text-2xl font-bold mb-6">Meus Acessos</h1>
       
       {accessesWithDestinations.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-          <PlayCircle className="w-16 h-16 text-zinc-800 mb-4" />
-          <p className="text-zinc-500 max-w-[250px]">
+          <PlayCircle className="w-16 h-16 text-zinc-400 dark:text-zinc-800 mb-4" />
+          <p className="text-zinc-600 dark:text-zinc-500 max-w-[250px]">
             Seus conteúdos comprados aparecerão aqui para acesso rápido.
           </p>
-          <Link href={`/miniapp/${storeSlug}`} className="mt-6 bg-white text-black font-semibold px-6 py-2 rounded-md hover:bg-zinc-200 transition-colors">
+          <Link href={`/miniapp/${storeSlug}`} className="mt-6 bg-red-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-red-500 transition-colors shadow-md">
             Explorar Loja
           </Link>
         </div>

@@ -172,10 +172,10 @@ export function StudioAccessCard({
   };
 
   return (
-    <div className="w-full rounded-2xl bg-[#111214] border border-white/8 overflow-hidden shadow-lg">
+    <div className="w-full rounded-2xl bg-white dark:bg-[#111214] border border-zinc-200 dark:border-white/8 overflow-hidden shadow-md">
       {/* Header row: access code + status badge */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <span className="text-[13px] font-bold text-white/90 tracking-wide">{accessCode}</span>
+        <span className="text-[13px] font-bold text-zinc-900 dark:text-white/90 tracking-wide">{accessCode}</span>
         <span
           className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${badge.bg} ${badge.text}`}
         >
@@ -186,28 +186,28 @@ export function StudioAccessCard({
 
       {/* Date/time sub-header */}
       <div className="px-4 pb-3">
-        <span className="text-[11px] text-white/35 font-medium">
+        <span className="text-[11px] text-zinc-500 dark:text-white/35 font-medium">
           {formatDateTimeBR(displayDate)}
         </span>
       </div>
 
       {/* Divider */}
-      <div className="mx-4 h-px bg-white/6" />
+      <div className="mx-4 h-px bg-zinc-200 dark:bg-white/6" />
 
       {/* Content row: poster + info */}
       <div className="flex gap-3 px-4 py-3">
         {/* Poster thumbnail — aspect 2/3 */}
-        <div className="relative flex-shrink-0 w-[62px] rounded-xl overflow-hidden bg-zinc-800" style={{ aspectRatio: "2/3" }}>
+        <div className="relative flex-shrink-0 w-[62px] rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800" style={{ aspectRatio: "2/3" }}>
           {access.product.coverUrl ? (
-            <Image
+            <img
               src={access.product.coverUrl}
               alt={access.product.title}
-              fill
-              className="object-cover"
-              sizes="62px"
+              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
-            <div className="absolute inset-0 bg-zinc-700 flex items-center justify-center">
+            <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
               <span className="text-zinc-500 text-xs">?</span>
             </div>
           )}
@@ -215,20 +215,20 @@ export function StudioAccessCard({
 
         {/* Product info */}
         <div className="flex flex-col justify-center gap-0.5 flex-1 min-w-0">
-          <h3 className="text-[14px] font-bold text-white leading-snug line-clamp-2">
+          <h3 className="text-[14px] font-bold text-zinc-900 dark:text-white leading-snug line-clamp-2">
             {access.product.title}
           </h3>
           {access.product.duration && (
-            <p className="text-[12px] text-white/45 mt-0.5">{access.product.duration}</p>
+            <p className="text-[12px] text-zinc-500 dark:text-white/45 mt-0.5">{access.product.duration}</p>
           )}
           {displayPrice && (
-            <p className="text-[15px] font-bold text-white mt-1">
+            <p className="text-[15px] font-bold text-zinc-900 dark:text-white mt-1">
               {formatPriceBR(displayPrice)}
             </p>
           )}
           {/* Expiration info */}
           {!isExpired && (
-            <p className={`text-[11px] mt-1 font-medium ${expInfo.isLifetime ? "text-emerald-400" : "text-white/40"}`}>
+            <p className={`text-[11px] mt-1 font-medium ${expInfo.isLifetime ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-white/40"}`}>
               {expInfo.isLifetime
                 ? "Vitalício • Sem data limite"
                 : expInfo.dateFormatted +
@@ -238,7 +238,7 @@ export function StudioAccessCard({
             </p>
           )}
           {isExpired && (
-            <p className="text-[11px] mt-1 font-medium text-red-400">
+            <p className="text-[11px] mt-1 font-medium text-red-500 dark:text-red-400">
               {expInfo.dateFormatted}
             </p>
           )}

@@ -4,6 +4,18 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   compress: true,
   cacheComponents: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "webgran-images.b-cdn.net",
+      },
+      {
+        protocol: "https",
+        hostname: "*.b-cdn.net",
+      },
+    ],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "25mb",
