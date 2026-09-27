@@ -33,15 +33,27 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
     >
       <div className="pointer-events-auto w-[calc(100%-16px)] max-w-md mx-auto flex items-center gap-2 select-none">
         
-        {/* A) MAIN PILL CAPSULE (Início, Explorar, Carrinho) */}
+        {/* A) MAIN PILL CAPSULE — ACRYLIC / REFRACTIVE GLASS PREMIUM */}
         <div
-          className="flex-1 h-[58px] px-2 py-1 rounded-full 
-                     bg-white/75 dark:bg-zinc-900/65 
-                     backdrop-blur-xl backdrop-saturate-150
-                     border border-white/60 dark:border-white/12 
-                     shadow-[0_8px_30px_rgba(0,0,0,0.12),0_1px_2px_rgba(255,255,255,0.8)_inset] 
-                     dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),0_1px_1px_rgba(255,255,255,0.08)_inset] 
-                     flex items-center justify-around transition-all duration-200"
+          className="relative flex-1 h-[58px] px-1.5 py-1 rounded-full 
+                     overflow-hidden transition-all duration-200
+                     flex items-center justify-around
+                     
+                     /* Glass Base & Refraction */
+                     bg-white/65 dark:bg-[#12161b]/60
+                     backdrop-blur-[20px] backdrop-saturate-[160%] backdrop-contrast-[1.05]
+                     
+                     /* Fine Specular Rim Border */
+                     border border-white/70 dark:border-white/20
+                     
+                     /* Multi-layer Inner Bevel & Outer Drop Shadow */
+                     shadow-[0_10px_32px_rgba(0,0,0,0.12),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-1.5px_2px_rgba(0,0,0,0.1)] 
+                     dark:shadow-[0_12px_36px_rgba(0,0,0,0.50),inset_0_1.5px_1px_rgba(255,255,255,0.35),inset_0_-1.5px_2.5px_rgba(0,0,0,0.40)]
+                     
+                     /* Specular Highlight Sheen Gradient Overlay */
+                     before:absolute before:inset-0 before:rounded-full before:pointer-events-none
+                     before:bg-[linear-gradient(135deg,rgba(255,255,255,0.35),rgba(255,255,255,0.05)_45%,transparent_70%)]
+                     dark:before:bg-[linear-gradient(135deg,rgba(255,255,255,0.15),rgba(255,255,255,0.02)_45%,transparent_70%)]"
         >
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -53,13 +65,13 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                   key={item.label}
                   href={item.href}
                   aria-label={item.label}
-                  className="flex-1 flex flex-col items-center justify-center min-h-[48px] py-0.5 transition-transform duration-150 active:scale-95 group"
+                  className="relative z-10 flex-1 flex flex-col items-center justify-center min-h-[48px] py-0.5 transition-transform duration-150 active:scale-95 group"
                 >
                   <div
                     className={`w-[38px] h-[38px] rounded-full flex items-center justify-center transition-all duration-200 ${
                       item.isActive
-                        ? "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)] scale-105"
-                        : "bg-gradient-to-tr from-red-600 to-red-500 shadow-[0_2px_8px_rgba(239,68,68,0.3)] group-hover:scale-105"
+                        ? "bg-gradient-to-tr from-red-600 via-red-500 to-rose-400 shadow-[0_0_14px_rgba(239,68,68,0.55),inset_0_1.5px_1px_rgba(255,255,255,0.45)] scale-105"
+                        : "bg-gradient-to-tr from-red-600 via-red-500 to-rose-400 shadow-[0_3px_10px_rgba(239,68,68,0.35),inset_0_1.5px_1px_rgba(255,255,255,0.35)] group-hover:scale-105"
                     }`}
                   >
                     <Icon className="w-[20px] h-[20px] text-white stroke-[2]" />
@@ -81,12 +93,12 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                 key={item.label}
                 href={item.href}
                 aria-label={item.label}
-                className="flex-1 flex items-center justify-center"
+                className="relative z-10 flex-1 flex items-center justify-center"
               >
                 <div
                   className={`w-full h-[42px] min-h-[48px] px-2 py-1 rounded-full flex flex-col items-center justify-center gap-[2px] transition-all duration-200 active:scale-95 ${
                     item.isActive
-                      ? "bg-black/7 dark:bg-white/12 text-red-600 dark:text-red-400 shadow-inner"
+                      ? "bg-white/80 dark:bg-white/15 border border-white/90 dark:border-white/20 text-red-600 dark:text-red-400 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,1),inset_0_-1px_1px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.3),inset_0_-1px_1.5px_rgba(0,0,0,0.35)]"
                       : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                   }`}
                 >
@@ -112,23 +124,34 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           })}
         </div>
 
-        {/* B) SEPARATED CIRCULAR SEARCH BUTTON (RIGHT SIDE - 54px) */}
+        {/* B) SEPARATED CIRCULAR SEARCH BUTTON — ACRYLIC GLASS */}
         <Link
           href={`${basePath}/search`}
           aria-label="Pesquisar"
-          className={`w-[54px] h-[54px] shrink-0 rounded-full flex items-center justify-center
-                     bg-white/75 dark:bg-zinc-900/65 
-                     backdrop-blur-xl backdrop-saturate-150
-                     border border-white/60 dark:border-white/12 
-                     shadow-[0_8px_25px_rgba(0,0,0,0.12),0_1px_2px_rgba(255,255,255,0.8)_inset] 
-                     dark:shadow-[0_8px_25px_rgba(0,0,0,0.45),0_1px_1px_rgba(255,255,255,0.08)_inset] 
-                     transition-all duration-200 active:scale-95 group ${
+          className={`relative overflow-hidden w-[54px] h-[54px] shrink-0 rounded-full flex items-center justify-center
+                     transition-all duration-200 active:scale-95 group
+                     
+                     /* Glass Base & Refraction */
+                     bg-white/65 dark:bg-[#12161b]/60
+                     backdrop-blur-[20px] backdrop-saturate-[160%] backdrop-contrast-[1.05]
+                     
+                     /* Fine Specular Rim Border */
+                     border border-white/70 dark:border-white/20
+                     
+                     /* Multi-layer Inner Bevel & Outer Drop Shadow */
+                     shadow-[0_10px_32px_rgba(0,0,0,0.12),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-1.5px_2px_rgba(0,0,0,0.1)] 
+                     dark:shadow-[0_12px_36px_rgba(0,0,0,0.50),inset_0_1.5px_1px_rgba(255,255,255,0.35),inset_0_-1.5px_2.5px_rgba(0,0,0,0.40)]
+                     
+                     /* Specular Highlight Sheen Gradient Overlay */
+                     before:absolute before:inset-0 before:rounded-full before:pointer-events-none
+                     before:bg-[linear-gradient(135deg,rgba(255,255,255,0.35),rgba(255,255,255,0.05)_45%,transparent_70%)]
+                     dark:before:bg-[linear-gradient(135deg,rgba(255,255,255,0.15),rgba(255,255,255,0.02)_45%,transparent_70%)] ${
                        isSearch
-                         ? "text-red-600 dark:text-red-400 border-red-500/40 shadow-[0_0_16px_rgba(239,68,68,0.3)]"
+                         ? "text-red-600 dark:text-red-400 border-red-500/50 shadow-[0_0_16px_rgba(239,68,68,0.35)]"
                          : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
                      }`}
         >
-          <Search className="w-[20px] h-[20px] transition-transform duration-200 group-hover:scale-110" strokeWidth={2.0} />
+          <Search className="relative z-10 w-[20px] h-[20px] transition-transform duration-200 group-hover:scale-110" strokeWidth={2.0} />
         </Link>
 
       </div>
