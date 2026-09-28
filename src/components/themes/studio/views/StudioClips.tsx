@@ -404,7 +404,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
     <div className="fixed inset-0 w-full h-[100dvh] min-h-[100dvh] bg-black flex justify-center items-center overflow-hidden select-none touch-none overscroll-none">
       {/* 9:16 Shorts/Reels Viewport Container — Fixed Viewport Frame */}
       <div
-        className="relative w-full max-w-[460px] h-full bg-zinc-950 shadow-2xl overflow-hidden touch-none overscroll-contain flex flex-col justify-between"
+        className="relative w-full max-w-[460px] h-full bg-zinc-950 shadow-2xl overflow-hidden touch-none overscroll-contain"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -433,7 +433,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
         </div>
 
         {/* 1. TOP OVERLAY: Fixed Counter Badge & Mute Toggle with Safe-Area Top Support */}
-        <div className="relative z-20 flex items-center justify-between px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] pb-4 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] pb-4 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none">
           {/* Clips Counter Badge (WebGran Liquid Glass Capsule Style) */}
           <div className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-xs font-semibold text-white tracking-wider flex items-center gap-2 shadow-lg pointer-events-auto">
             <Film className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -503,7 +503,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
         </div>
 
         {/* 4. BOTTOM OVERLAY: Title, Description & Progress Bar with Safe-Area Support */}
-        <div className="relative z-20 px-4 pt-16 pb-[calc(85px+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col gap-3 pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pt-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-3 pointer-events-none">
           {/* Title & Description Container */}
           {currentClip && (
             <div className="flex flex-col gap-1.5 pr-10 text-left pointer-events-auto">
