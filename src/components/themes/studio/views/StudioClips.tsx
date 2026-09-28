@@ -142,7 +142,7 @@ function ClipCard({
   }, [isMuted]);
 
   return (
-    <div className="relative w-full h-full shrink-0 flex flex-col justify-between overflow-hidden bg-zinc-950">
+    <div className="relative w-full h-full shrink-0 overflow-hidden bg-black">
       {/* Video Element */}
       <video
         ref={handleRefAssign}
@@ -503,7 +503,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
         </div>
 
         {/* 4. BOTTOM OVERLAY: Title, Description & Progress Bar with Safe-Area Support */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pt-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-3 pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pt-20 pb-[calc(80px+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-black via-black/85 to-transparent flex flex-col gap-3 pointer-events-none">
           {/* Title & Description Container */}
           {currentClip && (
             <div className="flex flex-col gap-1.5 pr-10 text-left pointer-events-auto">
