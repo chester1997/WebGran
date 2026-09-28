@@ -10,6 +10,7 @@ import {
   Film,
   ChevronUp,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import Hls from "hls.js";
 
@@ -38,12 +39,15 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [showTapFeedback, setShowTapFeedback] = useState(false);
 
-  // Swipe gesture tracking
+  // Swipe gesture tracking & Refs
   const touchStartY = useRef<number | null>(null);
   const touchMoveY = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
+  const tapFeedbackTimer = useRef<NodeJS.Timeout | null>(null);
 
   const fetchClips = useCallback(async () => {
     setLoading(true);
@@ -74,9 +78,19 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   const currentClip = clips[currentIndex] || null;
   const nextClip = clips[currentIndex + 1] || null;
 
-  // Handle Play/Pause toggle
+  // Trigger brief visual feedback animation on screen tap
+  const triggerTapFeedback = () => {
+    setShowTapFeedback(true);
+    if (tapFeedbackTimer.current) clearTimeout(tapFeedbackTimer.current);
+    tapFeedbackTimer.current = setTimeout(() => {
+      setShowTapFeedback(false);
+    }, 400);
+  };
+
+  // Handle Play/Pause toggle on video tap
   const togglePlay = () => {
     if (!videoRef.current) return;
+    triggerTapFeedback();
     if (videoRef.current.paused) {
       videoRef.current
         .play()
@@ -115,7 +129,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
     }
   }, [currentIndex]);
 
-  // Touch Swipe Handlers
+  // Touch Swipe Handlers (Vertical Feed Gesture)
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     touchMoveY.current = e.touches[0].clientY;
@@ -128,7 +142,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   const handleTouchEnd = () => {
     if (touchStartY.current === null || touchMoveY.current === null) return;
     const deltaY = touchStartY.current - touchMoveY.current;
-    const threshold = 60; // 60px swipe threshold
+    const threshold = 60; // 60px vertical threshold for swipe
 
     if (deltaY > threshold) {
       // Swiped Up -> Next Clip
@@ -161,12 +175,27 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
     }
   };
 
-  // Universal Video Stream Setup (HLS Native -> HLS.js -> Direct MP4 Fallback)
+  // Seek video position via progress bar click
+  const handleProgressSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    const bar = progressBarRef.current;
+    if (!video || !bar || !video.duration) return;
+
+    const rect = bar.getBoundingClientRect();
+    const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const newPercentage = clickX / rect.width;
+    const targetTime = newPercentage * video.duration;
+
+    video.currentTime = targetTime;
+    setProgress(newPercentage * 100);
+  };
+
+  // Universal Video Stream Setup (Native HLS -> HLS.js -> Direct MP4 Fallback)
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !currentClip) return;
 
-    // Clean up previous HLS instance if active
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -213,7 +242,6 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           hls.destroy();
           hlsRef.current = null;
 
-          // Fallback to direct MP4 URL
           video.src = currentClip.directUrl;
           video
             .play()
@@ -222,7 +250,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
         }
       });
     }
-    // 3. Fallback to direct MP4 URL if HLS is unsupported
+    // 3. Direct MP4 fallback if HLS is unsupported
     else {
       video.src = currentClip.directUrl;
       video
@@ -309,16 +337,16 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   }
 
   return (
-    <div className="relative w-full h-[calc(100vh-80px)] min-h-[500px] bg-black flex justify-center items-center overflow-hidden select-none">
-      {/* 9:16 Shorts/Reels Container */}
+    <div className="relative w-full h-[100dvh] min-h-[100dvh] bg-black flex justify-center items-center overflow-hidden select-none">
+      {/* 9:16 Shorts/Reels Container - Responsive Mobile Fullscreen & Desktop Centered Frame */}
       <div
-        className="relative w-full max-w-[440px] h-full bg-zinc-950 shadow-2xl flex flex-col justify-between overflow-hidden"
+        className="relative w-full max-w-[460px] h-full bg-zinc-950 shadow-2xl flex flex-col justify-between overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={togglePlay}
       >
-        {/* Active Clip Video */}
+        {/* Active Clip Video Element */}
         {currentClip && (
           <video
             ref={videoRef}
@@ -331,7 +359,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           />
         )}
 
-        {/* Preload of Next Clip */}
+        {/* Preload Next Clip Metadata */}
         {nextClip && (
           <video
             src={nextClip.directUrl}
@@ -341,19 +369,21 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           />
         )}
 
-        {/* TOP OVERLAY */}
-        <div className="relative z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 via-black/30 to-transparent">
-          <div className="px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs font-semibold text-white tracking-wider flex items-center gap-1.5">
-            <Film className="w-3.5 h-3.5 text-red-500" />
+        {/* 1. TOP OVERLAY: Counter Badge & Mute Toggle with Safe-Area Top Support */}
+        <div className="relative z-20 flex items-center justify-between px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] pb-4 bg-gradient-to-b from-black/80 via-black/30 to-transparent">
+          {/* Clips Counter Badge (WebGran Liquid Glass Capsule Style) */}
+          <div className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-xs font-semibold text-white tracking-wider flex items-center gap-2 shadow-lg">
+            <Film className="w-3.5 h-3.5 text-red-500 shrink-0" />
             <span>
               {currentIndex + 1} / {clips.length}
             </span>
           </div>
 
+          {/* Audio Toggle Button (WebGran Liquid Glass Circle Style) */}
           <button
             onClick={toggleMute}
             aria-label={isMuted ? "Ativar som do vídeo" : "Desativar som do vídeo"}
-            className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black/70 transition-all active:scale-95"
+            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:bg-black/60 transition-all active:scale-95 shadow-lg"
           >
             {isMuted ? (
               <VolumeX className="w-5 h-5 text-red-400" />
@@ -363,16 +393,24 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           </button>
         </div>
 
-        {/* CENTER OVERLAY: Play/Pause Indicator */}
+        {/* 2. CENTER OVERLAY: Play/Pause Indicator & Tap Feedback */}
         {!isPlaying && (
           <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-2xl animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-300 transform scale-100 opacity-100">
               <Play className="w-8 h-8 fill-white translate-x-0.5" />
             </div>
           </div>
         )}
 
-        {/* RIGHT OVERLAY: Navigation Controls */}
+        {showTapFeedback && isPlaying && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none animate-ping opacity-60">
+            <div className="w-14 h-14 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center border border-white/20">
+              <Pause className="w-6 h-6 fill-white" />
+            </div>
+          </div>
+        )}
+
+        {/* 3. RIGHT OVERLAY: Discrete Navigation Controls */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-3 pointer-events-auto">
           {currentIndex > 0 && (
             <button
@@ -381,9 +419,9 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
                 handlePrev();
               }}
               aria-label="Clip anterior"
-              className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/70 transition-all active:scale-95"
+              className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-white flex items-center justify-center hover:bg-black/60 transition-all active:scale-95 shadow-md"
             >
-              <ChevronUp className="w-6 h-6" />
+              <ChevronUp className="w-5 h-5" />
             </button>
           )}
 
@@ -394,20 +432,32 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
                 handleNext();
               }}
               aria-label="Próximo Clip"
-              className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/70 transition-all active:scale-95"
+              className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-white flex items-center justify-center hover:bg-black/60 transition-all active:scale-95 shadow-md"
             >
-              <ChevronDown className="w-6 h-6" />
+              <ChevronDown className="w-5 h-5" />
             </button>
           )}
         </div>
 
-        {/* BOTTOM OVERLAY */}
-        <div className="relative z-20 p-4 pt-12 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col gap-3">
+        {/* 4. BOTTOM OVERLAY: Title, Description & Interactive Progress Bar with Safe-Area Bottom Support */}
+        <div className="relative z-20 px-4 pt-16 pb-[calc(85px+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col gap-3">
+          {/* Title & Description Container */}
           {currentClip && (
-            <div className="flex flex-col gap-1 pr-12 text-left">
-              <h2 className="text-base font-bold text-white drop-shadow-md line-clamp-2 leading-snug">
+            <div className="flex flex-col gap-1.5 pr-10 text-left">
+              {/* Category / WebGran Badge */}
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-600/90 text-[10px] font-bold text-white uppercase tracking-wider shadow-sm">
+                  <Sparkles className="w-3 h-3 fill-white" />
+                  Mini Drama
+                </span>
+              </div>
+
+              {/* Title */}
+              <h2 className="text-base font-bold text-white drop-shadow-md line-clamp-2 leading-snug tracking-tight">
                 {currentClip.title}
               </h2>
+
+              {/* Description */}
               {currentClip.description && (
                 <p className="text-xs text-zinc-300 drop-shadow line-clamp-2 leading-relaxed">
                   {currentClip.description}
@@ -416,19 +466,23 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
             </div>
           )}
 
-          {/* Progress Bar */}
+          {/* Interactive Seekable Progress Bar (WebGran Style) */}
           <div
-            className="w-full h-1 bg-white/20 rounded-full overflow-hidden"
+            ref={progressBarRef}
+            onClick={handleProgressSeek}
+            className="relative w-full h-2 py-1 flex items-center cursor-pointer group pointer-events-auto"
             role="progressbar"
             aria-valuenow={Math.round(progress)}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Progresso da reprodução do Clip"
           >
-            <div
-              className="h-full bg-red-600 transition-all duration-150 ease-linear rounded-full"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="w-full h-1 bg-white/25 rounded-full overflow-hidden transition-all group-hover:h-1.5">
+              <div
+                className="h-full bg-red-600 transition-all duration-100 ease-linear rounded-full shadow-sm shadow-red-600/50"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>
