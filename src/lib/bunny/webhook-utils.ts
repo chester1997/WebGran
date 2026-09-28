@@ -9,70 +9,52 @@ export interface VerifySignatureParams {
   signature: string | null;
   version?: string | null;
   algorithm?: string | null;
-  apiKey?: string;
+  readOnlyApiKey?: string;
 }
 
 /**
- * Validates Bunny Stream webhook signature using HMAC-SHA256, SHA256, or token comparison with constant-time security.
- * Flexible enough to support Bunny Stream Webhook headers (signature, x-bunny-signature, token, etc.).
+ * Validates Bunny Stream webhook signature strictly using official HMAC-SHA256 specification.
+ *
+ * Requirements:
+ * - Version: "v1"
+ * - Algorithm: "hmac-sha256"
+ * - Secret: BUNNY_STREAM_READ_ONLY_API_KEY
+ * - Payload: Exact rawBody
+ * - Comparison: Constant-time timingSafeEqual with strict length check
  */
 export function verifyBunnyStreamSignature({
   rawBody,
   signature,
   version,
   algorithm,
-  apiKey,
+  readOnlyApiKey,
 }: VerifySignatureParams): boolean {
-  if (!apiKey || !signature) {
+  if (!readOnlyApiKey || !signature || !version || !algorithm) {
     return false;
   }
 
-  if (version && version !== "v1") {
+  if (version.trim() !== "v1") {
     return false;
   }
 
-  if (algorithm && algorithm.toLowerCase() !== "hmac-sha256") {
+  if (algorithm.trim().toLowerCase() !== "hmac-sha256") {
     return false;
   }
 
-  const cleanSig = signature.replace(/^Bearer\s+/i, "").trim().toLowerCase();
+  const cleanSig = signature.trim().toLowerCase();
   if (!cleanSig) return false;
 
-  // 1. HMAC-SHA256 signature check over rawBody
   const expectedHmac = crypto
-    .createHmac("sha256", apiKey)
+    .createHmac("sha256", readOnlyApiKey)
     .update(rawBody)
     .digest("hex")
     .toLowerCase();
 
-  if (cleanSig.length === expectedHmac.length) {
-    if (crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(expectedHmac))) {
-      return true;
-    }
+  if (cleanSig.length !== expectedHmac.length) {
+    return false;
   }
 
-  // 2. SHA256(apiKey + rawBody) hash check
-  const expectedSha = crypto
-    .createHash("sha256")
-    .update(apiKey + rawBody)
-    .digest("hex")
-    .toLowerCase();
-
-  if (cleanSig.length === expectedSha.length) {
-    if (crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(expectedSha))) {
-      return true;
-    }
-  }
-
-  // 3. Direct token match check
-  const cleanKey = apiKey.trim().toLowerCase();
-  if (cleanSig.length === cleanKey.length) {
-    if (crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(cleanKey))) {
-      return true;
-    }
-  }
-
-  return false;
+  return crypto.timingSafeEqual(Buffer.from(cleanSig), Buffer.from(expectedHmac));
 }
 
 /**
@@ -158,7 +140,7 @@ export function resolveClipStatusTransition(
     return "READY";
   }
 
-  // Complementary events (9, 10) preserve current state
+  // Complementary events preserve current state
   if (targetStatus === null) {
     return current;
   }

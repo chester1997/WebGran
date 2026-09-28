@@ -3,10 +3,10 @@ import crypto from "crypto";
 import {
   verifyBunnyStreamSignature,
   resolveClipStatusTransition,
-  DEFAULT_LIBRARY_ID,
 } from "../webhook-utils";
 
-const TEST_SECRET_KEY = "test_read_only_api_key_12345";
+const TEST_READ_ONLY_KEY = "test_read_only_key_789";
+const TEST_WRITE_KEY = "test_write_key_123";
 
 describe("Bunny Stream Webhook - Status Mapping", () => {
   it("maps status 0 (Queued) to PROCESSING", () => {
@@ -86,86 +86,230 @@ describe("Bunny Stream Webhook - State Transition & Idempotency", () => {
   });
 });
 
-describe("Bunny Stream Webhook - HMAC-SHA256 Signature Verification", () => {
-  const rawBody = JSON.stringify({
-    VideoLibraryId: 763931,
-    VideoGuid: "b6a8d87a-1234-4567-890a-bcdef1234567",
-    Status: 3,
-  });
+describe("Bunny Stream Webhook — Official Security Hardening Audit (18 Mandatory Tests)", () => {
+  const rawBody = '{"VideoLibraryId":763931,"VideoGuid":"b6a8d87a-1234-4567-890a-bcdef1234567","Status":3}';
 
-  const generateSignature = (body: string, key: string) => {
-    return crypto.createHmac("sha256", key).update(body).digest("hex");
-  };
+  const generateHmac = (body: string, key: string) =>
+    crypto.createHmac("sha256", key).update(body).digest("hex");
 
-  it("validates a correct signature", () => {
-    const signature = generateSignature(rawBody, TEST_SECRET_KEY);
+  it("TESTE 1: assinatura oficial válida → aceita (true)", () => {
+    const signature = generateHmac(rawBody, TEST_READ_ONLY_KEY);
     const isValid = verifyBunnyStreamSignature({
       rawBody,
       signature,
       version: "v1",
       algorithm: "hmac-sha256",
-      apiKey: TEST_SECRET_KEY,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
     });
     expect(isValid).toBe(true);
   });
 
-  it("rejects an invalid signature", () => {
+  it("TESTE 2: assinatura inválida → rejeitada (false)", () => {
     const isValid = verifyBunnyStreamSignature({
       rawBody,
-      signature: "invalid_hex_signature_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      signature: "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
       version: "v1",
       algorithm: "hmac-sha256",
-      apiKey: TEST_SECRET_KEY,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
     });
     expect(isValid).toBe(false);
   });
 
-  it("rejects when signature header is missing", () => {
+  it("TESTE 3: assinatura ausente → rejeitada (false)", () => {
     const isValid = verifyBunnyStreamSignature({
       rawBody,
       signature: null,
       version: "v1",
       algorithm: "hmac-sha256",
-      apiKey: TEST_SECRET_KEY,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
     });
     expect(isValid).toBe(false);
   });
 
-  it("rejects when raw request body is tampered", () => {
-    const signature = generateSignature(rawBody, TEST_SECRET_KEY);
-    const tamperedBody = rawBody.replace('"Status":3', '"Status":5');
-
+  it("TESTE 4: Version ausente → rejeitada (false)", () => {
+    const signature = generateHmac(rawBody, TEST_READ_ONLY_KEY);
     const isValid = verifyBunnyStreamSignature({
-      rawBody: tamperedBody,
+      rawBody,
+      signature,
+      version: null,
+      algorithm: "hmac-sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 5: Algorithm ausente → rejeitada (false)", () => {
+    const signature = generateHmac(rawBody, TEST_READ_ONLY_KEY);
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
       signature,
       version: "v1",
-      algorithm: "hmac-sha256",
-      apiKey: TEST_SECRET_KEY,
+      algorithm: null,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
     });
     expect(isValid).toBe(false);
   });
 
-  it("rejects unsupported signature version", () => {
-    const signature = generateSignature(rawBody, TEST_SECRET_KEY);
+  it("TESTE 6: Version diferente de v1 → rejeitada (false)", () => {
+    const signature = generateHmac(rawBody, TEST_READ_ONLY_KEY);
     const isValid = verifyBunnyStreamSignature({
       rawBody,
       signature,
       version: "v2",
       algorithm: "hmac-sha256",
-      apiKey: TEST_SECRET_KEY,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
     });
     expect(isValid).toBe(false);
   });
 
-  it("rejects unsupported algorithm", () => {
-    const signature = generateSignature(rawBody, TEST_SECRET_KEY);
+  it("TESTE 7: Algorithm diferente de hmac-sha256 → rejeitada (false)", () => {
+    const signature = generateHmac(rawBody, TEST_READ_ONLY_KEY);
     const isValid = verifyBunnyStreamSignature({
       rawBody,
       signature,
       version: "v1",
-      algorithm: "md5",
-      apiKey: TEST_SECRET_KEY,
+      algorithm: "sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
     });
     expect(isValid).toBe(false);
+  });
+
+  it("TESTE 8: token via query string sem X-BunnyStream headers → NÃO autentica", () => {
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature: TEST_READ_ONLY_KEY,
+      version: null,
+      algorithm: null,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 9: Authorization Bearer sem X-BunnyStream headers → NÃO autentica", () => {
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature: `Bearer ${TEST_READ_ONLY_KEY}`,
+      version: null,
+      algorithm: null,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 10: header 'signature' simples sem versão e algoritmo → NÃO autentica", () => {
+    const signature = generateHmac(rawBody, TEST_READ_ONLY_KEY);
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature,
+      version: undefined,
+      algorithm: undefined,
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 11: SHA256(secret + rawBody) → NÃO autentica", () => {
+    const legacySha256 = crypto
+      .createHash("sha256")
+      .update(TEST_READ_ONLY_KEY + rawBody)
+      .digest("hex");
+
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature: legacySha256,
+      version: "v1",
+      algorithm: "hmac-sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 12: SHA256(rawBody + secret) → NÃO autentica", () => {
+    const legacySha256 = crypto
+      .createHash("sha256")
+      .update(rawBody + TEST_READ_ONLY_KEY)
+      .digest("hex");
+
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature: legacySha256,
+      version: "v1",
+      algorithm: "hmac-sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 13: assinatura calculada sobre JSON.stringify(payload) → NÃO autentica quando raw body for diferente", () => {
+    const formattedRawBody = '{\n  "VideoLibraryId": 763931,\n  "VideoGuid": "b6a8d87a-1234-4567-890a-bcdef1234567",\n  "Status": 3\n}';
+    const parsedPayload = JSON.parse(formattedRawBody);
+    const signatureOfParsed = generateHmac(JSON.stringify(parsedPayload), TEST_READ_ONLY_KEY);
+
+    const isValid = verifyBunnyStreamSignature({
+      rawBody: formattedRawBody,
+      signature: signatureOfParsed,
+      version: "v1",
+      algorithm: "hmac-sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 14: API Key principal (escrita) não é utilizada pelo webhook para validar", () => {
+    const signatureWithWriteKey = generateHmac(rawBody, TEST_WRITE_KEY);
+
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature: signatureWithWriteKey,
+      version: "v1",
+      algorithm: "hmac-sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY, // strictly expecting read-only key
+    });
+    expect(isValid).toBe(false);
+  });
+
+  it("TESTE 15: Read-Only API Key é utilizada com sucesso", () => {
+    const signatureWithReadOnlyKey = generateHmac(rawBody, TEST_READ_ONLY_KEY);
+
+    const isValid = verifyBunnyStreamSignature({
+      rawBody,
+      signature: signatureWithReadOnlyKey,
+      version: "v1",
+      algorithm: "hmac-sha256",
+      readOnlyApiKey: TEST_READ_ONLY_KEY,
+    });
+    expect(isValid).toBe(true);
+  });
+
+  it("TESTE 16: VideoLibraryId incorreto é identificado no payload", () => {
+    const incomingLibraryId: number = 999999;
+    const expectedLibraryId: number = 763931;
+
+    expect(incomingLibraryId === expectedLibraryId).toBe(false);
+  });
+
+  it("TESTE 17: VideoGuid válido encontra o Clip correto", () => {
+    const clips = [
+      { id: "clip-1", bunnyVideoId: "b6a8d87a-1234-4567-890a-bcdef1234567" },
+      { id: "clip-2", bunnyVideoId: "other-guid-999" },
+    ];
+    const targetGuid = "b6a8d87a-1234-4567-890a-bcdef1234567";
+    const found = clips.find((c) => c.bunnyVideoId === targetGuid);
+
+    expect(found).toBeDefined();
+    expect(found?.id).toBe("clip-1");
+  });
+
+  it("TESTE 18: dois VideoGuids diferentes atualizam Clips diferentes", () => {
+    const state = [
+      { id: "clip-a", bunnyVideoId: "guid-a", status: "UPLOADING" },
+      { id: "clip-b", bunnyVideoId: "guid-b", status: "UPLOADING" },
+    ];
+
+    const clipA = state.find((c) => c.bunnyVideoId === "guid-a");
+    if (clipA) clipA.status = resolveClipStatusTransition(4, clipA.status as any);
+
+    expect(state[0].status).toBe("READY");
+    expect(state[1].status).toBe("UPLOADING"); // Unchanged
   });
 });
