@@ -279,7 +279,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       uploadAbortControllerRef.current = new AbortController();
 
       // Step 1: Client-Side Duration Check & Trimming to max 60s (0:00 -> 1:00)
-      const finalFileToUpload = await prepareClipFileForUpload(selectedFile, {
+      const { file: finalFileToUpload, originalDuration, isTrimmed } = await prepareClipFileForUpload(selectedFile, {
         maxDurationSeconds: CLIP_MAX_DURATION_SECONDS,
         signal: uploadAbortControllerRef.current.signal,
         onProgress: (percentage, statusText) => {
@@ -287,6 +287,10 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
           setUploadProgressText(statusText);
         },
       });
+
+      if (originalDuration > CLIP_MAX_DURATION_SECONDS && (!isTrimmed || finalFileToUpload === selectedFile)) {
+        throw new Error("Erro de segurança: Vídeo com mais de 60s não pode ser enviado sem corte local.");
+      }
 
       if (uploadAbortControllerRef.current.signal.aborted) {
         throw new Error("Upload cancelado pelo usuário.");
@@ -542,7 +546,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
           <Video className="w-12 h-12 text-zinc-600 mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Nenhum Clip cadastrado</h3>
           <p className="text-xs text-zinc-400 max-w-sm mb-6">
-            Sua loja ainda não possui vídeos. Faça o upload do seu primeiro Clip de até 500MB.
+            Sua loja ainda não possui vídeos. Faça o upload do seu primeiro Clip (máximo 60s por vídeo).
           </p>
           <Button
             onClick={openAddModal}
@@ -771,17 +775,22 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                 />
               </div>
 
+              {/* 60s Duration Info Notice Banner */}
+              {!editingClip && (
+                <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-500/20 text-sky-200 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    Clips têm duração máxima de <strong>60 segundos</strong>. Vídeos maiores serão cortados automaticamente nos primeiros 60 segundos.
+                  </p>
+                </div>
+              )}
+
               {/* Video File Selection Zone (Only when creating new clip) */}
               {!editingClip && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-zinc-300">
-                      Arquivo de Vídeo <span className="text-red-400">*</span>
-                    </label>
-                    <span className="text-[11px] font-semibold text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                      Limite: 500 MB
-                    </span>
-                  </div>
+                  <label className="block text-xs font-semibold text-zinc-300">
+                    Arquivo de Vídeo <span className="text-red-400">*</span>
+                  </label>
 
                   <input
                     type="file"
@@ -809,7 +818,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                       <div className="space-y-1">
                         <p className="text-sm font-bold text-white">{selectedFile.name}</p>
                         <p className="text-xs text-emerald-400 font-semibold">
-                          {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Pronto para envio direto
+                          {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Pronto para envio
                         </p>
                       </div>
                     ) : (
@@ -818,7 +827,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                           Selecione ou arraste seu vídeo aqui
                         </p>
                         <p className="text-xs text-zinc-400">
-                          Formatos aceitos: MP4, MOV, WebM (Até 500MB)
+                          Formatos aceitos: MP4, MOV, WebM (Máximo 60s por Clip)
                         </p>
                       </div>
                     )}

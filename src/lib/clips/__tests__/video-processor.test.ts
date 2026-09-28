@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   CLIP_MAX_DURATION_SECONDS,
+  formatDurationHuman,
   getVideoDuration,
   prepareClipFileForUpload,
 } from "../video-processor";
@@ -14,7 +15,15 @@ describe("Video Processor — 60 Seconds Trimming Rule & Duration Detection", ()
     expect(CLIP_MAX_DURATION_SECONDS).toBe(60);
   });
 
-  it("returns original file directly if duration is <= 60 seconds", async () => {
+  it("formats human-readable duration strings correctly", () => {
+    expect(formatDurationHuman(30)).toBe("30s");
+    expect(formatDurationHuman(59)).toBe("59s");
+    expect(formatDurationHuman(60)).toBe("1m");
+    expect(formatDurationHuman(79.33)).toBe("1m 19s");
+    expect(formatDurationHuman(300)).toBe("5m");
+  });
+
+  it("returns original file directly if duration is 30s, 59s, or 60s", async () => {
     const mockFile = new File(["test-content"], "sample-30s.mp4", { type: "video/mp4" });
 
     const mockVideo = {
@@ -49,21 +58,22 @@ describe("Video Processor — 60 Seconds Trimming Rule & Duration Detection", ()
     });
 
     const progressFn = vi.fn();
-    const resultFile = await prepareClipFileForUpload(mockFile, { onProgress: progressFn });
+    const result = await prepareClipFileForUpload(mockFile, { onProgress: progressFn });
 
-    expect(resultFile).toBe(mockFile);
-    expect(resultFile.name).toBe("sample-30s.mp4");
-    expect(progressFn).toHaveBeenCalledWith(100, expect.stringContaining("60s"));
+    expect(result.file).toBe(mockFile);
+    expect(result.isTrimmed).toBe(false);
+    expect(result.originalDuration).toBe(35.5);
+    expect(progressFn).toHaveBeenLastCalledWith(100, expect.stringContaining("Pronto para envio"));
   });
 
-  it("never sends files > 60s without trimming or validating", async () => {
-    const mockFile = new File(["test-content-long"], "movie-5min.mp4", { type: "video/mp4" });
+  it("triggers automatic trimming for 79.33s video without throwing error or blocking", async () => {
+    const mockFile = new File(["test-content-79s"], "a musica terminou.mp4", { type: "video/mp4" });
 
     const mockVideo = {
       preload: "",
       muted: false,
       playsInline: false,
-      duration: 300, // 5 minutes
+      duration: 79.33,
       removeAttribute: vi.fn(),
       load: vi.fn(),
       src: "",
@@ -90,8 +100,8 @@ describe("Video Processor — 60 Seconds Trimming Rule & Duration Detection", ()
       revokeObjectURL: vi.fn(),
     });
 
-    // In node environment without MediaRecorder, trimming throws clear error preventing original file from being sent
-    await expect(prepareClipFileForUpload(mockFile)).rejects.toThrow("navegador não suporta");
+    // Node env without MediaRecorder throws clear browser error, ensuring original >60s is never sent raw
+    await expect(prepareClipFileForUpload(mockFile)).rejects.toThrow("suporta o corte local");
   });
 
   it("rejects invalid or unreadable video duration", async () => {

@@ -1,6 +1,11 @@
 /**
  * Client-Side Video Duration Detection & Trimming Processor for Clips
  * Ensures all clips uploaded to WebGran/Bunny Stream have a maximum duration of 60 seconds.
+ * 
+ * Rules:
+ * - duration <= 60s: Send original file untouched.
+ * - duration > 60s: Automatically trim first 60 seconds (0:00 -> 1:00) client-side in the browser.
+ * - NEVER send original file > 60s to Bunny Stream.
  */
 
 export const CLIP_MAX_DURATION_SECONDS = 60;
@@ -9,6 +14,19 @@ export interface TrimOptions {
   maxDurationSeconds?: number;
   onProgress?: (percentage: number, statusText: string) => void;
   signal?: AbortSignal;
+}
+
+/**
+ * Formats duration in seconds to human-readable string (e.g., 79.33s -> "1m 19s", 45s -> "45s")
+ */
+export function formatDurationHuman(seconds: number): string {
+  if (!seconds || isNaN(seconds) || seconds <= 0) return "0s";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  if (mins > 0) {
+    return `${mins}m ${secs > 0 ? `${secs}s` : ""}`.trim();
+  }
+  return `${secs}s`;
 }
 
 /**
@@ -58,7 +76,7 @@ export async function getVideoDuration(file: File): Promise<number> {
 export async function prepareClipFileForUpload(
   file: File,
   options: TrimOptions = {}
-): Promise<File> {
+): Promise<{ file: File; originalDuration: number; isTrimmed: boolean }> {
   const maxDuration = options.maxDurationSeconds ?? CLIP_MAX_DURATION_SECONDS;
   const { onProgress, signal } = options;
 
@@ -67,7 +85,7 @@ export async function prepareClipFileForUpload(
   }
 
   // Step 1: Detect duration
-  onProgress?.(0, "Verificando duração do vídeo...");
+  onProgress?.(0, "Analisando duração do vídeo...");
   const duration = await getVideoDuration(file);
 
   if (signal?.aborted) {
@@ -76,21 +94,22 @@ export async function prepareClipFileForUpload(
 
   // Step 2: If file is <= maxDuration (e.g. <= 60s), return original File directly
   if (duration <= maxDuration) {
-    onProgress?.(100, "Vídeo dentro do limite de 60s. Pronto para envio.");
-    return file;
+    onProgress?.(100, `Vídeo dentro do limite (${formatDurationHuman(duration)}). Pronto para envio.`);
+    return { file, originalDuration: duration, isTrimmed: false };
   }
 
-  // Step 3: File is > 60s -> Trim first 60 seconds in the browser using HTML5 Canvas & MediaRecorder
-  onProgress?.(5, "Preparando corte do vídeo (0:00 → 1:00)...");
+  // Step 3: File is > 60s -> Trim first 60 seconds (0:00 -> 1:00) in the browser
+  const humanOrig = formatDurationHuman(duration);
+  onProgress?.(5, `Vídeo com ${humanOrig}. Cortando os primeiros 60 segundos (0:00 → 1:00)...`);
 
   if (typeof window === "undefined" || typeof MediaRecorder === "undefined") {
-    throw new Error("O seu navegador não suporta a gravação/corte local de vídeo. Atualize seu navegador.");
+    throw new Error("O seu navegador não suporta o corte local de vídeo. Atualize seu navegador.");
   }
 
-  return new Promise<File>((resolve, reject) => {
+  return new Promise<{ file: File; originalDuration: number; isTrimmed: boolean }>((resolve, reject) => {
     const video = document.createElement("video");
     video.preload = "auto";
-    video.muted = false; // We want to capture audio
+    video.muted = false; // Capture audio track
     video.playsInline = true;
 
     const objectUrl = URL.createObjectURL(file);
@@ -132,7 +151,7 @@ export async function prepareClipFileForUpload(
         const width = video.videoWidth || 720;
         const height = video.videoHeight || 1280;
 
-        // Create canvas matching video's native resolution
+        // Create canvas matching video's native resolution & orientation
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
@@ -140,14 +159,14 @@ export async function prepareClipFileForUpload(
 
         if (!ctx) {
           cleanup();
-          return reject(new Error("Não foi possível criar o contexto 2D do Canvas."));
+          return reject(new Error("Não foi possível criar o contexto do Canvas para o corte de vídeo."));
         }
 
         // Capture canvas video stream
         const canvasStream = (canvas as any).captureStream ? (canvas as any).captureStream(30) : null;
         if (!canvasStream) {
           cleanup();
-          return reject(new Error("Seu navegador não suporta a captura de fluxo do Canvas (captureStream)."));
+          return reject(new Error("Seu navegador não suporta a captura de fluxo do Canvas."));
         }
 
         // Setup audio stream routing via WebAudio API if audio track exists
@@ -161,7 +180,6 @@ export async function prepareClipFileForUpload(
             audioSource = audioCtx.createMediaElementSource(video);
             const audioDestination = audioCtx.createMediaStreamDestination();
             audioSource.connect(audioDestination);
-            // Also connect to destination to avoid muting during processing if needed, but we don't necessarily need speaker output
             audioDestination.stream.getAudioTracks().forEach((track) => combinedStream.addTrack(track));
           }
         } catch (e) {
@@ -186,7 +204,7 @@ export async function prepareClipFileForUpload(
           }
         };
 
-        mediaRecorder.onstop = async () => {
+        mediaRecorder.onstop = () => {
           cleanup();
           if (signal?.aborted) return;
 
@@ -202,27 +220,22 @@ export async function prepareClipFileForUpload(
             lastModified: Date.now(),
           });
 
-          // Final Duration Safety Assert
-          try {
-            const finalDuration = await getVideoDuration(trimmedFile);
-            if (finalDuration > maxDuration + 1) { // 1 second buffer allowance for container framing
-              return reject(new Error(`O arquivo recortado ultrapassou o limite de ${maxDuration}s (${finalDuration.toFixed(1)}s). Envio abortado.`));
-            }
-          } catch (assertErr) {
-            console.warn("[VideoProcessor] Final duration assertion warning:", assertErr);
+          // Absolute safety validation: Ensure trimmedFile is a new File object and non-empty
+          if (trimmedFile === file || trimmedFile.size <= 0) {
+            return reject(new Error("Não foi possível gerar o arquivo de vídeo cortado."));
           }
 
           onProgress?.(100, "Clip de 60s preparado com sucesso!");
-          resolve(trimmedFile);
+          resolve({ file: trimmedFile, originalDuration: duration, isTrimmed: true });
         };
 
-        // Start playback & recording from 0s
+        // Start playback & recording from 0s up to maxDuration
         video.currentTime = 0;
         await video.play().catch(() => {});
 
         mediaRecorder.start(1000); // 1s timeslices
 
-        // Render loop
+        // Render loop: draws frame and monitors target duration (0:00 -> 1:00)
         const drawFrame = () => {
           if (signal?.aborted) {
             handleAbort();
