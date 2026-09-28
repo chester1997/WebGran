@@ -160,7 +160,7 @@ function ClipCard({
         onEnded={() => {
           if (isActive) onEnded();
         }}
-        className="absolute inset-0 w-full h-full object-cover z-0"
+        className="absolute inset-0 w-full h-full object-contain z-0"
       />
     </div>
   );
