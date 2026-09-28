@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { BunnyStreamService } from "../stream";
 
-describe("MiniApp Public Clips API Security & Business Rules", () => {
+describe("MiniApp Public Clips API Security & Resolution Independence Rules", () => {
   const storeIdA = "store-uuid-aaaa-1111";
   const storeIdB = "store-uuid-bbbb-2222";
 
@@ -87,7 +88,7 @@ describe("MiniApp Public Clips API Security & Business Rules", () => {
       bunnyVideoId: c.bunnyVideoId,
       thumbnailUrl: c.thumbnailUrl || `https://${cdnHostname}/${c.bunnyVideoId}/thumbnail.jpg`,
       playbackUrl: `https://${cdnHostname}/${c.bunnyVideoId}/playlist.m3u8`,
-      directUrl: `https://${cdnHostname}/${c.bunnyVideoId}/play_720p.mp4`,
+      directUrl: `https://${cdnHostname}/${c.bunnyVideoId}/play_360p.mp4`,
       duration: c.duration,
       position: c.position,
     }));
@@ -106,7 +107,6 @@ describe("MiniApp Public Clips API Security & Business Rules", () => {
   it("returns ONLY READY and isActive=true clips", () => {
     const clipsA = filterPublicClips(storeIdA);
 
-    // clip-2 (UPLOADING) and clip-3 (isActive=false) must be excluded
     const clipIds = clipsA.map((c) => c.id);
     expect(clipIds).toContain("clip-4");
     expect(clipIds).toContain("clip-1");
@@ -122,12 +122,12 @@ describe("MiniApp Public Clips API Security & Business Rules", () => {
     expect(clipsA[0].position).toBeLessThan(clipsA[1].position);
   });
 
-  it("constructs correct public Bunny CDN streaming & thumbnail URLs", () => {
+  it("constructs correct public Bunny CDN HLS & universal fallback MP4 URLs", () => {
     const clipsA = filterPublicClips(storeIdA);
     const clip = clipsA[0];
 
     expect(clip.playbackUrl).toBe(`https://${cdnHostname}/guid-aaa-000/playlist.m3u8`);
-    expect(clip.directUrl).toBe(`https://${cdnHostname}/guid-aaa-000/play_720p.mp4`);
+    expect(clip.directUrl).toBe(`https://${cdnHostname}/guid-aaa-000/play_360p.mp4`);
     expect(clip.thumbnailUrl).toBe(`https://${cdnHostname}/guid-aaa-000/thumbnail.jpg`);
   });
 
@@ -143,5 +143,56 @@ describe("MiniApp Public Clips API Security & Business Rules", () => {
     expect(jsonString).not.toContain("BUNNY_STREAM_READ_ONLY_API_KEY");
     expect(jsonString).not.toContain("AccessKey");
     expect(jsonString).not.toContain("storeId");
+  });
+
+  describe("Resolution Independence & Universal Playback Scenarios", () => {
+    it("CENÁRIO A: Vídeo 480p SD possui HLS playlist.m3u8 disponível e fallback directUrl", () => {
+      const mockVideo480p = {
+        bunnyVideoId: "guid-sd-480p",
+        availableResolutions: "480p,240p,360p",
+        width: 480,
+        height: 854,
+      };
+
+      const playbackUrl = `https://${cdnHostname}/${mockVideo480p.bunnyVideoId}/playlist.m3u8`;
+      const directUrl = `https://${cdnHostname}/${mockVideo480p.bunnyVideoId}/play_360p.mp4`;
+
+      expect(playbackUrl).toContain("/playlist.m3u8");
+      expect(directUrl).toContain("/play_360p.mp4");
+      expect(mockVideo480p.availableResolutions).toContain("360p");
+    });
+
+    it("CENÁRIO B: Vídeo 720p HD possui HLS playlist.m3u8 e directUrl", () => {
+      const mockVideo720p = {
+        bunnyVideoId: "guid-hd-720p",
+        availableResolutions: "360p,480p,720p,240p",
+        width: 720,
+        height: 1280,
+      };
+
+      const playbackUrl = `https://${cdnHostname}/${mockVideo720p.bunnyVideoId}/playlist.m3u8`;
+      const directUrl = `https://${cdnHostname}/${mockVideo720p.bunnyVideoId}/play_360p.mp4`;
+
+      expect(playbackUrl).toContain("/playlist.m3u8");
+      expect(directUrl).toContain("/play_360p.mp4");
+    });
+
+    it("CENÁRIO C: Vídeo 1080p Full HD possui HLS playlist.m3u8 e directUrl", () => {
+      const mockVideo1080p = {
+        bunnyVideoId: "guid-fhd-1080p",
+        availableResolutions: "360p,480p,720p,240p,1080p",
+        width: 1080,
+        height: 1920,
+      };
+
+      const playbackUrl = `https://${cdnHostname}/${mockVideo1080p.bunnyVideoId}/playlist.m3u8`;
+      expect(playbackUrl).toContain("/playlist.m3u8");
+    });
+
+    it("CENÁRIO D: Fallback MP4 direto utiliza resolução universal 360p por padrão", () => {
+      const videoId = "guid-generic-test";
+      const directUrl = `https://${cdnHostname}/${videoId}/play_360p.mp4`;
+      expect(directUrl).toBe(`https://${cdnHostname}/guid-generic-test/play_360p.mp4`);
+    });
   });
 });

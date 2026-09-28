@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import Hls from "hls.js";
 
 export interface ClipItem {
   id: string;
@@ -42,6 +43,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   const touchStartY = useRef<number | null>(null);
   const touchMoveY = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   const fetchClips = useCallback(async () => {
     setLoading(true);
@@ -126,7 +128,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   const handleTouchEnd = () => {
     if (touchStartY.current === null || touchMoveY.current === null) return;
     const deltaY = touchStartY.current - touchMoveY.current;
-    const threshold = 60; // 60px swipe threshold to prevent accidental switches
+    const threshold = 60; // 60px swipe threshold
 
     if (deltaY > threshold) {
       // Swiped Up -> Next Clip
@@ -151,28 +153,93 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   };
 
   const handleVideoEnded = () => {
-    // Loop is disabled between clips per requirement. Auto-advance to next clip.
     if (currentIndex < clips.length - 1) {
       handleNext();
     } else {
-      // Reached the last clip
       setIsPlaying(false);
       setProgress(100);
     }
   };
 
-  // Auto-play when clip changes
+  // Universal Video Stream Setup (HLS Native -> HLS.js -> Direct MP4 Fallback)
   useEffect(() => {
-    if (videoRef.current && currentClip) {
-      videoRef.current.currentTime = 0;
-      videoRef.current
+    const video = videoRef.current;
+    if (!video || !currentClip) return;
+
+    // Clean up previous HLS instance if active
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    video.currentTime = 0;
+
+    // 1. Native HLS support (iOS Safari, Mobile Safari, iOS Telegram WebApp)
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = currentClip.playbackUrl;
+      video
         .play()
         .then(() => setIsPlaying(true))
         .catch((err) => {
-          console.warn("[StudioClips] Autoplay prevented by browser:", err);
+          console.warn("[StudioClips] Native HLS autoplay prevented:", err);
           setIsPlaying(false);
         });
     }
+    // 2. HLS.js support (Android Chrome, Android Telegram WebApp, Desktop Chrome/Firefox/Edge)
+    else if (Hls.isSupported()) {
+      const hls = new Hls({
+        autoStartLoad: true,
+        enableWorker: true,
+        lowLatencyMode: false,
+      });
+      hlsRef.current = hls;
+
+      hls.loadSource(currentClip.playbackUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch((err) => {
+            console.warn("[StudioClips] HLS.js autoplay prevented:", err);
+            setIsPlaying(false);
+          });
+      });
+
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          console.warn("[StudioClips] HLS.js fatal error, falling back to direct MP4:", data.type);
+          hls.destroy();
+          hlsRef.current = null;
+
+          // Fallback to direct MP4 URL
+          video.src = currentClip.directUrl;
+          video
+            .play()
+            .then(() => setIsPlaying(true))
+            .catch(() => setIsPlaying(false));
+        }
+      });
+    }
+    // 3. Fallback to direct MP4 URL if HLS is unsupported
+    else {
+      video.src = currentClip.directUrl;
+      video
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.warn("[StudioClips] Direct MP4 autoplay prevented:", err);
+          setIsPlaying(false);
+        });
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, [currentIndex, currentClip]);
 
   // Keyboard navigation (desktop support)
@@ -243,7 +310,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
 
   return (
     <div className="relative w-full h-[calc(100vh-80px)] min-h-[500px] bg-black flex justify-center items-center overflow-hidden select-none">
-      {/* 9:16 Shorts/Reels Container - Responsive Mobile & Desktop Frame */}
+      {/* 9:16 Shorts/Reels Container */}
       <div
         className="relative w-full max-w-[440px] h-full bg-zinc-950 shadow-2xl flex flex-col justify-between overflow-hidden"
         onTouchStart={handleTouchStart}
@@ -255,7 +322,6 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
         {currentClip && (
           <video
             ref={videoRef}
-            src={currentClip.directUrl}
             poster={currentClip.thumbnailUrl}
             playsInline
             muted={isMuted}
@@ -265,7 +331,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           />
         )}
 
-        {/* Controlled Preload of Next Clip (hidden, metadata only) */}
+        {/* Preload of Next Clip */}
         {nextClip && (
           <video
             src={nextClip.directUrl}
@@ -275,9 +341,8 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           />
         )}
 
-        {/* TOP OVERLAY: Position Indicator & Mute Button */}
+        {/* TOP OVERLAY */}
         <div className="relative z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 via-black/30 to-transparent">
-          {/* Clips Counter Badge */}
           <div className="px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs font-semibold text-white tracking-wider flex items-center gap-1.5">
             <Film className="w-3.5 h-3.5 text-red-500" />
             <span>
@@ -285,7 +350,6 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
             </span>
           </div>
 
-          {/* Mute / Unmute Button */}
           <button
             onClick={toggleMute}
             aria-label={isMuted ? "Ativar som do vídeo" : "Desativar som do vídeo"}
@@ -299,7 +363,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           </button>
         </div>
 
-        {/* CENTER OVERLAY: Play/Pause Indicator (shown when paused) */}
+        {/* CENTER OVERLAY: Play/Pause Indicator */}
         {!isPlaying && (
           <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
             <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-2xl animate-fade-in">
@@ -308,7 +372,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           </div>
         )}
 
-        {/* RIGHT OVERLAY: Swipe Navigation Controls */}
+        {/* RIGHT OVERLAY: Navigation Controls */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-3 pointer-events-auto">
           {currentIndex > 0 && (
             <button
@@ -337,9 +401,8 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           )}
         </div>
 
-        {/* BOTTOM OVERLAY: Title, Description & Progress Bar */}
+        {/* BOTTOM OVERLAY */}
         <div className="relative z-20 p-4 pt-12 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col gap-3">
-          {/* Title & Description */}
           {currentClip && (
             <div className="flex flex-col gap-1 pr-12 text-left">
               <h2 className="text-base font-bold text-white drop-shadow-md line-clamp-2 leading-snug">

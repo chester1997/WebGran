@@ -53,9 +53,9 @@ export async function GET(req: NextRequest) {
     const formattedClips = items.map((clip) => {
       const videoId = clip.bunnyVideoId;
       const thumbnailUrl =
-        clip.thumbnailUrl || `https://${cdnHostname}/${videoId}/thumbnail.jpg`;
-      const playbackUrl = `https://${cdnHostname}/${videoId}/playlist.m3u8`;
-      const directUrl = `https://${cdnHostname}/${videoId}/play_720p.mp4`;
+        clip.thumbnailUrl || BunnyStreamService.getThumbnailUrl(videoId);
+      const playbackUrl = BunnyStreamService.getPlaybackUrl(videoId);
+      const directUrl = BunnyStreamService.getDirectStreamUrl(videoId, "360p");
 
       return {
         id: clip.id,

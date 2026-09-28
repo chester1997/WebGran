@@ -161,10 +161,10 @@ export class BunnyStreamService {
   }
 
   /**
-   * Returns direct MP4 fallback URL if enabled.
+   * Returns direct MP4 fallback URL for a video (defaults to universal 360p resolution).
    */
-  static getDirectStreamUrl(videoId: string): string {
+  static getDirectStreamUrl(videoId: string, resolution = "360p"): string {
     const config = this.getConfig();
-    return `https://${config.cdnHostname}/${videoId}/play_720p.mp4`;
+    return `https://${config.cdnHostname}/${videoId}/play_${resolution}.mp4`;
   }
 }
