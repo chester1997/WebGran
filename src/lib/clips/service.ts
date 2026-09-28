@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { clips } from "@/db/schema";
-import { eq, and, asc, desc, max } from "drizzle-orm";
+import { eq, and, asc, desc, max, inArray } from "drizzle-orm";
 import { BunnyStreamService } from "@/lib/bunny/stream";
+import { resolveClipStatusTransition, ClipStatus } from "@/lib/bunny/webhook-utils";
 
 export interface CreateClipInput {
   storeId: string;
@@ -107,9 +108,66 @@ export class ClipService {
   }
 
   /**
-   * Lists all clips for a store.
+   * Synchronizes status of any pending clips (UPLOADING or PROCESSING) with Bunny Stream API.
+   * Ensures self-healing status updates without hardcoded IDs.
+   */
+  static async syncPendingClipsForStore(storeId: string) {
+    try {
+      const pendingClips = await db.query.clips.findMany({
+        where: and(
+          eq(clips.storeId, storeId),
+          inArray(clips.status, ["UPLOADING", "PROCESSING"])
+        ),
+      });
+
+      if (!pendingClips || pendingClips.length === 0) return;
+
+      for (const clip of pendingClips) {
+        try {
+          const videoDetails = await BunnyStreamService.getVideo(clip.bunnyVideoId);
+          if (!videoDetails) continue;
+
+          const targetStatus = resolveClipStatusTransition(
+            videoDetails.status,
+            clip.status as ClipStatus
+          );
+
+          let duration: number | undefined = undefined;
+          let thumbnailUrl: string | undefined = undefined;
+
+          if (targetStatus === "READY") {
+            if (typeof videoDetails.length === "number" && videoDetails.length > 0) {
+              duration = Math.round(videoDetails.length);
+            }
+            if (videoDetails.thumbnailFileName) {
+              thumbnailUrl = BunnyStreamService.getThumbnailUrl(
+                clip.bunnyVideoId,
+                videoDetails.thumbnailFileName
+              );
+            }
+          }
+
+          if (targetStatus !== clip.status || duration !== undefined || thumbnailUrl !== undefined) {
+            await this.updateClipStatusByBunnyId(clip.bunnyVideoId, targetStatus, {
+              duration,
+              thumbnailUrl,
+            });
+          }
+        } catch (err) {
+          console.error("[ClipService] Auto-sync error for clip:", clip.bunnyVideoId, err);
+        }
+      }
+    } catch (err) {
+      console.error("[ClipService] Failed to sync pending clips:", err);
+    }
+  }
+
+  /**
+   * Lists all clips for a store, auto-syncing pending clips with Bunny Stream API.
    */
   static async listStoreClips(storeId: string) {
+    await this.syncPendingClipsForStore(storeId);
+
     return await db.query.clips.findMany({
       where: eq(clips.storeId, storeId),
       orderBy: [asc(clips.position), desc(clips.createdAt)],
