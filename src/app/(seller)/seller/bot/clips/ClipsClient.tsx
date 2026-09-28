@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TusVideoUploader, uploadVideoDirectly } from "@/lib/bunny/client-upload";
+import { prepareClipFileForUpload, CLIP_MAX_DURATION_SECONDS } from "@/lib/clips/video-processor";
 
 export interface ClipItem {
   id: string;
@@ -272,19 +273,37 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
 
     try {
       setUploadError(null);
-      setUploadStep("CREATING_SESSION");
+      setUploadStep("PREPARING");
       setUploadProgressPercent(0);
-      setUploadProgressText("Criando sessão de upload seguro...");
+      setUploadProgressText("Analisando duração do vídeo no navegador...");
+      uploadAbortControllerRef.current = new AbortController();
 
-      // Step 1: POST /api/seller/clips/upload-session
+      // Step 1: Client-Side Duration Check & Trimming to max 60s (0:00 -> 1:00)
+      const finalFileToUpload = await prepareClipFileForUpload(selectedFile, {
+        maxDurationSeconds: CLIP_MAX_DURATION_SECONDS,
+        signal: uploadAbortControllerRef.current.signal,
+        onProgress: (percentage, statusText) => {
+          setUploadProgressPercent(percentage);
+          setUploadProgressText(statusText);
+        },
+      });
+
+      if (uploadAbortControllerRef.current.signal.aborted) {
+        throw new Error("Upload cancelado pelo usuário.");
+      }
+
+      setUploadStep("CREATING_SESSION");
+      setUploadProgressText("Criando sessão de upload seguro no WebGran...");
+
+      // Step 2: POST /api/seller/clips/upload-session with actual file size & mime type
       const sessionRes = await fetch("/api/seller/clips/upload-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.title.trim(),
           description: formData.description.trim() || null,
-          contentType: selectedFile.type || "video/mp4",
-          fileSize: selectedFile.size,
+          contentType: finalFileToUpload.type || "video/mp4",
+          fileSize: finalFileToUpload.size,
         }),
       });
 
@@ -295,18 +314,17 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
 
       const { uploadSession, clip } = sessionData;
 
-      // Step 2: Browser -> Bunny Stream Direct TUS Resumable Upload
+      // Step 3: Browser -> Bunny Stream Direct TUS Resumable Upload
       setUploadStep("UPLOADING");
       setUploadProgressText("Enviando vídeo diretamente para o Bunny Stream (TUS)...");
 
-      uploadAbortControllerRef.current = new AbortController();
       const uploader = new TusVideoUploader();
       uploadAbortControllerRef.current.signal.addEventListener("abort", () => {
         uploader.abort();
       });
 
       await uploader.uploadVideo({
-        file: selectedFile,
+        file: finalFileToUpload,
         tusUploadUrl: uploadSession.tusUploadUrl || "https://video.bunnycdn.com/tusupload",
         headers: uploadSession.headers,
         signal: uploadAbortControllerRef.current.signal,
@@ -318,7 +336,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
         },
       });
 
-      // Step 3: Direct Upload Completed -> Bunny Processing
+      // Step 4: Direct Upload Completed -> Bunny Processing
       setUploadStep("PROCESSING");
       setUploadProgressPercent(100);
       setUploadProgressText("Upload concluído com sucesso! Vídeo em processamento pelo Bunny Stream...");
@@ -809,7 +827,8 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
               )}
 
               {/* Upload Progress Bar Component */}
-              {(uploadStep === "CREATING_SESSION" ||
+              {(uploadStep === "PREPARING" ||
+                uploadStep === "CREATING_SESSION" ||
                 uploadStep === "UPLOADING" ||
                 uploadStep === "PROCESSING") && (
                 <div className="p-4 rounded-xl bg-[#181820] border border-white/10 space-y-3 animate-in fade-in">
@@ -828,14 +847,14 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                     />
                   </div>
 
-                  {uploadStep === "UPLOADING" && (
+                  {(uploadStep === "PREPARING" || uploadStep === "UPLOADING") && (
                     <div className="flex justify-end pt-1">
                       <button
                         type="button"
                         onClick={handleCancelUpload}
                         className="text-xs text-zinc-400 hover:text-red-400 underline transition-colors cursor-pointer"
                       >
-                        Cancelar Upload
+                        Cancelar
                       </button>
                     </div>
                   )}
@@ -847,7 +866,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  disabled={uploadStep === "UPLOADING"}
+                  disabled={uploadStep === "PREPARING" || uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION"}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition-colors disabled:opacity-30"
                 >
                   Cancelar
@@ -856,16 +875,17 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                 <Button
                   type="submit"
                   disabled={
+                    uploadStep === "PREPARING" ||
                     uploadStep === "CREATING_SESSION" ||
                     uploadStep === "UPLOADING" ||
                     uploadStep === "PROCESSING"
                   }
                   className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2 shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  {uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION" ? (
+                  {uploadStep === "PREPARING" || uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION" ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Enviando...</span>
+                      <span>{uploadStep === "PREPARING" ? "Preparando Clip..." : "Enviando..."}</span>
                     </>
                   ) : editingClip ? (
                     "Salvar Alterações"
