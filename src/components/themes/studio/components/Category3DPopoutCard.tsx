@@ -135,7 +135,7 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
 
   return (
     <div 
-      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-3 shadow-md relative transition-all duration-300`}
+      className={`w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 shadow-md relative transition-all duration-300 border border-white/10`}
     >
       <IconComp className={`w-full h-full ${iconColor} relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]`} />
     </div>
@@ -146,13 +146,13 @@ function Category3DPopoutCardBase({ category, storeSlug }: Category3DPopoutCardP
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
-      className="shrink-0 flex flex-col items-center gap-1.5 group select-none transition-transform duration-200 active:scale-95 block"
-      style={{ minWidth: "72px", maxWidth: "88px" }}
+      className="shrink-0 flex flex-col items-center gap-2 group select-none transition-transform duration-200 active:scale-95 block"
+      style={{ minWidth: "90px", maxWidth: "110px" }}
     >
       {/* 3D Icon / Image */}
       <div className="relative transition-all duration-300 group-hover:scale-105">
         {category.imageUrl ? (
-          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-md transition-all duration-300">
+          <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/40 transition-all duration-300">
             <img
               src={category.imageUrl}
               alt={category.name}
@@ -167,7 +167,7 @@ function Category3DPopoutCardBase({ category, storeSlug }: Category3DPopoutCardP
       </div>
 
       {/* Category Name */}
-      <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-center truncate max-w-full leading-tight text-zinc-400 group-hover:text-white transition-colors duration-200">
+      <span className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-center truncate max-w-full leading-tight text-zinc-400 group-hover:text-white transition-colors duration-200">
         {category.name}
       </span>
     </Link>
