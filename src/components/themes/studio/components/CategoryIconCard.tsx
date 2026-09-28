@@ -230,21 +230,20 @@ function CategoryIconCardBase({ category, storeSlug, isActive = false }: Categor
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
-      className="shrink-0 flex flex-col items-center gap-2 group select-none transition-transform duration-200 active:scale-95 block"
-      style={{ minWidth: "90px", maxWidth: "110px" }}
+      className="w-full flex flex-col items-center gap-1.5 group select-none transition-transform duration-200 active:scale-95 block"
     >
       {/* Vibrant 3D Gradient Icon Box / Image */}
-      <div className="relative transition-all duration-300 group-hover:scale-105">
+      <div className="relative w-full max-w-[110px] aspect-square transition-all duration-300 group-hover:scale-105">
         {category.imageUrl ? (
-          <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/40 transition-all duration-300">
+          <div className="w-full h-full rounded-2xl overflow-hidden bg-transparent transition-all duration-300">
             <img
               src={category.imageUrl}
               alt={category.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover rounded-2xl"
             />
           </div>
         ) : (
-          <div className={`w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 shadow-md relative transition-all duration-300 border border-white/10`}>
+          <div className={`w-full h-full rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 relative transition-all duration-300`}>
             <IconComp className={`w-full h-full ${iconColor} relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]`} />
           </div>
         )}

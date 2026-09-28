@@ -131,38 +131,26 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       )}
 
       <div className="relative z-20 mt-1 space-y-2">
-        {/* Categories Section */}
+        {/* Categories Section — 3 per row Grid aligned with Hero Banner */}
         {store.categories && store.categories.length > 0 && (
-          <section className="w-full overflow-hidden py-1">
-            {store.categoryDisplayStyle === 'ICON' ? (
-              /* ── ICON MODE: compact 56px cards, name below ── */
-              <div
-                className="flex overflow-x-auto scrollbar-hide w-full select-none px-2.5 py-1 gap-3"
-                style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
-              >
-                {store.categories.map((cat) => (
+          <section className="w-full max-w-[460px] mx-auto px-4 py-1.5">
+            <div className="grid grid-cols-3 w-full gap-2.5 sm:gap-3.5">
+              {store.categories.map((cat) => (
+                store.categoryDisplayStyle === 'ICON' ? (
                   <CategoryIconCard
                     key={cat.id}
                     category={cat}
                     storeSlug={storeSlug}
                   />
-                ))}
-              </div>
-            ) : (
-              /* ── IMAGE MODE: 3D Popout cards (existing) ── */
-              <div
-                className="flex overflow-x-auto scrollbar-hide w-full select-none px-2.5 py-1 gap-2.5 sm:gap-3"
-                style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
-              >
-                {store.categories.map((cat) => (
+                ) : (
                   <Category3DPopoutCard
                     key={cat.id}
                     category={cat}
                     storeSlug={storeSlug}
                   />
-                ))}
-              </div>
-            )}
+                )
+              ))}
+            </div>
           </section>
         )}
 

@@ -135,7 +135,7 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
 
   return (
     <div 
-      className={`w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 shadow-md relative transition-all duration-300 border border-white/10`}
+      className={`w-full aspect-square max-w-[110px] rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 relative transition-all duration-300`}
     >
       <IconComp className={`w-full h-full ${iconColor} relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]`} />
     </div>
@@ -146,21 +146,20 @@ function Category3DPopoutCardBase({ category, storeSlug }: Category3DPopoutCardP
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
-      className="shrink-0 flex flex-col items-center gap-2 group select-none transition-transform duration-200 active:scale-95 block"
-      style={{ minWidth: "90px", maxWidth: "110px" }}
+      className="w-full flex flex-col items-center gap-1.5 group select-none transition-transform duration-200 active:scale-95 block"
     >
-      {/* 3D Icon / Image */}
-      <div className="relative transition-all duration-300 group-hover:scale-105">
+      {/* 3D Icon / Image (Clean, no white background card behind image) */}
+      <div className="relative w-full max-w-[110px] aspect-square transition-all duration-300 group-hover:scale-105">
         {category.imageUrl ? (
-          <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/40 transition-all duration-300">
+          <div className="w-full h-full rounded-2xl overflow-hidden bg-transparent transition-all duration-300">
             <img
               src={category.imageUrl}
               alt={category.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover rounded-2xl"
             />
           </div>
         ) : (
-          <div className="relative rounded-2xl transition-all duration-300">
+          <div className="relative w-full h-full transition-all duration-300">
             <Category3DIconRenderer name={category.name} iconName={category.iconName} />
           </div>
         )}
