@@ -54,14 +54,14 @@ function ClipCard({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Synchronize ref with parent
-  const handleRefAssign = (el: HTMLVideoElement | null) => {
-    localVideoRef.current = el;
-    if (isActive) {
-      setVideoRef(el);
+  // Synchronize active video ref with parent component
+  useEffect(() => {
+    if (isActive && localVideoRef.current) {
+      setVideoRef(localVideoRef.current);
     }
-  };
+  }, [isActive, setVideoRef]);
 
+  // Main Media Lifecycle Effect: Only initializes/destroys media when active status or clip ID changes
   useEffect(() => {
     const video = localVideoRef.current;
     if (!video) return;
@@ -75,7 +75,6 @@ function ClipCard({
       return;
     }
 
-    setVideoRef(video);
     video.currentTime = 0;
     video.muted = isMuted;
 
@@ -132,9 +131,9 @@ function ClipCard({
         hlsRef.current = null;
       }
     };
-  }, [isActive, clip, isMuted, setVideoRef]);
+  }, [isActive, clip.id, clip.playbackUrl, clip.directUrl]);
 
-  // Keep mute state updated in real-time
+  // Keep mute state updated in real-time without re-creating HLS or resetting currentTime
   useEffect(() => {
     if (localVideoRef.current) {
       localVideoRef.current.muted = isMuted;
@@ -145,7 +144,7 @@ function ClipCard({
     <div className="relative w-full h-full shrink-0 overflow-hidden bg-black">
       {/* Video Element */}
       <video
-        ref={handleRefAssign}
+        ref={localVideoRef}
         poster={clip.thumbnailUrl}
         playsInline
         muted={isMuted}
@@ -184,6 +183,10 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
   const activeVideoRef = useRef<HTMLVideoElement | null>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const tapFeedbackTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    activeVideoRef.current = el;
+  }, []);
 
   const fetchClips = useCallback(async () => {
     setLoading(true);
@@ -425,9 +428,7 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
               isMuted={isMuted}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleVideoEnded}
-              setVideoRef={(el) => {
-                if (idx === currentIndex) activeVideoRef.current = el;
-              }}
+              setVideoRef={setVideoRef}
             />
           ))}
         </div>
