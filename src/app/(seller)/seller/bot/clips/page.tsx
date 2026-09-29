@@ -40,8 +40,18 @@ export default async function SellerClipsPage() {
     <ClipsClient
       initialClips={clipsList.map((c) => ({
         ...c,
-        createdAt: new Date(c.createdAt),
-        updatedAt: new Date(c.updatedAt),
+        createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+        updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(),
+        product: c.product
+          ? {
+              id: c.product.id,
+              title: c.product.title,
+              price: c.product.price,
+              coverUrl: c.product.coverUrl,
+              slug: c.product.slug,
+              status: c.product.status,
+            }
+          : null,
       }))}
       initialStats={{ total, published, processing, failed }}
       availableProducts={storeProducts.map((p) => ({
