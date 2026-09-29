@@ -3,7 +3,7 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { ClipService } from "@/lib/clips/service";
 import { BunnyStreamService } from "@/lib/bunny/stream";
 import { db } from "@/db";
-import { clips } from "@/db/schema";
+import { clips, products } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function PATCH(
@@ -26,7 +26,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { title, description, isActive } = body;
+    const { title, description, isActive, productId } = body;
 
     const updatedData: Record<string, any> = {
       updatedAt: new Date(),
@@ -47,15 +47,35 @@ export async function PATCH(
       updatedData.isActive = Boolean(isActive);
     }
 
+    if (productId !== undefined) {
+      if (!productId || typeof productId !== "string" || !productId.trim()) {
+        updatedData.productId = null;
+      } else {
+        const targetProd = await db.query.products.findFirst({
+          where: and(eq(products.id, productId.trim()), eq(products.storeId, store.id)),
+        });
+        if (!targetProd) {
+          return NextResponse.json(
+            { success: false, error: "O produto selecionado é inválido ou não pertence a esta loja." },
+            { status: 400 }
+          );
+        }
+        updatedData.productId = targetProd.id;
+      }
+    }
+
     const [updated] = await db
       .update(clips)
       .set(updatedData)
       .where(and(eq(clips.id, id), eq(clips.storeId, store.id)))
       .returning();
 
+    // Fetch updated record with product relation included
+    const fullUpdated = await ClipService.getClipById(id, store.id);
+
     return NextResponse.json({
       success: true,
-      clip: updated,
+      clip: fullUpdated || updated,
     });
   } catch (error: any) {
     console.error("[Seller Clip PATCH Error]:", error);

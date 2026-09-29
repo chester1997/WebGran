@@ -22,10 +22,21 @@ import {
   FileVideo,
   LayoutGrid,
   List,
+  ShoppingCart,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TusVideoUploader, uploadVideoDirectly } from "@/lib/bunny/client-upload";
 import { getVideoDuration, formatDurationHuman, CLIP_MAX_DURATION_SECONDS } from "@/lib/clips/video-processor";
+
+export interface ProductOption {
+  id: string;
+  title: string;
+  price: string | number;
+  coverUrl: string | null;
+  slug: string;
+  status?: string;
+}
 
 export interface ClipItem {
   id: string;
@@ -38,6 +49,8 @@ export interface ClipItem {
   status: string; // 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
   position: number;
   isActive: boolean;
+  productId?: string | null;
+  product?: ProductOption | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,18 +65,23 @@ export interface ClipsStats {
 interface ClipsClientProps {
   initialClips: ClipItem[];
   initialStats: ClipsStats;
+  availableProducts?: ProductOption[];
 }
 
 const MAX_FILE_SIZE_MB = 500;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 524,288,000 bytes
 
-export default function ClipsClient({ initialClips, initialStats }: ClipsClientProps) {
+export default function ClipsClient({ initialClips, initialStats, availableProducts = [] }: ClipsClientProps) {
   const [clipsList, setClipsList] = useState<ClipItem[]>(initialClips);
   const [stats, setStats] = useState<ClipsStats>(initialStats);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // View Mode: 'grid' (lado a lado) | 'list'
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Linked Product state in form
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [productSearchQuery, setProductSearchQuery] = useState<string>("");
 
   // Toast Feedback State
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -216,6 +234,8 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
   // Open Add Modal
   const openAddModal = () => {
     setFormData({ title: "", description: "" });
+    setSelectedProductId(null);
+    setProductSearchQuery("");
     setSelectedFile(null);
     setIsOverDurationLimit(false);
     setUploadStep("IDLE");
@@ -233,6 +253,8 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       title: c.title || "",
       description: c.description || "",
     });
+    setSelectedProductId(c.productId || (c.product?.id ?? null));
+    setProductSearchQuery("");
     setIsAddModalOpen(true);
   };
 
@@ -263,6 +285,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
           body: JSON.stringify({
             title: formData.title.trim(),
             description: formData.description.trim() || null,
+            productId: selectedProductId || null,
           }),
         });
 
@@ -319,7 +342,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
         type: selectedFile.type,
       });
 
-      // Step 1: POST /api/seller/clips/upload-session with actual file size & mime type
+      // Step 1: POST /api/seller/clips/upload-session with actual file size, mime type & productId
       const sessionRes = await fetch("/api/seller/clips/upload-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -328,6 +351,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
           description: formData.description.trim() || null,
           contentType: selectedFile.type || "video/mp4",
           fileSize: selectedFile.size,
+          productId: selectedProductId || null,
         }),
       });
 
@@ -705,6 +729,12 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                     {clip.description && (
                       <p className="text-xs text-zinc-400 line-clamp-2 mt-0.5">{clip.description}</p>
                     )}
+                    {clip.product && (
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-950/40 border border-amber-500/20 px-2 py-0.5 rounded-md mt-1.5 w-fit max-w-full">
+                        <ShoppingCart className="w-3 h-3 text-amber-400 shrink-0" />
+                        <span className="truncate">{clip.product.title}</span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-[10px] text-zinc-500 font-mono truncate pt-1">
                     ID: {clip.bunnyVideoId}
@@ -848,26 +878,34 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                         </span>
                       )}
 
-                      {/* Active / Inactive Badge */}
-                      <span
-                        className={`text-[11px] px-2 py-0.5 rounded font-semibold ${
-                          clip.isActive
-                            ? "bg-emerald-500/10 text-emerald-300"
-                            : "bg-zinc-800 text-zinc-400"
-                        }`}
-                      >
-                        {clip.isActive ? "Ativo" : "Inativo"}
+                    {/* Linked Product Badge */}
+                    {clip.product && (
+                      <span className="bg-amber-950/80 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1.5">
+                        <ShoppingCart className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="truncate max-w-[180px]">{clip.product.title}</span>
                       </span>
-                    </div>
-
-                    <h3 className="text-base font-bold text-white truncate">{clip.title}</h3>
-                    {clip.description && (
-                      <p className="text-xs text-zinc-400 line-clamp-2">{clip.description}</p>
                     )}
 
-                    <p className="text-[11px] text-zinc-500 pt-1">
-                      Bunny Video ID: <code className="text-zinc-400 font-mono">{clip.bunnyVideoId}</code>
-                    </p>
+                    {/* Active / Inactive Badge */}
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded font-semibold ${
+                        clip.isActive
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : "bg-zinc-800 text-zinc-400"
+                      }`}
+                    >
+                      {clip.isActive ? "Ativo" : "Inativo"}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-white truncate">{clip.title}</h3>
+                  {clip.description && (
+                    <p className="text-xs text-zinc-400 line-clamp-2">{clip.description}</p>
+                  )}
+
+                  <p className="text-[11px] text-zinc-500 pt-1">
+                    Bunny Video ID: <code className="text-zinc-400 font-mono">{clip.bunnyVideoId}</code>
+                  </p>
                   </div>
                 </div>
 
@@ -985,6 +1023,108 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                   disabled={uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION"}
                   className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500 transition-all disabled:opacity-50 resize-none"
                 />
+              </div>
+
+              {/* Linked Product Selection */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  Produto Vinculado (Opcional)
+                </label>
+
+                {selectedProductId ? (
+                  (() => {
+                    const selectedProd =
+                      availableProducts.find((p) => p.id === selectedProductId) ||
+                      (editingClip?.product?.id === selectedProductId ? editingClip.product : null);
+
+                    return (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-white shadow-inner">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {selectedProd?.coverUrl ? (
+                            <img
+                              src={selectedProd.coverUrl}
+                              alt={selectedProd.title}
+                              className="w-10 h-10 object-cover rounded-lg shrink-0 border border-white/10"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 text-amber-400">
+                              <ShoppingCart className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white truncate">{selectedProd?.title || "Produto selecionado"}</p>
+                            {selectedProd?.price !== undefined && (
+                              <p className="text-[11px] font-semibold text-emerald-400">
+                                R$ {Number(selectedProd.price).toFixed(2).replace(".", ",")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProductId(null)}
+                          title="Remover associação de produto"
+                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={productSearchQuery}
+                        onChange={(e) => setProductSearchQuery(e.target.value)}
+                        placeholder="Pesquisar produto cadastrado na loja..."
+                        disabled={uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION"}
+                        className="w-full bg-[#181820] border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500 transition-all disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div className="max-h-36 overflow-y-auto space-y-1 border border-white/5 rounded-xl p-1 bg-[#181820]/60">
+                      {availableProducts.filter((p) => p.title.toLowerCase().includes(productSearchQuery.toLowerCase().trim())).length === 0 ? (
+                        <p className="text-xs text-zinc-500 text-center py-3">
+                          {availableProducts.length === 0 ? "Nenhum produto cadastrado na loja" : "Nenhum produto encontrado"}
+                        </p>
+                      ) : (
+                        availableProducts
+                          .filter((p) => p.title.toLowerCase().includes(productSearchQuery.toLowerCase().trim()))
+                          .map((prod) => (
+                            <button
+                              key={prod.id}
+                              type="button"
+                              onClick={() => setSelectedProductId(prod.id)}
+                              className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/5 text-left transition-colors cursor-pointer group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {prod.coverUrl ? (
+                                  <img
+                                    src={prod.coverUrl}
+                                    alt={prod.title}
+                                    className="w-8 h-8 object-cover rounded-md shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0 text-zinc-500">
+                                    <ShoppingCart className="w-4 h-4" />
+                                  </div>
+                                )}
+                                <span className="text-xs font-semibold text-zinc-200 group-hover:text-white truncate">
+                                  {prod.title}
+                                </span>
+                              </div>
+                              <span className="text-xs font-bold text-emerald-400 shrink-0 ml-2">
+                                R$ {Number(prod.price).toFixed(2).replace(".", ",")}
+                              </span>
+                            </button>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 60s Duration Info Notice Banner */}

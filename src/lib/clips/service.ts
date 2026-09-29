@@ -12,6 +12,7 @@ export interface CreateClipInput {
   thumbnailUrl?: string | null;
   duration?: number | null;
   position?: number;
+  productId?: string | null;
 }
 
 export class ClipService {
@@ -35,6 +36,7 @@ export class ClipService {
       .insert(clips)
       .values({
         storeId: input.storeId,
+        productId: input.productId || null,
         title: input.title.trim(),
         description: input.description?.trim() || null,
         bunnyVideoId: input.bunnyVideoId,
@@ -55,6 +57,7 @@ export class ClipService {
   static async getClipByBunnyVideoId(bunnyVideoId: string) {
     return await db.query.clips.findFirst({
       where: eq(clips.bunnyVideoId, bunnyVideoId),
+      with: { product: true },
     });
   }
 
@@ -64,6 +67,7 @@ export class ClipService {
   static async getClipById(clipId: string, storeId: string) {
     return await db.query.clips.findFirst({
       where: and(eq(clips.id, clipId), eq(clips.storeId, storeId)),
+      with: { product: true },
     });
   }
 
@@ -171,6 +175,7 @@ export class ClipService {
     return await db.query.clips.findMany({
       where: eq(clips.storeId, storeId),
       orderBy: [asc(clips.position), desc(clips.createdAt)],
+      with: { product: true },
     });
   }
 

@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { BunnyStreamService } from "@/lib/bunny/stream";
 import { ClipService } from "@/lib/clips/service";
+import { db } from "@/db";
+import { products } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB max file size limit
 
@@ -15,7 +18,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, contentType, fileSize } = body;
+    const { title, description, contentType, fileSize, productId } = body;
 
     // 1. Input Validation
     if (!title || typeof title !== "string" || !title.trim()) {
@@ -39,6 +42,21 @@ export async function POST(req: Request) {
       }
     }
 
+    // Multi-tenant Product Validation
+    let validProductId: string | null = null;
+    if (productId && typeof productId === "string" && productId.trim()) {
+      const targetProd = await db.query.products.findFirst({
+        where: and(eq(products.id, productId.trim()), eq(products.storeId, store.id)),
+      });
+      if (!targetProd) {
+        return NextResponse.json(
+          { success: false, error: "O produto selecionado é inválido ou não pertence a esta loja." },
+          { status: 400 }
+        );
+      }
+      validProductId = targetProd.id;
+    }
+
     // 2. Create Video Object in Bunny Stream API
     const bunnyVideo = await BunnyStreamService.createVideo(title.trim());
 
@@ -50,6 +68,7 @@ export async function POST(req: Request) {
         title: title.trim(),
         description: description?.trim() || null,
         bunnyVideoId: bunnyVideo.videoId,
+        productId: validProductId,
       });
     } catch (dbError) {
       console.error("[Clip Upload Session] DB creation failed, rolling back Bunny Stream video:", bunnyVideo.videoId);

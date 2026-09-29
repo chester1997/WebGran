@@ -44,6 +44,9 @@ export async function GET(req: NextRequest) {
         eq(clips.isActive, true)
       ),
       orderBy: [asc(clips.position)],
+      with: {
+        product: true,
+      },
     });
 
     const cdnHostname = process.env.BUNNY_STREAM_CDN_HOSTNAME
@@ -57,6 +60,18 @@ export async function GET(req: NextRequest) {
       const playbackUrl = BunnyStreamService.getPlaybackUrl(videoId);
       const directUrl = BunnyStreamService.getDirectStreamUrl(videoId, "360p");
 
+      const linkedProduct =
+        clip.product && clip.product.storeId === store.id && clip.product.status === "active"
+          ? {
+              id: clip.product.id,
+              title: clip.product.title,
+              slug: clip.product.slug,
+              price: clip.product.price,
+              compareAtPrice: clip.product.compareAtPrice,
+              coverUrl: clip.product.coverUrl,
+            }
+          : null;
+
       return {
         id: clip.id,
         title: clip.title,
@@ -67,6 +82,8 @@ export async function GET(req: NextRequest) {
         directUrl,
         duration: clip.duration,
         position: clip.position,
+        productId: clip.productId,
+        product: linkedProduct,
       };
     });
 

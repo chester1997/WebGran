@@ -563,6 +563,7 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
 export const clips = pgTable('clips', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   description: text('description'),
   bunnyVideoId: text('bunny_video_id').notNull(),
@@ -576,6 +577,7 @@ export const clips = pgTable('clips', {
 }, (t) => ({
   bunnyVideoIdIdx: index('clips_bunny_video_id_idx').on(t.bunnyVideoId),
   storeIdIdx: index('clips_store_id_idx').on(t.storeId),
+  productIdIdx: index('clips_product_id_idx').on(t.productId),
   statusIdx: index('clips_status_idx').on(t.status),
   storePositionIdx: index('clips_store_position_idx').on(t.storeId, t.position),
 }));
@@ -584,5 +586,9 @@ export const clipsRelations = relations(clips, ({ one }) => ({
   store: one(stores, {
     fields: [clips.storeId],
     references: [stores.id],
+  }),
+  product: one(products, {
+    fields: [clips.productId],
+    references: [products.id],
   }),
 }));

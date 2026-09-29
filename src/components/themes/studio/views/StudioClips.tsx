@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Play,
   Pause,
@@ -11,8 +12,18 @@ import {
   ChevronUp,
   ChevronDown,
   Sparkles,
+  ShoppingCart,
 } from "lucide-react";
 import Hls from "hls.js";
+
+export interface ClipProduct {
+  id: string;
+  title: string;
+  slug: string;
+  price: string | number;
+  compareAtPrice?: string | number | null;
+  coverUrl?: string | null;
+}
 
 export interface ClipItem {
   id: string;
@@ -24,6 +35,8 @@ export interface ClipItem {
   directUrl: string;
   duration: number | null;
   position: number;
+  productId?: string | null;
+  product?: ClipProduct | null;
 }
 
 interface StudioClipsProps {
@@ -204,6 +217,7 @@ function ClipCard({
 }
 
 export function StudioClips({ storeSlug }: StudioClipsProps) {
+  const router = useRouter();
   const [clips, setClips] = useState<ClipItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -512,8 +526,8 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
           </div>
         )}
 
-        {/* 3. RIGHT OVERLAY: Discrete Navigation Arrow Buttons */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-3 pointer-events-auto">
+        {/* 3. RIGHT OVERLAY: Discrete Navigation Arrow Buttons & Linked Product Buy Button */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3 pointer-events-auto">
           {currentIndex > 0 && (
             <button
               onClick={(e) => {
@@ -537,6 +551,24 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
               className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-white flex items-center justify-center hover:bg-black/60 transition-all active:scale-95 shadow-md"
             >
               <ChevronDown className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* LINKED PRODUCT BUY BUTTON — Positioned immediately below the down arrow */}
+          {currentClip?.product && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (currentClip.product?.slug) {
+                  router.push(`/miniapp/${storeSlug}/product/${currentClip.product.slug}`);
+                }
+              }}
+              aria-label={`Comprar ${currentClip.product.title}`}
+              title={`Comprar ${currentClip.product.title}`}
+              className="w-10 h-10 rounded-full bg-red-600 border border-red-500 text-white flex items-center justify-center hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-600/40 relative group"
+            >
+              <ShoppingCart className="w-5 h-5 text-white" />
             </button>
           )}
         </div>
