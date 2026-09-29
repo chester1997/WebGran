@@ -20,6 +20,8 @@ import {
   Clock,
   RefreshCw,
   FileVideo,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TusVideoUploader, uploadVideoDirectly } from "@/lib/bunny/client-upload";
@@ -59,6 +61,9 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
   const [clipsList, setClipsList] = useState<ClipItem[]>(initialClips);
   const [stats, setStats] = useState<ClipsStats>(initialStats);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // View Mode: 'grid' (lado a lado) | 'list'
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Toast Feedback State
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -511,13 +516,45 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
           </p>
         </div>
 
-        <Button
-          onClick={openAddModal}
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-red-600/20 flex items-center gap-2 cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar Clip
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* View Mode Switcher (Grid vs List) */}
+          <div className="flex items-center bg-[#121216] border border-white/10 rounded-xl p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              title="Visualização em Grade (Lado a lado)"
+              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === "grid"
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="hidden sm:inline">Grade</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              title="Visualização em Lista"
+              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="hidden sm:inline">Lista</span>
+            </button>
+          </div>
+
+          <Button
+            onClick={openAddModal}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-red-600/20 flex items-center gap-2 cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Adicionar Clip
+          </Button>
+        </div>
       </div>
 
       {/* Real-time Summary Cards (Fetched directly from Neon) */}
@@ -555,7 +592,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
         </div>
       </div>
 
-      {/* Clips List */}
+      {/* Clips Container (Grid vs List) */}
       {clipsList.length === 0 ? (
         <div className="bg-[#121216] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
           <Video className="w-12 h-12 text-zinc-600 mb-3" />
@@ -570,7 +607,167 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
             + Adicionar Primeiro Clip
           </Button>
         </div>
+      ) : viewMode === "grid" ? (
+        /* GRID VIEW — LADO A LADO */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {clipsList.map((clip, index) => {
+            const isReady = clip.status === "READY";
+            const isFailed = clip.status === "FAILED";
+            const isProcessing = clip.status === "PROCESSING" || clip.status === "UPLOADING";
+
+            return (
+              <div
+                key={clip.id}
+                className={`bg-[#121216] border rounded-2xl overflow-hidden flex flex-col justify-between shadow-lg transition-all ${
+                  clip.isActive ? "border-white/10 hover:border-white/20" : "border-white/5 opacity-60"
+                }`}
+              >
+                {/* Top Poster / Thumbnail Area */}
+                <div className="relative w-full aspect-[9/16] bg-black/80 overflow-hidden flex items-center justify-center">
+                  {clip.thumbnailUrl ? (
+                    <img
+                      src={clip.thumbnailUrl}
+                      alt={clip.title}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-3 text-center text-zinc-600">
+                      {isProcessing ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-sky-400 mb-2" />
+                      ) : (
+                        <Film className="w-8 h-8 text-zinc-500 mb-2" />
+                      )}
+                      <span className="text-xs font-medium text-zinc-400">
+                        {isProcessing ? "Processando..." : "Sem Thumbnail"}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Position Badge - Top Left */}
+                  <div className="absolute top-2.5 left-2.5 z-10 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg text-[11px] font-bold text-white border border-white/10 shadow">
+                    #{index + 1}
+                  </div>
+
+                  {/* Status & Active Badges - Top Right */}
+                  <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
+                    {isReady && (
+                      <span className="bg-emerald-950/90 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 shadow">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Publicado
+                      </span>
+                    )}
+                    {clip.status === "UPLOADING" && (
+                      <span className="bg-amber-950/90 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 shadow">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        Enviando
+                      </span>
+                    )}
+                    {clip.status === "PROCESSING" && (
+                      <span className="bg-sky-950/90 text-sky-400 border border-sky-500/40 px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 shadow">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin text-sky-400" />
+                        Proc.
+                      </span>
+                    )}
+                    {isFailed && (
+                      <span className="bg-red-950/90 text-red-400 border border-red-500/40 px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 shadow">
+                        <AlertCircle className="w-2.5 h-2.5 text-red-400" />
+                        Falhou
+                      </span>
+                    )}
+
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-md font-semibold shadow ${
+                        clip.isActive
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          : "bg-zinc-900/90 text-zinc-400 border border-white/10"
+                      }`}
+                    >
+                      {clip.isActive ? "Ativo" : "Inativo"}
+                    </span>
+                  </div>
+
+                  {/* Duration Badge - Bottom Right */}
+                  <div className="absolute bottom-2.5 right-2.5 z-10 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-bold text-white flex items-center gap-1 border border-white/10 shadow">
+                    <Clock className="w-3 h-3 text-zinc-400" />
+                    {formatDuration(clip.duration)}
+                  </div>
+                </div>
+
+                {/* Info Content */}
+                <div className="p-3 space-y-1 border-b border-white/5 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white line-clamp-1" title={clip.title}>
+                      {clip.title}
+                    </h3>
+                    {clip.description && (
+                      <p className="text-xs text-zinc-400 line-clamp-2 mt-0.5">{clip.description}</p>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-zinc-500 font-mono truncate pt-1">
+                    ID: {clip.bunnyVideoId}
+                  </p>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-2 bg-white/[0.02] flex items-center justify-between gap-1">
+                  {/* Reorder Buttons */}
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => handleMove(index, "up")}
+                      disabled={index === 0}
+                      title="Subir posição"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 transition-all cursor-pointer"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleMove(index, "down")}
+                      disabled={index === clipsList.length - 1}
+                      title="Descer posição"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 transition-all cursor-pointer"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleToggleActive(clip)}
+                      title={clip.isActive ? "Desativar Clip" : "Ativar Clip"}
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                        clip.isActive
+                          ? "bg-zinc-800 text-zinc-300 border-white/10 hover:bg-zinc-700"
+                          : "bg-emerald-950/50 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/50"
+                      }`}
+                    >
+                      {clip.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => openEditModal(clip)}
+                      title="Editar Clip"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/5 transition-all cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => confirmDeleteClip(clip)}
+                      title="Excluir Clip"
+                      className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-500/20 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* LIST VIEW — LISTA VERTICAL */
         <div className="space-y-4">
           {clipsList.map((clip, index) => {
             const isReady = clip.status === "READY";
