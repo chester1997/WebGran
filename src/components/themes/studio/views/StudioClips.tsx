@@ -54,6 +54,17 @@ function ClipCard({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
+  const logVideoEvent = (eventName: string, video: HTMLVideoElement) => {
+    console.log(`[CLIPS][VIDEO] ${eventName}`, {
+      clipId: clip.id,
+      currentTime: video.currentTime,
+      duration: video.duration,
+      paused: video.paused,
+      readyState: video.readyState,
+      networkState: video.networkState,
+    });
+  };
+
   // Synchronize active video ref with parent component
   useEffect(() => {
     if (isActive && localVideoRef.current) {
@@ -83,6 +94,7 @@ function ClipCard({
       video.src = clip.playbackUrl;
       video
         .play()
+        .then(() => logVideoEvent("play-success", video))
         .catch((err) => console.warn("[ClipCard] Native HLS autoplay prevented:", err));
     }
     // 2. HLS.js support (Android Chrome, Android Telegram WebApp, Desktop Chrome/Firefox/Edge)
@@ -103,6 +115,7 @@ function ClipCard({
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video
           .play()
+          .then(() => logVideoEvent("play-success", video))
           .catch((err) => console.warn("[ClipCard] HLS.js autoplay prevented:", err));
       });
 
@@ -113,7 +126,7 @@ function ClipCard({
           hlsRef.current = null;
 
           video.src = clip.directUrl;
-          video.play().catch(() => {});
+          video.play().then(() => logVideoEvent("play-success-mp4", video)).catch(() => {});
         }
       });
     }
@@ -122,6 +135,7 @@ function ClipCard({
       video.src = clip.directUrl;
       video
         .play()
+        .then(() => logVideoEvent("play-success-direct", video))
         .catch((err) => console.warn("[ClipCard] Direct MP4 autoplay prevented:", err));
     }
 
@@ -148,16 +162,40 @@ function ClipCard({
         poster={clip.thumbnailUrl}
         playsInline
         muted={isMuted}
+        onPlay={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("play", localVideoRef.current);
+        }}
+        onPause={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("pause", localVideoRef.current);
+        }}
+        onWaiting={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("waiting", localVideoRef.current);
+        }}
+        onPlaying={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("playing", localVideoRef.current);
+        }}
+        onStalled={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("stalled", localVideoRef.current);
+        }}
+        onCanPlay={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("canplay", localVideoRef.current);
+        }}
+        onError={() => {
+          if (localVideoRef.current && isActive) logVideoEvent("error", localVideoRef.current);
+        }}
         onTimeUpdate={() => {
-          if (localVideoRef.current && isActive) {
-            onTimeUpdate(
-              localVideoRef.current.currentTime,
-              localVideoRef.current.duration || 0
-            );
-          }
+          const video = localVideoRef.current;
+          if (!video || !isActive) return;
+          logVideoEvent("timeupdate", video);
+          // Strict Guard: If video is paused or buffering (readyState < 3), DO NOT advance progress
+          if (video.paused || video.readyState < 3) return;
+          onTimeUpdate(video.currentTime, video.duration || 0);
         }}
         onEnded={() => {
-          if (isActive) onEnded();
+          if (localVideoRef.current && isActive) {
+            logVideoEvent("ended", localVideoRef.current);
+            onEnded();
+          }
         }}
         className="absolute inset-0 w-full h-full object-contain z-0"
       />

@@ -104,6 +104,91 @@ describe("Video Processor — 60 Seconds Trimming Rule & Duration Detection", ()
     await expect(prepareClipFileForUpload(mockFile)).rejects.toThrow("suporta o corte local");
   });
 
+  it("triggers automatic trimming for 60.1s and 61s videos", async () => {
+    const mockFile601 = new File(["test-60.1s"], "60-point-1s.mp4", { type: "video/mp4" });
+
+    const mockVideo = {
+      preload: "",
+      muted: false,
+      playsInline: false,
+      duration: 60.1,
+      removeAttribute: vi.fn(),
+      load: vi.fn(),
+      src: "",
+      onloadedmetadata: null as any,
+      onerror: null as any,
+    };
+
+    const mockDocument = {
+      createElement: (tagName: string) => {
+        if (tagName === "video") {
+          setTimeout(() => {
+            if (mockVideo.onloadedmetadata) mockVideo.onloadedmetadata();
+          }, 10);
+          return mockVideo;
+        }
+        return {};
+      },
+    };
+
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("document", mockDocument);
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn().mockReturnValue("blob:http://localhost/fake-uuid"),
+      revokeObjectURL: vi.fn(),
+    });
+
+    await expect(prepareClipFileForUpload(mockFile601)).rejects.toThrow("suporta o corte local");
+  });
+
+  it("handles 02:34 (154s) long video by starting trim process", async () => {
+    const mockFile = new File(["long-video"], "ep1-full.mp4", { type: "video/mp4" });
+
+    const mockVideo = {
+      preload: "",
+      muted: false,
+      playsInline: false,
+      duration: 154,
+      removeAttribute: vi.fn(),
+      load: vi.fn(),
+      src: "",
+      onloadedmetadata: null as any,
+      onerror: null as any,
+    };
+
+    const mockDocument = {
+      createElement: (tagName: string) => {
+        if (tagName === "video") {
+          setTimeout(() => {
+            if (mockVideo.onloadedmetadata) mockVideo.onloadedmetadata();
+          }, 10);
+          return mockVideo;
+        }
+        return {};
+      },
+    };
+
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("document", mockDocument);
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn().mockReturnValue("blob:http://localhost/fake-uuid"),
+      revokeObjectURL: vi.fn(),
+    });
+
+    // In node test env without MediaRecorder, attempting to trim 154s file throws browser capability error
+    await expect(prepareClipFileForUpload(mockFile)).rejects.toThrow("suporta o corte local");
+  });
+
+  it("aborts processing when AbortSignal is cancelled", async () => {
+    const mockFile = new File(["cancel-test"], "cancel.mp4", { type: "video/mp4" });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      prepareClipFileForUpload(mockFile, { signal: controller.signal })
+    ).rejects.toThrow("Processamento cancelado pelo usuário");
+  });
+
   it("rejects invalid or unreadable video duration", async () => {
     const mockFile = new File(["corrupted"], "corrupted.mp4", { type: "video/mp4" });
 

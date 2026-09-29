@@ -109,7 +109,7 @@ export async function prepareClipFileForUpload(
   return new Promise<{ file: File; originalDuration: number; isTrimmed: boolean }>((resolve, reject) => {
     const video = document.createElement("video");
     video.preload = "auto";
-    video.muted = false; // Capture audio track
+    video.muted = true; // Muted guarantees video.play() is allowed in async event handlers
     video.playsInline = true;
 
     const objectUrl = URL.createObjectURL(file);
@@ -204,7 +204,7 @@ export async function prepareClipFileForUpload(
           }
         };
 
-        mediaRecorder.onstop = () => {
+        mediaRecorder.onstop = async () => {
           cleanup();
           if (signal?.aborted) return;
 
@@ -225,24 +225,46 @@ export async function prepareClipFileForUpload(
             return reject(new Error("Não foi possível gerar o arquivo de vídeo cortado."));
           }
 
+          // Re-evaluate trimmed file duration using HTMLVideoElement
+          let processedDuration = duration;
+          try {
+            processedDuration = await getVideoDuration(trimmedFile);
+          } catch (e) {
+            console.warn("[VideoProcessor] Re-evaluating trimmed file duration warning:", e);
+          }
+
+          if (processedDuration > maxDuration) {
+            return reject(
+              new Error(
+                `Erro de corte: o arquivo gerado ultrapassa o limite máximo de ${maxDuration}s (${processedDuration.toFixed(2)}s). Envio abortado.`
+              )
+            );
+          }
+
           onProgress?.(100, "Clip de 60s preparado com sucesso!");
           resolve({ file: trimmedFile, originalDuration: duration, isTrimmed: true });
         };
 
         // Start playback & recording from 0s up to maxDuration
         video.currentTime = 0;
-        await video.play().catch(() => {});
+        await video.play().catch((err) => {
+          console.warn("[VideoProcessor] Video play attempt:", err);
+        });
 
         mediaRecorder.start(1000); // 1s timeslices
 
         // Render loop: draws frame and monitors target duration (0:00 -> 1:00)
+        // Stop slightly before 60.00s (59.95s) to guarantee final output duration <= 60.00s
+        const targetCutoff = maxDuration - 0.05;
+
         const drawFrame = () => {
           if (signal?.aborted) {
             handleAbort();
             return;
           }
 
-          if (video.currentTime >= maxDuration || video.ended) {
+          if (video.currentTime >= targetCutoff || video.ended) {
+            video.pause();
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
               mediaRecorder.stop();
             }

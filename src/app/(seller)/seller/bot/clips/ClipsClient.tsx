@@ -278,6 +278,13 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       setUploadProgressText("Analisando duração do vídeo no navegador...");
       uploadAbortControllerRef.current = new AbortController();
 
+      // LOG TEMPORÁRIO OBRIGATÓRIO: original file
+      console.log("[CLIP-UPLOAD] original file", {
+        nome: selectedFile.name,
+        tamanho: selectedFile.size,
+        type: selectedFile.type,
+      });
+
       // Step 1: Client-Side Duration Check & Trimming to max 60s (0:00 -> 1:00)
       const { file: finalFileToUpload, originalDuration, isTrimmed } = await prepareClipFileForUpload(selectedFile, {
         maxDurationSeconds: CLIP_MAX_DURATION_SECONDS,
@@ -288,8 +295,50 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
         },
       });
 
-      if (originalDuration > CLIP_MAX_DURATION_SECONDS && (!isTrimmed || finalFileToUpload === selectedFile)) {
-        throw new Error("Erro de segurança: Vídeo com mais de 60s não pode ser enviado sem corte local.");
+      // LOG TEMPORÁRIO OBRIGATÓRIO: original duration & trim decision
+      console.log("[CLIP-UPLOAD] original duration:", originalDuration, "segundos");
+      console.log("[CLIP-UPLOAD] trim required:", originalDuration > CLIP_MAX_DURATION_SECONDS);
+
+      if (originalDuration > CLIP_MAX_DURATION_SECONDS) {
+        console.log("[CLIP-UPLOAD] trimming started: start 0, end 60");
+      }
+
+      // LOG TEMPORÁRIO OBRIGATÓRIO: processed file
+      console.log("[CLIP-UPLOAD] processed file", {
+        nome: finalFileToUpload.name,
+        tamanho: finalFileToUpload.size,
+        type: finalFileToUpload.type,
+      });
+
+      // Re-evaluate duration of finalFileToUpload using getVideoDuration HTMLVideoElement
+      let processedDuration = originalDuration;
+      try {
+        const { getVideoDuration } = await import("@/lib/clips/video-processor");
+        processedDuration = await getVideoDuration(finalFileToUpload);
+      } catch (e) {
+        console.warn("[CLIP-UPLOAD] warning checking processed duration:", e);
+      }
+
+      console.log("[CLIP-UPLOAD] processed duration:", processedDuration, "segundos");
+
+      // LOG TEMPORÁRIO OBRIGATÓRIO: ANTES DO TUS - FINAL FILE TO UPLOAD
+      console.log("[CLIP-UPLOAD] FINAL FILE TO UPLOAD", {
+        nome: finalFileToUpload.name,
+        tamanho: finalFileToUpload.size,
+        type: finalFileToUpload.type,
+        duration: processedDuration,
+      });
+
+      // REGRA ABSOLUTA DO TUS: Proteção explícita antes do TusVideoUploader
+      if (originalDuration > CLIP_MAX_DURATION_SECONDS) {
+        if (finalFileToUpload === selectedFile) {
+          throw new Error("Proteção: vídeo original maior que 60s não pode ser enviado sem corte local.");
+        }
+        if (processedDuration > CLIP_MAX_DURATION_SECONDS) {
+          throw new Error(
+            `Proteção: o arquivo processado ultrapassou 60s (${processedDuration.toFixed(2)}s). Envio abortado.`
+          );
+        }
       }
 
       if (uploadAbortControllerRef.current.signal.aborted) {
