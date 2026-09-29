@@ -334,7 +334,36 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                          : "bg-white/50 dark:bg-black/40 border-white/30 dark:border-white/10 shadow-black/10 dark:shadow-black/40 text-red-600 dark:text-red-500 hover:text-red-500"
                      }`}
         >
-          <i className="fi fi-tr-screen-play relative z-10 text-[24px] leading-none" />
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="relative z-10 w-[24px] h-[24px]"
+          >
+            <path
+              d="M21.7178 13.8577C21.6528 15.5327 21.4728 16.9737 21.1908 17.2747C20.7618 17.7417 18.2768 16.3317 16.4188 14.8847"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M16.4193 10.1703C18.2583 8.71325 20.7243 7.30325 21.1913 7.80825C21.4643 8.10125 21.6323 9.27825 21.7043 10.7103"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6.6111 19.1547C3.7981 18.4647 2.7821 16.5187 2.7821 12.5347C2.7821 7.34169 4.5071 5.61169 9.6831 5.61169C14.8591 5.61169 16.5831 7.34169 16.5831 12.5347C16.5831 17.7257 14.8591 19.4577 9.6831 19.4577"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </Link>
 
       </div>
