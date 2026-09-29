@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ShoppingCart, Compass, Film, Bookmark, LibraryBig, User, X, ChevronRight } from "lucide-react";
+import { Home, ShoppingCart, Compass, Bookmark, LibraryBig, User, X, ChevronRight } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 
 interface StudioBottomNavProps {
@@ -334,7 +334,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                          : "bg-white/50 dark:bg-black/40 border-white/30 dark:border-white/10 shadow-black/10 dark:shadow-black/40 text-red-600 dark:text-red-500 hover:text-red-500"
                      }`}
         >
-          <Film className="relative z-10 w-[24px] h-[24px]" strokeWidth={2.2} />
+          <i className="fi fi-rr-video-duration relative z-10 text-[22px] leading-none" />
         </Link>
 
       </div>

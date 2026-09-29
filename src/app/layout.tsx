@@ -30,6 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jbMono.variable} antialiased h-full`}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css"
+        />
+      </head>
       <Script
         src="https://telegram.org/js/telegram-web-app.js?63"
         strategy="beforeInteractive"
