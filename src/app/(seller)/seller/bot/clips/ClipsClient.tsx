@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TusVideoUploader, uploadVideoDirectly } from "@/lib/bunny/client-upload";
-import { prepareClipFileForUpload, CLIP_MAX_DURATION_SECONDS } from "@/lib/clips/video-processor";
+import { getVideoDuration, formatDurationHuman, CLIP_MAX_DURATION_SECONDS } from "@/lib/clips/video-processor";
 
 export interface ClipItem {
   id: string;
@@ -77,6 +77,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
     description: "",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isOverDurationLimit, setIsOverDurationLimit] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Upload Progress & Lifecycle State
@@ -135,17 +136,16 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
     return () => clearInterval(intervalId);
   }, [hasPendingClips]);
 
-  // Handle File Select & Validation
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Handle File Select & Validation: Read duration in browser. If > 60s -> BLOCK immediately!
+  const processAndValidateFile = async (file: File) => {
     setUploadError(null);
+    setIsOverDurationLimit(false);
 
     // Validation 1: MIME Type must be video
     if (!file.type || !file.type.toLowerCase().startsWith("video/")) {
       setUploadError("Selecione um arquivo de vídeo válido (MP4, MOV, WebM, etc.).");
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFile(null);
       return;
     }
 
@@ -154,6 +154,28 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       setUploadError(`Este arquivo ultrapassa o limite máximo de ${MAX_FILE_SIZE_MB} MB. O arquivo possui ${sizeMB} MB.`);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFile(null);
+      return;
+    }
+
+    // Validation 3: Read duration in browser. If > 60s -> BLOCK immediately!
+    try {
+      const duration = await getVideoDuration(file);
+      console.log("[CLIP-UPLOAD] original file selected:", { name: file.name, size: file.size, type: file.type });
+      console.log("[CLIP-UPLOAD] duration detected:", duration, "segundos");
+
+      if (duration > CLIP_MAX_DURATION_SECONDS) {
+        setIsOverDurationLimit(true);
+        setUploadError(
+          `Este vídeo tem ${formatDurationHuman(duration)} (mais de 60 segundos). Para publicar um Clip, corte o vídeo para no máximo 60 segundos usando uma ferramenta de edição e tente novamente.`
+        );
+        setSelectedFile(file);
+        return;
+      }
+    } catch (err: any) {
+      setUploadError(err?.message || "Não foi possível verificar a duração do vídeo.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFile(null);
       return;
     }
 
@@ -163,6 +185,12 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
       setFormData((prev) => ({ ...prev, title: nameWithoutExt }));
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processAndValidateFile(file);
   };
 
   // Drag & Drop Handler
@@ -176,21 +204,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
     e.stopPropagation();
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      setUploadError(null);
-      if (!file.type || !file.type.toLowerCase().startsWith("video/")) {
-        setUploadError("Selecione um arquivo de vídeo válido (MP4, MOV, WebM, etc.).");
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        setUploadError(`Este arquivo ultrapassa o limite máximo de ${MAX_FILE_SIZE_MB} MB. O arquivo possui ${sizeMB} MB.`);
-        return;
-      }
-      setSelectedFile(file);
-      if (!formData.title) {
-        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-        setFormData((prev) => ({ ...prev, title: nameWithoutExt }));
-      }
+      processAndValidateFile(file);
     }
   };
 
@@ -198,6 +212,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
   const openAddModal = () => {
     setFormData({ title: "", description: "" });
     setSelectedFile(null);
+    setIsOverDurationLimit(false);
     setUploadStep("IDLE");
     setUploadProgressPercent(0);
     setUploadProgressText("");
@@ -271,92 +286,43 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       return;
     }
 
+    // Dual Validation: Re-evaluate duration immediately before starting upload
+    try {
+      const duration = await getVideoDuration(selectedFile);
+      if (duration > CLIP_MAX_DURATION_SECONDS) {
+        setIsOverDurationLimit(true);
+        setUploadError(
+          `Este vídeo tem ${formatDurationHuman(duration)} (mais de 60 segundos). Para publicar um Clip, corte o vídeo para no máximo 60 segundos usando uma ferramenta de edição e tente novamente.`
+        );
+        return;
+      }
+    } catch (err: any) {
+      setUploadError(err.message || "Falha ao validar a duração do vídeo antes do envio.");
+      return;
+    }
+
     try {
       setUploadError(null);
-      setUploadStep("PREPARING");
+      setUploadStep("CREATING_SESSION");
       setUploadProgressPercent(0);
-      setUploadProgressText("Analisando duração do vídeo no navegador...");
+      setUploadProgressText("Criando sessão de upload seguro no WebGran...");
       uploadAbortControllerRef.current = new AbortController();
 
-      // LOG TEMPORÁRIO OBRIGATÓRIO: original file
-      console.log("[CLIP-UPLOAD] original file", {
+      console.log("[CLIP-UPLOAD] FINAL FILE TO UPLOAD (original file untouched):", {
         nome: selectedFile.name,
         tamanho: selectedFile.size,
         type: selectedFile.type,
       });
 
-      // Step 1: Client-Side Duration Check & Trimming to max 60s (0:00 -> 1:00)
-      const { file: finalFileToUpload, originalDuration, isTrimmed } = await prepareClipFileForUpload(selectedFile, {
-        maxDurationSeconds: CLIP_MAX_DURATION_SECONDS,
-        signal: uploadAbortControllerRef.current.signal,
-        onProgress: (percentage, statusText) => {
-          setUploadProgressPercent(percentage);
-          setUploadProgressText(statusText);
-        },
-      });
-
-      // LOG TEMPORÁRIO OBRIGATÓRIO: original duration & trim decision
-      console.log("[CLIP-UPLOAD] original duration:", originalDuration, "segundos");
-      console.log("[CLIP-UPLOAD] trim required:", originalDuration > CLIP_MAX_DURATION_SECONDS);
-
-      if (originalDuration > CLIP_MAX_DURATION_SECONDS) {
-        console.log("[CLIP-UPLOAD] trimming started: start 0, end 60");
-      }
-
-      // LOG TEMPORÁRIO OBRIGATÓRIO: processed file
-      console.log("[CLIP-UPLOAD] processed file", {
-        nome: finalFileToUpload.name,
-        tamanho: finalFileToUpload.size,
-        type: finalFileToUpload.type,
-      });
-
-      // Re-evaluate duration of finalFileToUpload using getVideoDuration HTMLVideoElement
-      let processedDuration = originalDuration;
-      try {
-        const { getVideoDuration } = await import("@/lib/clips/video-processor");
-        processedDuration = await getVideoDuration(finalFileToUpload);
-      } catch (e) {
-        console.warn("[CLIP-UPLOAD] warning checking processed duration:", e);
-      }
-
-      console.log("[CLIP-UPLOAD] processed duration:", processedDuration, "segundos");
-
-      // LOG TEMPORÁRIO OBRIGATÓRIO: ANTES DO TUS - FINAL FILE TO UPLOAD
-      console.log("[CLIP-UPLOAD] FINAL FILE TO UPLOAD", {
-        nome: finalFileToUpload.name,
-        tamanho: finalFileToUpload.size,
-        type: finalFileToUpload.type,
-        duration: processedDuration,
-      });
-
-      // REGRA ABSOLUTA DO TUS: Proteção explícita antes do TusVideoUploader
-      if (originalDuration > CLIP_MAX_DURATION_SECONDS) {
-        if (finalFileToUpload === selectedFile) {
-          throw new Error("Proteção: vídeo original maior que 60s não pode ser enviado sem corte local.");
-        }
-        if (processedDuration > CLIP_MAX_DURATION_SECONDS) {
-          throw new Error(
-            `Proteção: o arquivo processado ultrapassou 60s (${processedDuration.toFixed(2)}s). Envio abortado.`
-          );
-        }
-      }
-
-      if (uploadAbortControllerRef.current.signal.aborted) {
-        throw new Error("Upload cancelado pelo usuário.");
-      }
-
-      setUploadStep("CREATING_SESSION");
-      setUploadProgressText("Criando sessão de upload seguro no WebGran...");
-
-      // Step 2: POST /api/seller/clips/upload-session with actual file size & mime type
+      // Step 1: POST /api/seller/clips/upload-session with actual file size & mime type
       const sessionRes = await fetch("/api/seller/clips/upload-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.title.trim(),
           description: formData.description.trim() || null,
-          contentType: finalFileToUpload.type || "video/mp4",
-          fileSize: finalFileToUpload.size,
+          contentType: selectedFile.type || "video/mp4",
+          fileSize: selectedFile.size,
         }),
       });
 
@@ -365,9 +331,9 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
         throw new Error(sessionData.error || "Falha ao criar sessão de upload.");
       }
 
-      const { uploadSession, clip } = sessionData;
+      const { uploadSession } = sessionData;
 
-      // Step 3: Browser -> Bunny Stream Direct TUS Resumable Upload
+      // Step 2: Browser -> Bunny Stream Direct TUS Resumable Upload (original file sent raw)
       setUploadStep("UPLOADING");
       setUploadProgressText("Enviando vídeo diretamente para o Bunny Stream (TUS)...");
 
@@ -377,7 +343,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
       });
 
       await uploader.uploadVideo({
-        file: finalFileToUpload,
+        file: selectedFile,
         tusUploadUrl: uploadSession.tusUploadUrl || "https://video.bunnycdn.com/tusupload",
         headers: uploadSession.headers,
         signal: uploadAbortControllerRef.current.signal,
@@ -829,7 +795,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                 <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-500/20 text-sky-200 text-xs flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
-                    Clips têm duração máxima de <strong>60 segundos</strong>. Vídeos maiores serão cortados automaticamente nos primeiros 60 segundos.
+                    Clips têm duração máxima de <strong>60 segundos</strong>. Vídeos maiores precisam ser cortados antes do envio.
                   </p>
                 </div>
               )}
@@ -924,7 +890,7 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  disabled={uploadStep === "PREPARING" || uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION"}
+                  disabled={uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION"}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition-colors disabled:opacity-30"
                 >
                   Cancelar
@@ -933,17 +899,18 @@ export default function ClipsClient({ initialClips, initialStats }: ClipsClientP
                 <Button
                   type="submit"
                   disabled={
-                    uploadStep === "PREPARING" ||
+                    isOverDurationLimit ||
+                    (!editingClip && !selectedFile) ||
                     uploadStep === "CREATING_SESSION" ||
                     uploadStep === "UPLOADING" ||
                     uploadStep === "PROCESSING"
                   }
                   className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2 shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  {uploadStep === "PREPARING" || uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION" ? (
+                  {uploadStep === "UPLOADING" || uploadStep === "CREATING_SESSION" ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{uploadStep === "PREPARING" ? "Preparando Clip..." : "Enviando..."}</span>
+                      <span>Enviando...</span>
                     </>
                   ) : editingClip ? (
                     "Salvar Alterações"
