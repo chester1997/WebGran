@@ -334,7 +334,27 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
                          : "bg-white/50 dark:bg-black/40 border-white/30 dark:border-white/10 shadow-black/10 dark:shadow-black/40 text-red-600 dark:text-red-500 hover:text-red-500"
                      }`}
         >
-          <i className="fi fi-rr-video-duration relative z-10 text-[22px] leading-none" />
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="relative z-10 w-[24px] h-[24px]"
+          >
+            <mask id="studio-clips-film-icon-mask">
+              <rect x="3" y="2" width="18" height="20" rx="3" fill="white" />
+              <rect x="8" y="4" width="8" height="7" rx="1" fill="black" />
+              <rect x="8" y="13" width="8" height="7" rx="1" fill="black" />
+              <rect x="4.5" y="4" width="2" height="2" rx="0.4" fill="black" />
+              <rect x="4.5" y="11" width="2" height="2" rx="0.4" fill="black" />
+              <rect x="4.5" y="18" width="2" height="2" rx="0.4" fill="black" />
+              <rect x="17.5" y="4" width="2" height="2" rx="0.4" fill="black" />
+              <rect x="17.5" y="11" width="2" height="2" rx="0.4" fill="black" />
+              <rect x="17.5" y="18" width="2" height="2" rx="0.4" fill="black" />
+            </mask>
+            <rect x="3" y="2" width="18" height="20" rx="3" fill="currentColor" mask="url(#studio-clips-film-icon-mask)" />
+          </svg>
         </Link>
 
       </div>
