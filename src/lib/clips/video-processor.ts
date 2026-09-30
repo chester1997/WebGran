@@ -1,14 +1,14 @@
 /**
  * Client-Side Video Duration Detection for Clips
- * Ensures all clips uploaded to WebGran/Bunny Stream have a maximum duration of 60 seconds.
+ * Ensures all clips uploaded to WebGran/Bunny Stream have a maximum duration of 120 seconds (2 minutes).
  * 
  * Rules:
- * - duration <= 60s: Allow upload of original file.
- * - duration > 60s: Block upload immediately and prompt seller to crop externally.
+ * - duration <= 120s: Allow upload of original file.
+ * - duration > 120s: Block upload immediately and prompt seller to crop externally.
  * - NO automatic trimming or client-side video processing.
  */
 
-export const CLIP_MAX_DURATION_SECONDS = 60;
+export const CLIP_MAX_DURATION_SECONDS = 120;
 
 /**
  * Formats duration in seconds to human-readable string (e.g., 79.33s -> "1m 19s", 45s -> "45s")

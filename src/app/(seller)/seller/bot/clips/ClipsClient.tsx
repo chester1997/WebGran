@@ -190,7 +190,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
       if (duration > CLIP_MAX_DURATION_SECONDS) {
         setIsOverDurationLimit(true);
         setUploadError(
-          `Este vídeo tem ${formatDurationHuman(duration)} (mais de 60 segundos). Para publicar um Clip, corte o vídeo para no máximo 60 segundos usando uma ferramenta de edição e tente novamente.`
+          `Este vídeo tem ${formatDurationHuman(duration)} (mais de 2 minutos). Para publicar um Clip, corte o vídeo para no máximo 2 minutos usando uma ferramenta de edição e tente novamente.`
         );
         setSelectedFile(file);
         return;
@@ -320,7 +320,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
       if (duration > CLIP_MAX_DURATION_SECONDS) {
         setIsOverDurationLimit(true);
         setUploadError(
-          `Este vídeo tem ${formatDurationHuman(duration)} (mais de 60 segundos). Para publicar um Clip, corte o vídeo para no máximo 60 segundos usando uma ferramenta de edição e tente novamente.`
+          `Este vídeo tem ${formatDurationHuman(duration)} (mais de 2 minutos). Para publicar um Clip, corte o vídeo para no máximo 2 minutos usando uma ferramenta de edição e tente novamente.`
         );
         return;
       }
@@ -622,7 +622,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
           <Video className="w-12 h-12 text-zinc-600 mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Nenhum Clip cadastrado</h3>
           <p className="text-xs text-zinc-400 max-w-sm mb-6">
-            Sua loja ainda não possui vídeos. Faça o upload do seu primeiro Clip (máximo 60s por vídeo).
+            Sua loja ainda não possui vídeos. Faça o upload do seu primeiro Clip (máximo 2 min por vídeo).
           </p>
           <Button
             onClick={openAddModal}
@@ -1127,12 +1127,12 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
                 )}
               </div>
 
-              {/* 60s Duration Info Notice Banner */}
+              {/* 2m Duration Info Notice Banner */}
               {!editingClip && (
                 <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-500/20 text-sky-200 text-xs flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
-                    Clips têm duração máxima de <strong>60 segundos</strong>. Vídeos maiores precisam ser cortados antes do envio.
+                    Clips têm duração máxima de <strong>2 minutos</strong>. Vídeos maiores precisam ser cortados antes do envio.
                   </p>
                 </div>
               )}
@@ -1179,7 +1179,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
                           Selecione ou arraste seu vídeo aqui
                         </p>
                         <p className="text-xs text-zinc-400">
-                          Formatos aceitos: MP4, MOV, WebM (Máximo 60s por Clip)
+                          Formatos aceitos: MP4, MOV, WebM (Máximo 2 min por Clip)
                         </p>
                       </div>
                     )}

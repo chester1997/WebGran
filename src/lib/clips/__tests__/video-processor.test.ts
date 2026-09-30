@@ -5,13 +5,13 @@ import {
   getVideoDuration,
 } from "../video-processor";
 
-describe("Video Processor — Strict 60-Second Upload Rule & Duration Detection", () => {
+describe("Video Processor — Strict 120-Second Upload Rule & Duration Detection", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("exports CLIP_MAX_DURATION_SECONDS constant set to 60", () => {
-    expect(CLIP_MAX_DURATION_SECONDS).toBe(60);
+  it("exports CLIP_MAX_DURATION_SECONDS constant set to 120", () => {
+    expect(CLIP_MAX_DURATION_SECONDS).toBe(120);
   });
 
   it("formats human-readable duration strings correctly", () => {
@@ -21,11 +21,12 @@ describe("Video Processor — Strict 60-Second Upload Rule & Duration Detection"
     expect(formatDurationHuman(60.01)).toBe("1m");
     expect(formatDurationHuman(61)).toBe("1m 1s");
     expect(formatDurationHuman(79.33)).toBe("1m 19s");
+    expect(formatDurationHuman(120)).toBe("2m");
     expect(formatDurationHuman(154)).toBe("2m 34s");
     expect(formatDurationHuman(300)).toBe("5m");
   });
 
-  it("detects valid durations <= 60s (30s, 59s, 60s) for original file upload", async () => {
+  it("detects valid durations <= 120s (30s, 60s, 119s, 120s) for original file upload", async () => {
     const mockFile = new File(["test-content-30s"], "sample-30s.mp4", { type: "video/mp4" });
 
     const mockVideo = {
@@ -64,11 +65,10 @@ describe("Video Processor — Strict 60-Second Upload Rule & Duration Detection"
     expect(duration <= CLIP_MAX_DURATION_SECONDS).toBe(true);
   });
 
-  it("detects video durations > 60s (60.01s, 61s, 79.33s, 154s, 300s) to enforce blocking", async () => {
+  it("detects video durations > 120s (120.01s, 121s, 154s, 300s) to enforce blocking", async () => {
     const testCases = [
-      { name: "60.01s.mp4", duration: 60.01 },
-      { name: "61s.mp4", duration: 61 },
-      { name: "79.33s.mp4", duration: 79.33 },
+      { name: "120.01s.mp4", duration: 120.01 },
+      { name: "121s.mp4", duration: 121 },
       { name: "154s-02m34s.mp4", duration: 154 },
       { name: "300s-5min.mp4", duration: 300 },
     ];
