@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, stores, subscriptions, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(
@@ -10,7 +10,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminUser = await requireSuperAdmin();
+    const adminUser = await requirePlatformAdmin();
     const { id: sellerId } = await params;
     const body = await req.json();
     const { action } = body;
@@ -266,7 +266,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminUser = await requireSuperAdmin();
+    const adminUser = await requirePlatformAdmin();
     const { id: sellerId } = await params;
 
     const targetUser = await db.query.users.findFirst({

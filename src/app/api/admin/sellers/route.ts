@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, stores, subscriptions, subscriptionPlans, invoices, orders } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { getDefaultPlan } from "@/lib/billing/subscription-service";
 
 export async function GET() {
   try {
-    const adminUser = await requireSuperAdmin();
+    const adminUser = await requirePlatformAdmin();
 
     const sellersData = await db.query.users.findMany({
       where: eq(users.role, 'seller'),
@@ -98,7 +98,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const adminUser = await requireSuperAdmin();
+    const adminUser = await requirePlatformAdmin();
     const body = await req.json();
 
     const { name, email, password, storeName, storeSlug, status = 'active', daysActive = 30 } = body;

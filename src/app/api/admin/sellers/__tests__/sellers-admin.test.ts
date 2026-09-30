@@ -8,6 +8,11 @@ vi.mock('@/lib/auth', () => ({
     email: 'admin@webgran.online',
     role: 'admin',
   })),
+  requirePlatformAdmin: vi.fn(async () => ({
+    id: 'super-admin-123',
+    email: 'superadmin@webgran.online',
+    role: 'super_admin',
+  })),
   requireSuperAdmin: vi.fn(async () => ({
     id: 'super-admin-123',
     email: 'superadmin@webgran.online',
@@ -20,44 +25,48 @@ vi.mock('@/lib/auth', () => ({
   })),
 }));
 
-describe('Super Admin ONLY - Vendedores Globais Security & Authorization Audit', () => {
+describe('Platform Admin - Vendedores Globais Security & Authorization Audit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('1. Strict SUPER_ADMIN Access Control & Authorization Tests', () => {
-    it('allows access for SUPER_ADMIN role', async () => {
-      const { requireSuperAdmin } = await import('@/lib/auth');
-      const user = await requireSuperAdmin();
+  describe('1. Platform Admin Access Control & Authorization Tests', () => {
+    it('allows access for SUPER_ADMIN role without redirecting to /seller', async () => {
+      const { requirePlatformAdmin } = await import('@/lib/auth');
+      const user = await requirePlatformAdmin();
       expect(user.role).toBe('super_admin');
     });
 
-    it('denies access with 403 FORBIDDEN for standard ADMIN role', async () => {
-      const { requireSuperAdmin } = await import('@/lib/auth');
-      vi.mocked(requireSuperAdmin).mockRejectedValueOnce(new Error('FORBIDDEN'));
-
-      await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+    it('allows access for ADMIN role without redirecting to /seller', async () => {
+      const { requirePlatformAdmin } = await import('@/lib/auth');
+      vi.mocked(requirePlatformAdmin).mockResolvedValueOnce({
+        id: 'admin-123',
+        email: 'admin@webgran.online',
+        role: 'admin',
+      });
+      const user = await requirePlatformAdmin();
+      expect(user.role).toBe('admin');
     });
 
     it('denies access with 403 FORBIDDEN for SELLER role', async () => {
-      const { requireSuperAdmin } = await import('@/lib/auth');
-      vi.mocked(requireSuperAdmin).mockRejectedValueOnce(new Error('FORBIDDEN'));
+      const { requirePlatformAdmin } = await import('@/lib/auth');
+      vi.mocked(requirePlatformAdmin).mockRejectedValueOnce(new Error('FORBIDDEN'));
 
-      await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+      await expect(requirePlatformAdmin()).rejects.toThrow('FORBIDDEN');
     });
 
     it('denies access with 403 FORBIDDEN for CUSTOMER role', async () => {
-      const { requireSuperAdmin } = await import('@/lib/auth');
-      vi.mocked(requireSuperAdmin).mockRejectedValueOnce(new Error('FORBIDDEN'));
+      const { requirePlatformAdmin } = await import('@/lib/auth');
+      vi.mocked(requirePlatformAdmin).mockRejectedValueOnce(new Error('FORBIDDEN'));
 
-      await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+      await expect(requirePlatformAdmin()).rejects.toThrow('FORBIDDEN');
     });
 
     it('denies access with 401 UNAUTHORIZED for unauthenticated users', async () => {
-      const { requireSuperAdmin } = await import('@/lib/auth');
-      vi.mocked(requireSuperAdmin).mockRejectedValueOnce(new Error('UNAUTHORIZED'));
+      const { requirePlatformAdmin } = await import('@/lib/auth');
+      vi.mocked(requirePlatformAdmin).mockRejectedValueOnce(new Error('UNAUTHORIZED'));
 
-      await expect(requireSuperAdmin()).rejects.toThrow('UNAUTHORIZED');
+      await expect(requirePlatformAdmin()).rejects.toThrow('UNAUTHORIZED');
     });
   });
 

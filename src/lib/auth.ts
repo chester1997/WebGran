@@ -86,17 +86,19 @@ export async function requireAdmin() {
   return user;
 }
 
-export async function requireSuperAdmin() {
+export async function requirePlatformAdmin() {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error("UNAUTHORIZED");
   }
   const role = (user.role || '').toLowerCase();
-  if (role !== 'super_admin') {
+  if (role !== 'admin' && role !== 'super_admin') {
     throw new Error("FORBIDDEN");
   }
   return user;
 }
+
+export const requireSuperAdmin = requirePlatformAdmin;
 
 export async function requireSeller() {
   const user = await getCurrentUser();

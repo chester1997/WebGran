@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { db } from "@/db";
 import { users, stores, subscriptions, invoices } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import SellersClient from "./SellersClient";
 import { redirect } from "next/navigation";
 
@@ -10,7 +10,7 @@ export default async function AdminSellersPage() {
   await connection();
   
   try {
-    await requireSuperAdmin();
+    await requirePlatformAdmin();
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED") {
       redirect("/login");
