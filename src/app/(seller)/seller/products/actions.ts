@@ -69,8 +69,9 @@ export async function createProductAction(formData: FormData) {
   // Validate Telegram Chat & Bot Permissions on Product Creation
   if (deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
+      const botId = (formData.get("botId") as string) || null;
       const { validateProductTelegramChat } = await import("@/lib/telegram/product-chat-validator");
-      const validation = await validateProductTelegramChat(store.id, deliveryValue);
+      const validation = await validateProductTelegramChat(store.id, deliveryValue, botId);
       if (!validation.success) {
         throw new Error(validation.error || "Falha ao validar grupo/canal no Telegram.");
       }
@@ -169,8 +170,9 @@ export async function updateProductAction(productId: string, formData: FormData)
   // Validate Telegram Chat & Bot Permissions on Product Update
   if (deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
+      const botId = (formData.get("botId") as string) || null;
       const { validateProductTelegramChat } = await import("@/lib/telegram/product-chat-validator");
-      const validation = await validateProductTelegramChat(store.id, deliveryValue);
+      const validation = await validateProductTelegramChat(store.id, deliveryValue, botId);
       if (!validation.success) {
         throw new Error(validation.error || "Falha ao validar grupo/canal no Telegram.");
       }
@@ -282,5 +284,92 @@ export async function testTelegramChatAccessAction(botId: string, telegramChatId
   const botToken = decrypt(bot.tokenEncrypted);
   const result = await TelegramDeliveryService.validateBotAndChatPermission(botToken, telegramChatId);
   return result;
+}
+
+export async function getStoreBotsAction() {
+  await requireSeller();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    throw new Error("Store not found");
+  }
+
+  const { telegramBots } = await import("@/db/schema");
+  const bots = await db.query.telegramBots.findMany({
+    where: eq(telegramBots.storeId, store.id),
+    orderBy: (bots, { desc }) => [desc(bots.createdAt)],
+  });
+
+  return bots.map(b => ({
+    id: b.id,
+    botId: b.botId,
+    username: b.username,
+    displayName: b.displayName || `@${b.username}`,
+    photoUrl: b.photoUrl,
+  }));
+}
+
+export async function getBotChatsAction(botId?: string | null) {
+  await requireSeller();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    throw new Error("Store not found");
+  }
+
+  const { telegramBots } = await import("@/db/schema");
+  const { getBotChats } = await import("@/lib/telegram/chat-sync");
+
+  let targetBot = null;
+  if (botId) {
+    targetBot = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+  }
+
+  if (!targetBot) {
+    targetBot = await db.query.telegramBots.findFirst({
+      where: eq(telegramBots.storeId, store.id)
+    });
+  }
+
+  if (!targetBot) {
+    return [];
+  }
+
+  const chats = await getBotChats(store.id, targetBot.id);
+  return chats;
+}
+
+export async function syncBotChatsAction(botId?: string | null) {
+  await requireSeller();
+  const store = await getCurrentStore();
+
+  if (!store) {
+    throw new Error("Store not found");
+  }
+
+  const { telegramBots } = await import("@/db/schema");
+  const { syncBotChats } = await import("@/lib/telegram/chat-sync");
+
+  let targetBot = null;
+  if (botId) {
+    targetBot = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+  }
+
+  if (!targetBot) {
+    targetBot = await db.query.telegramBots.findFirst({
+      where: eq(telegramBots.storeId, store.id)
+    });
+  }
+
+  if (!targetBot) {
+    throw new Error("Nenhum bot do Telegram encontrado para esta loja.");
+  }
+
+  const chats = await syncBotChats(store.id, targetBot.id);
+  return chats;
 }
 

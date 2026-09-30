@@ -77,6 +77,27 @@ export const telegramBots = pgTable('telegram_bots', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const telegramBotChats = pgTable('telegram_bot_chats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  telegramChatId: text('telegram_chat_id').notNull(),
+  title: text('title').notNull(),
+  type: text('type').notNull(), // 'group' | 'supergroup' | 'channel'
+  username: text('username'),
+  photoUrl: text('photo_url'),
+  botStatus: text('bot_status').notNull().default('administrator'), // 'administrator' | 'member' | 'left' | 'kicked'
+  canInviteUsers: boolean('can_invite_users').default(false).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  botChatUnique: unique().on(t.botId, t.telegramChatId),
+  storeBotIdx: index('telegram_bot_chats_store_bot_idx').on(t.storeId, t.botId),
+  storeActiveIdx: index('telegram_bot_chats_store_active_idx').on(t.storeId, t.isActive),
+}));
+
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
@@ -308,6 +329,7 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   coupons: many(coupons),
   floatingNotifications: many(storeFloatingNotifications),
   clips: many(clips),
+  botChats: many(telegramBotChats),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -328,10 +350,22 @@ export const storeFloatingNotificationsRelations = relations(storeFloatingNotifi
   }),
 }));
 
-export const telegramBotsRelations = relations(telegramBots, ({ one }) => ({
+export const telegramBotsRelations = relations(telegramBots, ({ one, many }) => ({
   store: one(stores, {
     fields: [telegramBots.storeId],
     references: [stores.id],
+  }),
+  chats: many(telegramBotChats),
+}));
+
+export const telegramBotChatsRelations = relations(telegramBotChats, ({ one }) => ({
+  store: one(stores, {
+    fields: [telegramBotChats.storeId],
+    references: [stores.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [telegramBotChats.botId],
+    references: [telegramBots.id],
   }),
 }));
 

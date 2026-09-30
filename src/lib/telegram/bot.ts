@@ -19,11 +19,13 @@ export class TelegramBotService {
     return telegramFetch<{ description: string }>(this.token, 'getMyDescription');
   }
 
-  async setWebhook(url: string, secretToken?: string): Promise<boolean> {
-    return telegramFetch<boolean>(this.token, 'setWebhook', { 
+  async setWebhook(url: string, secretToken?: string, allowedUpdates?: string[]): Promise<boolean> {
+    const payload: any = { 
       url, 
-      secret_token: secretToken 
-    });
+      secret_token: secretToken,
+      allowed_updates: allowedUpdates || ["message", "callback_query", "my_chat_member", "chat_member"]
+    };
+    return telegramFetch<boolean>(this.token, 'setWebhook', payload);
   }
 
   async deleteWebhook(): Promise<boolean> {

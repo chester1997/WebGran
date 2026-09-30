@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { createProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
+import { TelegramChatPicker } from "./TelegramChatPicker";
 
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
@@ -308,52 +309,16 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
 
               {/* Input for Delivery */}
               {deliveryType === "telegram" && (
-                <div className="space-y-2 w-full">
-                  <div className="flex flex-col sm:flex-row gap-2 w-full">
-                    <input 
-                      type="text"
-                      name="deliveryValue"
-                      required
-                      value={deliveryValue}
-                      onChange={(e) => {
-                        setDeliveryValue(e.target.value);
-                        setTestResult(null);
-                      }}
-                      placeholder="Ex: -1001234567890"
-                      className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={testingAccess || !deliveryValue.trim()}
-                      onClick={handleTestAccess}
-                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 sm:h-11 px-4 rounded-lg shrink-0 font-medium w-full sm:w-auto"
-                    >
-                      {testingAccess ? "Testando..." : "🔍 Testar conexão"}
-                    </Button>
-                  </div>
-
-                  {Boolean(testResult && deliveryValue.trim()) && (
-                    testResult!.success ? (
-                      <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs space-y-1.5 font-sans">
-                        <p className="font-bold text-sm text-emerald-400 flex items-center gap-1.5 mb-2">
-                          ✓ Canal encontrado
-                        </p>
-                        <p><strong>Nome:</strong> {testResult!.chatName || "Grupo/Canal Telegram"}</p>
-                        {testResult!.chatType && <p><strong>Tipo:</strong> {testResult!.chatType}</p>}
-                        <p className="text-emerald-400 font-semibold mt-1">✓ Bot verificado com permissão de Administrador (pode convidar usuários)</p>
-                      </div>
-                    ) : (
-                      <div className="p-3.5 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs whitespace-pre-line font-sans leading-relaxed">
-                        {testResult!.error}
-                      </div>
-                    )
-                  )}
-
-                  <div className="text-[11px] text-zinc-500 leading-relaxed">
-                    <p><strong>Como obter o ID:</strong> Acesse algum bot de ID no Telegram e encaminhe uma mensagem do canal/grupo.</p>
-                    <p className="text-amber-500/80 mt-1">⚠️ O bot de vendas precisa ser <strong>administrador</strong> do grupo/canal para gerar links de convite.</p>
-                  </div>
+                <div className="space-y-3 w-full">
+                  <input type="hidden" name="botId" value={selectedBotId} />
+                  <input type="hidden" name="deliveryValue" value={deliveryValue} />
+                  <TelegramChatPicker
+                    selectedBotId={selectedBotId}
+                    setSelectedBotId={setSelectedBotId}
+                    deliveryValue={deliveryValue}
+                    setDeliveryValue={setDeliveryValue}
+                    bots={bots}
+                  />
                 </div>
               )}
 

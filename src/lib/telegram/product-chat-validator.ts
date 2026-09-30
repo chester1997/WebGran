@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { telegramBots, stores } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
@@ -26,7 +26,8 @@ export interface ProductChatValidationResult {
  */
 export async function validateProductTelegramChat(
   storeId: string,
-  deliveryValue: string
+  deliveryValue: string,
+  targetBotId?: string | null
 ): Promise<ProductChatValidationResult> {
   const cleanChatId = deliveryValue ? String(deliveryValue).trim() : "";
 
@@ -38,10 +39,19 @@ export async function validateProductTelegramChat(
     };
   }
 
-  // 1. Resolve store bot
-  const botRecord = await db.query.telegramBots.findFirst({
-    where: eq(telegramBots.storeId, storeId)
-  });
+  // 1. Resolve store bot (with strict multi-tenancy check)
+  let botRecord = null;
+  if (targetBotId) {
+    botRecord = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, targetBotId), eq(telegramBots.storeId, storeId))
+    });
+  }
+
+  if (!botRecord) {
+    botRecord = await db.query.telegramBots.findFirst({
+      where: eq(telegramBots.storeId, storeId)
+    });
+  }
 
   if (!botRecord || !botRecord.tokenEncrypted) {
     return {
@@ -115,6 +125,23 @@ export async function validateProductTelegramChat(
     }
 
     const chatTitle = chatInfo.title || chatInfo.username || `Canal ${cleanChatId}`;
+
+    try {
+      const { saveOrUpdateBotChat } = await import("./chat-sync");
+      await saveOrUpdateBotChat({
+        storeId,
+        botId: botRecord.id,
+        telegramChatId: cleanChatId,
+        title: chatTitle,
+        type: chatInfo.type || "channel",
+        username: chatInfo.username || null,
+        botStatus: 'administrator',
+        canInviteUsers: true,
+        isActive: true,
+      });
+    } catch (saveErr) {
+      console.warn("[validateProductTelegramChat] Failed to auto-save chat:", saveErr);
+    }
 
     return {
       success: true,

@@ -33,6 +33,15 @@ export async function POST(req: NextRequest) {
     const { store, token } = resolved;
     const update = await req.json();
 
+    if (update.my_chat_member) {
+      try {
+        const { handleMyChatMemberUpdate } = await import("@/lib/telegram/chat-sync");
+        await handleMyChatMemberUpdate(resolved.bot, update);
+      } catch (chatSyncErr) {
+        console.error("[TELEGRAM WEBHOOK] Error processing my_chat_member:", chatSyncErr);
+      }
+    }
+
     if (update.callback_query) {
       const cbData = update.callback_query.data || "";
       const cbId = update.callback_query.id;
