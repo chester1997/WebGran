@@ -148,7 +148,7 @@ export function StudioProductClient({
   }
 
   return (
-    <div className="w-full min-h-screen bg-transparent text-white pb-28">
+    <div className="w-full min-h-screen bg-transparent text-zinc-900 dark:text-white pb-28">
       {/* 1. TOP BANNER / BACKDROP AREA */}
       <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] max-h-[360px] bg-zinc-950 overflow-hidden">
         <img
@@ -159,7 +159,7 @@ export function StudioProductClient({
           className="w-full h-full object-cover"
         />
         {/* Smooth Gradient Fade to Page Background */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#141416] via-[#141416]/40 to-black/50 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f5f7] via-[#f4f5f7]/40 to-black/30 dark:from-[#141416] dark:via-[#141416]/40 dark:to-black/50 pointer-events-none" />
 
         {/* Back Button */}
         <button
@@ -177,7 +177,7 @@ export function StudioProductClient({
         {/* POSTER THUMB & TITLE / METADATA HEADER (OVERLAPPING BANNER) */}
         <div className="-mt-14 sm:-mt-16 flex gap-4 items-end">
           {/* Small Vertical Poster Thumbnail */}
-          <div className="w-24 sm:w-28 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden bg-zinc-900 border border-white/15 shadow-2xl">
+          <div className="w-24 sm:w-28 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-300/50 dark:border-white/15 shadow-2xl">
             <img
               src={posterImage}
               alt={product.title}
@@ -186,7 +186,7 @@ export function StudioProductClient({
           </div>
 
           {/* Title & Metadata on the right */}
-          <div className="flex-1 space-y-1.5 pb-1">
+          <div className="flex-1 space-y-1.5 pb-1 min-w-0">
             {/* Category & Duration Badges */}
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
               {(() => {
@@ -199,20 +199,20 @@ export function StudioProductClient({
                 );
               })()}
               {product.category?.name && (
-                <span className="px-2.5 py-1 rounded-md bg-white/10 text-zinc-300 font-semibold border border-white/5 uppercase tracking-wider">
+                <span className="px-2.5 py-1 rounded-md bg-zinc-200/90 dark:bg-white/10 text-zinc-800 dark:text-zinc-300 font-semibold border border-zinc-300/60 dark:border-white/5 uppercase tracking-wider">
                   {product.category.name}
                 </span>
               )}
               {durationBadge && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/10 text-zinc-300 font-semibold border border-white/5">
-                  <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-200/90 dark:bg-white/10 text-zinc-800 dark:text-zinc-300 font-semibold border border-zinc-300/60 dark:border-white/5">
+                  <Clock className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                   {durationBadge}
                 </span>
               )}
             </div>
 
             {/* Title */}
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug drop-shadow-sm">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight leading-snug drop-shadow-sm">
               {product.title}
             </h1>
           </div>
@@ -220,7 +220,7 @@ export function StudioProductClient({
 
         {/* Delivery Type Badge if available */}
         {product.deliveryType && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-semibold border border-emerald-500/20">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/30">
             <span>Entrega Telegram</span>
           </div>
         )}
@@ -256,20 +256,20 @@ export function StudioProductClient({
             <button
               type="button"
               onClick={toggleMyList}
-              className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all text-xs font-semibold active:scale-95 cursor-pointer ${
+              className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all text-xs font-semibold active:scale-95 cursor-pointer shadow-sm ${
                 isInMyList
-                  ? "bg-red-500/15 text-red-400 border-red-500/30"
-                  : "bg-[#222226] text-zinc-300 hover:text-white border-white/10 hover:bg-white/10"
+                  ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                  : "bg-zinc-200/90 hover:bg-zinc-300/90 dark:bg-[#222226] text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white border-zinc-300 dark:border-white/10"
               }`}
             >
               {isInMyList ? (
                 <>
-                  <Check className="w-4 h-4 text-red-400" />
+                  <Check className="w-4 h-4 text-red-500 dark:text-red-400" />
                   <span>Nos Favoritos</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 text-zinc-300" />
+                  <Plus className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                   <span>Favoritos</span>
                 </>
               )}
@@ -278,9 +278,9 @@ export function StudioProductClient({
             <button
               type="button"
               onClick={handleShare}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#222226] text-zinc-300 hover:text-white border border-white/10 hover:bg-white/10 transition-all text-xs font-semibold active:scale-95 cursor-pointer"
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-zinc-200/90 hover:bg-zinc-300/90 dark:bg-[#222226] text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white border border-zinc-300 dark:border-white/10 transition-all text-xs font-semibold active:scale-95 cursor-pointer shadow-sm"
             >
-              <Share2 className="w-4 h-4 text-zinc-300" />
+              <Share2 className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
               <span>{copied ? "Link Copiado!" : "Compartilhar"}</span>
             </button>
           </div>
@@ -288,11 +288,11 @@ export function StudioProductClient({
 
         {/* DESCRIPTION SECTION */}
         {rawDescription && (
-          <div className="pt-3 border-t border-white/10 space-y-2">
-            <h3 className="text-xs uppercase font-bold text-zinc-400 tracking-wider">
+          <div className="pt-3 border-t border-zinc-300/60 dark:border-white/10 space-y-2">
+            <h3 className="text-xs uppercase font-bold text-zinc-500 dark:text-zinc-400 tracking-wider">
               Descrição
             </h3>
-            <p className="text-sm text-zinc-300 leading-relaxed break-words whitespace-pre-line">
+            <p className="text-sm text-zinc-800 dark:text-zinc-300 leading-relaxed break-words whitespace-pre-line">
               {isLongDescription && !isDescriptionExpanded
                 ? `${rawDescription.slice(0, 200)}...`
                 : rawDescription}
@@ -301,7 +301,7 @@ export function StudioProductClient({
               <button
                 type="button"
                 onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer underline"
+                className="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold cursor-pointer"
               >
                 {isDescriptionExpanded ? "Mostrar menos" : "Ler mais"}
               </button>
@@ -311,10 +311,10 @@ export function StudioProductClient({
 
         {/* RECOMMENDED PRODUCTS CAROUSEL */}
         {recommendedProducts.length > 0 && (
-          <div className="pt-4 border-t border-white/10 space-y-3">
+          <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+              <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
                 Recomendados para você
               </h3>
             </div>
