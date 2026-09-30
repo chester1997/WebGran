@@ -27,7 +27,8 @@ import {
   X,
   Ticket,
   Bell,
-  Video
+  Video,
+  DollarSign
 } from "lucide-react";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
@@ -52,7 +53,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   const dashboardItem = { name: "Dashboard", href: "/seller", icon: LayoutDashboard };
   const bottomRootItems = [
     { name: "Pedidos", href: "/seller/orders", icon: ShoppingCart },
-    { name: "Recebimento", href: "/seller/recebimentos", icon: CreditCard },
+    { name: "Financeiro", href: "/seller/financeiro", icon: DollarSign },
+    { name: "Gateways", href: "/seller/recebimentos", icon: CreditCard },
     { name: "Clientes", href: "/seller/customers", icon: Users },
     { name: "Configurações", href: "/seller/settings", icon: Settings },
   ];
