@@ -86,6 +86,18 @@ export async function requireAdmin() {
   return user;
 }
 
+export async function requireSuperAdmin() {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("UNAUTHORIZED");
+  }
+  const role = (user.role || '').toLowerCase();
+  if (role !== 'super_admin') {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}
+
 export async function requireSeller() {
   const user = await getCurrentUser();
   if (!user) {
