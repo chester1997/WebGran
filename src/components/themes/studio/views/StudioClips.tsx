@@ -487,24 +487,24 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
 
         {/* 1. TOP OVERLAY: Fixed Counter Badge & Mute Toggle with Safe-Area Top Support */}
         <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-[calc(12px+env(safe-area-inset-top,0px))] pb-4 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none">
-          {/* Clips Counter Badge (WebGran Liquid Glass Capsule Style) */}
-          <div className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-xs font-semibold text-white tracking-wider flex items-center gap-2 shadow-lg pointer-events-auto">
-            <Film className="w-3.5 h-3.5 text-red-500 shrink-0" />
-            <span>
+          {/* Clips Counter Badge (Subtle Liquid Glass Style) */}
+          <div className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-xs font-medium text-white/90 tracking-wider flex items-center gap-1.5 shadow-sm pointer-events-auto relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/15 before:to-transparent before:pointer-events-none">
+            <Film className="w-3.5 h-3.5 text-red-500 shrink-0 relative z-10" />
+            <span className="relative z-10">
               {currentIndex + 1} / {clips.length}
             </span>
           </div>
 
-          {/* Audio Toggle Button (WebGran Liquid Glass Circle Style) */}
+          {/* Audio Toggle Button (Subtle Liquid Glass Circle Style) */}
           <button
             onClick={toggleMute}
             aria-label={isMuted ? "Ativar som do vídeo" : "Desativar som do vídeo"}
-            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:bg-black/60 transition-all active:scale-95 shadow-lg pointer-events-auto"
+            className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/40 hover:border-white/30 transition-all active:scale-95 shadow-md pointer-events-auto relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent before:pointer-events-none"
           >
             {isMuted ? (
-              <VolumeX className="w-5 h-5 text-red-400" />
+              <VolumeX className="w-5 h-5 text-white/90 relative z-10" />
             ) : (
-              <Volume2 className="w-5 h-5 text-white" />
+              <Volume2 className="w-5 h-5 text-white relative z-10" />
             )}
           </button>
         </div>
@@ -512,8 +512,8 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
         {/* 2. CENTER OVERLAY: Play/Pause State Indicator */}
         {!isPlaying && (
           <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-300 transform scale-100 opacity-100">
-              <Play className="w-8 h-8 fill-white translate-x-0.5" />
+            <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-300 transform scale-100 opacity-100 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent">
+              <Play className="w-8 h-8 fill-white translate-x-0.5 relative z-10" />
             </div>
           </div>
         )}
@@ -535,9 +535,9 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
                 handlePrev();
               }}
               aria-label="Clip anterior"
-              className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-white flex items-center justify-center hover:bg-black/60 transition-all active:scale-95 shadow-md"
+              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/40 hover:border-white/30 transition-all active:scale-95 shadow-md relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent before:pointer-events-none"
             >
-              <ChevronUp className="w-5 h-5" />
+              <ChevronUp className="w-5 h-5 relative z-10" />
             </button>
           )}
 
@@ -548,13 +548,13 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
                 handleNext();
               }}
               aria-label="Próximo Clip"
-              className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-white flex items-center justify-center hover:bg-black/60 transition-all active:scale-95 shadow-md"
+              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/40 hover:border-white/30 transition-all active:scale-95 shadow-md relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent before:pointer-events-none"
             >
-              <ChevronDown className="w-5 h-5" />
+              <ChevronDown className="w-5 h-5 relative z-10" />
             </button>
           )}
 
-          {/* LINKED PRODUCT BUY BUTTON — Positioned immediately below the down arrow */}
+          {/* LINKED PRODUCT BUY BUTTON — Positioned immediately below the down arrow in Liquid Glass with subtle WebGran red accent */}
           {currentClip?.product && (
             <button
               onClick={(e) => {
@@ -566,9 +566,9 @@ export function StudioClips({ storeSlug }: StudioClipsProps) {
               }}
               aria-label={`Comprar ${currentClip.product.title}`}
               title={`Comprar ${currentClip.product.title}`}
-              className="w-10 h-10 rounded-full bg-red-600 border border-red-500 text-white flex items-center justify-center hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-600/40 relative group"
+              className="w-10 h-10 rounded-full bg-red-950/40 backdrop-blur-md border border-red-500/40 text-white flex items-center justify-center hover:bg-red-900/50 hover:border-red-400/60 transition-all active:scale-95 shadow-lg shadow-red-600/25 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/25 before:to-transparent before:pointer-events-none group"
             >
-              <ShoppingCart className="w-5 h-5 text-white" />
+              <ShoppingCart className="w-5 h-5 text-white relative z-10" />
             </button>
           )}
         </div>
