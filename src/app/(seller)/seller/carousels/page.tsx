@@ -13,6 +13,8 @@ import { ReorderCarouselButtons } from "./ReorderCarouselButtons";
 
 import SetupStoreClient from "../SetupStoreClient";
 
+import { getProductBadge } from "@/lib/product-badge";
+
 export default async function SellerCarouselsPage() {
   await connection();
   await requireSeller();
@@ -46,7 +48,7 @@ export default async function SellerCarouselsPage() {
   const storeProducts = await db.query.products.findMany({
     where: eq(products.storeId, store.id),
     orderBy: [desc(products.createdAt)],
-    columns: { id: true, title: true, price: true }
+    columns: { id: true, title: true, price: true, badge: true }
   });
 
   const rankingSelectedIds = rankingCarousel.items

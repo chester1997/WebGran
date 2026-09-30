@@ -23,11 +23,13 @@ import {
 } from "lucide-react";
 import { updateRankingCarouselAction } from "./actions";
 import { IconPickerModal } from "./IconPickerModal";
+import { getProductBadge } from "@/lib/product-badge";
 
 interface ProductOption {
   id: string;
   title: string;
   price: string | number;
+  badge?: string | null;
 }
 
 interface RankingModalProps {
@@ -220,6 +222,7 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                   const prod = products.find((p) => p.id === id);
                   if (!prod) return null;
                   const isTop5 = index < 5;
+                  const badgeConfig = getProductBadge(prod.badge);
 
                   return (
                     <div
@@ -247,9 +250,14 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                         >
                           {String(index + 1).padStart(2, "0")}
                         </div>
-                        <span className="text-xs font-semibold text-white truncate min-w-0 flex-1">
+                        <span className="text-xs font-semibold text-white truncate min-w-0">
                           {prod.title}
                         </span>
+                        {badgeConfig && (
+                          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badgeConfig.sellerBadgeClass}`}>
+                            {badgeConfig.label}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">
@@ -307,16 +315,26 @@ export function RankingModal({ rankingCarousel, products }: RankingModalProps) {
                 {availableProducts.length === 0 ? (
                   <p className="text-zinc-500 text-xs py-3 text-center">Nenhum produto disponível.</p>
                 ) : (
-                  availableProducts.map((p) => (
-                    <div
-                      key={p.id}
-                      onClick={() => handleAddProduct(p.id)}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-[#181820] hover:bg-white/10 border border-white/5 text-xs text-zinc-200 cursor-pointer transition-all min-w-0 w-full"
-                    >
-                      <span className="truncate min-w-0 flex-1">{p.title}</span>
-                      <Plus className="w-4 h-4 text-red-400 shrink-0 ml-2" />
-                    </div>
-                  ))
+                  availableProducts.map((p) => {
+                    const badgeConfig = getProductBadge(p.badge);
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => handleAddProduct(p.id)}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-[#181820] hover:bg-white/10 border border-white/5 text-xs text-zinc-200 cursor-pointer transition-all min-w-0 w-full"
+                      >
+                        <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-2">
+                          <span className="truncate">{p.title}</span>
+                          {badgeConfig && (
+                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badgeConfig.sellerBadgeClass}`}>
+                              {badgeConfig.label}
+                            </span>
+                          )}
+                        </div>
+                        <Plus className="w-4 h-4 text-red-400 shrink-0" />
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

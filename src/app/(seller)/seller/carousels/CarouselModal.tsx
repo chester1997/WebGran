@@ -7,8 +7,10 @@ import { Plus, Edit3, Check } from "lucide-react";
 import { createCarouselAction, updateCarouselAction } from "./actions";
 import { IconPickerModal } from "./IconPickerModal";
 
+import { getProductBadge } from "@/lib/product-badge";
+
 interface CarouselModalProps {
-  products: Array<{ id: string; title: string; price: string | number }>;
+  products: Array<{ id: string; title: string; price: string | number; badge?: string | null }>;
   carousel?: {
     id: string;
     name: string;
@@ -143,6 +145,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
                 <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
                   {products.map(product => {
                     const selected = selectedIds.includes(product.id);
+                    const badgeConfig = getProductBadge(product.badge);
                     return (
                       <div
                         key={product.id}
@@ -153,15 +156,20 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
                             : "bg-[#1A1A1E] border-white/5 text-zinc-400 hover:border-white/10 hover:text-zinc-200"
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+                          <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all shrink-0 ${
                             selected ? "bg-blue-600 border-blue-600 text-white" : "border-white/20 bg-transparent"
                           }`}>
                             {selected && <Check className="w-3.5 h-3.5" />}
                           </div>
                           <span className="text-sm font-medium truncate">{product.title}</span>
+                          {badgeConfig && (
+                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badgeConfig.sellerBadgeClass}`}>
+                              {badgeConfig.label}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-xs font-semibold text-emerald-400 shrink-0 ml-2">
+                        <span className="text-xs font-semibold text-emerald-400 shrink-0">
                           R$ {Number(product.price).toFixed(2).replace('.', ',')}
                         </span>
                       </div>
