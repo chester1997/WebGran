@@ -1,11 +1,14 @@
 import { MercadoPagoProvider } from './providers/mercado-pago';
+import { pushinPayProvider, PushinPayProvider } from './providers/pushinpay';
 import { CreateCheckoutParams, CheckoutResponse } from './types';
 
 export class PaymentService {
   private mercadoPagoProvider: MercadoPagoProvider;
+  private pushinPayProvider: PushinPayProvider;
 
   constructor() {
     this.mercadoPagoProvider = new MercadoPagoProvider();
+    this.pushinPayProvider = pushinPayProvider;
   }
 
   async getSellerConnection(sellerId: string) {
@@ -32,9 +35,19 @@ export class PaymentService {
     return this.mercadoPagoProvider.createPixPayment(params);
   }
 
-  async handleWebhook(provider: string, payload: any): Promise<void> {
+  async createPushinPayPix(params: import('./types').CreatePaymentParams) {
+    return this.pushinPayProvider.createPixPayment(params);
+  }
+
+  async testPushinPayConnection(token: string) {
+    return this.pushinPayProvider.testConnection(token);
+  }
+
+  async handleWebhook(provider: string, payload: any): Promise<any> {
     if (provider === 'mercado_pago' || provider === 'mercadopago') {
       await this.mercadoPagoProvider.handleWebhook(payload);
+    } else if (provider === 'pushinpay') {
+      return await this.pushinPayProvider.handleWebhook(payload);
     } else {
       throw new Error(`Unsupported payment provider: ${provider}`);
     }

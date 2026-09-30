@@ -10,7 +10,8 @@ import { paymentService } from "@/lib/payments/payment-service";
 export async function createCheckoutSession(
   storeSlug: string, 
   items: { id: string, quantity: number }[],
-  couponCode?: string
+  couponCode?: string,
+  paymentGateway?: 'mercadopago' | 'pushinpay'
 ) {
   try {
     const session = await getMiniAppSession();
@@ -128,19 +129,41 @@ export async function createCheckoutSession(
       }))
     );
 
-    // Connect to Mercado Pago Payment Gateway
+    // Resolve Payment Gateway Connections
     const storeRecord = await db.query.stores.findFirst({
       where: eq(stores.id, storeId),
       with: { owner: true }
     });
 
-    const conn = storeRecord?.ownerId 
-      ? await paymentService.getSellerConnection(storeRecord.ownerId)
-      : null;
+    const sellerId = storeRecord?.ownerId;
 
-    if (conn && conn.status === 'active') {
-      const pixPayment = await paymentService.createPixPayment({
-        sellerId: storeRecord!.ownerId,
+    const mpConn = sellerId 
+      ? await paymentService.getSellerConnection(sellerId)
+      : null;
+    const isMpActive = Boolean(mpConn && mpConn.status === 'active');
+
+    const pushinPayToken = sellerId
+      ? await paymentService['pushinPayProvider'].getPushinPayToken(sellerId, storeId)
+      : null;
+    const isPushinPayActive = Boolean(pushinPayToken);
+
+    // Determine target gateway
+    let targetGateway: 'pushinpay' | 'mercadopago' | null = null;
+
+    if (paymentGateway === 'pushinpay' && isPushinPayActive) {
+      targetGateway = 'pushinpay';
+    } else if (paymentGateway === 'mercadopago' && isMpActive) {
+      targetGateway = 'mercadopago';
+    } else if (isPushinPayActive && !isMpActive) {
+      targetGateway = 'pushinpay';
+    } else if (isMpActive) {
+      targetGateway = 'mercadopago';
+    }
+
+    // 1. Process PushinPay PIX
+    if (targetGateway === 'pushinpay') {
+      const pixPayment = await paymentService.createPushinPayPix({
+        sellerId: sellerId!,
         orderId: newOrder.id,
         amount: finalTotal,
         description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
@@ -153,6 +176,7 @@ export async function createCheckoutSession(
       await db.update(orders)
         .set({
           paymentId: pixPayment.paymentId,
+          paymentMethod: 'pushinpay',
           pixQrCode: pixPayment.qrCode,
           pixQrCodeBase64: pixPayment.qrCodeBase64,
           pixExpiresAt: pixPayment.expiresAt,
@@ -162,6 +186,7 @@ export async function createCheckoutSession(
       return {
         success: true,
         orderId: newOrder.id,
+        paymentGateway: 'pushinpay',
         pix: {
           qrCode: pixPayment.qrCode,
           qrCodeBase64: pixPayment.qrCodeBase64,
@@ -170,7 +195,42 @@ export async function createCheckoutSession(
       };
     }
 
-    // Fallback mode if seller hasn't connected Mercado Pago yet (Simulator / Demo Mode)
+    // 2. Process Mercado Pago PIX
+    if (targetGateway === 'mercadopago') {
+      const pixPayment = await paymentService.createPixPayment({
+        sellerId: sellerId!,
+        orderId: newOrder.id,
+        amount: finalTotal,
+        description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
+        customer: {
+          name: 'Cliente Telegram',
+          email: 'cliente@webgran.app'
+        }
+      });
+
+      await db.update(orders)
+        .set({
+          paymentId: pixPayment.paymentId,
+          paymentMethod: 'mercadopago',
+          pixQrCode: pixPayment.qrCode,
+          pixQrCodeBase64: pixPayment.qrCodeBase64,
+          pixExpiresAt: pixPayment.expiresAt,
+        })
+        .where(eq(orders.id, newOrder.id));
+
+      return {
+        success: true,
+        orderId: newOrder.id,
+        paymentGateway: 'mercadopago',
+        pix: {
+          qrCode: pixPayment.qrCode,
+          qrCodeBase64: pixPayment.qrCodeBase64,
+          expiresAt: pixPayment.expiresAt.toISOString(),
+        }
+      };
+    }
+
+    // Fallback mode if seller hasn't connected any gateway yet (Simulator / Demo Mode)
     await db.update(orders)
       .set({ status: 'paid' })
       .where(eq(orders.id, newOrder.id));

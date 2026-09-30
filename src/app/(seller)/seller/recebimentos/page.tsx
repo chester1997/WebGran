@@ -1,7 +1,7 @@
-﻿import { requireSeller, getCurrentStore } from '@/lib/auth';
+import { requireSeller, getCurrentStore } from '@/lib/auth';
 import { db } from '@/db';
 import { sellerPaymentConnections, orders } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import RecebimentosClient from './RecebimentosClient';
 
 import SetupStoreClient from "../SetupStoreClient";
@@ -16,8 +16,21 @@ export default async function RecebimentosPage() {
 
   // Fetch Mercado Pago Connection
   const connection = await db.query.sellerPaymentConnections.findFirst({
-    where: eq(sellerPaymentConnections.sellerId, seller.id),
+    where: and(
+      eq(sellerPaymentConnections.sellerId, seller.id),
+      eq(sellerPaymentConnections.provider, 'mercado_pago')
+    ),
   });
+
+  // Fetch PushinPay Connection
+  const pushinPayConn = await db.query.sellerPaymentConnections.findFirst({
+    where: and(
+      eq(sellerPaymentConnections.sellerId, seller.id),
+      eq(sellerPaymentConnections.provider, 'pushinpay')
+    ),
+  });
+
+  const isPushinPayEnvActive = Boolean(process.env.PUSHINPAY_TOKEN && process.env.PUSHINPAY_TOKEN.trim());
 
   // Fetch Store Transactions
   const storeOrders = await db.query.orders.findMany({
@@ -67,6 +80,12 @@ export default async function RecebimentosPage() {
         providerUserId: connection.providerUserId,
         updatedAt: connection.updatedAt ? new Date(connection.updatedAt).toISOString() : null,
       } : null}
+      pushinPayConnection={{
+        id: pushinPayConn?.id || null,
+        status: pushinPayConn?.status || (isPushinPayEnvActive ? 'active' : 'inactive'),
+        isGlobalEnvActive: isPushinPayEnvActive && !pushinPayConn,
+        updatedAt: pushinPayConn?.updatedAt ? new Date(pushinPayConn.updatedAt).toISOString() : null,
+      }}
       metrics={metrics}
       transactions={formattedTransactions}
     />
