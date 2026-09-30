@@ -43,18 +43,18 @@ export default async function AdminSellersPage() {
 
       const store = seller.stores[0] || null;
 
+      const periodEnd = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
+      const isExpired = periodEnd ? periodEnd < now : false;
+
       // Status calculation
       let computedStatus = 'active';
       if (store?.status === 'suspended' || sub?.status === 'SUSPENDED') {
         computedStatus = 'suspended';
       } else if (store?.status === 'inactive') {
         computedStatus = 'inactive';
-      } else if (sub?.status === 'PAST_DUE' || sub?.status === 'EXPIRED') {
+      } else if (sub?.status === 'PAST_DUE' || sub?.status === 'EXPIRED' || isExpired) {
         computedStatus = 'pending';
       }
-
-      const periodEnd = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
-      const isExpired = periodEnd ? periodEnd < now : false;
 
       return {
         id: seller.id,

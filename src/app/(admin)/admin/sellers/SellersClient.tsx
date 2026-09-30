@@ -27,6 +27,13 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export interface SellerItem {
   id: string;
@@ -632,130 +639,110 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     </td>
 
                     {/* Ações */}
-                    <td className="py-3.5 px-3 text-right relative">
-                      <div className="relative inline-block text-left">
-                        <Button
-                          variant="ghost"
-                          onClick={() => setActiveMenuSellerId(activeMenuSellerId === seller.id ? null : seller.id)}
-                          className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer"
-                        >
+                    <td className="py-3.5 px-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer inline-flex items-center justify-center transition-colors">
                           <MoreVertical className="w-4 h-4" />
-                        </Button>
-
-                        {/* Dropdown Menu */}
-                        {activeMenuSellerId === seller.id && (
-                          <div
-                            className="origin-top-right absolute right-0 mt-1 w-56 rounded-xl bg-[#18181C] border border-[#27272A] shadow-2xl z-50 py-1 text-xs text-gray-300 divide-y divide-[#27272A]/60"
-                            onMouseLeave={() => setActiveMenuSellerId(null)}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-[#18181C] border border-[#27272A] shadow-2xl p-1 text-xs text-gray-300">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setEditUserForm({ name: seller.name, email: seller.email });
+                              setIsEditUserOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-gray-200 focus:bg-white/5 focus:text-white"
                           >
-                            <div className="py-1">
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setEditUserForm({ name: seller.name, email: seller.email });
-                                  setIsEditUserOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200 cursor-pointer"
-                              >
-                                <UserPen className="w-3.5 h-3.5 text-blue-400" />
-                                Editar usuário
-                              </button>
+                            <UserPen className="w-3.5 h-3.5 text-blue-400" />
+                            Editar usuário
+                          </DropdownMenuItem>
 
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setEditStoreForm({
-                                    name: seller.store?.name || "",
-                                    slug: seller.store?.slug || "",
-                                    status: seller.store?.status || "active",
-                                  });
-                                  setIsEditStoreOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200 cursor-pointer"
-                              >
-                                <Store className="w-3.5 h-3.5 text-purple-400" />
-                                Gerenciar loja
-                              </button>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setEditStoreForm({
+                                name: seller.store?.name || "",
+                                slug: seller.store?.slug || "",
+                                status: seller.store?.status || "active",
+                              });
+                              setIsEditStoreOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-gray-200 focus:bg-white/5 focus:text-white"
+                          >
+                            <Store className="w-3.5 h-3.5 text-purple-400" />
+                            Gerenciar loja
+                          </DropdownMenuItem>
 
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setIsManageSubOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200 cursor-pointer"
-                              >
-                                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                                Gerenciar mensalidade
-                              </button>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setIsManageSubOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-gray-200 focus:bg-white/5 focus:text-white"
+                          >
+                            <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                            Gerenciar mensalidade
+                          </DropdownMenuItem>
 
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setIsReleaseSubOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-emerald-400 font-semibold cursor-pointer"
-                              >
-                                <Unlock className="w-3.5 h-3.5 text-emerald-400" />
-                                Liberar mensalidade
-                              </button>
-                            </div>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setIsReleaseSubOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-emerald-400 font-semibold focus:bg-white/5 focus:text-emerald-300"
+                          >
+                            <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                            Liberar mensalidade
+                          </DropdownMenuItem>
 
-                            <div className="py-1">
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setIsConfirmSuspendOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-amber-400 font-semibold cursor-pointer"
-                              >
-                                {seller.status === "suspended" ? (
-                                  <>
-                                    <PlayCircle className="w-3.5 h-3.5 text-emerald-400" />
-                                    ▶️ Reativar acesso
-                                  </>
-                                ) : (
-                                  <>
-                                    <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
-                                    ⏸️ Suspender acesso
-                                  </>
-                                )}
-                              </button>
+                          <DropdownMenuSeparator className="bg-[#27272A]/60 my-1" />
 
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setResetPasswordInput("");
-                                  setIsResetPasswordOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200 cursor-pointer"
-                              >
-                                <Key className="w-3.5 h-3.5 text-blue-400" />
-                                Redefinir senha
-                              </button>
-                            </div>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setIsConfirmSuspendOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-amber-400 font-semibold focus:bg-white/5 focus:text-amber-300"
+                          >
+                            {seller.status === "suspended" ? (
+                              <>
+                                <PlayCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                ▶️ Reativar acesso
+                              </>
+                            ) : (
+                              <>
+                                <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+                                ⏸️ Suspender acesso
+                              </>
+                            )}
+                          </DropdownMenuItem>
 
-                            <div className="py-1">
-                              <button
-                                onClick={() => {
-                                  setSelectedSeller(seller);
-                                  setIsConfirmDeleteOpen(true);
-                                  setActiveMenuSellerId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-red-500/10 flex items-center gap-2 text-red-400 font-bold cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                                Excluir vendedor
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setResetPasswordInput("");
+                              setIsResetPasswordOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-gray-200 focus:bg-white/5 focus:text-white"
+                          >
+                            <Key className="w-3.5 h-3.5 text-blue-400" />
+                            Redefinir senha
+                          </DropdownMenuItem>
+
+                          <DropdownMenuSeparator className="bg-[#27272A]/60 my-1" />
+
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSeller(seller);
+                              setIsConfirmDeleteOpen(true);
+                            }}
+                            className="px-3 py-2 hover:bg-red-500/10 cursor-pointer flex items-center gap-2 text-red-400 font-bold focus:bg-red-500/20 focus:text-red-300"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                            Excluir vendedor
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 );
