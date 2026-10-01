@@ -8,11 +8,17 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
+import { hasFeature } from "@/lib/entitlements/entitlement-service";
 
 export async function saveBotAction(formData: FormData) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
+
+  const botAllowed = await hasFeature(seller.id, "telegram_bot");
+  if (!botAllowed) {
+    throw new Error("A integração com Bot do Telegram não está disponível no seu plano. Faça upgrade.");
+  }
 
   const token = formData.get("token") as string;
   const buttonName = (formData.get("buttonName") as string) || "Abrir Loja";

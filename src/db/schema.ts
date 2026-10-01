@@ -5,6 +5,7 @@ import {
   uuid, 
   boolean, 
   integer, 
+  bigint,
   jsonb, 
   unique, 
   decimal,
@@ -626,3 +627,149 @@ export const clipsRelations = relations(clips, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+// ============================================================================
+// ENTITLEMENTS / FEATURES / PLAN LIMITS & OVERRIDES
+// ============================================================================
+
+export const features = pgTable('features', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: text('type').notNull(), // 'BOOLEAN' | 'LIMIT' | 'QUOTA'
+  category: text('category').notNull().default('general'),
+  defaultValue: jsonb('default_value').notNull().default({}),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const planFeatures = pgTable('plan_features', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  planId: uuid('plan_id').notNull().references(() => subscriptionPlans.id, { onDelete: 'cascade' }),
+  featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
+  value: jsonb('value').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  planFeatureUnique: unique().on(t.planId, t.featureId),
+  planIdx: index('plan_features_plan_idx').on(t.planId),
+  featureIdx: index('plan_features_feature_idx').on(t.featureId),
+}));
+
+export const sellerFeatureOverrides = pgTable('seller_feature_overrides', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
+  overrideValue: jsonb('override_value').notNull(),
+  reason: text('reason'),
+  expiresAt: timestamp('expires_at'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  sellerFeatureUnique: unique().on(t.sellerId, t.featureId),
+  sellerIdx: index('seller_feature_overrides_seller_idx').on(t.sellerId),
+  featureIdx: index('seller_feature_overrides_feature_idx').on(t.featureId),
+}));
+
+export const featuresRelations = relations(features, ({ many }) => ({
+  planFeatures: many(planFeatures),
+  overrides: many(sellerFeatureOverrides),
+}));
+
+export const planFeaturesRelations = relations(planFeatures, ({ one }) => ({
+  plan: one(subscriptionPlans, {
+    fields: [planFeatures.planId],
+    references: [subscriptionPlans.id],
+  }),
+  feature: one(features, {
+    fields: [planFeatures.featureId],
+    references: [features.id],
+  }),
+}));
+
+export const sellerFeatureOverridesRelations = relations(sellerFeatureOverrides, ({ one }) => ({
+  seller: one(users, {
+    fields: [sellerFeatureOverrides.sellerId],
+    references: [users.id],
+  }),
+  feature: one(features, {
+    fields: [sellerFeatureOverrides.featureId],
+    references: [features.id],
+  }),
+  creator: one(users, {
+    fields: [sellerFeatureOverrides.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const pendingDeletions = pgTable('pending_deletions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').references(() => stores.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(), // 'bunny_storage' | 'bunny_stream'
+  path: text('path').notNull(),
+  resourceId: text('resource_id'),
+  attempts: integer('attempts').notNull().default(0),
+  lastError: text('last_error'),
+  scheduledAt: timestamp('scheduled_at').defaultNow().notNull(),
+  processedAt: timestamp('processed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeIdx: index('pending_deletions_store_idx').on(t.storeId),
+  processedIdx: index('pending_deletions_processed_idx').on(t.processedAt),
+}));
+
+export const pendingDeletionsRelations = relations(pendingDeletions, ({ one }) => ({
+  store: one(stores, {
+    fields: [pendingDeletions.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const sellerStorageUsage = pgTable('seller_storage_usage', {
+  sellerId: uuid('seller_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  usedBytes: bigint('used_bytes', { mode: 'number' }).notNull().default(0),
+  reservedBytes: bigint('reserved_bytes', { mode: 'number' }).notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const storageReservations = pgTable('storage_reservations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  storeId: uuid('store_id').references(() => stores.id, { onDelete: 'cascade' }),
+  referenceType: text('reference_type').notNull(), // 'clip_upload' | 'image_upload' | 'generic'
+  referenceId: text('reference_id'),
+  requestedBytes: bigint('requested_bytes', { mode: 'number' }).notNull(),
+  status: text('status').notNull().default('ACTIVE'), // 'ACTIVE' | 'CONFIRMED' | 'RELEASED' | 'EXPIRED'
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  sellerIdx: index('storage_reservations_seller_idx').on(t.sellerId),
+  statusIdx: index('storage_reservations_status_idx').on(t.status),
+  expiresIdx: index('storage_reservations_expires_idx').on(t.expiresAt),
+}));
+
+export const sellerStorageUsageRelations = relations(sellerStorageUsage, ({ one }) => ({
+  seller: one(users, {
+    fields: [sellerStorageUsage.sellerId],
+    references: [users.id],
+  }),
+}));
+
+export const storageReservationsRelations = relations(storageReservations, ({ one }) => ({
+  seller: one(users, {
+    fields: [storageReservations.sellerId],
+    references: [users.id],
+  }),
+  store: one(stores, {
+    fields: [storageReservations.storeId],
+    references: [stores.id],
+  }),
+}));
+
+
+

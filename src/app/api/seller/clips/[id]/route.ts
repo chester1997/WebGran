@@ -105,22 +105,11 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: "Clip não encontrado ou sem permissão." }, { status: 404 });
     }
 
-    // 1. Delete video object from Bunny Stream
-    try {
-      const deletedFromBunny = await BunnyStreamService.deleteVideo(existing.bunnyVideoId);
-      if (!deletedFromBunny) {
-        console.warn("[Seller Clip Delete] Bunny Stream video deletion returned false for:", existing.bunnyVideoId);
-      }
-    } catch (bunnyErr: any) {
-      console.error("[Seller Clip Delete] Failed to delete video from Bunny Stream:", bunnyErr);
-      return NextResponse.json(
-        { success: false, error: "Erro ao remover o vídeo do Bunny Stream. O clipe não foi excluído." },
-        { status: 500 }
-      );
+    // Delete clip and Bunny Stream video with lifecycle fallback queue
+    const success = await ClipService.deleteClip(id, store.id);
+    if (!success) {
+      return NextResponse.json({ success: false, error: "Erro ao excluir clipe." }, { status: 500 });
     }
-
-    // 2. Delete clip record from Neon DB
-    await db.delete(clips).where(and(eq(clips.id, existing.id), eq(clips.storeId, store.id)));
 
     return NextResponse.json({
       success: true,

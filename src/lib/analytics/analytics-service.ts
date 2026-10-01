@@ -10,6 +10,7 @@ import {
   telegramBots
 } from "@/db/schema";
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
+import { hasFeature } from "@/lib/entitlements/entitlement-service";
 
 export interface KpiMetric {
   value: number;
@@ -129,6 +130,13 @@ export class AnalyticsService {
         owner: true
       }
     });
+
+    if (store?.ownerId) {
+      const allowed = await hasFeature(store.ownerId, "analytics_reports_enabled");
+      if (!allowed) {
+        throw new Error("Relatórios analíticos não estão disponíveis no seu plano. Faça upgrade.");
+      }
+    }
 
     const storeName = store?.name || "Minha Loja";
     const userName = store?.owner?.name || "";

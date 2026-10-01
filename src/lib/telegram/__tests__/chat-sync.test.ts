@@ -71,7 +71,34 @@ vi.mock("@/db", () => {
         products: {
           findMany: vi.fn().mockImplementation(async () => []),
         },
+        stores: {
+          findFirst: vi.fn().mockImplementation(async () => ({ id: "store-uuid-1", ownerId: "seller-123" })),
+        },
+        users: {
+          findFirst: vi.fn().mockImplementation(async () => ({ id: "seller-123", role: "SELLER" })),
+        },
+        subscriptions: {
+          findFirst: vi.fn().mockImplementation(async () => null),
+        },
+        subscriptionPlans: {
+          findFirst: vi.fn().mockImplementation(async () => ({ id: "plan-webgran-id", slug: "webgran" })),
+        },
+        features: {
+          findFirst: vi.fn().mockImplementation(async () => ({ id: "feat-chats", key: "max_telegram_bot_chats", type: "LIMIT", defaultValue: { value: 10 }, isActive: true })),
+        },
+        planFeatures: {
+          findFirst: vi.fn().mockImplementation(async () => null),
+        },
+        sellerFeatureOverrides: {
+          findFirst: vi.fn().mockImplementation(async () => null),
+        },
       },
+      select: vi.fn().mockImplementation(() => ({
+        from: vi.fn().mockImplementation(() => ({
+          where: vi.fn().mockImplementation(async () => [{ ownerId: "seller-123", value: 0 }]),
+        })),
+      })),
+      execute: vi.fn().mockResolvedValue(true),
       insert: vi.fn().mockImplementation(() => ({
         values: vi.fn().mockImplementation((val: any) => ({
           returning: vi.fn().mockImplementation(async () => [{ id: "chat-uuid-1", ...val }]),

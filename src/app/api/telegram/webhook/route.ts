@@ -97,8 +97,11 @@ export async function POST(req: NextRequest) {
       // Customer name formatting
       const customerFirstName = update.message.from?.first_name || "Cliente";
 
+      const { hasFeature } = await import("@/lib/entitlements/entitlement-service");
+      const welcomeAllowed = store.ownerId ? await hasFeature(store.ownerId, "welcome_bot_message_enabled") : true;
+
       // Custom welcome message or default
-      let welcomeText = store.welcomeMessage;
+      let welcomeText = welcomeAllowed ? store.welcomeMessage : null;
       if (!welcomeText || welcomeText.trim() === "") {
         welcomeText = `Olá {nome}! Bem-vindo(a) à ${store.name}.\n\n${store.description ? store.description + '\n\n' : ''}Clique no botão abaixo para abrir nossa loja e conferir os produtos!`;
       }
@@ -123,7 +126,7 @@ export async function POST(req: NextRequest) {
         ]
       };
 
-      const banners = (store.welcomeBanners as string[]) || [];
+      const banners = welcomeAllowed ? ((store.welcomeBanners as string[]) || []) : [];
       const primaryBanner = banners.find(b => b && b.trim() !== "");
 
       if (primaryBanner) {

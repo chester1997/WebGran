@@ -5,6 +5,9 @@ import { banners } from '@/db/schema';
 import { eq, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getStorageProvider, generateMultiTenantStoragePath } from '@/lib/storage/provider';
+import { checkLimit } from '@/lib/entitlements/entitlement-service';
+import { MediaLifecycleService } from '@/lib/storage/lifecycle-service';
+import { StorageUsageService } from '@/lib/storage/storage-usage-service';
 
 export async function POST(req: Request) {
   try {
@@ -32,11 +35,36 @@ export async function POST(req: Request) {
         const matchMime = meta.match(/data:(.*?);/);
         const mimeType = matchMime ? matchMime[1] : "image/webp";
         const buffer = Buffer.from(base64Data, "base64");
+        const actualBytes = buffer.length;
+
+        const reservation = await StorageUsageService.reserveStorageForUpload({
+          sellerId: seller.id,
+          storeId: store.id,
+          bytes: actualBytes,
+          referenceType: "image_upload",
+        });
+
+        if (!reservation.allowed) {
+          return NextResponse.json(
+            { success: false, code: "STORAGE_QUOTA_EXCEEDED", error: reservation.reason },
+            { status: 403 }
+          );
+        }
 
         const storagePath = generateMultiTenantStoragePath(store.id, "banners", `banner-${Date.now()}.webp`);
         const provider = getStorageProvider();
-        const uploadRes = await provider.upload(buffer, storagePath, mimeType);
-        finalImageUrl = uploadRes.url;
+        try {
+          const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+          if (reservation.reservationId) {
+            await StorageUsageService.confirmReservation(reservation.reservationId, uploadRes.sizeBytes || actualBytes);
+          }
+          finalImageUrl = uploadRes.url;
+        } catch (uploadErr: any) {
+          if (reservation.reservationId) {
+            await StorageUsageService.releaseReservation(reservation.reservationId);
+          }
+          throw uploadErr;
+        }
       } catch (uploadErr: any) {
         console.error("[Banner Storage Upload Error]:", uploadErr);
         return NextResponse.json({ success: false, error: uploadErr?.message || "Erro no upload do banner para o Storage CDN." }, { status: 500 });
@@ -64,20 +92,30 @@ export async function POST(req: Request) {
         })
         .where(eq(banners.id, id));
 
+      if (existing.imageUrl && finalImageUrl !== existing.imageUrl) {
+        await MediaLifecycleService.handleImageReplacement({
+          oldUrl: existing.imageUrl,
+          newUrl: finalImageUrl,
+          storeId: store.id,
+          excludeEntityId: id,
+        });
+      }
+
       revalidatePath("/seller/banners");
       revalidatePath(`/miniapp/${store.slug}`);
       return NextResponse.json({ success: true, isEdit: true, imageUrl: finalImageUrl });
     }
 
-    // Create new banner - Check limit (max 5)
+    // Create new banner - Check entitlement limit
     const existingCount = await db
       .select({ count: count() })
       .from(banners)
       .where(eq(banners.storeId, store.id));
 
     const total = existingCount[0]?.count || 0;
-    if (total >= 5) {
-      return NextResponse.json({ success: false, error: "Você pode cadastrar no máximo 5 banners." }, { status: 400 });
+    const bannerCheck = await checkLimit(seller.id, "max_banners", total);
+    if (!bannerCheck.allowed) {
+      return NextResponse.json({ success: false, error: `Limite de banners atingido (${total}/${bannerCheck.limit}). Faça upgrade do seu plano.` }, { status: 400 });
     }
 
     await db.insert(banners).values({

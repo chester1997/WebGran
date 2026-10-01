@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { banners, stores } from "@/db/schema";
 import { eq, and, asc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { checkLimit, getSellerEntitlement } from "@/lib/entitlements/entitlement-service";
+import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 
 export async function getStoreBanners() {
   const seller = await requireSeller();
@@ -16,10 +18,13 @@ export async function getStoreBanners() {
     orderBy: [asc(banners.position), asc(banners.createdAt)],
   });
 
+  const bannerEntitlement = await getSellerEntitlement(seller.id, "max_banners");
+  const maxLimit = bannerEntitlement.isUnlimited || bannerEntitlement.value === -1 ? 9999 : Number(bannerEntitlement.value) || 5;
+
   return {
     banners: list,
     bannerInterval: store.bannerInterval || 5,
-    maxLimit: 5,
+    maxLimit,
   };
 }
 
@@ -42,15 +47,16 @@ export async function createBannerAction(data: {
     throw new Error("A imagem do banner excede o tamanho máximo permitido de 20MB.");
   }
 
-  // Server-side validation: Max 5 banners per store
+  // Server-side validation: max_banners entitlement check
   const existingCount = await db
     .select({ count: count() })
     .from(banners)
     .where(eq(banners.storeId, store.id));
 
   const total = existingCount[0]?.count || 0;
-  if (total >= 5) {
-    throw new Error("Você pode cadastrar no máximo 5 banners.");
+  const bannerCheck = await checkLimit(seller.id, "max_banners", total);
+  if (!bannerCheck.allowed) {
+    throw new Error(`Limite de banners atingido (${total}/${bannerCheck.limit}). Faça upgrade do seu plano.`);
   }
 
   await db.insert(banners).values({
@@ -103,6 +109,15 @@ export async function updateBannerAction(data: {
     })
     .where(eq(banners.id, data.id));
 
+  if (data.imageUrl && existing.imageUrl && data.imageUrl.trim() !== existing.imageUrl) {
+    await MediaLifecycleService.handleImageReplacement({
+      oldUrl: existing.imageUrl,
+      newUrl: data.imageUrl,
+      storeId: store.id,
+      excludeEntityId: data.id,
+    });
+  }
+
   revalidatePath("/seller/banners");
   revalidatePath(`/miniapp/${store.slug}`);
   return { success: true };
@@ -123,6 +138,10 @@ export async function deleteBannerAction(id: string) {
   }
 
   await db.delete(banners).where(eq(banners.id, id));
+
+  if (existing.imageUrl) {
+    await MediaLifecycleService.deleteMediaFile(existing.imageUrl, store.id, id);
+  }
 
   revalidatePath("/seller/banners");
   revalidatePath(`/miniapp/${store.slug}`);

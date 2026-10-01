@@ -4,31 +4,53 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { products } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
+import { checkLimit } from "@/lib/entitlements/entitlement-service";
+import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
+import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 
 async function processImageUrl(
   rawUrl: string | null,
   storeId: string,
+  sellerId: string,
   entityType: "products" | "banners" | "categories",
   prefix: string
 ): Promise<string | null> {
   if (!rawUrl || !rawUrl.trim()) return null;
   const trimmed = rawUrl.trim();
   if (trimmed.startsWith("data:")) {
-    try {
-      const parts = trimmed.split(",");
-      const meta = parts[0];
-      const base64Data = parts[1] || "";
-      const matchMime = meta.match(/data:(.*?);/);
-      const mimeType = matchMime ? matchMime[1] : "image/webp";
-      const buffer = Buffer.from(base64Data, "base64");
+    const parts = trimmed.split(",");
+    const meta = parts[0];
+    const base64Data = parts[1] || "";
+    const matchMime = meta.match(/data:(.*?);/);
+    const mimeType = matchMime ? matchMime[1] : "image/webp";
+    const buffer = Buffer.from(base64Data, "base64");
+    const actualBytes = buffer.length;
 
-      const storagePath = generateMultiTenantStoragePath(storeId, entityType, `${prefix}-${Date.now()}.webp`);
-      const provider = getStorageProvider();
+    const reservation = await StorageUsageService.reserveStorageForUpload({
+      sellerId,
+      storeId,
+      bytes: actualBytes,
+      referenceType: "image_upload",
+    });
+
+    if (!reservation.allowed) {
+      throw new Error(reservation.reason || "Capacidade de armazenamento excedida para o seu plano.");
+    }
+
+    const storagePath = generateMultiTenantStoragePath(storeId, entityType, `${prefix}-${Date.now()}.webp`);
+    const provider = getStorageProvider();
+    try {
       const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+      if (reservation.reservationId) {
+        await StorageUsageService.confirmReservation(reservation.reservationId, uploadRes.sizeBytes || actualBytes);
+      }
       return uploadRes.url;
     } catch (err: any) {
+      if (reservation.reservationId) {
+        await StorageUsageService.releaseReservation(reservation.reservationId);
+      }
       console.error("[Storage Upload Error]:", err);
       throw new Error(`Upload de imagem do produto falhou: ${err?.message || "Erro no storage"}`);
     }
@@ -37,11 +59,22 @@ async function processImageUrl(
 }
 
 export async function createProductAction(formData: FormData) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
     throw new Error("Store not found");
+  }
+
+  // Enforcement: max_products
+  const prodCountRes = await db
+    .select({ count: count() })
+    .from(products)
+    .where(eq(products.storeId, store.id));
+  const currentCount = prodCountRes[0]?.count || 0;
+  const limitCheck = await checkLimit(seller.id, "max_products", currentCount);
+  if (!limitCheck.allowed) {
+    throw new Error(`Limite de produtos atingido. Seu plano permite ${limitCheck.limit} produtos e você já possui ${currentCount}.`);
   }
 
   const title = (formData.get("title") as string)?.trim();
@@ -98,8 +131,8 @@ export async function createProductAction(formData: FormData) {
   const rawCoverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
   const rawBannerUrl = (formData.get("bannerUrl") as string) || null;
 
-  const coverUrl = await processImageUrl(rawCoverUrl, store.id, "products", "cover");
-  const bannerUrl = await processImageUrl(rawBannerUrl, store.id, "products", "banner");
+  const coverUrl = await processImageUrl(rawCoverUrl, store.id, seller.id, "products", "cover");
+  const bannerUrl = await processImageUrl(rawBannerUrl, store.id, seller.id, "products", "banner");
 
   const showViews = formData.get("showViews") === "on" || formData.get("showViews") === "true" || formData.get("showViews") === "1";
   const viewsCountStr = formData.get("viewsCount") as string;
@@ -138,7 +171,7 @@ export async function createProductAction(formData: FormData) {
 }
 
 export async function updateProductAction(productId: string, formData: FormData) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -198,8 +231,8 @@ export async function updateProductAction(productId: string, formData: FormData)
   const rawCoverUrl = (formData.get("coverUrl") as string) || (formData.get("imageUrl") as string) || null;
   const rawBannerUrl = (formData.get("bannerUrl") as string) || null;
 
-  const coverUrl = await processImageUrl(rawCoverUrl, store.id, "products", "cover");
-  const bannerUrl = await processImageUrl(rawBannerUrl, store.id, "products", "banner");
+  const coverUrl = await processImageUrl(rawCoverUrl, store.id, seller.id, "products", "cover");
+  const bannerUrl = await processImageUrl(rawBannerUrl, store.id, seller.id, "products", "banner");
 
   const showViews = formData.get("showViews") === "on" || formData.get("showViews") === "true" || formData.get("showViews") === "1";
   const viewsCountStr = formData.get("viewsCount") as string;
@@ -207,6 +240,10 @@ export async function updateProductAction(productId: string, formData: FormData)
   const showFire = formData.get("showFire") === "on" || formData.get("showFire") === "true" || formData.get("showFire") === "1";
   const fireCountStr = formData.get("fireCount") as string;
   const fireCount = fireCountStr ? parseInt(fireCountStr, 10) : 0;
+
+  const existing = await db.query.products.findFirst({
+    where: and(eq(products.id, productId), eq(products.storeId, store.id)),
+  });
 
   await db.update(products).set({
     botId: botId || null,
@@ -230,6 +267,26 @@ export async function updateProductAction(productId: string, formData: FormData)
     updatedAt: new Date(),
   }).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
 
+  // Media Replacement Cleanup
+  if (existing) {
+    if (coverUrl && existing.coverUrl && coverUrl !== existing.coverUrl) {
+      await MediaLifecycleService.handleImageReplacement({
+        oldUrl: existing.coverUrl,
+        newUrl: coverUrl,
+        storeId: store.id,
+        excludeEntityId: productId,
+      });
+    }
+    if (bannerUrl && existing.bannerUrl && bannerUrl !== existing.bannerUrl) {
+      await MediaLifecycleService.handleImageReplacement({
+        oldUrl: existing.bannerUrl,
+        newUrl: bannerUrl,
+        storeId: store.id,
+        excludeEntityId: productId,
+      });
+    }
+  }
+
   revalidatePath("/seller/products");
   revalidatePath("/miniapp/[slug]", "layout");
   return { success: true };
@@ -243,7 +300,21 @@ export async function deleteProductAction(productId: string) {
     throw new Error("Store not found");
   }
 
-  await db.delete(products).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
+  const existing = await db.query.products.findFirst({
+    where: and(eq(products.id, productId), eq(products.storeId, store.id)),
+  });
+
+  if (existing) {
+    await db.delete(products).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
+
+    // Cleanup images from Bunny Storage safely
+    if (existing.coverUrl) {
+      await MediaLifecycleService.deleteMediaFile(existing.coverUrl, store.id, productId);
+    }
+    if (existing.bannerUrl) {
+      await MediaLifecycleService.deleteMediaFile(existing.bannerUrl, store.id, productId);
+    }
+  }
 
   revalidatePath("/seller/products");
   return { success: true };

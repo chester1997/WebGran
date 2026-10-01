@@ -7,6 +7,7 @@ import {
   DEFAULT_LIBRARY_ID,
   ClipStatus,
 } from "@/lib/bunny/webhook-utils";
+import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 
 export async function POST(req: Request) {
   try {
@@ -111,6 +112,7 @@ export async function POST(req: Request) {
     let thumbnailUrl: string | undefined = undefined;
 
     if (newStatus === "READY") {
+      let actualBytes = 5 * 1024 * 1024; // Baseline 5MB fallback
       try {
         const videoInfo = await BunnyStreamService.getVideo(videoGuid);
         if (videoInfo && typeof videoInfo.length === "number" && videoInfo.length > 0) {
@@ -119,9 +121,21 @@ export async function POST(req: Request) {
         if (videoInfo?.thumbnailFileName) {
           thumbnailUrl = BunnyStreamService.getThumbnailUrl(videoGuid, videoInfo.thumbnailFileName);
         }
+        const info = videoInfo as any;
+        if (info && (info.storageSize || info.size)) {
+          actualBytes = Number(info.storageSize || info.size);
+        } else if (duration) {
+          actualBytes = duration * 200 * 1024; // ~200 KB/sec bitrate estimate if storageSize unpopulated
+        }
       } catch (err) {
         console.error("[BunnyStream] Failed to fetch video info from Bunny API during webhook:", err);
       }
+
+      // Confirm reservation for completed clip using actual storage size from Bunny Stream
+      await StorageUsageService.confirmReservationByReference("clip_upload", videoGuid, actualBytes);
+    } else if (newStatus === "FAILED") {
+      // Release reservation if video processing failed
+      await StorageUsageService.releaseReservationByReference("clip_upload", videoGuid);
     }
 
     // 13. Update status in database (Idempotent)

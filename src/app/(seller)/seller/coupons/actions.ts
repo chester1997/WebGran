@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { coupons } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasFeature, checkLimit } from "@/lib/entitlements/entitlement-service";
 
 export async function getCouponsAction() {
   await requireSeller();
@@ -30,10 +31,25 @@ export async function createCouponAction(data: {
   maxUses?: number | null;
   expiresAt?: string | null;
 }) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) {
     throw new Error("Loja não encontrada");
+  }
+
+  const couponsAllowed = await hasFeature(seller.id, "coupons_enabled");
+  if (!couponsAllowed) {
+    throw new Error("A criação de cupons não está disponível no seu plano. Faça upgrade.");
+  }
+
+  const activeCoupons = await db
+    .select()
+    .from(coupons)
+    .where(and(eq(coupons.storeId, store.id), eq(coupons.status, "active")));
+
+  const limitCheck = await checkLimit(seller.id, "max_coupons", activeCoupons.length);
+  if (!limitCheck.allowed) {
+    throw new Error(`Limite de cupons ativos atingido (${limitCheck.limit}). Faça upgrade do seu plano para criar mais cupons.`);
   }
 
   const cleanCode = data.code.trim().toUpperCase();

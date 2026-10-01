@@ -1,8 +1,9 @@
 import { db } from "@/db";
-import { telegramBotChats, telegramBots, products } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { telegramBotChats, telegramBots, products, stores } from "@/db/schema";
+import { eq, and, count } from "drizzle-orm";
 import { TelegramBotService } from "./bot";
 import { decrypt } from "@/lib/encryption";
+import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
 export interface BotChatData {
   id: string;
@@ -127,6 +128,27 @@ export async function saveOrUpdateBotChat(data: {
 
     return updated;
   } else {
+    // Check max_telegram_bot_chats limit before inserting a new chat
+    const [storeRes] = await db
+      .select({ ownerId: stores.ownerId })
+      .from(stores)
+      .where(eq(stores.id, data.storeId));
+    const ownerId = storeRes?.ownerId;
+
+    if (ownerId) {
+      const [chatCountRes] = await db
+        .select({ value: count() })
+        .from(telegramBotChats)
+        .where(eq(telegramBotChats.storeId, data.storeId));
+      const currentCount = chatCountRes?.value ?? 0;
+
+      const chatCheck = await checkLimit(ownerId, "max_telegram_bot_chats", currentCount);
+      if (!chatCheck.allowed) {
+        console.warn(`[saveOrUpdateBotChat] Limite max_telegram_bot_chats atingido para o vendedor ${ownerId} (${currentCount}/${chatCheck.limit})`);
+        return null;
+      }
+    }
+
     const [inserted] = await db.insert(telegramBotChats)
       .values({
         storeId: data.storeId,

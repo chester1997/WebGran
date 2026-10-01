@@ -5,6 +5,7 @@ import { sellerPaymentConnections } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { encrypt, decrypt } from '@/lib/encryption';
 import { paymentService } from '@/lib/payments/payment-service';
+import { hasFeature } from '@/lib/entitlements/entitlement-service';
 
 export async function GET() {
   try {
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest) {
 
     if (!store) {
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
+    }
+
+    const gatewayAllowed = await hasFeature(seller.id, "payment_gateways_enabled");
+    if (!gatewayAllowed) {
+      return NextResponse.json({ error: 'A configuração de gateways de pagamento não está disponível no seu plano. Faça upgrade.' }, { status: 403 });
     }
 
     const body = await req.json();

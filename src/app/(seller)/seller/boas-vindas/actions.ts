@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { stores } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasFeature } from "@/lib/entitlements/entitlement-service";
 
 export async function getWelcomeSettingsAction() {
   await requireSeller();
@@ -25,9 +26,14 @@ export async function updateWelcomeSettingsAction(data: {
   supportType?: string;
   supportValue?: string;
 }) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
+
+  const welcomeAllowed = await hasFeature(seller.id, "welcome_bot_message_enabled");
+  if (!welcomeAllowed) {
+    throw new Error("A mensagem de boas-vindas do bot não está disponível no seu plano. Faça upgrade.");
+  }
 
   await db
     .update(stores)

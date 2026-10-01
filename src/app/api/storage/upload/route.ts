@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
+import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 
 export async function POST(req: NextRequest) {
   try {
@@ -89,20 +90,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Reserve Storage Quota for Seller
+    const actualBytes = fileBuffer.length;
+    const reservation = await StorageUsageService.reserveStorageForUpload({
+      sellerId: seller.id,
+      storeId: store.id,
+      bytes: actualBytes,
+      referenceType: "image_upload",
+    });
+
+    if (!reservation.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "STORAGE_QUOTA_EXCEEDED",
+          error: reservation.reason || "Capacidade de armazenamento excedida para o seu plano.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Generate isolated multi-tenant storage key
     const storagePath = generateMultiTenantStoragePath(store.id, entityType, fileName);
 
     // Upload via Storage Provider (Bunny CDN or Fallback)
     const provider = getStorageProvider();
-    const result = await provider.upload(fileBuffer, storagePath, mimeType);
+    try {
+      const result = await provider.upload(fileBuffer, storagePath, mimeType);
 
-    return NextResponse.json({
-      success: true,
-      url: result.url,
-      path: result.path,
-      sizeBytes: result.sizeBytes,
-      storeId: store.id,
-    });
+      // Confirm reservation on success
+      if (reservation.reservationId) {
+        await StorageUsageService.confirmReservation(reservation.reservationId, result.sizeBytes || actualBytes);
+      }
+
+      return NextResponse.json({
+        success: true,
+        url: result.url,
+        path: result.path,
+        sizeBytes: result.sizeBytes,
+        storeId: store.id,
+      });
+    } catch (uploadErr: any) {
+      if (reservation.reservationId) {
+        await StorageUsageService.releaseReservation(reservation.reservationId);
+      }
+      throw uploadErr;
+    }
   } catch (error: any) {
     console.error("[Storage Upload API Error]:", error);
     return NextResponse.json(

@@ -5,6 +5,7 @@ import { stores, storeFloatingNotifications, products } from "@/db/schema";
 import { eq, and, asc, desc } from "drizzle-orm";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { hasFeature } from "@/lib/entitlements/entitlement-service";
 
 export interface FloatingNotificationSettings {
   floatingNotificationsEnabled: boolean;
@@ -38,9 +39,14 @@ const DEFAULT_TEMPLATES = [
  * Update global store floating notification settings
  */
 export async function updateFloatingSettingsAction(data: FloatingNotificationSettings) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
+
+  const floatAllowed = await hasFeature(seller.id, "floating_notifications_enabled");
+  if (!floatAllowed) {
+    throw new Error("Notificações flutuantes não estão disponíveis no seu plano. Faça upgrade.");
+  }
 
   // Validation
   const displayDuration = Math.max(1, Math.min(60, Number(data.floatingNotificationsDisplayDuration) || 5));
@@ -67,9 +73,14 @@ export async function updateFloatingSettingsAction(data: FloatingNotificationSet
  * Create or update a floating notification item
  */
 export async function saveFloatingNotificationAction(data: FloatingNotificationInput) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
+
+  const floatAllowed = await hasFeature(seller.id, "floating_notifications_enabled");
+  if (!floatAllowed) {
+    throw new Error("Notificações flutuantes não estão disponíveis no seu plano. Faça upgrade.");
+  }
 
   if (!data.text || !data.text.trim()) {
     throw new Error("O texto da mensagem é obrigatório.");
@@ -196,9 +207,14 @@ export async function reorderFloatingNotificationsAction(orderedIds: string[]) {
  * Seed default template messages if none exist or requested
  */
 export async function seedDefaultFloatingNotificationsAction() {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
+
+  const floatAllowed = await hasFeature(seller.id, "floating_notifications_enabled");
+  if (!floatAllowed) {
+    throw new Error("Notificações flutuantes não estão disponíveis no seu plano. Faça upgrade.");
+  }
 
   for (let i = 0; i < DEFAULT_TEMPLATES.length; i++) {
     const tpl = DEFAULT_TEMPLATES[i];

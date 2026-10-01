@@ -3,9 +3,11 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { stores, products, categories } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { AnalyticsService } from "@/lib/analytics/analytics-service";
+import { checkLimit } from "@/lib/entitlements/entitlement-service";
+import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 
 export async function getDashboardAnalyticsAction(period: string = "30D") {
   await requireSeller();
@@ -25,9 +27,19 @@ export async function updateStoreSettings(formData: FormData) {
   const slug = formData.get("slug") as string; // in real world, validate slug
 
   if (store) {
+    const oldLogo = store.logoUrl;
     await db.update(stores).set({
       name, description, logoUrl, slug
     }).where(eq(stores.id, store.id));
+
+    if (oldLogo && logoUrl && oldLogo !== logoUrl) {
+      await MediaLifecycleService.handleImageReplacement({
+        oldUrl: oldLogo,
+        newUrl: logoUrl,
+        storeId: store.id,
+        excludeEntityId: store.id,
+      });
+    }
   } else {
     // Creating store for the first time
     await db.insert(stores).values({
@@ -39,9 +51,20 @@ export async function updateStoreSettings(formData: FormData) {
 }
 
 export async function createCategory(formData: FormData) {
-  await requireSeller();
+  const user = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Store required");
+
+  const [categoryCountRes] = await db
+    .select({ value: count() })
+    .from(categories)
+    .where(eq(categories.storeId, store.id));
+  const currentCount = categoryCountRes?.value ?? 0;
+
+  const categoryCheck = await checkLimit(user.id, "max_categories", currentCount);
+  if (!categoryCheck.allowed) {
+    throw new Error(`Limite de categorias atingido (${currentCount}/${categoryCheck.limit}). Faça upgrade do seu plano.`);
+  }
 
   const name = formData.get("name") as string;
   const slug = formData.get("slug") as string;
@@ -63,9 +86,20 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function createProduct(formData: FormData) {
-  await requireSeller();
+  const user = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Store required");
+
+  const [prodCountRes] = await db
+    .select({ value: count() })
+    .from(products)
+    .where(eq(products.storeId, store.id));
+  const currentCount = prodCountRes?.value ?? 0;
+
+  const productCheck = await checkLimit(user.id, "max_products", currentCount);
+  if (!productCheck.allowed) {
+    throw new Error(`Limite de produtos atingido (${currentCount}/${productCheck.limit}). Faça upgrade do seu plano.`);
+  }
 
   const title = formData.get("title") as string;
   const slug = formData.get("slug") as string;

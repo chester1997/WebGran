@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { 
   Users, 
   Building2, 
@@ -24,7 +25,8 @@ import {
   AlertCircle, 
   Clock, 
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Sliders
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -693,6 +695,16 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                           >
                             <Unlock className="w-3.5 h-3.5 text-emerald-400" />
                             Liberar mensalidade
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => {
+                              router.push(`/admin/sellers/${seller.id}/entitlements`);
+                            }}
+                            className="px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-2 text-red-400 font-semibold focus:bg-white/5 focus:text-red-300"
+                          >
+                            <Sliders className="w-3.5 h-3.5 text-red-400" />
+                            Recursos & Overrides
                           </DropdownMenuItem>
 
                           <DropdownMenuSeparator className="bg-[#27272A]/60 my-1" />

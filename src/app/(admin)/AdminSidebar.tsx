@@ -18,7 +18,8 @@ import {
   ShieldAlert,
   LogOut,
   Store,
-  CreditCard
+  CreditCard,
+  Sliders
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -36,6 +37,8 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
   const menuItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: CreditCard },
+    { label: "Planos de Assinatura", href: "/admin/plans", icon: Package },
+    { label: "Recursos & Features", href: "/admin/features", icon: Sliders },
     { label: "Vendedores", href: "/admin/sellers", icon: Users },
     { label: "Bots", href: "/admin/bots", icon: Bot },
     { label: "Pedidos", href: "/admin/orders", icon: ShoppingCart },

@@ -248,6 +248,43 @@ export async function PATCH(
       });
     }
 
+    // ----------------------------------------------------
+    // ACTION: CHANGE PLAN (ALTERAR PLANO DO VENDEDOR)
+    // ----------------------------------------------------
+    if (action === "change_plan") {
+      const { planId } = body;
+      if (!planId) {
+        return NextResponse.json({ error: "ID do plano é obrigatório." }, { status: 400 });
+      }
+
+      if (targetSub) {
+        await db
+          .update(subscriptions)
+          .set({ planId, updatedAt: now })
+          .where(eq(subscriptions.id, targetSub.id));
+      } else {
+        const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        await db.insert(subscriptions).values({
+          sellerId,
+          planId,
+          status: "ACTIVE",
+          startedAt: now,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        });
+      }
+
+      console.log("[ADMIN_AUDIT]", JSON.stringify({
+        adminId: adminUser.id,
+        action: "CHANGE_SELLER_PLAN",
+        sellerId,
+        planId,
+        timestamp: now.toISOString(),
+      }));
+
+      return NextResponse.json({ success: true, message: "Plano do vendedor atualizado com sucesso!" });
+    }
+
     return NextResponse.json({ error: "Ação não reconhecida." }, { status: 400 });
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {

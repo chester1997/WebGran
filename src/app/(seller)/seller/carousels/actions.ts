@@ -3,8 +3,9 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { productCarousels, carouselProducts } from "@/db/schema";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc, desc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{3,8})$/;
 
@@ -123,10 +124,21 @@ export async function createCarouselAction(
   iconName?: string,
   iconColor?: string
 ) {
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
   if (!name.trim()) throw new Error("Nome do carrossel é obrigatório");
+
+  const [carouselCountRes] = await db
+    .select({ value: count() })
+    .from(productCarousels)
+    .where(and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, false)));
+  const currentCount = carouselCountRes?.value ?? 0;
+
+  const check = await checkLimit(seller.id, "max_product_carousels", currentCount);
+  if (!check.allowed) {
+    throw new Error(`Limite de carrosséis de produtos atingido (${currentCount}/${check.limit}). Faça upgrade do seu plano.`);
+  }
 
   const validated = validateIndicator(indicatorType, iconName, iconColor, "BAR", "#8B5CF6");
 

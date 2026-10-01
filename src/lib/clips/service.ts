@@ -3,6 +3,7 @@ import { clips } from "@/db/schema";
 import { eq, and, asc, desc, max, inArray } from "drizzle-orm";
 import { BunnyStreamService } from "@/lib/bunny/stream";
 import { resolveClipStatusTransition, ClipStatus } from "@/lib/bunny/webhook-utils";
+import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 
 export interface CreateClipInput {
   storeId: string;
@@ -186,12 +187,8 @@ export class ClipService {
     const clip = await this.getClipById(clipId, storeId);
     if (!clip) return false;
 
-    // Delete video from Bunny Stream library
-    try {
-      await BunnyStreamService.deleteVideo(clip.bunnyVideoId);
-    } catch (err) {
-      console.error("[ClipService] Failed to delete video from Bunny Stream:", err);
-    }
+    // Delete video from Bunny Stream library with fallback retry queue
+    await MediaLifecycleService.deleteStreamVideo(clip.bunnyVideoId, storeId);
 
     // Delete record from Neon
     await db.delete(clips).where(eq(clips.id, clip.id));
