@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PushinPayProvider } from '../providers/pushinpay';
 
 vi.mock('@/db', () => ({
@@ -35,6 +35,8 @@ describe('PushinPay Integration Audit — Comprehensive Security Suite', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    delete process.env.PUSHINPAY_TOKEN;
+    delete process.env.PUSHINPAY_ENV;
     provider = new PushinPayProvider();
   });
 
@@ -288,7 +290,7 @@ describe('PushinPay Integration Audit — Comprehensive Security Suite', () => {
       });
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        'https://api.pushinpay.com.br/api/pix/cashIn/pp_tx_recon',
+        'https://api.pushinpay.com.br/api/transactions/pp_tx_recon',
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer valid_token_recon',
@@ -300,26 +302,109 @@ describe('PushinPay Integration Audit — Comprehensive Security Suite', () => {
   });
 
   describe('7. Connection Test Endpoint', () => {
-    it('validates authentication dry-run check', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-        ok: true,
-        status: 200,
-      } as Response);
+    it('validates credential configuration locally without calling fictitious endpoints or creating charges', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-      const res = await provider.testConnection('valid_token_123');
+      const res = await provider.testConnection('valid_bearer_token_123456');
+      expect(fetchSpy).not.toHaveBeenCalled();
       expect(res.success).toBe(true);
-      expect(res.message).toContain('autenticada com sucesso');
+      expect(res.message).toContain('Credencial PushinPay armazenada com sucesso');
+      expect(res.message).toContain('validação com a API ocorrerá ao criar o primeiro PIX');
     });
 
-    it('rejects invalid credentials with 401 error message', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-        ok: false,
-        status: 401,
+    it('rejects unpopulated or invalid token strings locally without network calls', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+      const resEmpty = await provider.testConnection('');
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(resEmpty.success).toBe(false);
+      expect(resEmpty.message).toContain('não informado');
+
+      const resShort = await provider.testConnection('short');
+      expect(resShort.success).toBe(false);
+      expect(resShort.message).toContain('inválido');
+    });
+  });
+
+  describe('8. Sandbox vs Production Environment Switching & Isolation', () => {
+    const originalEnv = process.env.PUSHINPAY_ENV;
+
+    afterEach(() => {
+      process.env.PUSHINPAY_ENV = originalEnv;
+    });
+
+    it('resolves sandbox URL https://api-sandbox.pushinpay.com.br/api when PUSHINPAY_ENV=sandbox', () => {
+      process.env.PUSHINPAY_ENV = 'sandbox';
+      expect(provider.getBaseUrl()).toBe('https://api-sandbox.pushinpay.com.br/api');
+      expect(provider.getEnvironment()).toBe('sandbox');
+    });
+
+    it('resolves production URL https://api.pushinpay.com.br/api when PUSHINPAY_ENV=production or default', () => {
+      process.env.PUSHINPAY_ENV = 'production';
+      expect(provider.getBaseUrl()).toBe('https://api.pushinpay.com.br/api');
+      expect(provider.getEnvironment()).toBe('production');
+
+      delete process.env.PUSHINPAY_ENV;
+      expect(provider.getBaseUrl()).toBe('https://api.pushinpay.com.br/api');
+      expect(provider.getEnvironment()).toBe('production');
+    });
+
+    it('uses sandbox API endpoint when creating PIX in sandbox environment', async () => {
+      process.env.PUSHINPAY_ENV = 'sandbox';
+      process.env.PUSHINPAY_TOKEN = 'sandbox_secret_token_777';
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'pp_sandbox_tx_1',
+          status: 'created',
+          qr_code: 'sandbox_qr_code',
+        }),
       } as Response);
 
-      const res = await provider.testConnection('bad_token');
-      expect(res.success).toBe(false);
-      expect(res.message).toContain('inválido ou não autorizado');
+      await provider.createPixPayment({
+        sellerId: 'seller-sandbox',
+        orderId: 'order-sandbox-123',
+        amount: 10.0,
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api-sandbox.pushinpay.com.br/api/pix/cashIn',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sandbox_secret_token_777',
+          }),
+        })
+      );
+    });
+
+    it('ensures token is masked/never printed in error logs or responses', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      process.env.PUSHINPAY_ENV = 'sandbox';
+      process.env.PUSHINPAY_TOKEN = 'super_secret_token_never_log';
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Validation Error',
+      } as Response);
+
+      try {
+        await provider.createPixPayment({
+          sellerId: 'seller-1',
+          orderId: 'order-1',
+          amount: 5.0,
+        });
+      } catch (err: any) {
+        expect(err.message).not.toContain('super_secret_token_never_log');
+      }
+
+      for (const call of consoleErrorSpy.mock.calls) {
+        for (const arg of call) {
+          expect(String(arg)).not.toContain('super_secret_token_never_log');
+        }
+      }
     });
   });
 });

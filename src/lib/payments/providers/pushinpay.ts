@@ -21,7 +21,29 @@ export interface PushinPayCashInResponse {
 }
 
 export class PushinPayProvider {
-  private baseUrl = 'https://api.pushinpay.com.br/api';
+  /**
+   * Dynamically resolves PushinPay API Base URL based on PUSHINPAY_ENV environment variable.
+   * - 'sandbox' -> 'https://api-sandbox.pushinpay.com.br/api'
+   * - 'production' (or default) -> 'https://api.pushinpay.com.br/api'
+   */
+  getBaseUrl(): string {
+    const env = (process.env.PUSHINPAY_ENV || '').toLowerCase().trim();
+    if (env === 'sandbox') {
+      return 'https://api-sandbox.pushinpay.com.br/api';
+    }
+    return 'https://api.pushinpay.com.br/api';
+  }
+
+  /**
+   * Returns current active PushinPay environment ('sandbox' | 'production').
+   */
+  getEnvironment(): 'sandbox' | 'production' {
+    const env = (process.env.PUSHINPAY_ENV || '').toLowerCase().trim();
+    if (env === 'sandbox') {
+      return 'sandbox';
+    }
+    return 'production';
+  }
 
   /**
    * Resolves PushinPay Bearer Token for a specific seller/store.
@@ -75,49 +97,34 @@ export class PushinPayProvider {
   }
 
   /**
-   * Tests PushinPay Token validity via API check without exposing token to frontend.
+   * Validates PushinPay credential configuration locally without calling non-existent endpoints or creating charges.
+   * Full API validation occurs on the first real/sandbox PIX transaction.
    */
   async testConnection(token: string): Promise<{ success: boolean; message: string }> {
     if (!token || !token.trim()) {
       return { success: false, message: 'Token PushinPay não informado.' };
     }
 
-    try {
-      const res = await fetch(`${this.baseUrl}/pix/cashIn`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          value: 100, // R$ 1.00 dry test payload
-          webhook_url: 'https://www.webgran.online/api/webhooks/payments/pushinpay',
-        }),
-      });
-
-      if (res.status === 401 || res.status === 403) {
-        return { success: false, message: 'Token PushinPay inválido ou não autorizado.' };
-      }
-
-      if (res.ok || res.status === 400 || res.status === 422) {
-        return { success: true, message: 'Conexão com a PushinPay autenticada com sucesso!' };
-      }
-
-      const errText = await res.text();
-      return { success: false, message: `PushinPay respondeu com status ${res.status}: ${errText.slice(0, 100)}` };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Falha de conexão com a API PushinPay.' };
+    const trimmedToken = token.trim();
+    if (trimmedToken.length < 10) {
+      return { success: false, message: 'Formato do Token PushinPay inválido.' };
     }
+
+    const currentEnv = this.getEnvironment();
+    return {
+      success: true,
+      message: `Credencial PushinPay armazenada com sucesso (${currentEnv.toUpperCase()}). A validação com a API ocorrerá ao criar o primeiro PIX.`,
+    };
   }
 
   /**
    * Consults PushinPay API server-side to verify real status and value of a transaction.
+   * Official GET endpoint: /transactions/{id}
    */
   async getPixPaymentStatus(paymentId: string, token: string): Promise<PushinPayCashInResponse | null> {
     if (!paymentId || !token) return null;
     try {
-      const res = await fetch(`${this.baseUrl}/pix/cashIn/${paymentId}`, {
+      const res = await fetch(`${this.getBaseUrl()}/transactions/${paymentId}`, {
         headers: {
           Authorization: `Bearer ${token.trim()}`,
           Accept: 'application/json',
@@ -126,19 +133,6 @@ export class PushinPayProvider {
 
       if (res.ok) {
         return await res.json();
-      }
-
-      const searchRes = await fetch(`${this.baseUrl}/pix/cashIn?id=${paymentId}`, {
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-          Accept: 'application/json',
-        },
-      });
-
-      if (searchRes.ok) {
-        const data = await searchRes.json();
-        if (Array.isArray(data) && data.length > 0) return data[0];
-        if (data && data.id) return data;
       }
     } catch (err) {
       console.error('[PushinPayProvider] Error querying server-side transaction status:', err);
@@ -171,7 +165,7 @@ export class PushinPayProvider {
 
     const idempotencyKey = `webgran-order-${params.orderId}`;
 
-    const res = await fetch(`${this.baseUrl}/pix/cashIn`, {
+    const res = await fetch(`${this.getBaseUrl()}/pix/cashIn`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token.trim()}`,
