@@ -61,6 +61,15 @@ export const INITIAL_FEATURES: SeedFeatureDefinition[] = [
     planValue: { value: -1 },
   },
   {
+    key: 'financial_reports_enabled',
+    name: 'Relatórios Financeiros',
+    description: 'Permite ao vendedor acessar os relatórios financeiros da loja',
+    type: 'BOOLEAN',
+    category: 'management',
+    defaultValue: { value: true },
+    planValue: { value: true },
+  },
+  {
     key: 'telegram_bot',
     name: 'Bot Telegram Próprio',
     description: 'Permite integrar Bot Telegram próprio da loja',
