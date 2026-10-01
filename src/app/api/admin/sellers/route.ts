@@ -174,6 +174,12 @@ export async function POST(req: Request) {
     }).returning();
 
     // 4. Create Store
+    const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
+    const storeCheck = await checkLimit(newUser.id, "max_stores", 0);
+    if (!storeCheck.allowed) {
+      return NextResponse.json({ error: "A criação de lojas para este vendedor excede a quota permitida." }, { status: 403 });
+    }
+
     const initialStoreStatus = status === 'suspended' ? 'suspended' : 'active';
     const [newStore] = await db.insert(stores).values({
       ownerId: newUser.id,

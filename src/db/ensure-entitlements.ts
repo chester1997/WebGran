@@ -43,6 +43,15 @@ export const INITIAL_FEATURES: SeedFeatureDefinition[] = [
     planValue: { value: -1 },
   },
   {
+    key: 'max_stores',
+    name: 'Limite de Lojas',
+    description: 'Quantidade máxima de lojas que o vendedor pode possuir',
+    type: 'LIMIT',
+    category: 'management',
+    defaultValue: { value: 1 },
+    planValue: { value: 1 },
+  },
+  {
     key: 'telegram_bot',
     name: 'Bot Telegram Próprio',
     description: 'Permite integrar Bot Telegram próprio da loja',

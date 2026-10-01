@@ -2,11 +2,26 @@ import { NextResponse } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { stores, themes } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
+import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
 export async function POST(req: Request) {
   try {
     const user = await requireSeller();
+
+    const [storeCountRes] = await db
+      .select({ value: count() })
+      .from(stores)
+      .where(eq(stores.ownerId, user.id));
+    const currentCount = storeCountRes?.value ?? 0;
+
+    const storeCheck = await checkLimit(user.id, "max_stores", currentCount);
+    if (!storeCheck.allowed) {
+      return NextResponse.json({
+        success: false,
+        error: `Limite de lojas atingido (${currentCount}/${storeCheck.limit}). Faça upgrade do seu plano para criar mais lojas.`
+      }, { status: 403 });
+    }
 
     // Check if store already exists for this user
     const existingStore = await getCurrentStore();

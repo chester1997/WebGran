@@ -54,6 +54,12 @@ export async function POST(req: Request) {
 
     const sellerId = newUser[0].id;
 
+    const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
+    const storeCheck = await checkLimit(sellerId, "max_stores", 0);
+    if (!storeCheck.allowed) {
+      return NextResponse.json({ error: "A criação de lojas está desativada no momento." }, { status: 403 });
+    }
+
     // Insert store
     await db.insert(stores).values({
       ownerId: sellerId,

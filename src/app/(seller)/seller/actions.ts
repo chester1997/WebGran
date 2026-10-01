@@ -42,6 +42,17 @@ export async function updateStoreSettings(formData: FormData) {
     }
   } else {
     // Creating store for the first time
+    const [storeCountRes] = await db
+      .select({ value: count() })
+      .from(stores)
+      .where(eq(stores.ownerId, user.id));
+    const currentCount = storeCountRes?.value ?? 0;
+
+    const storeCheck = await checkLimit(user.id, "max_stores", currentCount);
+    if (!storeCheck.allowed) {
+      throw new Error(`Limite de lojas atingido (${currentCount}/${storeCheck.limit}). Faça upgrade do seu plano para criar mais lojas.`);
+    }
+
     await db.insert(stores).values({
       name, description, logoUrl, slug, ownerId: user.id
     });
