@@ -67,6 +67,19 @@ export async function POST(req: NextRequest) {
       customer = newCustomer;
     }
 
+    // 4.5 Check max_orders_per_month entitlement for seller
+    const { getMonthlyOrderUsage } = await import("@/lib/orders/order-usage-service");
+    const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
+
+    const currentUsage = await getMonthlyOrderUsage(store.ownerId);
+    const orderLimitCheck = await checkLimit(store.ownerId, "max_orders_per_month", currentUsage);
+    if (!orderLimitCheck.allowed) {
+      return NextResponse.json(
+        { error: `Limite mensal de pedidos atingido para esta loja (${currentUsage}/${orderLimitCheck.limit}). Faça upgrade do plano para receber mais pedidos.` },
+        { status: 403 }
+      );
+    }
+
     // 5. Create Pending Order
     const productPrice = Number(product.price);
 

@@ -52,6 +52,15 @@ export const INITIAL_FEATURES: SeedFeatureDefinition[] = [
     planValue: { value: 1 },
   },
   {
+    key: 'max_orders_per_month',
+    name: 'Limite de Pedidos por Mês',
+    description: 'Quantidade máxima de pedidos que o vendedor pode receber no mês-calendário atual (-1 para ilimitado)',
+    type: 'LIMIT',
+    category: 'management',
+    defaultValue: { value: -1 },
+    planValue: { value: -1 },
+  },
+  {
     key: 'telegram_bot',
     name: 'Bot Telegram Próprio',
     description: 'Permite integrar Bot Telegram próprio da loja',

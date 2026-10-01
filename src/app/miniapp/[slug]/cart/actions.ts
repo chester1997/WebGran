@@ -40,6 +40,27 @@ export async function createCheckoutSession(
       return { success: false, error: "Alguns produtos são inválidos ou estão indisponíveis" };
     }
 
+    // Check seller max_orders_per_month entitlement
+    const storeRecord = await db.query.stores.findFirst({
+      where: eq(stores.id, storeId),
+    });
+
+    if (!storeRecord || !storeRecord.ownerId) {
+      return { success: false, error: "Loja não encontrada." };
+    }
+
+    const { getMonthlyOrderUsage } = await import("@/lib/orders/order-usage-service");
+    const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
+
+    const currentUsage = await getMonthlyOrderUsage(storeRecord.ownerId);
+    const orderLimitCheck = await checkLimit(storeRecord.ownerId, "max_orders_per_month", currentUsage);
+    if (!orderLimitCheck.allowed) {
+      return {
+        success: false,
+        error: `Limite mensal de pedidos atingido para esta loja (${currentUsage}/${orderLimitCheck.limit}). Entre em contato com o suporte da loja.`
+      };
+    }
+
     let subtotal = 0;
     const itemsToInsert = [];
 
@@ -130,12 +151,7 @@ export async function createCheckoutSession(
     );
 
     // Resolve Payment Gateway Connections
-    const storeRecord = await db.query.stores.findFirst({
-      where: eq(stores.id, storeId),
-      with: { owner: true }
-    });
-
-    const sellerId = storeRecord?.ownerId;
+    const sellerId = storeRecord.ownerId;
 
     const mpConn = sellerId 
       ? await paymentService.getSellerConnection(sellerId)
