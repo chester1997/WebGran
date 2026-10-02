@@ -96,6 +96,24 @@ export class SyncPayAuthService {
 
 import { ensurePaymentTables } from '@/db/ensure-payment-tables';
 
+/**
+ * Helper function to determine if a SyncPay webhook payload or status query represents a confirmed payment.
+ * CRITICAL RULE: transaction.created NEVER confirms payment (prevents auto-confirmation on Pix charge generation).
+ * Only transaction.updated (or direct status query) with status completed/paid/approved confirms payment.
+ */
+export function isSyncPayPaymentConfirmed(eventType: string, rawStatus: string): boolean {
+  const normEvent = String(eventType || '').toLowerCase().trim();
+  const normStatus = String(rawStatus || '').toLowerCase().trim();
+
+  // transaction.created MUST NEVER confirm a payment
+  if (normEvent === 'transaction.created') {
+    return false;
+  }
+
+  const validConfirmedStatuses = ['completed', 'paid', 'approved', 'sucesso'];
+  return validConfirmedStatuses.includes(normStatus);
+}
+
 export class SyncPayProvider {
   getBaseUrl(): string {
     return 'https://api.syncpayments.com.br/api/partner/v1';
@@ -378,7 +396,7 @@ export class SyncPayProvider {
   /**
    * Processes incoming SyncPay Webhooks with strict multi-tenancy, HMAC validation, idempotency via event_id, and event ordering.
    */
-  async handleWebhook(connectionId: string, rawBody: string, headers: Headers): Promise<{ success: boolean; alreadyProcessed?: boolean; error?: string }> {
+  async handleWebhook(connectionId: string, rawBody: string, headers: Headers): Promise<{ success: boolean; alreadyProcessed?: boolean; pending?: boolean; error?: string }> {
     // 1. Locate connection
     const conn = await db.query.sellerPaymentConnections.findFirst({
       where: and(
@@ -471,7 +489,13 @@ export class SyncPayProvider {
       return { success: false, error: 'Acesso negado: loja incorreta.' };
     }
 
-    // 6. Event Ordering Check: if order is ALREADY paid or refunded, do not regress status
+    // 6. Event Type Check: transaction.created is ONLY creation notification, MUST NEVER confirm payment
+    if (eventType.toLowerCase() === 'transaction.created') {
+      console.log(`[SyncPayWebhook] Evento transaction.created recebido para o pedido ${order.id}. Mantendo status pending.`);
+      return { success: true, pending: true };
+    }
+
+    // 7. Event Ordering Check: if order is ALREADY paid or refunded, do not regress status
     if (order.status === 'paid' && eventType !== 'transaction.refunded') {
       console.log(`[SyncPayWebhook] Pedido ${order.id} já está como 'paid'. Ignorando atualização antiga.`);
       return { success: true, alreadyProcessed: true };
@@ -479,7 +503,7 @@ export class SyncPayProvider {
 
     const rawStatus = String(transactionData.status || payload.status || '').toLowerCase().trim();
 
-    const isPaid = ['completed', 'paid', 'approved', 'sucesso'].includes(rawStatus);
+    const isPaid = isSyncPayPaymentConfirmed(eventType, rawStatus);
     const isFailed = ['failed', 'refused', 'cancelled', 'canceled', 'expired'].includes(rawStatus);
     const isRefunded = ['refunded', 'reembolsado'].includes(rawStatus);
 

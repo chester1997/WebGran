@@ -263,6 +263,50 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       expect(res.alreadyProcessed).toBe(true);
     });
 
+    it('NEVER marks order as paid on transaction.created event even if status is completed', async () => {
+      const { isSyncPayPaymentConfirmed } = await import('../providers/syncpay');
+      expect(isSyncPayPaymentConfirmed('transaction.created', 'completed')).toBe(false);
+      expect(isSyncPayPaymentConfirmed('transaction.created', 'paid')).toBe(false);
+
+      const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-created-111',
+        storeId: 'store-1',
+        status: 'pending',
+        paymentId: 'sync_tx_created',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_created_001',
+        event: 'transaction.created',
+        data: {
+          reference_id: 'sync_tx_created',
+          status: 'completed',
+        },
+      });
+
+      const signedPayload = `${timestamp}.${rawBody}`;
+      const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.success).toBe(true);
+      expect(res.pending).toBe(true);
+      expect(AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
+    });
+
     it('processes valid paid webhook and triggers AccessDeliveryService atomically', async () => {
       const { db } = await import('@/db');
       const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');

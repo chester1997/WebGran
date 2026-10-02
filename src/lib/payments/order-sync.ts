@@ -20,6 +20,34 @@ export async function syncOrderWithMercadoPago(orderId: string) {
     return { success: true, status: 'paid', alreadyPaid: true, accesses: accessList };
   }
 
+  // Support SyncPay orders
+  if (order.paymentMethod === 'syncpay') {
+    const { syncPayProvider } = await import('./providers/syncpay');
+    const syncConn = await syncPayProvider.getSyncPayConnection(undefined, order.storeId);
+    if (syncConn && order.paymentId) {
+      const txStatus = await syncPayProvider.getPixPaymentStatus(order.paymentId, syncConn.clientId, syncConn.clientSecret);
+      if (txStatus) {
+        const rawStatus = String(txStatus.status || '').toLowerCase().trim();
+        const isPaid = ['completed', 'paid', 'approved', 'sucesso'].includes(rawStatus);
+        if (isPaid) {
+          await db.update(orders)
+            .set({
+              status: 'paid',
+              paidAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')));
+          const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
+          const accessList = await db.query.accesses.findMany({
+            where: eq(accesses.orderId, order.id),
+          });
+          return { success: true, status: 'paid', paymentId: order.paymentId, accesses: accessList, deliveries: deliveryResults };
+        }
+      }
+    }
+    return { success: true, status: order.status };
+  }
+
   const store = await db.query.stores.findFirst({
     where: eq(stores.id, order.storeId),
   });

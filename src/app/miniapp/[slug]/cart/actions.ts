@@ -11,7 +11,7 @@ export async function createCheckoutSession(
   storeSlug: string, 
   items: { id: string, quantity: number }[],
   couponCode?: string,
-  paymentGateway?: 'mercadopago' | 'pushinpay'
+  paymentGateway?: 'mercadopago' | 'pushinpay' | 'syncpay'
 ) {
   try {
     const session = await getMiniAppSession();
@@ -163,17 +163,62 @@ export async function createCheckoutSession(
       : null;
     const isPushinPayActive = Boolean(pushinPayToken);
 
-    // Determine target gateway
-    let targetGateway: 'pushinpay' | 'mercadopago' | null = null;
+    const syncPayConn = sellerId
+      ? await paymentService['syncPayProvider'].getSyncPayConnection(sellerId, storeId)
+      : null;
+    const isSyncPayActive = Boolean(syncPayConn);
 
-    if (paymentGateway === 'pushinpay' && isPushinPayActive) {
+    // Determine target gateway
+    let targetGateway: 'pushinpay' | 'mercadopago' | 'syncpay' | null = null;
+
+    if (paymentGateway === 'syncpay' && isSyncPayActive) {
+      targetGateway = 'syncpay';
+    } else if (paymentGateway === 'pushinpay' && isPushinPayActive) {
       targetGateway = 'pushinpay';
     } else if (paymentGateway === 'mercadopago' && isMpActive) {
       targetGateway = 'mercadopago';
-    } else if (isPushinPayActive && !isMpActive) {
+    } else if (isSyncPayActive) {
+      targetGateway = 'syncpay';
+    } else if (isPushinPayActive) {
       targetGateway = 'pushinpay';
     } else if (isMpActive) {
       targetGateway = 'mercadopago';
+    }
+
+    // 1. Process SyncPay PIX
+    if (targetGateway === 'syncpay') {
+      const pixPayment = await paymentService.createSyncPayPix({
+        sellerId: sellerId!,
+        orderId: newOrder.id,
+        amount: finalTotal,
+        description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
+        customer: {
+          name: 'Cliente Telegram',
+          email: 'cliente@webgran.app'
+        }
+      });
+
+      await db.update(orders)
+        .set({
+          paymentId: pixPayment.paymentId,
+          paymentMethod: 'syncpay',
+          pixQrCode: pixPayment.qrCode,
+          pixQrCodeBase64: pixPayment.qrCodeBase64 || '',
+          pixExpiresAt: pixPayment.expiresAt,
+          status: 'pending',
+        })
+        .where(eq(orders.id, newOrder.id));
+
+      return {
+        success: true,
+        orderId: newOrder.id,
+        paymentGateway: 'syncpay',
+        pix: {
+          qrCode: pixPayment.qrCode,
+          qrCodeBase64: pixPayment.qrCodeBase64 || '',
+          expiresAt: pixPayment.expiresAt.toISOString(),
+        }
+      };
     }
 
     // 1. Process PushinPay PIX
