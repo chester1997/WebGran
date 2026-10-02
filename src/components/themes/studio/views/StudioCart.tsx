@@ -43,7 +43,9 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     qrCode: string;
     qrCodeBase64: string;
     expiresAt: string;
+    amount: number;
   } | null>(null);
+
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [accessLink, setAccessLink] = useState<string | null>(null);
@@ -94,6 +96,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     setIsProcessing(true);
     setErrorMessage(null);
     try {
+      const checkoutAmount = displayTotal;
       const result = await createCheckoutSession(
         storeSlug,
         items.map((i) => ({ id: i.id, quantity: i.quantity })),
@@ -108,6 +111,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
             qrCode: result.pix.qrCode,
             qrCodeBase64: result.pix.qrCodeBase64,
             expiresAt: result.pix.expiresAt,
+            amount: checkoutAmount,
           });
         } else if (result.isDemoPaid) {
           setIsPaid(true);
@@ -197,7 +201,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         <PixPaymentCard
           pixCode={pixState.qrCode}
           qrCodeBase64={pixState.qrCodeBase64}
-          amount={displayTotal}
+          amount={pixState.amount}
           orderId={pixState.orderId}
           status="pending"
           onBack={() => setPixState(null)}
