@@ -46,10 +46,10 @@ export async function StudioSearch({ storeSlug, q }: { storeSlug: string, q: str
             {q ? `Nenhum produto encontrado para "${q}".` : "Nenhum produto cadastrado."}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-4">
             {searchResults.map(prod => (
-              <div key={prod.id} className="flex justify-center">
-                <ProductCard storeSlug={storeSlug} product={prod} buttonVariant="details" />
+              <div key={prod.id} className="w-full flex justify-center">
+                <ProductCard storeSlug={storeSlug} product={prod} buttonVariant="details" className="w-full" />
               </div>
             ))}
           </div>

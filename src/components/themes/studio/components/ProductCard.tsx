@@ -41,6 +41,7 @@ interface ProductCardProps {
   viewsCount?: number | string;
   showFire?: boolean | null;
   fireCount?: number | string;
+  className?: string;
 }
 
 function ProductCardBase({ 
@@ -53,8 +54,8 @@ function ProductCardBase({
   viewsCount: propViewsCount,
   showFire: propShowFire,
   fireCount: propFireCount,
+  className = "w-36 md:w-44",
 }: ProductCardProps) {
-  const width = "w-36 md:w-44";
   const badgeConfig = getProductBadge(product.badge);
 
   const hasViews = !isTopTen && (propShowViews !== undefined ? propShowViews : Boolean(product.showViews));
@@ -64,7 +65,7 @@ function ProductCardBase({
   const rawFire = propFireCount ?? product.fireCount ?? 0;
 
   return (
-    <div className={`flex flex-col gap-1.5 ${width}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="block relative rounded-xl overflow-hidden bg-zinc-900 group shadow-lg aspect-[2/3]">
         {badgeConfig && (
           <div className="absolute top-1 left-1 z-20 pointer-events-none">
