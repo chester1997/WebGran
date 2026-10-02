@@ -482,11 +482,13 @@ export const sellerPaymentConnections = pgTable('seller_payment_connections', {
   id: uuid('id').primaryKey().defaultRandom(),
   sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   storeId: uuid('store_id').references(() => stores.id, { onDelete: 'cascade' }),
-  provider: text('provider').notNull(), // 'mercado_pago'
+  provider: text('provider').notNull(), // 'mercado_pago' | 'pushinpay' | 'syncpay'
   providerUserId: text('provider_user_id'),
   providerEmail: text('provider_email'),
   accessTokenEncrypted: text('access_token_encrypted').notNull(),
   refreshTokenEncrypted: text('refresh_token_encrypted'),
+  webhookId: text('webhook_id'),
+  webhookSecretEncrypted: text('webhook_secret_encrypted'),
   accountId: text('account_id'),
   status: text('status').notNull().default('active'),
   expiresAt: timestamp('expires_at'),
@@ -760,16 +762,19 @@ export const sellerStorageUsageRelations = relations(sellerStorageUsage, ({ one 
   }),
 }));
 
-export const storageReservationsRelations = relations(storageReservations, ({ one }) => ({
-  seller: one(users, {
-    fields: [storageReservations.sellerId],
-    references: [users.id],
-  }),
-  store: one(stores, {
-    fields: [storageReservations.storeId],
-    references: [stores.id],
-  }),
+export const paymentWebhookEvents = pgTable('payment_webhook_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  provider: text('provider').notNull(), // 'syncpay' | 'pushinpay' | 'mercado_pago'
+  eventId: text('event_id').notNull(),
+  eventType: text('event_type'),
+  connectionId: text('connection_id'),
+  processedAt: timestamp('processed_at').defaultNow().notNull(),
+  payload: jsonb('payload'),
+}, (t) => ({
+  providerEventUnique: unique().on(t.provider, t.eventId),
+  providerEventIdx: index('payment_webhook_events_idx').on(t.provider, t.eventId),
 }));
+
 
 
 

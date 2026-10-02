@@ -1,14 +1,17 @@
 import { MercadoPagoProvider } from './providers/mercado-pago';
 import { pushinPayProvider, PushinPayProvider } from './providers/pushinpay';
+import { syncPayProvider, SyncPayProvider } from './providers/syncpay';
 import { CreateCheckoutParams, CheckoutResponse } from './types';
 
 export class PaymentService {
   private mercadoPagoProvider: MercadoPagoProvider;
   private pushinPayProvider: PushinPayProvider;
+  private syncPayProvider: SyncPayProvider;
 
   constructor() {
     this.mercadoPagoProvider = new MercadoPagoProvider();
     this.pushinPayProvider = pushinPayProvider;
+    this.syncPayProvider = syncPayProvider;
   }
 
   async getSellerConnection(sellerId: string) {
@@ -43,11 +46,21 @@ export class PaymentService {
     return this.pushinPayProvider.testConnection(token);
   }
 
-  async handleWebhook(provider: string, payload: any): Promise<any> {
+  async createSyncPayPix(params: import('./types').CreatePaymentParams) {
+    return this.syncPayProvider.createPixPayment(params);
+  }
+
+  async testSyncPayConnection(clientId: string, clientSecret: string) {
+    return this.syncPayProvider.testConnection(clientId, clientSecret);
+  }
+
+  async handleWebhook(provider: string, payload: any, options?: any): Promise<any> {
     if (provider === 'mercado_pago' || provider === 'mercadopago') {
       await this.mercadoPagoProvider.handleWebhook(payload);
     } else if (provider === 'pushinpay') {
       return await this.pushinPayProvider.handleWebhook(payload);
+    } else if (provider === 'syncpay') {
+      return await this.syncPayProvider.handleWebhook(options?.connectionId, options?.rawBody, options?.headers);
     } else {
       throw new Error(`Unsupported payment provider: ${provider}`);
     }

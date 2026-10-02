@@ -30,6 +30,14 @@ export default async function RecebimentosPage() {
     ),
   });
 
+  // Fetch SyncPay Connection
+  const syncPayConn = await db.query.sellerPaymentConnections.findFirst({
+    where: and(
+      eq(sellerPaymentConnections.sellerId, seller.id),
+      eq(sellerPaymentConnections.provider, 'syncpay')
+    ),
+  });
+
   const isPushinPayEnvActive = Boolean(process.env.PUSHINPAY_TOKEN && process.env.PUSHINPAY_TOKEN.trim());
 
   return (
@@ -46,6 +54,11 @@ export default async function RecebimentosPage() {
         status: pushinPayConn?.status || (isPushinPayEnvActive ? 'active' : 'inactive'),
         isGlobalEnvActive: isPushinPayEnvActive && !pushinPayConn,
         updatedAt: pushinPayConn?.updatedAt ? new Date(pushinPayConn.updatedAt).toISOString() : null,
+      }}
+      syncPayConnection={{
+        id: syncPayConn?.id || null,
+        status: syncPayConn?.status || 'inactive',
+        updatedAt: syncPayConn?.updatedAt ? new Date(syncPayConn.updatedAt).toISOString() : null,
       }}
     />
   );
