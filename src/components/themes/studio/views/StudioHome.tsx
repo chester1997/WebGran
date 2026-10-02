@@ -131,24 +131,24 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
       )}
 
       <div className="relative z-20 mt-1 space-y-2">
-        {/* Categories Section — 3 per row Grid aligned with Hero Banner */}
+        {/* Categories Section — Horizontal Scroll Row fitting 4 visible side-by-side */}
         {store.categories && store.categories.length > 0 && (
-          <section className="w-full max-w-[460px] mx-auto px-4 py-1.5">
-            <div className="grid grid-cols-3 w-full gap-2.5 sm:gap-3.5">
+          <section className="w-full max-w-[460px] mx-auto py-1.5">
+            <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar px-4 scroll-smooth py-1">
               {store.categories.map((cat) => (
-                store.categoryDisplayStyle === 'ICON' ? (
-                  <CategoryIconCard
-                    key={cat.id}
-                    category={cat}
-                    storeSlug={storeSlug}
-                  />
-                ) : (
-                  <Category3DPopoutCard
-                    key={cat.id}
-                    category={cat}
-                    storeSlug={storeSlug}
-                  />
-                )
+                <div key={cat.id} className="w-[76px] sm:w-[86px] shrink-0">
+                  {store.categoryDisplayStyle === 'ICON' ? (
+                    <CategoryIconCard
+                      category={cat}
+                      storeSlug={storeSlug}
+                    />
+                  ) : (
+                    <Category3DPopoutCard
+                      category={cat}
+                      storeSlug={storeSlug}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </section>

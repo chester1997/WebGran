@@ -140,7 +140,7 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
 
   return (
     <div 
-      className={`w-full aspect-square max-w-[110px] rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 relative transition-all duration-300`}
+      className={`w-full aspect-square rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center p-3 sm:p-3.5 relative transition-all duration-300`}
     >
       <IconComp className={`w-full h-full ${iconColor} relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]`} />
     </div>
@@ -151,10 +151,10 @@ function Category3DPopoutCardBase({ category, storeSlug }: Category3DPopoutCardP
   return (
     <Link
       href={`/miniapp/${storeSlug}/category/${category.slug}`}
-      className="w-full flex flex-col items-center gap-1.5 group select-none transition-transform duration-200 active:scale-95 block"
+      className="w-full flex flex-col items-center gap-1 group select-none transition-transform duration-200 active:scale-95 block"
     >
-      {/* 3D Icon / Image (Clean, no white background card behind image) */}
-      <div className="relative w-full max-w-[110px] aspect-square transition-all duration-300 group-hover:scale-105">
+      {/* 3D Icon / Image */}
+      <div className="relative w-full aspect-square transition-all duration-300 group-hover:scale-105">
         {category.imageUrl ? (
           <div className="w-full h-full rounded-2xl overflow-hidden bg-transparent transition-all duration-300">
             <img
@@ -171,7 +171,7 @@ function Category3DPopoutCardBase({ category, storeSlug }: Category3DPopoutCardP
       </div>
 
       {/* Category Name */}
-      <span className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-center truncate max-w-full leading-tight text-zinc-400 group-hover:text-white transition-colors duration-200">
+      <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-center truncate max-w-full leading-tight text-zinc-400 group-hover:text-white transition-colors duration-200">
         {category.name}
       </span>
     </Link>
