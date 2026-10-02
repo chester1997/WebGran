@@ -174,14 +174,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             href={dashboardItem.href}
             onClick={() => isMobile && setMobileDrawerOpen(false)}
             title={!isExpanded ? dashboardItem.name : undefined}
-            className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
+            className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 relative overflow-hidden ${
               pathname === dashboardItem.href 
-                ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.1)]" 
+                ? "bg-gradient-to-r from-red-500/15 via-red-500/10 to-transparent text-white border border-red-500/30 shadow-[0_0_15px_rgba(255,30,45,0.15)]" 
                 : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
             }`}
           >
             {pathname === dashboardItem.href && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[22px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
             )}
             <LayoutDashboard className={`w-5 h-5 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
             {isExpanded && <span className="truncate">{dashboardItem.name}</span>}
@@ -197,7 +197,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   onClick={handleToggleBotGroup}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
                     isBotChildActive
-                      ? "text-white font-semibold bg-white/[0.03]"
+                      ? "text-white font-semibold bg-white/[0.04]"
                       : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
@@ -226,12 +226,12 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                           onClick={() => isMobile && setMobileDrawerOpen(false)}
                           className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                             isSubActive
-                              ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                              ? "bg-gradient-to-r from-red-500/15 via-red-500/10 to-transparent text-white font-semibold border border-red-500/30 shadow-[0_0_12px_rgba(255,30,45,0.15)]"
                               : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                           }`}
                         >
                           {isSubActive && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-red-500 rounded-r-[3px] shadow-[0_0_8px_#ef4444]" />
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-red-500 rounded-r-[3px] shadow-[0_0_8px_#ef4444]" />
                           )}
                           <SubIcon className={`w-[17px] h-[17px] shrink-0 transition-colors ${isSubActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                           <span className="truncate">{subItem.name}</span>
@@ -254,7 +254,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     title={`Bot Telegram - ${subItem.name}`}
                     className={`flex items-center justify-center p-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                       isSubActive
-                        ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                        ? "bg-gradient-to-r from-red-500/15 to-transparent text-white font-semibold border border-red-500/30 shadow-[0_0_10px_rgba(255,30,45,0.15)]"
                         : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                     }`}
                   >
@@ -281,12 +281,12 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 title={!isExpanded ? item.name : undefined}
                 className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 relative overflow-hidden ${
                   isActive 
-                    ? "bg-red-500/10 text-white font-semibold border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.1)]" 
+                    ? "bg-gradient-to-r from-red-500/15 via-red-500/10 to-transparent text-white font-semibold border border-red-500/30 shadow-[0_0_15px_rgba(255,30,45,0.15)]" 
                     : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[20px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[22px] bg-red-500 rounded-r-[3px] shadow-[0_0_10px_#ef4444]" />
                 )}
 
                 <ItemIcon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? "text-red-500" : "text-zinc-400"}`} strokeWidth={1.8} />
@@ -300,7 +300,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
           {/* Active Trial Badge */}
           {isExpanded && subInfo?.isTrialActive && !subInfo?.isExempt && (
-            <div className="mx-1.5 my-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+            <div className="mx-1.5 my-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs shadow-md">
               <div className="flex items-center gap-1.5 font-bold mb-0.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
                 <span>Teste Grátis Ativo</span>
@@ -329,9 +329,9 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
         {/* User Footer */}
         <div className="border-t border-white/5 p-3">
-          <div className={`flex items-center ${!isExpanded ? "justify-center" : "justify-between"} p-2.5 rounded-xl bg-[#16161C] border border-white/5`}>
+          <div className={`flex items-center ${!isExpanded ? "justify-center" : "justify-between"} p-2.5 rounded-2xl bg-[#14141A] border border-white/[0.08] shadow-lg`}>
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 shrink-0 font-bold text-xs text-white overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center border border-white/20 shrink-0 font-bold text-xs text-white overflow-hidden shadow-sm">
                 {sellerProfile?.avatarUrl ? (
                   <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -341,7 +341,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               {isExpanded && (
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-white truncate">{sellerProfile?.name || "Vendedor"}</p>
-                  <p className="text-[11px] text-zinc-500 truncate">Vendedor</p>
+                  <p className="text-[10px] text-zinc-400 truncate">Vendedor WebGran</p>
                 </div>
               )}
             </div>
@@ -353,7 +353,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   if (isMobile) setMobileDrawerOpen(false);
                   signOut({ callbackUrl: "/login" });
                 }} 
-                className="text-zinc-500 hover:text-white p-1 rounded-md transition-colors cursor-pointer" 
+                className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" 
                 title="Sair"
               >
                 <LogOut className="w-4 h-4" strokeWidth={1.8} />
