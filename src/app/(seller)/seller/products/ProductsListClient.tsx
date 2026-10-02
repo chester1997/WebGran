@@ -123,11 +123,19 @@ export default function ProductsListClient({ storeName, products, categories, bo
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input 
-            type="text" 
+            type="search"
+            name="search"
+            id="products_search_input"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-lpignore="true"
+            data-form-type="other"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`Buscar em ${products.length} produtos...`}
-            className="w-full bg-[#16161C] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-zinc-500"
+            className="w-full bg-[#16161C] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-zinc-500 [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
 

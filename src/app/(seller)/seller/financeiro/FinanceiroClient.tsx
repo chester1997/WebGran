@@ -164,11 +164,19 @@ export default function FinanceiroClient({ metrics, transactions }: Props) {
             <div className="relative w-full sm:w-64">
               <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input 
-                type="text" 
+                type="search" 
+                name="search"
+                id="financeiro_search_input"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-form-type="other"
                 placeholder="Buscar por ID ou cliente..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-[#18181C] border border-white/10 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 w-full transition-all"
+                className="bg-[#18181C] border border-white/10 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 w-full transition-all [&::-webkit-search-cancel-button]:hidden"
               />
               {searchQuery && (
                 <button 

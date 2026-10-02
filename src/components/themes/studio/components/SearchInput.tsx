@@ -21,11 +21,19 @@ export function SearchInput({ storeSlug, initialQuery }: { storeSlug: string, in
     <form onSubmit={handleSearch} className="relative">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
       <input 
-        type="text" 
+        type="search"
+        name="search"
+        id="studio_search_input"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        data-lpignore="true"
+        data-form-type="other"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar séries, dramas..." 
-        className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-3 pl-10 pr-4 text-white focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
+        className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-3 pl-10 pr-4 text-white focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all [&::-webkit-search-cancel-button]:hidden"
       />
     </form>
   );

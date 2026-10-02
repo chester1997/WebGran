@@ -108,11 +108,19 @@ export default function CustomersClient({ customers, stats }: Props) {
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input 
-            type="text" 
+            type="search" 
+            name="search"
+            id="customers_search_input"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-lpignore="true"
+            data-form-type="other"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, @username ou ID..." 
-            className="w-full bg-[#18181C] border border-white/10 rounded-xl py-2.5 pl-10 pr-9 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30 transition-all"
+            className="w-full bg-[#18181C] border border-white/10 rounded-xl py-2.5 pl-10 pr-9 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30 transition-all [&::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
             <button
