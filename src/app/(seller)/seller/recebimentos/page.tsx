@@ -18,7 +18,6 @@ export default async function RecebimentosPage() {
   await ensurePaymentTables();
 
   let connection = null;
-  let pushinPayConn = null;
   let syncPayConn = null;
 
   try {
@@ -34,18 +33,6 @@ export default async function RecebimentosPage() {
   }
 
   try {
-    // Fetch PushinPay Connection
-    pushinPayConn = await db.query.sellerPaymentConnections.findFirst({
-      where: and(
-        eq(sellerPaymentConnections.sellerId, seller.id),
-        eq(sellerPaymentConnections.provider, 'pushinpay')
-      ),
-    });
-  } catch (err) {
-    console.error('[RecebimentosPage] Error fetching PushinPay connection:', err);
-  }
-
-  try {
     // Fetch SyncPay Connection
     syncPayConn = await db.query.sellerPaymentConnections.findFirst({
       where: and(
@@ -57,8 +44,6 @@ export default async function RecebimentosPage() {
     console.error('[RecebimentosPage] Error fetching SyncPay connection:', err);
   }
 
-  const isPushinPayEnvActive = Boolean(process.env.PUSHINPAY_TOKEN && process.env.PUSHINPAY_TOKEN.trim());
-
   return (
     <RecebimentosClient 
       connection={connection ? {
@@ -68,12 +53,6 @@ export default async function RecebimentosPage() {
         providerUserId: connection.providerUserId,
         updatedAt: connection.updatedAt ? new Date(connection.updatedAt).toISOString() : null,
       } : null}
-      pushinPayConnection={{
-        id: pushinPayConn?.id || null,
-        status: pushinPayConn?.status || (isPushinPayEnvActive ? 'active' : 'inactive'),
-        isGlobalEnvActive: isPushinPayEnvActive && !pushinPayConn,
-        updatedAt: pushinPayConn?.updatedAt ? new Date(pushinPayConn.updatedAt).toISOString() : null,
-      }}
       syncPayConnection={{
         id: syncPayConn?.id || null,
         status: syncPayConn?.status || 'inactive',

@@ -249,10 +249,10 @@ export default function FinanceiroClient({ metrics, transactions }: Props) {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      {tx.paymentMethod === 'pushinpay' ? (
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold inline-flex items-center gap-1.5">
-                          <Zap className="w-3 h-3 text-emerald-400" />
-                          PushinPay
+                      {tx.paymentMethod === 'syncpay' ? (
+                        <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[11px] font-semibold inline-flex items-center gap-1.5">
+                          <Zap className="w-3 h-3 text-indigo-400" />
+                          SyncPay
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-semibold inline-flex items-center gap-1.5">

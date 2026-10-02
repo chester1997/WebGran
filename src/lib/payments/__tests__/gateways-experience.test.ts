@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PushinPayProvider } from '../providers/pushinpay';
+import { SyncPayProvider } from '../providers/syncpay';
 
 vi.mock('@/db', () => ({
   db: {
@@ -25,24 +25,21 @@ vi.mock('@/db', () => ({
 }));
 
 describe('Gateways Connection Experience & Security Audit', () => {
-  let provider: PushinPayProvider;
+  let provider: SyncPayProvider;
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    delete process.env.PUSHINPAY_TOKEN;
-    delete process.env.PUSHINPAY_ENV;
-    provider = new PushinPayProvider();
+    provider = new SyncPayProvider();
   });
 
   describe('1. Connected State Token Isolation', () => {
-    it('ensures PushinPay API status responses never leak token or secrets', async () => {
-      process.env.PUSHINPAY_TOKEN = 'secret_bearer_token_999';
+    it('ensures SyncPay API status responses never leak credentials or secrets', async () => {
       const { db } = await import('@/db');
 
       vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
         id: 'conn-1',
         sellerId: 'seller-a',
-        provider: 'pushinpay',
+        provider: 'syncpay',
         accessTokenEncrypted: 'encrypted_secret_data',
         status: 'active',
         updatedAt: new Date(),
@@ -51,9 +48,7 @@ describe('Gateways Connection Experience & Security Audit', () => {
       // Simulating API response returned to client
       const responsePayload = {
         success: true,
-        hasCustomToken: true,
         status: 'active',
-        isGlobalEnvActive: false,
         updatedAt: new Date().toISOString(),
       };
 
@@ -61,7 +56,6 @@ describe('Gateways Connection Experience & Security Audit', () => {
       expect(responsePayload).not.toHaveProperty('accessToken');
       expect(responsePayload).not.toHaveProperty('accessTokenEncrypted');
       expect(responsePayload).not.toHaveProperty('secret');
-      expect(JSON.stringify(responsePayload)).not.toContain('secret_bearer_token_999');
     });
 
     it('ensures multi-tenant isolation so Seller A cannot view Seller B gateway connection', async () => {
@@ -71,7 +65,7 @@ describe('Gateways Connection Experience & Security Audit', () => {
         .mockResolvedValueOnce({
           id: 'conn-seller-a',
           sellerId: 'seller-a',
-          provider: 'pushinpay',
+          provider: 'syncpay',
           status: 'active',
         } as any)
         .mockResolvedValueOnce(undefined as any);
@@ -85,31 +79,11 @@ describe('Gateways Connection Experience & Security Audit', () => {
     });
   });
 
-  describe('2. Test Connection & Local Option B Security', () => {
-    it('validates connection locally via Option B without calling fictitious endpoints or creating charges', async () => {
-      const fetchSpy = vi.spyOn(globalThis, 'fetch');
-
-      const res = await provider.testConnection('valid_bearer_token_777777');
-      expect(fetchSpy).not.toHaveBeenCalled();
-      expect(res.success).toBe(true);
-      expect(res.message).toContain('Credencial PushinPay armazenada com sucesso');
-      expect(res.message).not.toContain('valid_bearer_token_777777');
-    });
-
-    it('does not expose raw token in connection test errors', async () => {
-      const res = await provider.testConnection('');
+  describe('2. Test Connection Security', () => {
+    it('returns error when testing with empty credentials', async () => {
+      const res = await provider.testConnection('', '');
       expect(res.success).toBe(false);
-      expect(res.message).toContain('não informado');
-    });
-  });
-
-  describe('3. Credential Update & Disconnect Rules', () => {
-    it('ensures token remains encrypted server-side and is never pre-filled on update', () => {
-      const changeTokenFormState = {
-        newPushinPayToken: '', // Must start empty
-      };
-
-      expect(changeTokenFormState.newPushinPayToken).toBe('');
+      expect(res.message).toContain('obrigatórios');
     });
   });
 });

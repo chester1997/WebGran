@@ -158,29 +158,20 @@ export async function createCheckoutSession(
       : null;
     const isMpActive = Boolean(mpConn && mpConn.status === 'active');
 
-    const pushinPayToken = sellerId
-      ? await paymentService['pushinPayProvider'].getPushinPayToken(sellerId, storeId)
-      : null;
-    const isPushinPayActive = Boolean(pushinPayToken);
-
     const syncPayConn = sellerId
       ? await paymentService['syncPayProvider'].getSyncPayConnection(sellerId, storeId)
       : null;
     const isSyncPayActive = Boolean(syncPayConn);
 
     // Determine target gateway
-    let targetGateway: 'pushinpay' | 'mercadopago' | 'syncpay' | null = null;
+    let targetGateway: 'mercadopago' | 'syncpay' | null = null;
 
     if (paymentGateway === 'syncpay' && isSyncPayActive) {
       targetGateway = 'syncpay';
-    } else if (paymentGateway === 'pushinpay' && isPushinPayActive) {
-      targetGateway = 'pushinpay';
     } else if (paymentGateway === 'mercadopago' && isMpActive) {
       targetGateway = 'mercadopago';
     } else if (isSyncPayActive) {
       targetGateway = 'syncpay';
-    } else if (isPushinPayActive) {
-      targetGateway = 'pushinpay';
     } else if (isMpActive) {
       targetGateway = 'mercadopago';
     }
@@ -216,41 +207,6 @@ export async function createCheckoutSession(
         pix: {
           qrCode: pixPayment.qrCode,
           qrCodeBase64: pixPayment.qrCodeBase64 || '',
-          expiresAt: pixPayment.expiresAt.toISOString(),
-        }
-      };
-    }
-
-    // 1. Process PushinPay PIX
-    if (targetGateway === 'pushinpay') {
-      const pixPayment = await paymentService.createPushinPayPix({
-        sellerId: sellerId!,
-        orderId: newOrder.id,
-        amount: finalTotal,
-        description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
-        customer: {
-          name: 'Cliente Telegram',
-          email: 'cliente@webgran.app'
-        }
-      });
-
-      await db.update(orders)
-        .set({
-          paymentId: pixPayment.paymentId,
-          paymentMethod: 'pushinpay',
-          pixQrCode: pixPayment.qrCode,
-          pixQrCodeBase64: pixPayment.qrCodeBase64,
-          pixExpiresAt: pixPayment.expiresAt,
-        })
-        .where(eq(orders.id, newOrder.id));
-
-      return {
-        success: true,
-        orderId: newOrder.id,
-        paymentGateway: 'pushinpay',
-        pix: {
-          qrCode: pixPayment.qrCode,
-          qrCodeBase64: pixPayment.qrCodeBase64,
           expiresAt: pixPayment.expiresAt.toISOString(),
         }
       };
