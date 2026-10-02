@@ -21,6 +21,7 @@ import Image from "next/image";
 import { useCart } from "@/components/miniapp/CartProvider";
 import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
 import { useRouter } from "next/navigation";
+import { PixPaymentCard } from "@/components/payments/PixPaymentCard";
 
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const { items, updateQuantity, removeFromCart, subtotal, total, clearCart } = useCart();
@@ -192,60 +193,15 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   /* ── PIX state ── */
   if (pixState) {
     return (
-      <div className="p-4 pt-6 text-zinc-900 dark:text-white w-full max-w-lg mx-auto flex flex-col items-center space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold">Pagamento via PIX</h1>
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">Escaneie o QR Code ou copie o código PIX abaixo</p>
-        </div>
-
-        {pixState.qrCodeBase64 && (
-          <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center justify-center border border-zinc-200 dark:border-transparent">
-            <img
-              src={`data:image/png;base64,${pixState.qrCodeBase64}`}
-              alt="PIX QR Code"
-              className="w-56 h-56 object-contain"
-            />
-          </div>
-        )}
-
-        <div className="w-full space-y-2">
-          <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">PIX Copia e Cola:</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              readOnly
-              value={pixState.qrCode}
-              className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-zinc-900 dark:text-zinc-300 text-xs px-3 py-2.5 rounded-xl font-mono truncate focus:outline-none"
-            />
-            <button
-              onClick={handleCopyPix}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
-                copied ? "bg-emerald-600 text-white" : "bg-red-600 hover:bg-red-700 text-white"
-              }`}
-            >
-              {copied ? (
-                <><Check className="w-4 h-4" /> Copiado!</>
-              ) : (
-                <><Copy className="w-4 h-4" /> Copiar Código</>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="w-full bg-zinc-100/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-4 flex items-center gap-3">
-          <Loader2 className="w-5 h-5 text-red-500 animate-spin flex-shrink-0" />
-          <div className="text-xs">
-            <p className="font-semibold text-zinc-800 dark:text-zinc-200">Aguardando confirmação do pagamento...</p>
-            <p className="text-zinc-600 dark:text-zinc-500">A liberação ocorrerá automaticamente assim que pago.</p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setPixState(null)}
-          className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 underline pt-2"
-        >
-          Voltar para o carrinho
-        </button>
+      <div className="p-4 pt-6 text-zinc-900 dark:text-white w-full max-w-lg mx-auto flex flex-col items-center">
+        <PixPaymentCard
+          pixCode={pixState.qrCode}
+          qrCodeBase64={pixState.qrCodeBase64}
+          amount={displayTotal}
+          orderId={pixState.orderId}
+          status="pending"
+          onBack={() => setPixState(null)}
+        />
       </div>
     );
   }
