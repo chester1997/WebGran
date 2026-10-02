@@ -10,6 +10,13 @@ import { checkLimit, hasFeature } from "@/lib/entitlements/entitlement-service";
 import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 
+function assertAdminRole(user: { role?: string }) {
+  const role = (user.role || "").toLowerCase();
+  if (role !== "admin" && role !== "super_admin") {
+    throw new Error("Acesso de gerenciamento de categorias restrito apenas ao administrador.");
+  }
+}
+
 async function processImageUrl(
   rawUrl: string | null,
   storeId: string,
@@ -60,6 +67,8 @@ async function processImageUrl(
 
 export async function updateCategoryDisplayStyleAction(displayStyle: "IMAGE" | "ICON") {
   const user = await requireSeller();
+  assertAdminRole(user);
+
   const store = await getCurrentStore();
 
   if (!store) {
@@ -85,6 +94,8 @@ export async function updateCategoryDisplayStyleAction(displayStyle: "IMAGE" | "
 
 export async function createCategoryAction(formData: FormData) {
   const user = await requireSeller();
+  assertAdminRole(user);
+
   const store = await getCurrentStore();
 
   if (!store) {
@@ -140,6 +151,8 @@ export async function createCategoryAction(formData: FormData) {
 
 export async function updateCategoryAction(categoryId: string, formData: FormData) {
   const seller = await requireSeller();
+  assertAdminRole(seller);
+
   const store = await getCurrentStore();
 
   if (!store) {
@@ -201,7 +214,9 @@ export async function updateCategoryAction(categoryId: string, formData: FormDat
 }
 
 export async function deleteCategoryAction(categoryId: string) {
-  await requireSeller();
+  const seller = await requireSeller();
+  assertAdminRole(seller);
+
   const store = await getCurrentStore();
 
   if (!store) {

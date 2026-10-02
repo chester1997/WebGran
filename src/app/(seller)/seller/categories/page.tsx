@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { categories, products } from "@/db/schema";
@@ -12,7 +13,13 @@ import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerCategoriesPage() {
   await connection();
-  await requireSeller();
+  const user = await requireSeller();
+
+  const role = (user.role || "").toLowerCase();
+  if (role !== "admin" && role !== "super_admin") {
+    redirect("/seller");
+  }
+
   const store = await getCurrentStore();
 
   if (!store) {

@@ -163,6 +163,15 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
 
+  const isAdminOrSuperAdmin = sellerProfile?.role === "admin" || sellerProfile?.role === "super_admin";
+
+  const visibleBotSubItems = botTelegramSubItems.filter((item) => {
+    if (item.href === "/seller/categories") {
+      return isAdminOrSuperAdmin;
+    }
+    return true;
+  });
+
   const renderNavContent = (isMobile = false) => {
     const isExpanded = isMobile || !collapsed;
 
@@ -215,7 +224,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 {/* Submenus (Indented with connecting line) */}
                 {botGroupOpen && (
                   <div className="ml-5 pl-3 border-l border-white/10 space-y-1 my-1 transition-all duration-200 ease-in-out">
-                    {botTelegramSubItems.map((subItem) => {
+                    {visibleBotSubItems.map((subItem) => {
                       const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                       const SubIcon = subItem.icon;
 
@@ -243,7 +252,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               </>
             ) : (
               /* Collapsed mode icons (Desktop only) */
-              botTelegramSubItems.map((subItem) => {
+              visibleBotSubItems.map((subItem) => {
                 const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                 const SubIcon = subItem.icon;
 
