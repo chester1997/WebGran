@@ -18,6 +18,7 @@ import {
   Users, 
   Globe, 
   Bookmark,
+  Skull,
   LucideIcon
 } from "lucide-react";
 
@@ -126,6 +127,10 @@ function Category3DIconRenderer({ name, iconName }: { name: string; iconName?: s
       IconComp = Globe;
       gradientClass = "from-emerald-500 via-teal-700 to-slate-950";
       iconColor = "text-emerald-100";
+    } else if (norm.includes("máfia") || norm.includes("mafia") || norm.includes("crime") || norm.includes("skull")) {
+      IconComp = Skull;
+      gradientClass = "from-red-900 via-rose-950 to-black";
+      iconColor = "text-red-400";
     } else if (norm.includes("lgbt") || norm.includes("sparkles") || norm.includes("gem")) {
       IconComp = Sparkles;
       gradientClass = "from-pink-500 via-purple-600 to-indigo-950";
