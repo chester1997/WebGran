@@ -94,6 +94,8 @@ export class SyncPayAuthService {
   }
 }
 
+import { ensurePaymentTables } from '@/db/ensure-payment-tables';
+
 export class SyncPayProvider {
   getBaseUrl(): string {
     return 'https://api.syncpayments.com.br/api/partner/v1';
@@ -107,6 +109,7 @@ export class SyncPayProvider {
    * Resolves active SyncPay connection for a seller or store.
    */
   async getSyncPayConnection(sellerId?: string, storeId?: string) {
+    await ensurePaymentTables();
     let resolvedSellerId = sellerId;
 
     if (!resolvedSellerId && storeId) {

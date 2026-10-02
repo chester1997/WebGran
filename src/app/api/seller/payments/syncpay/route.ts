@@ -6,9 +6,11 @@ import { eq, and } from 'drizzle-orm';
 import { encrypt, decrypt } from '@/lib/encryption';
 import { syncPayProvider } from '@/lib/payments/providers/syncpay';
 import { hasFeature } from '@/lib/entitlements/entitlement-service';
+import { ensurePaymentTables } from '@/db/ensure-payment-tables';
 
 export async function GET() {
   try {
+    await ensurePaymentTables();
     const seller = await requireSeller();
 
     const conn = await db.query.sellerPaymentConnections.findFirst({

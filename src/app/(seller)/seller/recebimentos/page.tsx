@@ -3,8 +3,8 @@ import { db } from '@/db';
 import { sellerPaymentConnections } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import RecebimentosClient from './RecebimentosClient';
-
 import SetupStoreClient from "../SetupStoreClient";
+import { ensurePaymentTables } from '@/db/ensure-payment-tables';
 
 export default async function RecebimentosPage() {
   const seller = await requireSeller();
@@ -14,29 +14,48 @@ export default async function RecebimentosPage() {
     return <SetupStoreClient />;
   }
 
-  // Fetch Mercado Pago Connection
-  const connection = await db.query.sellerPaymentConnections.findFirst({
-    where: and(
-      eq(sellerPaymentConnections.sellerId, seller.id),
-      eq(sellerPaymentConnections.provider, 'mercado_pago')
-    ),
-  });
+  // Ensure DB columns & tables exist on production database (e.g. Neon)
+  await ensurePaymentTables();
 
-  // Fetch PushinPay Connection
-  const pushinPayConn = await db.query.sellerPaymentConnections.findFirst({
-    where: and(
-      eq(sellerPaymentConnections.sellerId, seller.id),
-      eq(sellerPaymentConnections.provider, 'pushinpay')
-    ),
-  });
+  let connection = null;
+  let pushinPayConn = null;
+  let syncPayConn = null;
 
-  // Fetch SyncPay Connection
-  const syncPayConn = await db.query.sellerPaymentConnections.findFirst({
-    where: and(
-      eq(sellerPaymentConnections.sellerId, seller.id),
-      eq(sellerPaymentConnections.provider, 'syncpay')
-    ),
-  });
+  try {
+    // Fetch Mercado Pago Connection
+    connection = await db.query.sellerPaymentConnections.findFirst({
+      where: and(
+        eq(sellerPaymentConnections.sellerId, seller.id),
+        eq(sellerPaymentConnections.provider, 'mercado_pago')
+      ),
+    });
+  } catch (err) {
+    console.error('[RecebimentosPage] Error fetching Mercado Pago connection:', err);
+  }
+
+  try {
+    // Fetch PushinPay Connection
+    pushinPayConn = await db.query.sellerPaymentConnections.findFirst({
+      where: and(
+        eq(sellerPaymentConnections.sellerId, seller.id),
+        eq(sellerPaymentConnections.provider, 'pushinpay')
+      ),
+    });
+  } catch (err) {
+    console.error('[RecebimentosPage] Error fetching PushinPay connection:', err);
+  }
+
+  try {
+    // Fetch SyncPay Connection
+    syncPayConn = await db.query.sellerPaymentConnections.findFirst({
+      where: and(
+        eq(sellerPaymentConnections.sellerId, seller.id),
+        eq(sellerPaymentConnections.provider, 'syncpay')
+      ),
+    });
+  } catch (err) {
+    console.error('[RecebimentosPage] Error fetching SyncPay connection:', err);
+  }
 
   const isPushinPayEnvActive = Boolean(process.env.PUSHINPAY_TOKEN && process.env.PUSHINPAY_TOKEN.trim());
 
