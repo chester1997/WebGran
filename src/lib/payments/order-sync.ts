@@ -22,26 +22,30 @@ export async function syncOrderWithMercadoPago(orderId: string) {
 
   // Support SyncPay orders
   if (order.paymentMethod === 'syncpay') {
-    const { syncPayProvider } = await import('./providers/syncpay');
+    const { syncPayProvider, extractSyncPayStatus } = await import('./providers/syncpay');
     const syncConn = await syncPayProvider.getSyncPayConnection(undefined, order.storeId);
-    if (syncConn && order.paymentId) {
-      const txStatus = await syncPayProvider.getPixPaymentStatus(order.paymentId, syncConn.clientId, syncConn.clientSecret);
-      if (txStatus) {
-        const rawStatus = String(txStatus.status || '').toLowerCase().trim();
-        const isPaid = ['completed', 'paid', 'approved', 'sucesso'].includes(rawStatus);
-        if (isPaid) {
-          await db.update(orders)
-            .set({
-              status: 'paid',
-              paidAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')));
-          const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
-          const accessList = await db.query.accesses.findMany({
-            where: eq(accesses.orderId, order.id),
-          });
-          return { success: true, status: 'paid', paymentId: order.paymentId, accesses: accessList, deliveries: deliveryResults };
+    if (syncConn) {
+      const queryIds = Array.from(new Set([order.paymentId, order.id])).filter(Boolean) as string[];
+      for (const queryId of queryIds) {
+        if (!queryId || queryId.startsWith('sync_')) continue;
+        const txStatus = await syncPayProvider.getPixPaymentStatus(queryId, syncConn.clientId, syncConn.clientSecret);
+        if (txStatus) {
+          const rawStatus = extractSyncPayStatus(txStatus);
+          const isPaid = ['completed', 'paid', 'approved', 'sucesso'].includes(rawStatus);
+          if (isPaid) {
+            await db.update(orders)
+              .set({
+                status: 'paid',
+                paidAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')));
+            const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
+            const accessList = await db.query.accesses.findMany({
+              where: eq(accesses.orderId, order.id),
+            });
+            return { success: true, status: 'paid', paymentId: order.paymentId, accesses: accessList, deliveries: deliveryResults };
+          }
         }
       }
     }

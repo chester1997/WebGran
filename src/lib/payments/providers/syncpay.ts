@@ -97,13 +97,23 @@ export class SyncPayAuthService {
 import { ensurePaymentTables } from '@/db/ensure-payment-tables';
 
 /**
+ * Helper to safely extract status string from nested SyncPay response payloads.
+ */
+export function extractSyncPayStatus(resData: any): string {
+  if (!resData) return '';
+  if (typeof resData === 'string') return resData.toLowerCase().trim();
+  const raw = resData.status || resData.data?.status || resData.data?.transaction?.status || resData.transaction?.status || resData.data?.state || '';
+  return String(raw).toLowerCase().trim();
+}
+
+/**
  * Helper function to determine if a SyncPay webhook payload or status query represents a confirmed payment.
  * CRITICAL RULE: transaction.created NEVER confirms payment (prevents auto-confirmation on Pix charge generation).
  * Only transaction.updated (or direct status query) with status completed/paid/approved confirms payment.
  */
-export function isSyncPayPaymentConfirmed(eventType: string, rawStatus: string): boolean {
+export function isSyncPayPaymentConfirmed(eventType: string, rawStatusOrData: any): boolean {
   const normEvent = String(eventType || '').toLowerCase().trim();
-  const normStatus = String(rawStatus || '').toLowerCase().trim();
+  const normStatus = extractSyncPayStatus(rawStatusOrData);
 
   // transaction.created MUST NEVER confirm a payment
   if (normEvent === 'transaction.created') {
@@ -214,6 +224,7 @@ export class SyncPayProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          title: 'WebGran Webhook',
           url: webhookUrl,
           event: 'transaction',
           trigger_all_products: true,
@@ -225,12 +236,15 @@ export class SyncPayProvider {
         if (data.id || data.webhook_id) {
           webhookId = String(data.id || data.webhook_id);
         }
-        if (data.secret || data.webhook_secret) {
-          webhookSecret = String(data.secret || data.webhook_secret);
+        if (data.token || data.secret || data.webhook_secret) {
+          webhookSecret = String(data.token || data.secret || data.webhook_secret);
         }
+      } else {
+        const errText = await res.text();
+        console.warn('[SyncPayProvider] Remote webhook creation failed:', res.status, errText);
       }
     } catch (err) {
-      console.warn('[SyncPayProvider] Remote webhook creation call warning (will use connection secret):', err);
+      console.warn('[SyncPayProvider] Remote webhook creation call warning:', err);
     }
 
     return { webhookId, webhookSecret };
@@ -320,7 +334,7 @@ export class SyncPayProvider {
 
     const data: SyncPayCashInResponse = await res.json();
 
-    const paymentId = String(data.reference_id || data.id || data.transaction_id || `sync_${params.orderId}`);
+    const paymentId = String(data.identifier || data.reference_id || data.id || data.transaction_id || params.orderId);
     const pixCode = data.pix_code || data.pix_copia_e_cola || data.qr_code || data.br_code || data.emv || '';
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min expiration
 
@@ -462,21 +476,39 @@ export class SyncPayProvider {
       // Ignore unique constraint conflict on concurrent race
     }
 
-    // 5. Locate order by transaction reference_id
-    const transactionData = payload.data || payload.transaction || payload;
-    const referenceId = String(transactionData.reference_id || transactionData.id || payload.reference_id || '').trim();
+    // 5. Locate order by transaction reference_id, identifier or order ID
+    const transactionData = payload.data?.transaction || payload.data || payload.transaction || payload;
+    const referenceId = String(transactionData.reference_id || transactionData.identifier || transactionData.id || payload.reference_id || payload.identifier || payload.id || '').trim();
 
     if (!referenceId) {
       console.warn('[SyncPayWebhook] Webhook sem reference_id de transação:', payload);
       return { success: true };
     }
 
-    const order = await db.query.orders.findFirst({
+    let order = await db.query.orders.findFirst({
       where: and(
         eq(orders.paymentId, referenceId),
         eq(orders.paymentMethod, 'syncpay')
       ),
     });
+
+    if (!order) {
+      order = await db.query.orders.findFirst({
+        where: and(
+          eq(orders.id, referenceId),
+          eq(orders.paymentMethod, 'syncpay')
+        ),
+      });
+    }
+
+    if (!order) {
+      order = await db.query.orders.findFirst({
+        where: and(
+          eq(orders.paymentId, `sync_${referenceId}`),
+          eq(orders.paymentMethod, 'syncpay')
+        ),
+      });
+    }
 
     if (!order) {
       console.warn(`[SyncPayWebhook] Nenhum pedido WebGran encontrado para paymentId SyncPay: ${referenceId}`);
@@ -546,12 +578,24 @@ export class SyncPayProvider {
 
     try {
       const token = await SyncPayAuthService.getAccessToken(clientId, clientSecret);
-      const res = await fetch(`${this.getV2BaseUrl()}/transactions/${referenceId}`, {
+      
+      // Try V1 /transaction/{id} endpoint first
+      let res = await fetch(`${this.getBaseUrl()}/transaction/${referenceId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
       });
+
+      if (!res.ok) {
+        // Fallback to V2 /transactions/{id} endpoint
+        res = await fetch(`${this.getV2BaseUrl()}/transactions/${referenceId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+      }
 
       if (res.ok) {
         return await res.json();

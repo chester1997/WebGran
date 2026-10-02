@@ -32,39 +32,46 @@ export class SyncPayReconciliationService {
     let updated = 0;
 
     for (const order of pendingOrders) {
-      if (!order.paymentId) continue;
       checked++;
 
       try {
-        const txStatus = await this.provider.getPixPaymentStatus(order.paymentId, conn.clientId, conn.clientSecret);
-        if (!txStatus) continue;
+        const { extractSyncPayStatus } = await import('./providers/syncpay');
+        const queryIds = Array.from(new Set([order.paymentId, order.id])).filter(Boolean) as string[];
 
-        const rawStatus = String(txStatus.status || '').toLowerCase().trim();
-        const isPaid = ['completed', 'paid', 'approved', 'sucesso'].includes(rawStatus);
-        const isFailed = ['failed', 'refused', 'cancelled', 'canceled', 'expired'].includes(rawStatus);
+        for (const queryId of queryIds) {
+          if (!queryId || queryId.startsWith('sync_')) continue;
+          const txStatus = await this.provider.getPixPaymentStatus(queryId, conn.clientId, conn.clientSecret);
+          if (!txStatus) continue;
 
-        if (isPaid) {
-          const updatedRows = await db.update(orders)
-            .set({
-              status: 'paid',
-              paidAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(and(
-              eq(orders.id, order.id),
-              eq(orders.status, 'pending')
-            ))
-            .returning();
+          const rawStatus = extractSyncPayStatus(txStatus);
+          const isPaid = ['completed', 'paid', 'approved', 'sucesso'].includes(rawStatus);
+          const isFailed = ['failed', 'refused', 'cancelled', 'canceled', 'expired'].includes(rawStatus);
 
-          if (updatedRows.length > 0) {
+          if (isPaid) {
+            const updatedRows = await db.update(orders)
+              .set({
+                status: 'paid',
+                paidAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(and(
+                eq(orders.id, order.id),
+                eq(orders.status, 'pending')
+              ))
+              .returning();
+
+            if (updatedRows.length > 0) {
+              updated++;
+              await AccessDeliveryService.processOrderDelivery(order.id);
+            }
+            break;
+          } else if (isFailed) {
+            await db.update(orders)
+              .set({ status: 'failed', updatedAt: new Date() })
+              .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')));
             updated++;
-            await AccessDeliveryService.processOrderDelivery(order.id);
+            break;
           }
-        } else if (isFailed) {
-          await db.update(orders)
-            .set({ status: 'failed', updatedAt: new Date() })
-            .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')));
-          updated++;
         }
       } catch (err) {
         console.error(`[SyncPayReconciliationService] Error reconciling order ${order.id}:`, err);

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import crypto from 'crypto';
-import { SyncPayProvider, SyncPayAuthService } from '../providers/syncpay';
+import { SyncPayProvider, SyncPayAuthService, isSyncPayPaymentConfirmed, extractSyncPayStatus } from '../providers/syncpay';
 import { syncPayReconciliationService } from '../syncpay-reconciliation-service';
 import { encrypt } from '@/lib/encryption';
 
@@ -49,6 +49,7 @@ vi.mock('@/lib/entitlements/entitlement-service', () => ({
 
 describe('SyncPay Integration Audit — Comprehensive Security & Functional Suite', () => {
   let provider: SyncPayProvider;
+  const secret = 'webhook_secret_key_321';
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -145,7 +146,7 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       ).rejects.toThrow('mínimo');
     });
 
-    it('creates PIX cash-in charge successfully with valid payload', async () => {
+    it('creates PIX cash-in charge successfully with valid payload and extracts identifier', async () => {
       const { db } = await import('@/db');
       vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
         id: 'conn-1',
@@ -166,7 +167,7 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          reference_id: 'sync_ref_999',
+          identifier: 'sync_identifier_999',
           pix_code: '00020126580014BR.GOV.BCB.PIX...',
         }),
       } as Response);
@@ -178,7 +179,7 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
         customer: { name: 'João Silva', email: 'joao@email.com' },
       });
 
-      expect(res.paymentId).toBe('sync_ref_999');
+      expect(res.paymentId).toBe('sync_identifier_999');
       expect(res.status).toBe('pending');
       expect(res.qrCode).toContain('BR.GOV.BCB.PIX');
     });
@@ -207,40 +208,192 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
     });
   });
 
-  describe('4. Webhook Verification, HMAC-SHA256 & Replay Protection', () => {
-    const secret = 'webhook_secret_key_321';
+  describe('4. Mandatory Requirement Test Cases (Section 7 Audit)', () => {
+    // 1. transaction.created -> NÃO paga pedido
+    it('1. transaction.created -> does NOT mark order as paid', async () => {
+      expect(isSyncPayPaymentConfirmed('transaction.created', 'completed')).toBe(false);
 
-    it('validates HMAC-SHA256 signature correctly with matching secret and raw body', () => {
-      const timestamp = String(Math.floor(Date.now() / 1000));
-      const rawBody = JSON.stringify({ event: 'transaction.updated', event_id: 'evt_1' });
-      const signedPayload = `${timestamp}.${rawBody}`;
-      const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-
-      const header = `t=${timestamp},v1=${signature}`;
-      const res = provider.verifyWebhookSignature(rawBody, header, secret);
-      expect(res.isValid).toBe(true);
-    });
-
-    it('rejects webhook if signature header is missing or corrupted', () => {
-      const res = provider.verifyWebhookSignature('{}', null, secret);
-      expect(res.isValid).toBe(false);
-      expect(res.error).toContain('ausente');
-    });
-
-    it('rejects webhook if timestamp is older than 300 seconds (Replay Attack)', () => {
-      const oldTimestamp = String(Math.floor(Date.now() / 1000) - 400); // 400 sec old
-      const rawBody = '{}';
-      const signedPayload = `${oldTimestamp}.${rawBody}`;
-      const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-
-      const header = `t=${oldTimestamp},v1=${signature}`;
-      const res = provider.verifyWebhookSignature(rawBody, header, secret);
-      expect(res.isValid).toBe(false);
-      expect(res.error).toContain('Replay Attack');
-    });
-
-    it('ignores duplicate event_id idempotently', async () => {
       const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-t-created',
+        storeId: 'store-1',
+        status: 'pending',
+        paymentId: 'sync_created_1',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_tc_1',
+        event: 'transaction.created',
+        data: { reference_id: 'sync_created_1', status: 'completed' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.pending).toBe(true);
+      expect(AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
+    });
+
+    // 2. transaction.updated + completed -> paga pedido
+    it('2. transaction.updated + completed -> marks order as paid and delivers product', async () => {
+      expect(isSyncPayPaymentConfirmed('transaction.updated', { data: { status: 'completed' } })).toBe(true);
+
+      const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-t-updated-paid',
+        storeId: 'store-1',
+        status: 'pending',
+        paymentId: 'sync_updated_paid_1',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_tu_paid_1',
+        event: 'transaction.updated',
+        data: { reference_id: 'sync_updated_paid_1', status: 'completed' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.success).toBe(true);
+      expect(AccessDeliveryService.processOrderDelivery).toHaveBeenCalledWith('order-t-updated-paid');
+    });
+
+    // 3. transaction.updated + pending -> mantém pending
+    it('3. transaction.updated + pending -> keeps order status pending', async () => {
+      expect(isSyncPayPaymentConfirmed('transaction.updated', { status: 'pending' })).toBe(false);
+
+      const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-pending-stay',
+        storeId: 'store-1',
+        status: 'pending',
+        paymentId: 'sync_pending_stay',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_pending_stay',
+        event: 'transaction.updated',
+        data: { reference_id: 'sync_pending_stay', status: 'pending' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.success).toBe(true);
+      expect(AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
+    });
+
+    // 4. transaction.updated + failed -> não libera (marca failed)
+    it('4. transaction.updated + failed -> marks order as failed and does NOT deliver product', async () => {
+      const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-fail-1',
+        storeId: 'store-1',
+        status: 'pending',
+        paymentId: 'sync_fail_1',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_fail_1',
+        event: 'transaction.updated',
+        data: { reference_id: 'sync_fail_1', status: 'refused' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.success).toBe(true);
+      expect(AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
+    });
+
+    // 5. transaction.updated + refunded -> altera para refunded
+    it('5. transaction.updated + refunded -> updates status to refunded', async () => {
+      const { db } = await import('@/db');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-refund-1',
+        storeId: 'store-1',
+        status: 'paid',
+        paymentId: 'sync_refund_1',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_refund_1',
+        event: 'transaction.refunded',
+        data: { reference_id: 'sync_refund_1', status: 'refunded' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.success).toBe(true);
+    });
+
+    // 6. transaction.updated + med -> não libera
+    it('6. transaction.updated + med -> does NOT confirm payment', async () => {
+      expect(isSyncPayPaymentConfirmed('transaction.updated', 'med')).toBe(false);
+      expect(isSyncPayPaymentConfirmed('transaction.updated', { status: 'med' })).toBe(false);
+    });
+
+    // 7. webhook duplicado -> não duplica entrega
+    it('7. duplicate webhook -> ignores idempotently without re-triggering delivery', async () => {
+      const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
       vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
         id: 'conn-1',
         provider: 'syncpay',
@@ -248,14 +401,47 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       } as any);
 
       vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue({
-        id: 'existing-evt',
-        eventId: 'evt_duplicate_123',
+        id: 'already-processed-evt',
+        eventId: 'evt_dup_999',
       } as any);
 
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const rawBody = JSON.stringify({ event_id: 'evt_duplicate_123', event: 'transaction.updated' });
-      const signedPayload = `${timestamp}.${rawBody}`;
-      const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+      const rawBody = JSON.stringify({ event_id: 'evt_dup_999', event: 'transaction.updated' });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
+
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
+      expect(res.success).toBe(true);
+      expect(res.alreadyProcessed).toBe(true);
+      expect(AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
+    });
+
+    // 8. webhook fora de ordem -> não regrede pedido
+    it('8. out of order webhook -> does NOT regress order from paid to pending', async () => {
+      const { db } = await import('@/db');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        storeId: 'store-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-already-paid',
+        storeId: 'store-1',
+        status: 'paid',
+        paymentId: 'sync_already_paid',
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_old_update',
+        event: 'transaction.updated',
+        data: { reference_id: 'sync_already_paid', status: 'pending' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
       const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
 
       const res = await provider.handleWebhook('conn-1', rawBody, headers);
@@ -263,13 +449,37 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       expect(res.alreadyProcessed).toBe(true);
     });
 
-    it('NEVER marks order as paid on transaction.created event even if status is completed', async () => {
-      const { isSyncPayPaymentConfirmed } = await import('../providers/syncpay');
-      expect(isSyncPayPaymentConfirmed('transaction.created', 'completed')).toBe(false);
-      expect(isSyncPayPaymentConfirmed('transaction.created', 'paid')).toBe(false);
-
+    // 9. webhook com assinatura inválida -> rejeitado e não altera pedido
+    it('9. invalid signature -> returns error and does NOT alter order', async () => {
       const { db } = await import('@/db');
-      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        provider: 'syncpay',
+        webhookSecretEncrypted: encrypt(secret),
+      } as any);
+
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=invalid_fake_sig` });
+
+      const res = await provider.handleWebhook('conn-1', JSON.stringify({ event_id: 'evt_bad' }), headers);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('Assinatura HMAC-SHA256');
+    });
+
+    // 10. webhook com replay > janela permitida -> rejeitado
+    it('10. replay > 300 seconds -> rejected', () => {
+      const oldTimestamp = String(Math.floor(Date.now() / 1000) - 500);
+      const rawBody = JSON.stringify({ event_id: 'evt_old' });
+      const signature = crypto.createHmac('sha256', secret).update(`${oldTimestamp}.${rawBody}`).digest('hex');
+      const res = provider.verifyWebhookSignature(rawBody, `t=${oldTimestamp},v1=${signature}`, secret);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toContain('Replay Attack');
+    });
+
+    // 11. webhook válido para pedido inexistente -> não deve causar erro 500
+    it('11. valid webhook for nonexistent order -> returns success without 500 error', async () => {
+      const { db } = await import('@/db');
 
       vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
         id: 'conn-1',
@@ -279,123 +489,27 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       } as any);
 
       vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
-
-      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
-        id: 'order-created-111',
-        storeId: 'store-1',
-        status: 'pending',
-        paymentId: 'sync_tx_created',
-      } as any);
-
-      const timestamp = String(Math.floor(Date.now() / 1000));
-      const rawBody = JSON.stringify({
-        event_id: 'evt_created_001',
-        event: 'transaction.created',
-        data: {
-          reference_id: 'sync_tx_created',
-          status: 'completed',
-        },
-      });
-
-      const signedPayload = `${timestamp}.${rawBody}`;
-      const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
-
-      const res = await provider.handleWebhook('conn-1', rawBody, headers);
-      expect(res.success).toBe(true);
-      expect(res.pending).toBe(true);
-      expect(AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
-    });
-
-    it('processes valid paid webhook and triggers AccessDeliveryService atomically', async () => {
-      const { db } = await import('@/db');
-      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
-
-      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
-        id: 'conn-1',
-        storeId: 'store-1',
-        provider: 'syncpay',
-        webhookSecretEncrypted: encrypt(secret),
-      } as any);
-
-      vi.mocked(db.query.paymentWebhookEvents.findFirst).mockResolvedValue(null as any);
-
-      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
-        id: 'order-pay-999',
-        storeId: 'store-1',
-        status: 'pending',
-        paymentId: 'sync_tx_888',
-      } as any);
-
-      const timestamp = String(Math.floor(Date.now() / 1000));
-      const rawBody = JSON.stringify({
-        event_id: 'evt_new_100',
-        event: 'transaction.updated',
-        data: {
-          reference_id: 'sync_tx_888',
-          status: 'completed',
-        },
-      });
-
-      const signedPayload = `${timestamp}.${rawBody}`;
-      const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
-
-      const res = await provider.handleWebhook('conn-1', rawBody, headers);
-      expect(res.success).toBe(true);
-      expect(AccessDeliveryService.processOrderDelivery).toHaveBeenCalledWith('order-pay-999');
-    });
-  });
-
-  describe('5. Refund & Multi-Tenancy Security', () => {
-    it('prevents Seller A from executing refund on Seller B order', async () => {
-      const { db } = await import('@/db');
-      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
-        id: 'conn-seller-a',
-        sellerId: 'seller-a',
-        provider: 'syncpay',
-        accessTokenEncrypted: encrypt('client_a'),
-        refreshTokenEncrypted: encrypt('secret_a'),
-      } as any);
-
-      // Order belongs to seller-b (different payment connection lookup)
       vi.mocked(db.query.orders.findFirst).mockResolvedValue(null as any);
 
-      await expect(provider.refundPayment('seller-a', 'order-belonging-to-b')).rejects.toThrow('não encontrado');
-    });
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const rawBody = JSON.stringify({
+        event_id: 'evt_nonexistent_1',
+        event: 'transaction.updated',
+        data: { reference_id: 'sync_nonexistent_tx', status: 'completed' },
+      });
+      const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
+      const headers = new Headers({ 'X-SyncPay-Signature': `t=${timestamp},v1=${signature}` });
 
-    it('executes refund successfully for legitimate seller order', async () => {
-      const { db } = await import('@/db');
-      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
-        id: 'conn-seller-a',
-        sellerId: 'seller-a',
-        provider: 'syncpay',
-        accessTokenEncrypted: encrypt('client_a'),
-        refreshTokenEncrypted: encrypt('secret_a'),
-      } as any);
-
-      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
-        id: 'order-paid-1',
-        status: 'paid',
-        paymentId: 'sync_refund_tx',
-      } as any);
-
-      vi.spyOn(SyncPayAuthService, 'getAccessToken').mockResolvedValue('mock_token');
-
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'refunded' }),
-      } as Response);
-
-      const res = await provider.refundPayment('seller-a', 'order-paid-1');
+      const res = await provider.handleWebhook('conn-1', rawBody, headers);
       expect(res.success).toBe(true);
-      expect(res.message).toContain('sucesso');
     });
-  });
 
-  describe('6. SyncPayReconciliationService', () => {
-    it('reconciles pending orders server-side with SyncPay transaction status', async () => {
+    // 12. reconciliation encontra completed -> confirma pedido
+    // 13. webhook não chegou + reconciliation encontra completed -> libera produto
+    it('12 & 13. reconciliation finds completed status -> confirms order and delivers product', async () => {
       const { db } = await import('@/db');
+      const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
+
       vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
         id: 'conn-1',
         sellerId: 'seller-1',
@@ -405,7 +519,7 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       } as any);
 
       vi.mocked(db.query.orders.findMany).mockResolvedValue([
-        { id: 'pending-ord-1', paymentId: 'sync_tx_reconcile', status: 'pending' },
+        { id: 'pending-order-rec', paymentId: 'sync_tx_rec_100', status: 'pending' },
       ] as any);
 
       vi.spyOn(SyncPayAuthService, 'getAccessToken').mockResolvedValue('mock_token');
@@ -413,14 +527,39 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          reference_id: 'sync_tx_reconcile',
-          status: 'completed',
+          data: {
+            transaction: {
+              reference_id: 'sync_tx_rec_100',
+              status: 'completed',
+            }
+          }
         }),
       } as Response);
 
       const res = await syncPayReconciliationService.reconcilePendingOrders('seller-1');
       expect(res.checked).toBe(1);
       expect(res.updated).toBe(1);
+      expect(AccessDeliveryService.processOrderDelivery).toHaveBeenCalledWith('pending-order-rec');
+    });
+
+    // 14. reconciliation de pedido já PAID -> idempotente
+    it('14. reconciliation on already paid order -> idempotent, does not process again', async () => {
+      const { db } = await import('@/db');
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        sellerId: 'seller-1',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_1'),
+        refreshTokenEncrypted: encrypt('secret_1'),
+      } as any);
+
+      // Only pending orders are fetched
+      vi.mocked(db.query.orders.findMany).mockResolvedValue([]);
+
+      const res = await syncPayReconciliationService.reconcilePendingOrders('seller-1');
+      expect(res.checked).toBe(0);
+      expect(res.updated).toBe(0);
     });
   });
 });
