@@ -637,12 +637,13 @@ export const clipsRelations = relations(clips, ({ one }) => ({
 export const productVideos = pgTable('product_videos', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }),
   bunnyVideoId: text('bunny_video_id').notNull(),
   title: text('title').notNull(),
   description: text('description'),
   position: integer('position').notNull().default(0),
   durationSeconds: integer('duration_seconds'),
+  fileSizeBytes: bigint('file_size_bytes', { mode: 'number' }),
   thumbnailUrl: text('thumbnail_url'),
   status: text('status').notNull().default('UPLOADING'), // 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
   active: boolean('active').default(true).notNull(),
@@ -657,6 +658,23 @@ export const productVideos = pgTable('product_videos', {
   storeProductPositionIdx: index('product_videos_store_product_position_idx').on(t.storeId, t.productId, t.position),
 }));
 
+export const productVideoAssignments = pgTable('product_video_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  videoId: uuid('video_id').notNull().references(() => productVideos.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  productVideoUnique: unique().on(t.productId, t.videoId),
+  storeIdIdx: index('product_video_assignments_store_id_idx').on(t.storeId),
+  productIdIdx: index('product_video_assignments_product_id_idx').on(t.productId),
+  videoIdIdx: index('product_video_assignments_video_id_idx').on(t.videoId),
+  storeProductIdx: index('product_video_assignments_store_product_idx').on(t.storeId, t.productId),
+  storeVideoIdx: index('product_video_assignments_store_video_idx').on(t.storeId, t.videoId),
+}));
+
 export const productVideosRelations = relations(productVideos, ({ one, many }) => ({
   store: one(stores, {
     fields: [productVideos.storeId],
@@ -666,7 +684,23 @@ export const productVideosRelations = relations(productVideos, ({ one, many }) =
     fields: [productVideos.productId],
     references: [products.id],
   }),
+  assignments: many(productVideoAssignments),
   progresses: many(videoProgress),
+}));
+
+export const productVideoAssignmentsRelations = relations(productVideoAssignments, ({ one }) => ({
+  store: one(stores, {
+    fields: [productVideoAssignments.storeId],
+    references: [stores.id],
+  }),
+  product: one(products, {
+    fields: [productVideoAssignments.productId],
+    references: [products.id],
+  }),
+  video: one(productVideos, {
+    fields: [productVideoAssignments.videoId],
+    references: [productVideos.id],
+  }),
 }));
 
 export const videoProgress = pgTable('video_progress', {

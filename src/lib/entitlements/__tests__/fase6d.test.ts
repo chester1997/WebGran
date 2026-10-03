@@ -83,10 +83,11 @@ describe("FASE 6D — Entitlement System Closing Integrity Audit Suite", () => {
         "video_bandwidth_quota_gb",
         "product_videos_enabled",
         "max_product_videos",
+        "video_storage_quota_gb",
       ];
 
       const catalogKeys = INITIAL_FEATURES.map((f) => f.key);
-      expect(catalogKeys).toHaveLength(23);
+      expect(catalogKeys).toHaveLength(24);
       for (const key of expectedKeys) {
         expect(catalogKeys).toContain(key);
       }

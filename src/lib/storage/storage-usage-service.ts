@@ -139,6 +139,25 @@ export class StorageUsageService {
   }
 
   /**
+   * Resolves effective video storage quota in bytes from EntitlementService (video_storage_quota_gb)
+   */
+  static async getVideoQuotaBytes(sellerId: string): Promise<{ quotaBytes: number | null; isUnlimited: boolean; source: string }> {
+    const entitlement = await getSellerEntitlement(sellerId, "video_storage_quota_gb");
+
+    if (entitlement.source === "ADMIN_EXEMPT" || entitlement.isUnlimited || entitlement.value === -1) {
+      return { quotaBytes: null, isUnlimited: true, source: entitlement.source };
+    }
+
+    const quotaGb = typeof entitlement.value === "number" ? entitlement.value : Number(entitlement.value) || 50;
+    if (quotaGb === -1) {
+      return { quotaBytes: null, isUnlimited: true, source: entitlement.source };
+    }
+
+    const quotaBytes = Math.max(0, quotaGb * GB_IN_BYTES);
+    return { quotaBytes, isUnlimited: false, source: entitlement.source };
+  }
+
+  /**
    * Reserves storage for upload using atomic SQL update to prevent race conditions
    */
   static async reserveStorageForUpload(params: {
@@ -153,7 +172,9 @@ export class StorageUsageService {
     const { sellerId, storeId, bytes, referenceType, referenceId } = params;
     const requestedBytes = Math.max(0, Math.round(bytes));
 
-    const quotaInfo = await this.getQuotaBytes(sellerId);
+    const quotaInfo = referenceType === "product_video_upload"
+      ? await this.getVideoQuotaBytes(sellerId)
+      : await this.getQuotaBytes(sellerId);
     const expirationMinutes = params.expirationMinutes || 60;
     const expiresAt = new Date(Date.now() + expirationMinutes * 60 * 1000);
 

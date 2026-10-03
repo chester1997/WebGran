@@ -11,12 +11,13 @@ export async function ensureProductVideoTables() {
       CREATE TABLE IF NOT EXISTS product_videos (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
         bunny_video_id TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
         position INTEGER NOT NULL DEFAULT 0,
         duration_seconds INTEGER,
+        file_size_bytes BIGINT,
         thumbnail_url TEXT,
         status TEXT NOT NULL DEFAULT 'UPLOADING',
         active BOOLEAN NOT NULL DEFAULT true,
@@ -24,6 +25,10 @@ export async function ensureProductVideoTables() {
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
     `);
+
+    // Make product_id nullable and add file_size_bytes if upgrading existing table
+    await db.execute(sql`ALTER TABLE product_videos ALTER COLUMN product_id DROP NOT NULL;`);
+    await db.execute(sql`ALTER TABLE product_videos ADD COLUMN IF NOT EXISTS file_size_bytes BIGINT;`);
 
     // 2. Create product_videos indexes individually
     await db.execute(sql`CREATE INDEX IF NOT EXISTS product_videos_bunny_video_id_idx ON product_videos(bunny_video_id);`);
@@ -33,7 +38,27 @@ export async function ensureProductVideoTables() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS product_videos_status_idx ON product_videos(status);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS product_videos_store_product_position_idx ON product_videos(store_id, product_id, position);`);
 
-    // 3. Create video_progress table
+    // 3. Create product_video_assignments table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS product_video_assignments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        video_id UUID NOT NULL REFERENCES product_videos(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        CONSTRAINT product_video_assignments_unique UNIQUE (product_id, video_id)
+      );
+    `);
+
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS product_video_assignments_store_id_idx ON product_video_assignments(store_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS product_video_assignments_product_id_idx ON product_video_assignments(product_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS product_video_assignments_video_id_idx ON product_video_assignments(video_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS product_video_assignments_store_product_idx ON product_video_assignments(store_id, product_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS product_video_assignments_store_video_idx ON product_video_assignments(store_id, video_id);`);
+
+    // 4. Create video_progress table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS video_progress (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,7 +76,7 @@ export async function ensureProductVideoTables() {
       );
     `);
 
-    // 4. Create video_progress indexes individually
+    // 5. Create video_progress indexes individually
     await db.execute(sql`CREATE INDEX IF NOT EXISTS video_progress_customer_video_idx ON video_progress(customer_id, product_video_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS video_progress_store_idx ON video_progress(store_id);`);
 

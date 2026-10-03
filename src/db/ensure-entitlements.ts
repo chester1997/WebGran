@@ -142,6 +142,15 @@ export const INITIAL_FEATURES: SeedFeatureDefinition[] = [
     planValue: { value: -1 },
   },
   {
+    key: 'video_storage_quota_gb',
+    name: 'Quota de Armazenamento de Vídeos (GB)',
+    description: 'Espaço total em GB disponível para a Biblioteca de Vídeos (-1 para ilimitado)',
+    type: 'QUOTA',
+    category: 'media',
+    defaultValue: { value: 50 },
+    planValue: { value: 50 },
+  },
+  {
     key: 'max_banners',
     name: 'Limite de Banners',
     description: 'Quantidade máxima de banners promocionais na loja',

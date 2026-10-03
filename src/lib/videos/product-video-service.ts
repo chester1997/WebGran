@@ -1,13 +1,14 @@
 import { db } from "@/db";
 import {
   productVideos,
+  productVideoAssignments,
   videoProgress,
   products,
   accesses,
   storageReservations,
   pendingDeletions,
 } from "@/db/schema";
-import { eq, and, asc, count, sql } from "drizzle-orm";
+import { eq, and, asc, desc, count, sql, ilike, gt, ne, inArray } from "drizzle-orm";
 import { BunnyStreamService } from "@/lib/bunny/stream";
 import { generateBunnyPlaybackToken } from "@/lib/bunny/token";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
@@ -17,11 +18,12 @@ import { resolveClipStatusTransition, ClipStatus } from "@/lib/bunny/webhook-uti
 export interface CreateProductVideoOptions {
   sellerId: string;
   storeId: string;
-  productId: string;
+  productId?: string | null;
   title: string;
   description?: string | null;
   contentType?: string | null;
   fileSize?: number | null;
+  fileSizeBytes?: number | null;
 }
 
 export interface UpdateProductVideoOptions {
@@ -469,6 +471,10 @@ export class ProductVideoService {
       throw new Error("Este vídeo ainda está em processamento e não pode ser reproduzido.");
     }
 
+    if (!video.productId) {
+      throw new Error("Vídeo sem produto vinculado.");
+    }
+
     // 2. Server-side Access Authorization Check
     // Query accesses table for storeId + customerId + productId + status 'ACTIVE'
     const now = new Date();
@@ -597,5 +603,275 @@ export class ProductVideoService {
         eq(videoProgress.productVideoId, productVideoId)
       ),
     });
+  }
+
+  /**
+   * List seller library videos for a store.
+   */
+  static async listSellerLibraryVideos(
+    storeId: string,
+    options?: { search?: string; statusFilter?: string }
+  ) {
+    const conditions = [eq(productVideos.storeId, storeId)];
+
+    if (options?.search && options.search.trim()) {
+      conditions.push(ilike(productVideos.title, `%${options.search.trim()}%`));
+    }
+
+    if (options?.statusFilter && options.statusFilter !== "ALL") {
+      conditions.push(eq(productVideos.status, options.statusFilter));
+    }
+
+    const videos = await db.query.productVideos.findMany({
+      where: and(...conditions),
+      orderBy: [desc(productVideos.createdAt)],
+      with: {
+        assignments: {
+          with: {
+            product: true,
+          },
+        },
+        product: true,
+      },
+    });
+
+    return videos.map((v) => {
+      const productMap = new Map<string, { id: string; title: string; slug: string }>();
+      if (v.product) {
+        productMap.set(v.product.id, { id: v.product.id, title: v.product.title, slug: v.product.slug });
+      }
+      if (v.assignments && v.assignments.length > 0) {
+        for (const a of v.assignments) {
+          if (a.product) {
+            productMap.set(a.product.id, { id: a.product.id, title: a.product.title, slug: a.product.slug });
+          }
+        }
+      }
+
+      const assignedProducts = Array.from(productMap.values());
+
+      return {
+        id: v.id,
+        storeId: v.storeId,
+        bunnyVideoId: v.bunnyVideoId,
+        title: v.title,
+        description: v.description,
+        durationSeconds: v.durationSeconds || 0,
+        fileSizeBytes: v.fileSizeBytes || 0,
+        thumbnailUrl: v.thumbnailUrl,
+        status: v.status,
+        active: v.active,
+        createdAt: v.createdAt,
+        updatedAt: v.updatedAt,
+        assignedProductsCount: assignedProducts.length,
+        assignedProducts,
+      };
+    });
+  }
+
+  /**
+   * Gets Video Storage Usage metrics for seller.
+   */
+  static async getSellerVideoStorageUsage(sellerId: string, storeId: string) {
+    const entitlement = await getSellerEntitlement(sellerId, "video_storage_quota_gb");
+    const isUnlimited = entitlement.source === "ADMIN_EXEMPT" || entitlement.isUnlimited || entitlement.value === -1;
+    const quotaGb = isUnlimited ? null : (typeof entitlement.value === "number" ? entitlement.value : Number(entitlement.value) || 50);
+    const quotaBytes = (quotaGb === null || quotaGb === -1) ? null : Math.max(0, quotaGb * 1024 * 1024 * 1024);
+
+    const [usedRes] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${productVideos.fileSizeBytes}), 0)` })
+      .from(productVideos)
+      .where(
+        and(
+          eq(productVideos.storeId, storeId),
+          ne(productVideos.status, "FAILED")
+        )
+      );
+
+    const usedBytes = Number(usedRes?.total || 0);
+
+    const [reservedRes] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${storageReservations.requestedBytes}), 0)` })
+      .from(storageReservations)
+      .where(
+        and(
+          eq(storageReservations.sellerId, sellerId),
+          eq(storageReservations.status, "ACTIVE"),
+          gt(storageReservations.expiresAt, new Date()),
+          eq(storageReservations.referenceType, "product_video_upload")
+        )
+      );
+
+    const reservedBytes = Number(reservedRes?.total || 0);
+    const totalCommittedBytes = usedBytes + reservedBytes;
+    const remainingBytes = quotaBytes !== null ? Math.max(0, quotaBytes - totalCommittedBytes) : null;
+    const percentUsed = quotaBytes !== null && quotaBytes > 0 ? Math.min(100, (totalCommittedBytes / quotaBytes) * 100) : 0;
+
+    const videos = await db.query.productVideos.findMany({
+      where: eq(productVideos.storeId, storeId),
+    });
+
+    const totalVideosCount = videos.length;
+    const readyCount = videos.filter((v) => v.status === "READY").length;
+    const processingCount = videos.filter((v) => v.status === "PROCESSING" || v.status === "UPLOADING").length;
+    const failedCount = videos.filter((v) => v.status === "FAILED").length;
+
+    return {
+      sellerId,
+      storeId,
+      usedBytes,
+      reservedBytes,
+      totalCommittedBytes,
+      quotaBytes,
+      quotaGb,
+      remainingBytes,
+      percentUsed: Number(percentUsed.toFixed(1)),
+      isUnlimited,
+      totalVideosCount,
+      readyCount,
+      processingCount,
+      failedCount,
+    };
+  }
+
+  /**
+   * Authorizes video playback preview for seller library.
+   */
+  static async getLibraryVideoForPreview(storeId: string, videoId: string) {
+    const video = await db.query.productVideos.findFirst({
+      where: and(
+        eq(productVideos.id, videoId),
+        eq(productVideos.storeId, storeId)
+      ),
+    });
+
+    if (!video) {
+      throw new Error("Vídeo não encontrado ou sem permissão de acesso.");
+    }
+
+    const playbackAuth = generateBunnyPlaybackToken({
+      videoId: video.bunnyVideoId,
+      expiresInSeconds: 3600,
+    });
+
+    return {
+      video: {
+        id: video.id,
+        storeId: video.storeId,
+        title: video.title,
+        description: video.description,
+        durationSeconds: video.durationSeconds || 0,
+        thumbnailUrl: video.thumbnailUrl,
+        status: video.status,
+      },
+      playback: {
+        playbackUrl: playbackAuth.playbackUrl,
+        directUrl: playbackAuth.directUrl,
+        expiresAt: playbackAuth.expiresAt,
+      },
+    };
+  }
+
+  /**
+   * Updates title or description of a seller library video.
+   */
+  static async updateLibraryVideo(
+    storeId: string,
+    videoId: string,
+    options: UpdateProductVideoOptions
+  ) {
+    const video = await db.query.productVideos.findFirst({
+      where: and(
+        eq(productVideos.id, videoId),
+        eq(productVideos.storeId, storeId)
+      ),
+    });
+
+    if (!video) {
+      throw new Error("Vídeo não encontrado ou sem permissão de acesso.");
+    }
+
+    const payload: any = { updatedAt: new Date() };
+    if (options.title !== undefined) payload.title = options.title.trim();
+    if (options.description !== undefined) payload.description = options.description?.trim() || null;
+    if (options.active !== undefined) payload.active = Boolean(options.active);
+
+    const [updated] = await db
+      .update(productVideos)
+      .set(payload)
+      .where(eq(productVideos.id, videoId))
+      .returning();
+
+    return updated;
+  }
+
+  /**
+   * Deletes a video from seller library safely, checking for product assignments first.
+   */
+  static async deleteLibraryVideo(storeId: string, videoId: string, force = false) {
+    const video = await db.query.productVideos.findFirst({
+      where: and(
+        eq(productVideos.id, videoId),
+        eq(productVideos.storeId, storeId)
+      ),
+      with: {
+        assignments: {
+          with: { product: true },
+        },
+        product: true,
+      },
+    });
+
+    if (!video) {
+      throw new Error("Vídeo não encontrado ou sem permissão de acesso.");
+    }
+
+    const productMap = new Map<string, { id: string; title: string; slug: string }>();
+    if (video.product) {
+      productMap.set(video.product.id, { id: video.product.id, title: video.product.title, slug: video.product.slug });
+    }
+    if (video.assignments && video.assignments.length > 0) {
+      for (const a of video.assignments) {
+        if (a.product) {
+          productMap.set(a.product.id, { id: a.product.id, title: a.product.title, slug: a.product.slug });
+        }
+      }
+    }
+    const assignedProducts = Array.from(productMap.values());
+
+    if (assignedProducts.length > 0 && !force) {
+      return {
+        success: false,
+        isAssigned: true,
+        assignedCount: assignedProducts.length,
+        products: assignedProducts,
+        message: `Este vídeo está vinculado a ${assignedProducts.length} produto(s).`,
+      };
+    }
+
+    const bunnyVideoId = video.bunnyVideoId;
+
+    await db.delete(productVideoAssignments).where(eq(productVideoAssignments.videoId, videoId));
+    await db.delete(productVideos).where(eq(productVideos.id, videoId));
+
+    let bunnySuccess = false;
+    try {
+      bunnySuccess = await BunnyStreamService.deleteVideo(bunnyVideoId);
+    } catch (err: any) {
+      console.warn("[ProductVideoService] Bunny Stream delete API failed, enqueuing pending_deletion:", err.message);
+    }
+
+    if (!bunnySuccess) {
+      await db.insert(pendingDeletions).values({
+        storeId,
+        provider: "bunny_stream",
+        path: bunnyVideoId,
+        resourceId: bunnyVideoId,
+      });
+    }
+
+    await StorageUsageService.releaseReservationByReference("product_video_upload", bunnyVideoId);
+
+    return { success: true, deletedVideoId: videoId };
   }
 }
