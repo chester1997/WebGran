@@ -239,6 +239,16 @@ export async function ensureEntitlementTablesAndSeed() {
   if (entitlementsEnsured) return;
 
   try {
+    const existingFeature = await db.query.features.findFirst().catch(() => null);
+    if (existingFeature) {
+      entitlementsEnsured = true;
+      return;
+    }
+  } catch {
+    // Continue to DDL fallback if table query fails
+  }
+
+  try {
     // 1. Create tables if they do not exist
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS features (

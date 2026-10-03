@@ -88,10 +88,13 @@ export async function ensureProductVideoTables() {
 }
 
 // Allow direct execution via CLI script
-ensureProductVideoTables()
-  .then(() => {
-    console.log("Migration script execution finished.");
-  })
-  .catch((err) => {
-    console.error("Migration failed:", err);
-  });
+if (typeof process !== "undefined" && process.argv[1] && process.argv[1].includes("ensure-product-video-tables")) {
+  ensureProductVideoTables()
+    .then(() => {
+      console.log("Migration script execution finished.");
+    })
+    .catch((err) => {
+      console.error("Migration failed:", err);
+    });
+}
+
