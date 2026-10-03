@@ -299,4 +299,23 @@ describe("Product Video Delivery Foundation Suite", () => {
       ).rejects.toThrow("Capacidade de armazenamento excedida para o seu plano.");
     });
   });
+
+  describe("6. Zero DDL Execution During Runtime Requests", () => {
+    it("lists product videos without triggering CREATE INDEX or DDL migrations", async () => {
+      const { db } = await import("@/db");
+      vi.mocked(ProductVideoService.listProductVideos).mockResolvedValueOnce([]);
+
+      const videos = await ProductVideoService.listProductVideos("store-A", "prod-empty");
+      expect(videos).toEqual([]);
+      expect(db.execute).not.toHaveBeenCalledWith(expect.stringContaining("CREATE INDEX"));
+    });
+
+    it("returns empty list for newly created product without videos", async () => {
+      vi.mocked(ProductVideoService.listProductVideos).mockResolvedValueOnce([]);
+
+      const result = await ProductVideoService.listProductVideos("store-A", "prod-new-123");
+      expect(result).toBeDefined();
+      expect(result.length).toBe(0);
+    });
+  });
 });

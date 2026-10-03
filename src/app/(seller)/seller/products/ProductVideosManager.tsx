@@ -55,6 +55,11 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchVideos = useCallback(async () => {
+    if (!productId) {
+      setVideos([]);
+      setLoading(false);
+      return;
+    }
     try {
       setError(null);
       const res = await fetch(`/api/seller/products/${productId}/videos`);

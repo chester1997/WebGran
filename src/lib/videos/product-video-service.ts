@@ -13,7 +13,6 @@ import { generateBunnyPlaybackToken } from "@/lib/bunny/token";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 import { hasFeature, checkLimit, getSellerEntitlement } from "@/lib/entitlements/entitlement-service";
 import { resolveClipStatusTransition, ClipStatus } from "@/lib/bunny/webhook-utils";
-import { ensureProductVideoTables } from "@/db/ensure-product-video-tables";
 
 export interface CreateProductVideoOptions {
   sellerId: string;
@@ -33,15 +32,10 @@ export interface UpdateProductVideoOptions {
 }
 
 export class ProductVideoService {
-  private static async ensureInit() {
-    await ensureProductVideoTables();
-  }
-
   /**
    * Helper to look up a Product Video by its Bunny Stream video ID.
    */
   static async getProductVideoByBunnyId(bunnyVideoId: string) {
-    await this.ensureInit();
     return await db.query.productVideos.findFirst({
       where: eq(productVideos.bunnyVideoId, bunnyVideoId),
     });
@@ -51,7 +45,6 @@ export class ProductVideoService {
    * List all Product Videos for a specific product within a store (ordered by position).
    */
   static async listProductVideos(storeId: string, productId: string, activeOnly = false) {
-    await this.ensureInit();
     const conditions = [
       eq(productVideos.storeId, storeId),
       eq(productVideos.productId, productId),
@@ -70,7 +63,6 @@ export class ProductVideoService {
    * Creates a Product Video upload session with storage quota reservation & entitlement validation.
    */
   static async createProductVideoUploadSession(options: CreateProductVideoOptions) {
-    await this.ensureInit();
     const { sellerId, storeId, productId, title, description, contentType, fileSize } = options;
 
     // 1. Entitlement checks
@@ -225,7 +217,6 @@ export class ProductVideoService {
     newStatus: ClipStatus,
     details?: { duration?: number; thumbnailUrl?: string; storageSize?: number }
   ) {
-    await this.ensureInit();
     const video = await this.getProductVideoByBunnyId(bunnyVideoId);
     if (!video) return null;
 
@@ -262,7 +253,6 @@ export class ProductVideoService {
     videoId: string,
     options: UpdateProductVideoOptions
   ) {
-    await this.ensureInit();
     const video = await db.query.productVideos.findFirst({
       where: and(
         eq(productVideos.id, videoId),
@@ -294,7 +284,6 @@ export class ProductVideoService {
    * Reorders product videos by position.
    */
   static async reorderProductVideos(storeId: string, productId: string, orderedVideoIds: string[]) {
-    await this.ensureInit();
     const videos = await this.listProductVideos(storeId, productId);
     const videoMap = new Map(videos.map((v) => [v.id, v]));
 
@@ -315,7 +304,6 @@ export class ProductVideoService {
    * Deletes a Product Video using the existing pending_deletions & storage lifecycle infrastructure.
    */
   static async deleteProductVideo(storeId: string, productId: string, videoId: string) {
-    await this.ensureInit();
     const video = await db.query.productVideos.findFirst({
       where: and(
         eq(productVideos.id, videoId),
@@ -361,8 +349,6 @@ export class ProductVideoService {
    * Authorizes video playback for an authenticated Telegram customer after verifying active product access.
    */
   static async getProductVideoForPlayback(storeId: string, customerId: string, videoId: string) {
-    await this.ensureInit();
-
     // 1. Find Product Video
     const video = await db.query.productVideos.findFirst({
       where: and(
@@ -449,8 +435,6 @@ export class ProductVideoService {
     positionSecondsRaw: number,
     durationSecondsRaw: number
   ) {
-    await this.ensureInit();
-
     const video = await db.query.productVideos.findFirst({
       where: and(
         eq(productVideos.id, productVideoId),
@@ -506,7 +490,6 @@ export class ProductVideoService {
    * Gets video progress for customer.
    */
   static async getVideoProgress(storeId: string, customerId: string, productVideoId: string) {
-    await this.ensureInit();
     return await db.query.videoProgress.findFirst({
       where: and(
         eq(videoProgress.storeId, storeId),
