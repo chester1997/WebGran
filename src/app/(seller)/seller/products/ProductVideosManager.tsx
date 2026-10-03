@@ -16,9 +16,17 @@ import {
   EyeOff,
   Film,
   Plus,
+  X,
+  FileVideo,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-interface ProductVideoItem {
+export interface ProductVideoItem {
   id: string;
   storeId: string;
   productId: string;
@@ -33,24 +41,39 @@ interface ProductVideoItem {
   createdAt: string;
 }
 
-interface ProductVideosManagerProps {
-  productId: string;
-  productTitle: string;
+export interface PendingVideo {
+  bunnyVideoId: string;
+  title: string;
+  description?: string | null;
+  position: number;
+  tempId: string;
 }
 
-export function ProductVideosManager({ productId, productTitle }: ProductVideosManagerProps) {
+interface ProductVideosManagerProps {
+  productId?: string;
+  productTitle?: string;
+  onPendingVideosChange?: (pending: PendingVideo[]) => void;
+}
+
+export function ProductVideosManager({
+  productId,
+  productTitle = "Produto",
+  onPendingVideosChange,
+}: ProductVideosManagerProps) {
   const [videos, setVideos] = useState<ProductVideoItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pendingVideos, setPendingVideos] = useState<PendingVideo[]>([]);
+  const [loading, setLoading] = useState(Boolean(productId));
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatusText, setUploadStatusText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // New video form state
-  const [showAddForm, setShowAddForm] = useState(false);
+  // New video modal state
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -79,7 +102,41 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
     fetchVideos();
   }, [fetchVideos]);
 
-  // Handle direct TUS browser upload to Bunny Stream CDN
+  // Sync pending videos changes with parent form (for New Product Modal)
+  useEffect(() => {
+    if (!productId && onPendingVideosChange) {
+      onPendingVideosChange(pendingVideos);
+    }
+  }, [pendingVideos, productId, onPendingVideosChange]);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith("video/")) {
+        setSelectedFile(file);
+        setError(null);
+      } else {
+        setError("Por favor, selecione um arquivo de vídeo válido (MP4 ou MOV).");
+      }
+    }
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) {
@@ -97,8 +154,11 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
       setUploadProgress(0);
       setUploadStatusText("Criando sessão de upload no Bunny Stream...");
 
-      // 1. Create upload session via server API
-      const sessionRes = await fetch(`/api/seller/products/${productId}/videos/upload-session`, {
+      const endpointUrl = productId
+        ? `/api/seller/products/${productId}/videos/upload-session`
+        : `/api/seller/products/pending/videos/upload-session`;
+
+      const sessionRes = await fetch(endpointUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -114,10 +174,9 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
         throw new Error(sessionData.error || "Falha ao iniciar sessão de upload.");
       }
 
-      const { uploadSession } = sessionData;
+      const { uploadSession, productVideo } = sessionData;
       setUploadStatusText("Enviando vídeo diretamente ao Bunny CDN...");
 
-      // 2. Perform direct browser TUS upload
       const tusUpload = new upload.Upload(selectedFile, {
         endpoint: uploadSession.tusUploadUrl || "https://video.bunnycdn.com/tusupload",
         retryDelays: [0, 3000, 5000, 10000, 20000],
@@ -140,11 +199,24 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
         onSuccess: () => {
           setUploadStatusText("Upload concluído! Vídeo enviado para transcodificação.");
           setUploading(false);
-          setShowAddForm(false);
+          setShowAddModal(false);
           setNewTitle("");
           setNewDescription("");
           setSelectedFile(null);
-          fetchVideos();
+
+          if (!productId) {
+            // New Product Mode: store in pendingVideos list
+            const newPendingItem: PendingVideo = {
+              bunnyVideoId: uploadSession.videoId,
+              title: newTitle.trim(),
+              description: newDescription.trim() || null,
+              position: pendingVideos.length,
+              tempId: `pending_${uploadSession.videoId}`,
+            };
+            setPendingVideos((prev) => [...prev, newPendingItem]);
+          } else {
+            fetchVideos();
+          }
         },
       });
 
@@ -156,6 +228,7 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
   };
 
   const handleToggleActive = async (video: ProductVideoItem) => {
+    if (!productId) return;
     try {
       const res = await fetch(`/api/seller/products/${productId}/videos/${video.id}`, {
         method: "PATCH",
@@ -172,8 +245,21 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
     }
   };
 
-  const handleDelete = async (videoId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este vídeo do produto?")) return;
+  const handleDelete = async (videoId: string, bunnyVideoId?: string) => {
+    if (!confirm("Tem certeza que deseja excluir este vídeo?")) return;
+
+    if (!productId) {
+      // Pending Mode delete
+      const bunnyIdToDelete = bunnyVideoId || videoId.replace("pending_", "");
+      setPendingVideos((prev) => prev.filter((v) => v.bunnyVideoId !== bunnyIdToDelete));
+      fetch("/api/seller/products/pending/videos/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pendingBunnyVideoIds: [bunnyIdToDelete] }),
+      }).catch(console.error);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/seller/products/${productId}/videos/${videoId}`, {
         method: "DELETE",
@@ -190,6 +276,17 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
 
   const handleMovePosition = async (index: number, direction: "up" | "down") => {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (!productId) {
+      if (targetIndex < 0 || targetIndex >= pendingVideos.length) return;
+      const newOrder = [...pendingVideos];
+      const temp = newOrder[index];
+      newOrder[index] = newOrder[targetIndex];
+      newOrder[targetIndex] = temp;
+      setPendingVideos(newOrder);
+      return;
+    }
+
     if (targetIndex < 0 || targetIndex >= videos.length) return;
 
     const newOrder = [...videos];
@@ -223,23 +320,23 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
     switch (status) {
       case "READY":
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full dark:bg-emerald-950/40 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Pronto (READY)
+            Pronto
           </span>
         );
       case "FAILED":
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full dark:bg-red-950/40 dark:text-red-400">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full">
             <AlertCircle className="w-3.5 h-3.5" />
-            Falhou (FAILED)
+            Falhou
           </span>
         );
       case "PROCESSING":
       case "UPLOADING":
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full dark:bg-amber-950/40 dark:text-amber-400">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Processando
           </span>
@@ -247,155 +344,97 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
     }
   };
 
+  const currentList = productId
+    ? videos
+    : pendingVideos.map((p, idx) => ({
+        id: p.tempId,
+        storeId: "",
+        productId: "pending",
+        bunnyVideoId: p.bunnyVideoId,
+        title: p.title,
+        description: p.description,
+        position: idx,
+        durationSeconds: null,
+        thumbnailUrl: null,
+        status: "PROCESSING",
+        active: true,
+        createdAt: new Date().toISOString(),
+      }));
+
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-white/5">
         <div>
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <Film className="w-5 h-5 text-primary" />
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <Film className="w-4 h-4 text-blue-500" />
             Vídeos do Produto
           </h3>
-          <p className="text-xs text-muted-foreground">
-            Gerencie os episódios/vídeos entregues aos compradores de &quot;{productTitle}&quot;.
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Adicione episódios, aulas ou conteúdos que serão entregues automaticamente após a compra.
           </p>
         </div>
 
-        {!showAddForm && (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-medium text-xs rounded-xl hover:opacity-90 transition shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar Vídeo
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            setShowAddModal(true);
+            setError(null);
+          }}
+          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-blue-600/10 self-start sm:self-auto shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          Adicionar vídeo
+        </button>
       </div>
 
-      {error && (
-        <div className="p-3 text-xs bg-red-50 text-red-600 rounded-xl flex items-center gap-2 dark:bg-red-950/30 dark:text-red-400 border border-red-200/50">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          {error}
+      {error && !showAddModal && (
+        <div className="p-3 text-xs bg-red-500/10 text-red-400 rounded-xl flex items-center gap-2 border border-red-500/20">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Add New Video Form */}
-      {showAddForm && (
-        <form
-          onSubmit={handleUploadSubmit}
-          className="p-4 rounded-2xl bg-card border border-border/60 flex flex-col gap-4 shadow-sm"
-        >
-          <div className="flex items-center justify-between border-b border-border/40 pb-2">
-            <h4 className="text-sm font-semibold">Novo Vídeo do Produto</h4>
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddForm(false);
-                setError(null);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Cancelar
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium">Título do Episódio / Vídeo *</label>
-            <input
-              type="text"
-              required
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Ex: Episódio 01 — A Origem"
-              className="px-3 py-2 rounded-xl text-xs bg-background border border-input focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium">Descrição (Opcional)</label>
-            <textarea
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              rows={2}
-              placeholder="Breve resumo do conteúdo deste episódio..."
-              className="px-3 py-2 rounded-xl text-xs bg-background border border-input focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium">Arquivo de Vídeo MP4/MOV *</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              required
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-            />
-          </div>
-
-          {uploading && (
-            <div className="flex flex-col gap-2 pt-2">
-              <div className="flex justify-between text-xs font-medium">
-                <span>{uploadStatusText}</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-xl"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={uploading}
-              className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground font-medium text-xs rounded-xl hover:opacity-90 transition disabled:opacity-50"
-            >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {uploading ? "Enviando..." : "Enviar Vídeo"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Videos List */}
+      {/* Videos List or Elegant Compact Empty State */}
       {loading ? (
-        <div className="py-8 flex flex-col items-center justify-center text-muted-foreground">
-          <Loader2 className="w-8 h-8 animate-spin mb-2" />
-          <span className="text-xs">Carregando lista de vídeos...</span>
+        <div className="py-8 flex flex-col items-center justify-center text-zinc-400">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-500 mb-2" />
+          <span className="text-xs">Carregando vídeos...</span>
         </div>
-      ) : videos.length === 0 ? (
-        <div className="p-8 text-center border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-muted-foreground gap-2">
-          <Video className="w-10 h-10 opacity-40" />
-          <p className="text-xs font-medium">Nenhum vídeo vinculado a este produto ainda.</p>
-          <p className="text-[11px] opacity-75">
-            Adicione episódios ou aulas que serão liberados automaticamente após a compra.
-          </p>
+      ) : currentList.length === 0 ? (
+        <div className="p-6 rounded-2xl bg-[#1A1A1E] border border-white/5 flex flex-col items-center justify-center text-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <Film className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-white">Nenhum vídeo adicionado</p>
+            <p className="text-[11px] text-zinc-400 max-w-md mt-0.5">
+              Adicione episódios, aulas ou conteúdos que serão entregues automaticamente após a compra.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddModal(true);
+              setError(null);
+            }}
+            className="mt-1 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 hover:text-white font-semibold text-xs rounded-xl transition"
+          >
+            Adicionar primeiro vídeo
+          </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {videos.map((vid, idx) => (
+        <div className="flex flex-col gap-2.5">
+          {currentList.map((vid, idx) => (
             <div
               key={vid.id}
-              className={`p-4 rounded-2xl bg-card border border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition hover:border-border ${
-                !vid.active ? "opacity-60" : ""
+              className={`p-3.5 rounded-xl bg-[#1A1A1E] border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 transition hover:border-white/10 ${
+                !vid.active ? "opacity-50" : ""
               }`}
             >
-              {/* Left Info */}
-              <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                <div className="relative w-16 h-12 rounded-lg bg-black/80 shrink-0 overflow-hidden border border-border/40 flex items-center justify-center">
+              {/* Thumbnail & Video Details */}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="relative w-16 h-12 rounded-lg bg-black/90 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
                   {vid.thumbnailUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -404,70 +443,78 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Film className="w-6 h-6 text-muted-foreground/50" />
+                    <Film className="w-5 h-5 text-zinc-600" />
                   )}
-                  <span className="absolute bottom-1 right-1 text-[9px] font-mono font-bold bg-black/80 text-white px-1 rounded">
-                    {formatDuration(vid.durationSeconds)}
-                  </span>
+                  {vid.durationSeconds ? (
+                    <span className="absolute bottom-1 right-1 text-[9px] font-mono font-bold bg-black/80 text-white px-1 py-0.5 rounded">
+                      {formatDuration(vid.durationSeconds)}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-muted-foreground">
+                    <span className="text-xs font-mono font-bold text-zinc-500">
                       #{String(idx + 1).padStart(2, "0")}
                     </span>
-                    <h4 className="text-sm font-semibold truncate">{vid.title}</h4>
+                    <h4 className="text-xs sm:text-sm font-semibold text-white truncate">
+                      {vid.title}
+                    </h4>
                   </div>
                   {vid.description && (
-                    <p className="text-xs text-muted-foreground truncate">{vid.description}</p>
+                    <p className="text-xs text-zinc-400 truncate mt-0.5">{vid.description}</p>
                   )}
-                  <div className="mt-1 flex items-center gap-3">
+                  <div className="mt-1 flex items-center gap-2.5">
                     {getStatusBadge(vid.status)}
-                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatDuration(vid.durationSeconds)}
-                    </span>
+                    {!productId && (
+                      <span className="text-[10px] text-blue-400 font-semibold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                        Pendente de associação
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Right Actions */}
-              <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-                {/* Move Up/Down */}
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
                 <button
+                  type="button"
                   disabled={idx === 0}
                   onClick={() => handleMovePosition(idx, "up")}
-                  className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-30 rounded-lg hover:bg-secondary transition"
+                  className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-20 rounded-lg hover:bg-white/5 transition"
                   title="Mover para cima"
                 >
                   <MoveUp className="w-4 h-4" />
                 </button>
                 <button
-                  disabled={idx === videos.length - 1}
+                  type="button"
+                  disabled={idx === currentList.length - 1}
                   onClick={() => handleMovePosition(idx, "down")}
-                  className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-30 rounded-lg hover:bg-secondary transition"
+                  className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-20 rounded-lg hover:bg-white/5 transition"
                   title="Mover para baixo"
                 >
                   <MoveDown className="w-4 h-4" />
                 </button>
 
-                {/* Toggle Active */}
-                <button
-                  onClick={() => handleToggleActive(vid)}
-                  className={`p-2 rounded-lg transition ${
-                    vid.active
-                      ? "text-emerald-500 hover:bg-emerald-500/10"
-                      : "text-muted-foreground hover:bg-secondary"
-                  }`}
-                  title={vid.active ? "Desativar vídeo" : "Ativar vídeo"}
-                >
-                  {vid.active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                </button>
+                {productId && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(vid as ProductVideoItem)}
+                    className={`p-1.5 rounded-lg transition ${
+                      vid.active
+                        ? "text-emerald-400 hover:bg-emerald-500/10"
+                        : "text-zinc-500 hover:bg-white/5"
+                    }`}
+                    title={vid.active ? "Desativar vídeo" : "Ativar vídeo"}
+                  >
+                    {vid.active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+                )}
 
-                {/* Delete */}
                 <button
-                  onClick={() => handleDelete(vid.id)}
-                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition"
+                  type="button"
+                  onClick={() => handleDelete(vid.id, vid.bunnyVideoId)}
+                  className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition"
                   title="Excluir vídeo"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -477,6 +524,161 @@ export function ProductVideosManager({ productId, productTitle }: ProductVideosM
           ))}
         </div>
       )}
+
+      {/* Modern WebGran Dark Theme Modal "Novo Vídeo do Produto" */}
+      <Dialog open={showAddModal} onOpenChange={(val) => { setShowAddModal(val); if (!val) setError(null); }}>
+        <DialogContent className="sm:max-w-lg w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/10 p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] shadow-2xl rounded-2xl">
+          <div className="p-4 sm:p-5 border-b border-white/5 shrink-0 flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Film className="w-5 h-5 text-blue-500" />
+                Novo vídeo do produto
+              </DialogTitle>
+              <p className="text-xs text-zinc-400 mt-0.5">Adicione um episódio ou aula</p>
+            </div>
+          </div>
+
+          <div className="overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-4">
+            {error && (
+              <div className="p-3 text-xs bg-red-500/10 text-red-400 rounded-xl flex items-center gap-2 border border-red-500/20">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form id="add-video-form" onSubmit={handleUploadSubmit} className="space-y-4">
+              {/* Título */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  Título *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Ex: Episódio 01 — A Origem"
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                />
+              </div>
+
+              {/* Descrição */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  Descrição (Opcional)
+                </label>
+                <textarea
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Breve descrição do conteúdo..."
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
+                />
+              </div>
+
+              {/* Drag and Drop Upload Zone */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  Vídeo *
+                </label>
+                
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition ${
+                    isDragging
+                      ? "border-blue-500 bg-blue-500/10"
+                      : selectedFile
+                      ? "border-emerald-500/50 bg-emerald-500/5"
+                      : "border-white/10 bg-[#1A1A1E] hover:border-blue-500/40 hover:bg-[#1A1A1E]/80"
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      setSelectedFile(e.target.files?.[0] || null);
+                      setError(null);
+                    }}
+                  />
+
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
+                    {selectedFile ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    ) : (
+                      <FileVideo className="w-5 h-5" />
+                    )}
+                  </div>
+
+                  {selectedFile ? (
+                    <div>
+                      <p className="text-xs font-bold text-emerald-400 truncate max-w-xs">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Clique para alterar
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs font-semibold text-zinc-200">
+                        Arraste o vídeo aqui
+                      </p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        ou <span className="text-blue-400 underline">selecionar arquivo</span>
+                      </p>
+                      <p className="text-[10px] text-zinc-500 mt-1">MP4 ou MOV</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Upload Progress Bar */}
+              {uploading && (
+                <div className="space-y-1.5 pt-2">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-zinc-300">{uploadStatusText}</span>
+                    <span className="text-blue-400 font-mono">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-[#1A1A1E] rounded-full overflow-hidden border border-white/5">
+                    <div
+                      className="h-full bg-blue-600 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
+
+          <div className="p-4 sm:p-5 border-t border-white/5 shrink-0 flex items-center justify-end gap-3 bg-[#121214]">
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => {
+                setShowAddModal(false);
+                setError(null);
+              }}
+              className="px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white rounded-xl transition"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="add-video-form"
+              disabled={uploading}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-50"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {uploading ? "Enviando..." : "Enviar"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { createProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
-
+import { ProductVideosManager, PendingVideo } from "./ProductVideosManager";
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
 
@@ -29,19 +29,33 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
   const [selectedBotId, setSelectedBotId] = useState("");
   const [testingAccess, setTestingAccess] = useState(false);
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
+  const [pendingVideos, setPendingVideos] = useState<PendingVideo[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Clear validation test result and state whenever modal opens or closes
-  useEffect(() => {
-    setTestResult(null);
-    setErrorMessage(null);
-    if (!open) {
+  const handleOpenChange = (val: boolean) => {
+    setOpen(val);
+    if (!val) {
+      setErrorMessage(null);
+      setTestResult(null);
       setDeliveryValue("");
       setImageUrl("");
       setBannerUrl("");
+
+      // Cleanup pending Bunny videos if modal closed without saving
+      if (pendingVideos.length > 0) {
+        fetch("/api/seller/products/pending/videos/cleanup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pendingBunnyVideoIds: pendingVideos.map((v) => v.bunnyVideoId),
+          }),
+        }).catch(console.error);
+        setPendingVideos([]);
+      }
     }
-  }, [open]);
+  };
 
   const handleTestAccess = async () => {
     if (!deliveryValue.trim()) return;
@@ -127,6 +141,16 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
     try {
       const res = await createProductAction(formData);
       if (res?.success) {
+        // Associate pending videos with newly created product ID
+        if (res?.product?.id && pendingVideos.length > 0) {
+          await fetch(`/api/seller/products/${res.product.id}/videos/attach-pending`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pendingVideos }),
+          });
+        }
+
+        setPendingVideos([]);
         setOpen(false);
         setImageUrl("");
         setBannerUrl("");
@@ -142,7 +166,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) setErrorMessage(null); }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
         <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
@@ -437,6 +461,10 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               />
             </div>
 
+            {/* Gerenciador de Vídeos do Produto (Suporte no Novo Produto) */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+              <ProductVideosManager onPendingVideosChange={setPendingVideos} />
+            </div>
 
           </form>
         </div>

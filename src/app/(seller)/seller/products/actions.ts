@@ -141,33 +141,36 @@ export async function createProductAction(formData: FormData) {
   const fireCountStr = formData.get("fireCount") as string;
   const fireCount = fireCountStr ? parseInt(fireCountStr, 10) : 0;
 
-  await db.insert(products).values({
-    storeId: store.id,
-    botId: botId || null,
-    title,
-    slug,
-    shortDescription,
-    description,
-    price: price.toString(),
-    compareAtPrice,
-    categoryId: categoryId || null,
-    status,
-    duration,
-    badge,
-    coverUrl,
-    bannerUrl,
-    deliveryType,
-    deliveryValue,
-    showViews,
-    viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
-    showFire,
-    fireCount: isNaN(fireCount) ? 0 : fireCount,
-    position: 0,
-  });
+  const [createdProduct] = await db
+    .insert(products)
+    .values({
+      storeId: store.id,
+      botId: botId || null,
+      title,
+      slug,
+      shortDescription,
+      description,
+      price: price.toString(),
+      compareAtPrice,
+      categoryId: categoryId || null,
+      status,
+      duration,
+      badge,
+      coverUrl,
+      bannerUrl,
+      deliveryType,
+      deliveryValue,
+      showViews,
+      viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
+      showFire,
+      fireCount: isNaN(fireCount) ? 0 : fireCount,
+      position: 0,
+    })
+    .returning();
 
   revalidatePath("/seller/products");
   revalidatePath("/miniapp/[slug]", "layout");
-  return { success: true };
+  return { success: true, product: { id: createdProduct.id, title: createdProduct.title } };
 }
 
 export async function updateProductAction(productId: string, formData: FormData) {

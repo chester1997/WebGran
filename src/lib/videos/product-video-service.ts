@@ -115,12 +115,15 @@ export class ProductVideoService {
       }
     }
 
-    // Multi-tenant Product Validation
-    const targetProduct = await db.query.products.findFirst({
-      where: and(eq(products.id, productId), eq(products.storeId, storeId)),
-    });
-    if (!targetProduct) {
-      throw new Error("O produto selecionado é inválido ou não pertence a esta loja.");
+    // Multi-tenant Product Validation (only if productId is a real UUID, not "pending")
+    const isPending = !productId || productId === "pending";
+    if (!isPending) {
+      const targetProduct = await db.query.products.findFirst({
+        where: and(eq(products.id, productId), eq(products.storeId, storeId)),
+      });
+      if (!targetProduct) {
+        throw new Error("O produto selecionado é inválido ou não pertence a esta loja.");
+      }
     }
 
     // Storage Quota Reservation
@@ -161,36 +164,54 @@ export class ProductVideoService {
     }
 
     // Determine position
-    const currentVideos = await this.listProductVideos(storeId, productId);
-    const nextPosition = currentVideos.length > 0 ? Math.max(...currentVideos.map((v) => v.position)) + 1 : 0;
+    let nextPosition = 0;
+    if (!isPending) {
+      const currentVideos = await this.listProductVideos(storeId, productId);
+      nextPosition = currentVideos.length > 0 ? Math.max(...currentVideos.map((v) => v.position)) + 1 : 0;
+    }
 
-    // 3. Register Product Video metadata in Neon DB
-    let videoRecord;
-    try {
-      const inserted = await db
-        .insert(productVideos)
-        .values({
-          storeId,
-          productId,
-          bunnyVideoId: bunnyVideo.videoId,
-          title: title.trim(),
-          description: description?.trim() || null,
-          position: nextPosition,
-          status: "UPLOADING",
-          active: true,
-        })
-        .returning();
-      videoRecord = inserted[0];
-    } catch (dbError) {
-      if (reservation.reservationId) {
-        await StorageUsageService.releaseReservation(reservation.reservationId);
-      }
+    // 3. Register Product Video metadata in Neon DB (skip DB insert if isPending)
+    let videoRecord: any;
+    if (!isPending) {
       try {
-        await BunnyStreamService.deleteVideo(bunnyVideo.videoId);
-      } catch (rollbackErr) {
-        console.error("[ProductVideoService] Rollback failed to delete Bunny video:", rollbackErr);
+        const inserted = await db
+          .insert(productVideos)
+          .values({
+            storeId,
+            productId,
+            bunnyVideoId: bunnyVideo.videoId,
+            title: title.trim(),
+            description: description?.trim() || null,
+            position: nextPosition,
+            status: "UPLOADING",
+            active: true,
+          })
+          .returning();
+        videoRecord = inserted[0];
+      } catch (dbError) {
+        if (reservation.reservationId) {
+          await StorageUsageService.releaseReservation(reservation.reservationId);
+        }
+        try {
+          await BunnyStreamService.deleteVideo(bunnyVideo.videoId);
+        } catch (rollbackErr) {
+          console.error("[ProductVideoService] Rollback failed to delete Bunny video:", rollbackErr);
+        }
+        throw dbError;
       }
-      throw dbError;
+    } else {
+      videoRecord = {
+        id: `pending_${bunnyVideo.videoId}`,
+        storeId,
+        productId: "pending",
+        bunnyVideoId: bunnyVideo.videoId,
+        title: title.trim(),
+        description: description?.trim() || null,
+        position: 0,
+        status: "UPLOADING",
+        active: true,
+        createdAt: new Date().toISOString(),
+      };
     }
 
     // 4. Generate Presigned Signature for direct browser upload
@@ -207,6 +228,85 @@ export class ProductVideoService {
         videoId: uploadSession.videoId,
       },
     };
+  }
+
+  /**
+   * Attach pending videos to a newly created product ID.
+   */
+  static async attachPendingVideos(
+    sellerId: string,
+    storeId: string,
+    productId: string,
+    pendingVideos: Array<{
+      bunnyVideoId: string;
+      title: string;
+      description?: string | null;
+      position?: number;
+    }>
+  ) {
+    if (!pendingVideos || pendingVideos.length === 0) return [];
+
+    const targetProduct = await db.query.products.findFirst({
+      where: and(eq(products.id, productId), eq(products.storeId, storeId)),
+    });
+    if (!targetProduct) {
+      throw new Error("Produto não encontrado para associação de vídeos.");
+    }
+
+    const insertedRecords = [];
+    for (let idx = 0; idx < pendingVideos.length; idx++) {
+      const item = pendingVideos[idx];
+      const [inserted] = await db
+        .insert(productVideos)
+        .values({
+          storeId,
+          productId,
+          bunnyVideoId: item.bunnyVideoId,
+          title: item.title.trim(),
+          description: item.description?.trim() || null,
+          position: item.position !== undefined ? item.position : idx,
+          status: "UPLOADING",
+          active: true,
+        })
+        .returning();
+      insertedRecords.push(inserted);
+    }
+
+    return insertedRecords;
+  }
+
+  /**
+   * Cleanup pending Bunny videos and storage reservations if product creation is cancelled.
+   */
+  static async cleanupPendingVideos(
+    sellerId: string,
+    storeId: string,
+    pendingBunnyVideoIds: string[]
+  ) {
+    if (!pendingBunnyVideoIds || pendingBunnyVideoIds.length === 0) return { success: true };
+
+    for (const bunnyVideoId of pendingBunnyVideoIds) {
+      if (!bunnyVideoId) continue;
+      let bunnySuccess = false;
+      try {
+        bunnySuccess = await BunnyStreamService.deleteVideo(bunnyVideoId);
+      } catch (err: any) {
+        console.warn("[ProductVideoService] Cleanup Bunny video failed:", err.message);
+      }
+
+      if (!bunnySuccess) {
+        await db.insert(pendingDeletions).values({
+          storeId,
+          provider: "bunny_stream",
+          path: bunnyVideoId,
+          resourceId: bunnyVideoId,
+        });
+      }
+
+      await StorageUsageService.releaseReservationByReference("product_video_upload", bunnyVideoId);
+    }
+
+    return { success: true };
   }
 
   /**
