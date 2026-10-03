@@ -154,25 +154,37 @@ export class AccessDeliveryService {
     storeSlug?: string
   ): Promise<DeliveryResult> {
     try {
-      if (!bot) {
+      if (!bot && product.deliveryType !== 'product_video') {
         throw new Error("Nenhum bot do Telegram está vinculado a esta loja.");
       }
 
       const telegramChatId = product.deliveryValue ? String(product.deliveryValue).trim() : null;
 
-      if (!telegramChatId || telegramChatId === "null" || telegramChatId === "") {
-        throw new Error("Produto sem telegramChatId configurado.");
+      if (product.deliveryType !== 'product_video' && (!telegramChatId || telegramChatId === "null" || telegramChatId === "")) {
+        throw new Error(
+          product.deliveryType === 'telegram' || product.deliveryType === 'TELEGRAM_CHAT'
+            ? "Produto sem telegramChatId configurado."
+            : "Produto sem link externo configurado."
+        );
       }
 
       const { calculateAccessExpiration } = await import("@/lib/orders/expiration-service");
       const paidAtDate = accessRecord.grantedAt || new Date();
       const accessExpiresAt = calculateAccessExpiration(product.duration, paidAtDate);
 
-      const botToken = decrypt(bot.tokenEncrypted);
+      const botToken = bot?.tokenEncrypted ? decrypt(bot.tokenEncrypted) : null;
       let deliveryUrl = accessRecord.inviteLink || '';
       let isAlreadyMember = false;
 
-      if (product.deliveryType === 'telegram' || product.deliveryType === 'TELEGRAM_CHAT') {
+      if (product.deliveryType === 'product_video') {
+        let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
+        if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+        const appUrl = rawAppUrl.replace(/\/+$/, "");
+        deliveryUrl = accessRecord.inviteLink || `${appUrl}/miniapp/${storeSlug || ''}/product/${product.slug || ''}`;
+      } else if (product.deliveryType === 'telegram' || product.deliveryType === 'TELEGRAM_CHAT') {
+        if (!botToken || !telegramChatId) {
+          throw new Error("Configuração do bot ou canal do Telegram inválida.");
+        }
         if (telegramChatId.startsWith('http://') || telegramChatId.startsWith('https://')) {
           deliveryUrl = telegramChatId;
         } else {
@@ -209,13 +221,13 @@ export class AccessDeliveryService {
           }
         }
       } else {
-        deliveryUrl = telegramChatId;
+        deliveryUrl = telegramChatId || '';
       }
 
       // 4. Send Automated Notification Message to Buyer (Idempotent: check confirmationSentAt)
       let confirmationSent = Boolean(accessRecord.confirmationSentAt);
 
-      if (!confirmationSent && customer && customer.telegramUserId) {
+      if (!confirmationSent && customer && customer.telegramUserId && botToken) {
         try {
           let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
           if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;

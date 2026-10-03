@@ -89,9 +89,9 @@ export async function createProductAction(formData: FormData) {
   }
 
   const deliveryType = (formData.get("deliveryType") as string) || "telegram";
-  const deliveryValue = (formData.get("deliveryValue") as string)?.trim();
+  const deliveryValue = (formData.get("deliveryValue") as string)?.trim() || null;
 
-  if (!deliveryValue) {
+  if (deliveryType !== "product_video" && !deliveryValue) {
     throw new Error(
       deliveryType === "telegram"
         ? "Informe o ID do Grupo/Canal do Telegram (Ex: -1001234567890)."
@@ -100,7 +100,7 @@ export async function createProductAction(formData: FormData) {
   }
 
   // Validate Telegram Chat & Bot Permissions on Product Creation
-  if (deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") {
+  if ((deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") && deliveryValue) {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
       const botId = (formData.get("botId") as string) || null;
       const { validateProductTelegramChat } = await import("@/lib/telegram/product-chat-validator");
@@ -193,9 +193,9 @@ export async function updateProductAction(productId: string, formData: FormData)
   }
 
   const deliveryType = (formData.get("deliveryType") as string) || "telegram";
-  const deliveryValue = (formData.get("deliveryValue") as string)?.trim();
+  const deliveryValue = (formData.get("deliveryValue") as string)?.trim() || null;
 
-  if (!deliveryValue) {
+  if (deliveryType !== "product_video" && !deliveryValue) {
     throw new Error(
       deliveryType === "telegram"
         ? "Informe o ID do Grupo/Canal do Telegram (Ex: -1001234567890)."
@@ -204,7 +204,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   }
 
   // Validate Telegram Chat & Bot Permissions on Product Update
-  if (deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") {
+  if ((deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") && deliveryValue) {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
       const botId = (formData.get("botId") as string) || null;
       const { validateProductTelegramChat } = await import("@/lib/telegram/product-chat-validator");

@@ -22,7 +22,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [deliveryType, setDeliveryType] = useState<"telegram" | "external">("telegram");
+  const [deliveryType, setDeliveryType] = useState<"telegram" | "external" | "product_video">("telegram");
   const [deliveryValue, setDeliveryValue] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
@@ -311,7 +311,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
               <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
                 Tipo de entrega após pagamento *
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 w-full">
                 <div 
                   onClick={() => setDeliveryType("telegram")}
                   className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
@@ -325,6 +325,13 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                 >
                   <p className={`text-sm font-bold ${deliveryType === "external" ? "text-white" : "text-zinc-300"}`}>Link externo</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Bot envia qualquer link após pagamento</p>
+                </div>
+                <div 
+                  onClick={() => setDeliveryType("product_video")}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "product_video" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                >
+                  <p className={`text-sm font-bold ${deliveryType === "product_video" ? "text-white" : "text-zinc-300"}`}>Vídeo do Produto</p>
+                  <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Cliente recebe acesso aos vídeos pelo Mini App</p>
                 </div>
               </div>
               
@@ -394,6 +401,12 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                   />
                 </div>
               )}
+
+              {deliveryType === "product_video" && (
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+                  <ProductVideosManager onPendingVideosChange={setPendingVideos} />
+                </div>
+              )}
             </div>
 
             {/* Vínculo de Bot e Categoria */}
@@ -459,11 +472,6 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                 initialShowFire={false}
                 initialFireCount={0}
               />
-            </div>
-
-            {/* Gerenciador de Vídeos do Produto (Suporte no Novo Produto) */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
-              <ProductVideosManager onPendingVideosChange={setPendingVideos} />
             </div>
 
           </form>

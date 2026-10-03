@@ -19,7 +19,7 @@ export interface AccessResolutionResult {
 export interface AccessDestinationResult {
   success: boolean;
   status: 'ACTIVE' | 'EXPIRED' | 'FAILED';
-  destinationType: 'DIRECT_CHAT' | 'INVITE' | 'EXPIRED' | 'ERROR';
+  destinationType: 'DIRECT_CHAT' | 'INVITE' | 'EXPIRED' | 'ERROR' | 'PRODUCT_VIDEO';
   destinationUrl: string | null;
   expiresAt: Date | null;
   membershipStatus?: string;
@@ -101,6 +101,21 @@ export class AccessLifecycleService {
     const product = accessRecord.product;
     const customer = accessRecord.customer;
     const telegramChatId = product?.deliveryValue ? String(product.deliveryValue).trim() : null;
+
+    if (product?.deliveryType === 'product_video') {
+      let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
+      if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+      const appUrl = rawAppUrl.replace(/\/+$/, "");
+      const destinationUrl = `${appUrl}/miniapp/${storeSlug}/product/${product.slug}`;
+
+      return {
+        success: true,
+        status: 'ACTIVE',
+        destinationType: 'PRODUCT_VIDEO',
+        destinationUrl: destinationUrl,
+        expiresAt: accessRecord.expiresAt,
+      };
+    }
 
     if (!telegramChatId) {
       return {
