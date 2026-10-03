@@ -1,11 +1,12 @@
 import React from "react";
 import { db } from "@/db";
-import { products, telegramBots } from "@/db/schema";
+import { products, telegramBots, accesses } from "@/db/schema";
 import { eq, and, ne, desc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, PackageX } from "lucide-react";
 import { StudioProductClient } from "./StudioProductClient";
 import { getStoreBySlug } from "@/lib/store-cache";
+import { getMiniAppSession } from "@/lib/telegram/session";
 
 export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: string, productSlug: string }) {
   const store = await getStoreBySlug(storeSlug);
@@ -52,8 +53,10 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
     );
   }
 
-  // Concurrently fetch secondary data: bot username & recommendation candidates
-  const [firstBot, sameCategoryProducts, storeProducts] = await Promise.all([
+  // Concurrently fetch secondary data: bot username & recommendation candidates & user session access
+  const session = await getMiniAppSession();
+
+  const [firstBot, sameCategoryProducts, storeProducts, accessRecord] = await Promise.all([
     db.query.telegramBots.findFirst({
       where: eq(telegramBots.storeId, store.id)
     }),
@@ -76,7 +79,17 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
       ),
       orderBy: [desc(products.createdAt)],
       limit: 12
-    })
+    }),
+    session?.customerId
+      ? db.query.accesses.findFirst({
+          where: and(
+            eq(accesses.storeId, store.id),
+            eq(accesses.customerId, session.customerId),
+            eq(accesses.productId, product.id),
+            eq(accesses.status, 'ACTIVE')
+          )
+        })
+      : Promise.resolve(null),
   ]);
 
   // Combine recommendations (same category first, filled up to 10 items without duplicates)
@@ -98,7 +111,9 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
   }
 
   const botUsername = firstBot?.username || null;
-  const hasAccess = false;
+  const now = new Date();
+  const hasAccess = Boolean(accessRecord && (!accessRecord.expiresAt || new Date(accessRecord.expiresAt) > now));
+
 
   return (
     <StudioProductClient

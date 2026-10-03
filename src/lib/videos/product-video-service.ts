@@ -636,9 +636,105 @@ export class ProductVideoService {
   }
 
   /**
+   * Lists videos assigned to a product that the customer has active access to.
+   */
+  static async listCustomerProductVideos(storeId: string, customerId: string, productId: string) {
+    const now = new Date();
+    const accessRecord = await db.query.accesses.findFirst({
+      where: and(
+        eq(accesses.storeId, storeId),
+        eq(accesses.customerId, customerId),
+        eq(accesses.productId, productId),
+        eq(accesses.status, "ACTIVE")
+      ),
+    });
+
+    if (!accessRecord) {
+      throw new Error("Você não possui acesso válido a este produto.");
+    }
+
+    if (accessRecord.expiresAt && new Date(accessRecord.expiresAt) < now) {
+      throw new Error("Seu acesso a este produto expirou.");
+    }
+
+    const assignments = await db.query.productVideoAssignments.findMany({
+      where: and(
+        eq(productVideoAssignments.storeId, storeId),
+        eq(productVideoAssignments.productId, productId)
+      ),
+      orderBy: [asc(productVideoAssignments.position)],
+      with: {
+        video: true,
+      },
+    });
+
+    const legacyVideos = await db.query.productVideos.findMany({
+      where: and(
+        eq(productVideos.storeId, storeId),
+        eq(productVideos.productId, productId),
+        eq(productVideos.status, "READY"),
+        eq(productVideos.active, true)
+      ),
+      orderBy: [asc(productVideos.position)],
+    });
+
+    const videoMap = new Map<string, { video: any; position: number }>();
+
+    for (const assign of assignments) {
+      if (assign.video && assign.video.status === "READY" && assign.video.active) {
+        videoMap.set(assign.video.id, {
+          video: assign.video,
+          position: assign.position ?? assign.video.position ?? 0,
+        });
+      }
+    }
+
+    for (const leg of legacyVideos) {
+      if (!videoMap.has(leg.id)) {
+        videoMap.set(leg.id, {
+          video: leg,
+          position: leg.position ?? 0,
+        });
+      }
+    }
+
+    const sortedList = Array.from(videoMap.values()).sort((a, b) => a.position - b.position);
+
+    const result = await Promise.all(
+      sortedList.map(async ({ video, position }) => {
+        const progress = await this.getVideoProgress(storeId, customerId, video.id);
+        return {
+          id: video.id,
+          title: video.title,
+          description: video.description,
+          position,
+          durationSeconds: video.durationSeconds || 0,
+          thumbnailUrl: video.thumbnailUrl,
+          progress: progress
+            ? {
+                positionSeconds: progress.positionSeconds,
+                durationSeconds: progress.durationSeconds,
+                progressPercent: Number(progress.progressPercent),
+                completed: progress.completed,
+                lastWatchedAt: progress.lastWatchedAt,
+              }
+            : null,
+        };
+      })
+    );
+
+    return result;
+  }
+
+  /**
    * Authorizes video playback for an authenticated Telegram customer after verifying active product access.
    */
-  static async getProductVideoForPlayback(storeId: string, customerId: string, videoId: string) {
+  static async getProductVideoForPlayback(
+    storeId: string,
+    customerId: string,
+    videoId: string,
+    productId?: string
+  ) {
     // 1. Find Product Video
     const video = await db.query.productVideos.findFirst({
       where: and(
@@ -655,48 +751,90 @@ export class ProductVideoService {
       throw new Error("Vídeo de produto não encontrado ou inativo.");
     }
 
-    if (video.status !== "READY") {
+    if (video.status === "PROCESSING" || video.status === "UPLOADING") {
       throw new Error("Este vídeo ainda está em processamento e não pode ser reproduzido.");
     }
 
-    if (!video.productId) {
-      throw new Error("Vídeo sem produto vinculado.");
+    if (video.status === "FAILED") {
+      throw new Error("Falha no processamento do vídeo.");
     }
 
-    // 2. Server-side Access Authorization Check
-    // Query accesses table for storeId + customerId + productId + status 'ACTIVE'
-    const now = new Date();
-    const accessRecord = await db.query.accesses.findFirst({
+    if (video.status !== "READY") {
+      throw new Error("Este vídeo não está disponível para reprodução.");
+    }
+
+    // 2. Find associated product IDs for this video
+    const assignments = await db.query.productVideoAssignments.findMany({
       where: and(
-        eq(accesses.storeId, storeId),
-        eq(accesses.customerId, customerId),
-        eq(accesses.productId, video.productId),
-        eq(accesses.status, "ACTIVE")
+        eq(productVideoAssignments.storeId, storeId),
+        eq(productVideoAssignments.videoId, video.id)
       ),
     });
 
-    if (!accessRecord) {
+    const associatedProductIds = new Set<string>();
+    for (const a of assignments) {
+      associatedProductIds.add(a.productId);
+    }
+    if (video.productId) {
+      associatedProductIds.add(video.productId);
+    }
+
+    if (associatedProductIds.size === 0) {
+      throw new Error("Vídeo sem produto vinculado.");
+    }
+
+    if (productId && !associatedProductIds.has(productId)) {
+      throw new Error("Vídeo não está associado ao produto especificado.");
+    }
+
+    // 3. Server-side Access Authorization Check
+    const now = new Date();
+    const candidateProductIds = productId ? [productId] : Array.from(associatedProductIds);
+
+    let validAccessRecord = null;
+    let hasExpiredAccess = false;
+
+    for (const pid of candidateProductIds) {
+      const accessRecord = await db.query.accesses.findFirst({
+        where: and(
+          eq(accesses.storeId, storeId),
+          eq(accesses.customerId, customerId),
+          eq(accesses.productId, pid),
+          eq(accesses.status, "ACTIVE")
+        ),
+      });
+
+      if (accessRecord) {
+        if (accessRecord.expiresAt && new Date(accessRecord.expiresAt) < now) {
+          hasExpiredAccess = true;
+        } else {
+          validAccessRecord = accessRecord;
+          break;
+        }
+      }
+    }
+
+    if (!validAccessRecord) {
+      if (hasExpiredAccess) {
+        throw new Error("Seu acesso a este produto expirou.");
+      }
       throw new Error("Você não possui acesso válido a este produto.");
     }
 
-    if (accessRecord.expiresAt && new Date(accessRecord.expiresAt) < now) {
-      throw new Error("Seu acesso a este produto expirou.");
-    }
-
-    // 3. Generate Temporary Bunny Playback Token Authorization
+    // 4. Generate Temporary Bunny Playback Token Authorization
     const playbackAuth = generateBunnyPlaybackToken({
       videoId: video.bunnyVideoId,
       expiresInSeconds: 3600,
     });
 
-    // 4. Load Customer Progress if exists
+    // 5. Load Customer Progress if exists
     const progress = await this.getVideoProgress(storeId, customerId, video.id);
 
     return {
       video: {
         id: video.id,
         storeId: video.storeId,
-        productId: video.productId,
+        productId: validAccessRecord.productId,
         productTitle: video.product?.title || "",
         title: video.title,
         description: video.description,
@@ -709,15 +847,18 @@ export class ProductVideoService {
         directUrl: playbackAuth.directUrl,
         expiresAt: playbackAuth.expiresAt,
       },
-      progress: progress ? {
-        positionSeconds: progress.positionSeconds,
-        durationSeconds: progress.durationSeconds,
-        progressPercent: Number(progress.progressPercent),
-        completed: progress.completed,
-        lastWatchedAt: progress.lastWatchedAt,
-      } : null,
+      progress: progress
+        ? {
+            positionSeconds: progress.positionSeconds,
+            durationSeconds: progress.durationSeconds,
+            progressPercent: Number(progress.progressPercent),
+            completed: progress.completed,
+            lastWatchedAt: progress.lastWatchedAt,
+          }
+        : null,
     };
   }
+
 
   /**
    * Save/Upsert customer video progress.

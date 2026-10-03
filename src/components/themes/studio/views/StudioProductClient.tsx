@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock, PlayCircle, Play, Loader2 } from "lucide-react";
 import { AddToCartButton } from "../components/AddToCartButton";
 import { HorizontalCarousel } from "../components/HorizontalCarousel";
 import { ProductCard } from "../components/ProductCard";
@@ -46,6 +46,10 @@ export function StudioProductClient({
   const [copied, setCopied] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
+  // Product Videos state for buyers with access
+  const [productVideos, setProductVideos] = useState<any[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
+
   // Storage key for Favorites
   const favoritesKey = `webgran_favorites_${storeSlug}`;
 
@@ -62,6 +66,29 @@ export function StudioProductClient({
       // localStorage unavailable or restricted
     }
   }, [favoritesKey, product.id]);
+
+  useEffect(() => {
+    if (hasAccess) {
+      setLoadingVideos(true);
+      fetch(`/api/miniapp/products/${product.id}/videos?storeSlug=${encodeURIComponent(storeSlug)}`, {
+        headers: {
+          "x-store-slug": storeSlug,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.videos)) {
+            setProductVideos(data.videos);
+          }
+        })
+        .catch((err) => {
+          console.warn("[StudioProductClient] Failed to load product videos:", err);
+        })
+        .finally(() => {
+          setLoadingVideos(false);
+        });
+    }
+  }, [hasAccess, product.id, storeSlug]);
 
   const toggleMyList = () => {
     try {
@@ -94,7 +121,6 @@ export function StudioProductClient({
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Construct Telegram deep link for product
     let shareUrl = "";
     if (botUsername) {
       shareUrl = `https://t.me/${botUsername}?startapp=p_${product.slug}`;
@@ -113,7 +139,6 @@ export function StudioProductClient({
     } else if (tgWebApp && typeof tgWebApp.openLink === "function") {
       tgWebApp.openLink(tgShareUrl);
     } else {
-      // Fallback for web browsers
       if (navigator.clipboard) {
         navigator.clipboard.writeText(shareUrl).then(() => {
           setCopied(true);
@@ -136,7 +161,6 @@ export function StudioProductClient({
   const rawDescription = (product.description || product.shortDescription || "").trim();
   const isLongDescription = rawDescription.length > 200;
 
-  // Format Duration string
   let durationBadge: string | null = null;
   if (product.duration) {
     const dur = product.duration.toLowerCase();
@@ -158,10 +182,8 @@ export function StudioProductClient({
           decoding="async"
           className="w-full h-full object-cover"
         />
-        {/* Smooth Gradient Fade to Page Background */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#f4f5f7] via-[#f4f5f7]/40 to-black/30 dark:from-[#141416] dark:via-[#141416]/40 dark:to-black/50 pointer-events-none" />
 
-        {/* Back Button */}
         <button
           type="button"
           onClick={handleBack}
@@ -174,9 +196,8 @@ export function StudioProductClient({
 
       {/* 2. MAIN PAGE CONTAINER */}
       <div className="px-4 max-w-lg mx-auto relative z-10 space-y-4">
-        {/* POSTER THUMB & TITLE / METADATA HEADER (OVERLAPPING BANNER) */}
+        {/* POSTER THUMB & TITLE / METADATA HEADER */}
         <div className="-mt-14 sm:-mt-16 flex gap-4 items-end">
-          {/* Small Vertical Poster Thumbnail */}
           <div className="w-24 sm:w-28 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-300/50 dark:border-white/15 shadow-2xl">
             <img
               src={posterImage}
@@ -185,9 +206,7 @@ export function StudioProductClient({
             />
           </div>
 
-          {/* Title & Metadata on the right */}
           <div className="flex-1 space-y-1.5 pb-1 min-w-0">
-            {/* Category & Duration Badges */}
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
               {(() => {
                 const badgeConfig = getProductBadge(product.badge);
@@ -211,7 +230,6 @@ export function StudioProductClient({
               )}
             </div>
 
-            {/* Title */}
             <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight leading-snug drop-shadow-sm">
               {product.title}
             </h1>
@@ -221,7 +239,7 @@ export function StudioProductClient({
         {/* Delivery Type Badge if available */}
         {product.deliveryType && (
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/30">
-            <span>Entrega Telegram</span>
+            <span>{product.deliveryType === "product_video" ? "Vídeo do Produto" : "Entrega Telegram"}</span>
           </div>
         )}
 
@@ -233,7 +251,7 @@ export function StudioProductClient({
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all text-sm active:scale-95"
             >
               <Zap className="w-5 h-5 fill-current" />
-              <span>⚡ Acessar conteúdo</span>
+              <span>⚡ Acesso Liberado</span>
             </Link>
           ) : (
             <AddToCartButton 
@@ -286,6 +304,83 @@ export function StudioProductClient({
           </div>
         </div>
 
+        {/* VÍDEOS DA ENTREGA SECTION */}
+        {hasAccess && (
+          <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
+            <div className="flex items-center gap-2">
+              <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
+                Vídeos da Entrega
+              </h3>
+            </div>
+
+            {loadingVideos ? (
+              <div className="p-4 flex items-center justify-center text-xs text-zinc-400">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Carregando vídeos...
+              </div>
+            ) : productVideos.length > 0 ? (
+              <div className="space-y-2.5">
+                {productVideos.map((vid, idx) => {
+                  const isCompleted = vid.progress?.completed;
+                  const hasStarted = (vid.progress?.positionSeconds || 0) > 0;
+                  const progressPercent = vid.progress?.progressPercent || 0;
+
+                  return (
+                    <Link
+                      key={vid.id}
+                      href={`/miniapp/${storeSlug}/video/${vid.id}?productId=${product.id}`}
+                      className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border border-zinc-200 dark:border-white/10 transition-all group cursor-pointer"
+                    >
+                      {/* Thumbnail / Icon */}
+                      <div className="relative w-16 aspect-video shrink-0 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center">
+                        {vid.thumbnailUrl ? (
+                          <img src={vid.thumbnailUrl} alt={vid.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <Play className="w-5 h-5 text-white/70" />
+                        )}
+                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                          <Play className="w-5 h-5 text-white fill-white drop-shadow" />
+                        </div>
+                      </div>
+
+                      {/* Title & Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                          Episódio {String(idx + 1).padStart(2, "0")}
+                        </div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white truncate group-hover:text-red-500 transition-colors">
+                          {vid.title}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                          {vid.durationSeconds > 0 && (
+                            <span>{Math.floor(vid.durationSeconds / 60)} min</span>
+                          )}
+                          {isCompleted ? (
+                            <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Concluído
+                            </span>
+                          ) : hasStarted ? (
+                            <span className="text-amber-500 font-semibold">
+                              {progressPercent}% concluído
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400">Não iniciado</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-xs text-zinc-400">
+                Nenhum vídeo disponível neste produto no momento.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* DESCRIPTION SECTION */}
         {rawDescription && (
           <div className="pt-3 border-t border-zinc-300/60 dark:border-white/10 space-y-2">
@@ -335,3 +430,4 @@ export function StudioProductClient({
     </div>
   );
 }
+
