@@ -8,7 +8,7 @@ import { eq, and, count } from "drizzle-orm";
 import { hasFeature, checkLimit, getSellerEntitlement } from "@/lib/entitlements/entitlement-service";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 
-const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB max file size limit
+const MAX_FILE_SIZE_BYTES = 4096 * 1024 * 1024; // 4 GB max file size limit
 
 export async function POST(req: Request) {
   try {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     }
 
     const sizeEntitlement = await getSellerEntitlement(seller.id, "max_video_size_mb");
-    const maxVideoSizeMb = sizeEntitlement.isUnlimited || sizeEntitlement.value === -1 ? 500 : (Number(sizeEntitlement.value) || 500);
+    const maxVideoSizeMb = sizeEntitlement.isUnlimited || sizeEntitlement.value === -1 ? 4096 : (Number(sizeEntitlement.value) || 4096);
     const maxFileSizeBytes = maxVideoSizeMb * 1024 * 1024;
 
     const body = await req.json();

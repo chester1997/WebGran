@@ -68,7 +68,7 @@ interface ClipsClientProps {
   availableProducts?: ProductOption[];
 }
 
-const MAX_FILE_SIZE_MB = 500;
+const MAX_FILE_SIZE_MB = 4096;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 524,288,000 bytes
 
 export default function ClipsClient({ initialClips, initialStats, availableProducts = [] }: ClipsClientProps) {

@@ -87,8 +87,8 @@ export class ProductVideoService {
     const sizeEntitlement = await getSellerEntitlement(sellerId, "max_video_size_mb");
     const maxVideoSizeMb =
       sizeEntitlement.isUnlimited || sizeEntitlement.value === -1
-        ? 500
-        : Number(sizeEntitlement.value) || 500;
+        ? 4096
+        : Number(sizeEntitlement.value) || 4096;
     const maxFileSizeBytes = maxVideoSizeMb * 1024 * 1024;
 
     // Input Validation

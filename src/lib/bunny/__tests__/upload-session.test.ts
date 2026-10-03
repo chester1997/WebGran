@@ -46,7 +46,7 @@ describe("Upload Session Payload & Validation Rules", () => {
     fileSize?: any;
   }) {
     const { title, contentType, fileSize } = body;
-    const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+    const MAX_FILE_SIZE_BYTES = 4096 * 1024 * 1024;
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return { valid: false, error: "O título do clipe é obrigatório." };
@@ -65,7 +65,7 @@ describe("Upload Session Payload & Validation Rules", () => {
         return { valid: false, error: "Tamanho de arquivo inválido." };
       }
       if (size > MAX_FILE_SIZE_BYTES) {
-        return { valid: false, error: "O arquivo excede o limite máximo permitido de 500MB." };
+        return { valid: false, error: "O arquivo excede o limite máximo permitido de 4096MB." };
       }
     }
 
@@ -96,11 +96,11 @@ describe("Upload Session Payload & Validation Rules", () => {
     );
   });
 
-  it("rejects invalid file sizes (zero, negative, or exceeding 500MB)", () => {
+  it("rejects invalid file sizes (zero, negative, or exceeding 4096MB)", () => {
     expect(validateUploadInput({ title: "Clip Teste", fileSize: 0 }).error).toBe("Tamanho de arquivo inválido.");
     expect(validateUploadInput({ title: "Clip Teste", fileSize: -100 }).error).toBe("Tamanho de arquivo inválido.");
     expect(
-      validateUploadInput({ title: "Clip Teste", fileSize: 600 * 1024 * 1024 }).error
-    ).toBe("O arquivo excede o limite máximo permitido de 500MB.");
+      validateUploadInput({ title: "Clip Teste", fileSize: 5000 * 1024 * 1024 }).error
+    ).toBe("O arquivo excede o limite máximo permitido de 4096MB.");
   });
 });
