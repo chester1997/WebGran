@@ -1,684 +1,669 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import * as upload from "tus-js-client";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Video,
-  Upload,
+  Film,
+  Plus,
   Trash2,
   MoveUp,
   MoveDown,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Clock,
   Eye,
-  EyeOff,
-  Film,
-  Plus,
   X,
-  FileVideo,
+  Search,
+  CheckSquare,
+  Square,
+  AlertTriangle,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
 
-export interface ProductVideoItem {
+export interface AssignedProductVideo {
   id: string;
+  assignmentId?: string | null;
   storeId: string;
-  productId: string;
+  productId?: string | null;
+  videoId: string;
   bunnyVideoId: string;
   title: string;
   description?: string | null;
   position: number;
   durationSeconds?: number | null;
+  fileSizeBytes?: number | null;
   thumbnailUrl?: string | null;
-  status: "UPLOADING" | "PROCESSING" | "READY" | "FAILED" | string;
+  status: string;
   active: boolean;
   createdAt: string;
 }
 
-export interface PendingVideo {
+export interface LibraryVideoOption {
+  id: string;
+  storeId: string;
   bunnyVideoId: string;
   title: string;
   description?: string | null;
-  position: number;
-  tempId: string;
+  durationSeconds?: number | null;
+  fileSizeBytes?: number | null;
+  thumbnailUrl?: string | null;
+  status: string; // 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
+  active: boolean;
+  createdAt: string;
 }
+
+export type PendingVideo = {
+  tempId: string;
+  bunnyVideoId?: string;
+  title?: string;
+  description?: string;
+  position?: number;
+};
 
 interface ProductVideosManagerProps {
   productId?: string;
   productTitle?: string;
-  onPendingVideosChange?: (pending: PendingVideo[]) => void;
+  onSelectedVideoIdsChange?: (videoIds: string[]) => void;
+  onPendingVideosChange?: (pending: any[]) => void;
 }
 
 export function ProductVideosManager({
   productId,
   productTitle = "Produto",
+  onSelectedVideoIdsChange,
   onPendingVideosChange,
 }: ProductVideosManagerProps) {
-  const [videos, setVideos] = useState<ProductVideoItem[]>([]);
-  const [pendingVideos, setPendingVideos] = useState<PendingVideo[]>([]);
-  const [loading, setLoading] = useState(Boolean(productId));
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatusText, setUploadStatusText] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [assignedVideos, setAssignedVideos] = useState<AssignedProductVideo[]>([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(Boolean(productId));
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // New video modal state
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  // Selection Modal State
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [libraryVideos, setLibraryVideos] = useState<LibraryVideoOption[]>([]);
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [selectedInModal, setSelectedInModal] = useState<string[]>([]);
+  const [isSavingAssignments, setIsSavingAssignments] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Preview Modal State
+  const [previewVideo, setPreviewVideo] = useState<AssignedProductVideo | null>(null);
+  const [previewPlayback, setPreviewPlayback] = useState<{ playbackUrl: string; directUrl: string } | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
-  const fetchVideos = useCallback(async () => {
+  // Fetch assigned videos for existing product
+  const fetchAssignedVideos = useCallback(async () => {
     if (!productId) {
-      setVideos([]);
-      setLoading(false);
+      setLoadingAssigned(false);
       return;
     }
     try {
-      setError(null);
+      setLoadingAssigned(true);
       const res = await fetch(`/api/seller/products/${productId}/videos`);
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Falha ao carregar vídeos do produto.");
+      const data = await res.json();
+      if (data.success) {
+        setAssignedVideos(data.videos || []);
       }
-      setVideos(json.videos || []);
     } catch (err: any) {
-      setError(err.message || "Erro ao carregar vídeos.");
+      console.error("[ProductVideosManager] Error fetching assigned videos:", err);
     } finally {
-      setLoading(false);
+      setLoadingAssigned(false);
     }
   }, [productId]);
 
   useEffect(() => {
-    fetchVideos();
-  }, [fetchVideos]);
+    fetchAssignedVideos();
+  }, [fetchAssignedVideos]);
 
-  // Sync pending videos changes with parent form (for New Product Modal)
-  useEffect(() => {
-    if (!productId && onPendingVideosChange) {
-      onPendingVideosChange(pendingVideos);
-    }
-  }, [pendingVideos, productId, onPendingVideosChange]);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith("video/")) {
-        setSelectedFile(file);
-        setError(null);
-      } else {
-        setError("Por favor, selecione um arquivo de vídeo válido (MP4 ou MOV).");
-      }
-    }
-  };
-
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) {
-      setError("O título do vídeo é obrigatório.");
-      return;
-    }
-    if (!selectedFile) {
-      setError("Selecione um arquivo de vídeo para enviar.");
-      return;
-    }
-
+  // Fetch seller library videos for picker modal
+  const fetchLibraryVideos = async () => {
+    setLoadingLibrary(true);
     try {
-      setUploading(true);
-      setError(null);
-      setUploadProgress(0);
-      setUploadStatusText("Criando sessão de upload no Bunny Stream...");
-
-      const endpointUrl = productId
-        ? `/api/seller/products/${productId}/videos/upload-session`
-        : `/api/seller/products/pending/videos/upload-session`;
-
-      const sessionRes = await fetch(endpointUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTitle.trim(),
-          description: newDescription.trim() || undefined,
-          contentType: selectedFile.type,
-          fileSize: selectedFile.size,
-        }),
-      });
-
-      const sessionData = await sessionRes.json();
-      if (!sessionRes.ok || !sessionData.success) {
-        throw new Error(sessionData.error || "Falha ao iniciar sessão de upload.");
+      const res = await fetch("/api/seller/videos");
+      const data = await res.json();
+      if (data.success) {
+        setLibraryVideos(data.videos || []);
       }
-
-      const { uploadSession, productVideo } = sessionData;
-      setUploadStatusText("Enviando vídeo diretamente ao Bunny CDN...");
-
-      const tusUpload = new upload.Upload(selectedFile, {
-        endpoint: uploadSession.tusUploadUrl || "https://video.bunnycdn.com/tusupload",
-        retryDelays: [0, 3000, 5000, 10000, 20000],
-        headers: uploadSession.headers,
-        metadata: {
-          filetype: selectedFile.type,
-          title: newTitle.trim(),
-          collection: uploadSession.videoId,
-        },
-        onError: (err) => {
-          console.error("[TUS Upload Error]:", err);
-          setError("Erro durante o envio do arquivo. Verifique sua conexão e tente novamente.");
-          setUploading(false);
-        },
-        onProgress: (bytesUploaded, bytesTotal) => {
-          const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
-          setUploadProgress(percentage);
-          setUploadStatusText(`Enviando arquivo: ${percentage}%`);
-        },
-        onSuccess: () => {
-          setUploadStatusText("Upload concluído! Vídeo enviado para transcodificação.");
-          setUploading(false);
-          setShowAddModal(false);
-          setNewTitle("");
-          setNewDescription("");
-          setSelectedFile(null);
-
-          if (!productId) {
-            // New Product Mode: store in pendingVideos list
-            const newPendingItem: PendingVideo = {
-              bunnyVideoId: uploadSession.videoId,
-              title: newTitle.trim(),
-              description: newDescription.trim() || null,
-              position: pendingVideos.length,
-              tempId: `pending_${uploadSession.videoId}`,
-            };
-            setPendingVideos((prev) => [...prev, newPendingItem]);
-          } else {
-            fetchVideos();
-          }
-        },
-      });
-
-      tusUpload.start();
-    } catch (err: any) {
-      setError(err.message || "Erro no upload do vídeo.");
-      setUploading(false);
-    }
-  };
-
-  const handleToggleActive = async (video: ProductVideoItem) => {
-    if (!productId) return;
-    try {
-      const res = await fetch(`/api/seller/products/${productId}/videos/${video.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: !video.active }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Falha ao atualizar status do vídeo.");
-      }
-      fetchVideos();
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const handleDelete = async (videoId: string, bunnyVideoId?: string) => {
-    if (!confirm("Tem certeza que deseja excluir este vídeo?")) return;
-
-    if (!productId) {
-      // Pending Mode delete
-      const bunnyIdToDelete = bunnyVideoId || videoId.replace("pending_", "");
-      setPendingVideos((prev) => prev.filter((v) => v.bunnyVideoId !== bunnyIdToDelete));
-      fetch("/api/seller/products/pending/videos/cleanup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pendingBunnyVideoIds: [bunnyIdToDelete] }),
-      }).catch(console.error);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/seller/products/${productId}/videos/${videoId}`, {
-        method: "DELETE",
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Falha ao excluir vídeo.");
-      }
-      fetchVideos();
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const handleMovePosition = async (index: number, direction: "up" | "down") => {
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-
-    if (!productId) {
-      if (targetIndex < 0 || targetIndex >= pendingVideos.length) return;
-      const newOrder = [...pendingVideos];
-      const temp = newOrder[index];
-      newOrder[index] = newOrder[targetIndex];
-      newOrder[targetIndex] = temp;
-      setPendingVideos(newOrder);
-      return;
-    }
-
-    if (targetIndex < 0 || targetIndex >= videos.length) return;
-
-    const newOrder = [...videos];
-    const temp = newOrder[index];
-    newOrder[index] = newOrder[targetIndex];
-    newOrder[targetIndex] = temp;
-
-    setVideos(newOrder);
-
-    try {
-      const orderedVideoIds = newOrder.map((v) => v.id);
-      await fetch(`/api/seller/products/${productId}/videos/reorder`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedVideoIds }),
-      });
     } catch (err) {
-      console.error("Reorder failed:", err);
-      fetchVideos();
+      console.error("[ProductVideosManager] Error fetching library videos:", err);
+    } finally {
+      setLoadingLibrary(false);
     }
   };
 
-  const formatDuration = (sec?: number | null) => {
-    if (!sec || sec <= 0) return "--:--";
-    const mins = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${mins}:${s.toString().padStart(2, "0")}`;
+  const handleOpenPicker = () => {
+    setIsPickerOpen(true);
+    const currentlyAssignedIds = assignedVideos.map((v) => v.id || v.videoId);
+    setSelectedInModal(currentlyAssignedIds);
+    fetchLibraryVideos();
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "READY":
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Pronto
-          </span>
-        );
-      case "FAILED":
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full">
-            <AlertCircle className="w-3.5 h-3.5" />
-            Falhou
-          </span>
-        );
-      case "PROCESSING":
-      case "UPLOADING":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Processando
-          </span>
-        );
-    }
+  // Toggle selection inside picker modal
+  const toggleVideoSelection = (video: LibraryVideoOption) => {
+    if (video.status !== "READY") return; // ONLY READY videos can be selected!
+
+    setSelectedInModal((prev) => {
+      if (prev.includes(video.id)) {
+        return prev.filter((id) => id !== video.id);
+      } else {
+        return [...prev, video.id];
+      }
+    });
   };
 
-  const currentList = productId
-    ? videos
-    : pendingVideos.map((p, idx) => ({
-        id: p.tempId,
-        storeId: "",
-        productId: "pending",
-        bunnyVideoId: p.bunnyVideoId,
-        title: p.title,
-        description: p.description,
+  // Confirm addition from picker modal
+  const handleConfirmAddVideos = async () => {
+    const newlySelectedIds = selectedInModal.filter(
+      (id) => !assignedVideos.some((v) => v.id === id || v.videoId === id)
+    );
+
+    if (productId) {
+      // Existing Product: assign via API
+      if (newlySelectedIds.length > 0) {
+        setIsSavingAssignments(true);
+        try {
+          const res = await fetch(`/api/seller/products/${productId}/videos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ videoIds: newlySelectedIds }),
+          });
+          const data = await res.json();
+          if (!data.success) {
+            throw new Error(data.error || "Falha ao vincular vídeos ao produto.");
+          }
+          await fetchAssignedVideos();
+        } catch (err: any) {
+          setErrorMessage(err.message || "Erro ao adicionar vídeos ao produto.");
+        } finally {
+          setIsSavingAssignments(false);
+        }
+      }
+    } else {
+      // New Product: update local state & notify parent form
+      const updatedList = libraryVideos.filter((v) => selectedInModal.includes(v.id));
+      const formattedAssigned: AssignedProductVideo[] = updatedList.map((v, idx) => ({
+        id: v.id,
+        storeId: v.storeId,
+        videoId: v.id,
+        bunnyVideoId: v.bunnyVideoId,
+        title: v.title,
+        description: v.description,
         position: idx,
-        durationSeconds: null,
-        thumbnailUrl: null,
-        status: "PROCESSING",
-        active: true,
-        createdAt: new Date().toISOString(),
+        durationSeconds: v.durationSeconds,
+        fileSizeBytes: v.fileSizeBytes,
+        thumbnailUrl: v.thumbnailUrl,
+        status: v.status,
+        active: v.active,
+        createdAt: v.createdAt,
       }));
 
+      setAssignedVideos(formattedAssigned);
+      if (onSelectedVideoIdsChange) {
+        onSelectedVideoIdsChange(selectedInModal);
+      }
+      if (onPendingVideosChange) {
+        onPendingVideosChange(selectedInModal.map((id) => ({ tempId: id })));
+      }
+    }
+
+    setIsPickerOpen(false);
+  };
+
+  // Remove Video Assignment (ONLY removes product assignment, DOES NOT delete from library or Bunny!)
+  const handleRemoveAssignment = async (video: AssignedProductVideo) => {
+    if (productId) {
+      try {
+        const res = await fetch(`/api/seller/products/${productId}/videos/${video.id}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || "Erro ao remover vínculo do vídeo.");
+        }
+        await fetchAssignedVideos();
+      } catch (err: any) {
+        setErrorMessage(err.message || "Erro ao remover vídeo do produto.");
+      }
+    } else {
+      // New Product form local state removal
+      const updated = assignedVideos.filter((v) => v.id !== video.id && v.videoId !== video.id);
+      setAssignedVideos(updated);
+      const updatedIds = updated.map((v) => v.id || v.videoId);
+      if (onSelectedVideoIdsChange) {
+        onSelectedVideoIdsChange(updatedIds);
+      }
+      if (onPendingVideosChange) {
+        onPendingVideosChange(updatedIds.map((id) => ({ tempId: id })));
+      }
+    }
+  };
+
+  // Reorder Videos (Move Up / Move Down)
+  const handleMove = async (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= assignedVideos.length) return;
+
+    const updated = [...assignedVideos];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+
+    // Recalculate position indices
+    const reordered = updated.map((item, idx) => ({ ...item, position: idx }));
+    setAssignedVideos(reordered);
+
+    if (productId) {
+      try {
+        const orderedVideoIds = reordered.map((v) => v.id || v.videoId);
+        await fetch(`/api/seller/products/${productId}/videos/reorder`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderedVideoIds }),
+        });
+      } catch (err) {
+        console.error("[ProductVideosManager] Error reordering videos:", err);
+      }
+    } else {
+      const updatedIds = reordered.map((v) => v.id || v.videoId);
+      if (onSelectedVideoIdsChange) {
+        onSelectedVideoIdsChange(updatedIds);
+      }
+    }
+  };
+
+  // Preview video modal handler
+  const handlePreview = async (video: AssignedProductVideo) => {
+    setPreviewVideo(video);
+    setIsLoadingPreview(true);
+    setPreviewPlayback(null);
+
+    try {
+      const res = await fetch(`/api/seller/videos/${video.id}/preview`);
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Falha ao carregar preview.");
+      }
+      setPreviewPlayback(data.playback);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Erro ao carregar preview do vídeo.");
+      setPreviewVideo(null);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  // Formatting helpers
+  const formatDuration = (seconds?: number | null) => {
+    if (!seconds || seconds <= 0) return "--:--";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatFileSize = (bytes?: number | null) => {
+    if (!bytes || bytes <= 0) return "";
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  // Filtered library videos for picker modal
+  const filteredLibraryVideos = libraryVideos.filter((v) => {
+    const matchesSearch = searchQuery
+      ? v.title.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    const matchesStatus =
+      statusFilter === "ALL" ? true : v.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <div className="w-full space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-white/5">
-        <div>
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Film className="w-4 h-4 text-blue-500" />
-            Vídeos do Produto
-          </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Adicione episódios, aulas ou conteúdos que serão entregues automaticamente após a compra.
-          </p>
-        </div>
+    <div className="space-y-4 w-full text-zinc-100">
+      {/* Hidden input to pass selected video IDs to HTML forms */}
+      {!productId && (
+        <input
+          type="hidden"
+          name="videoIds"
+          value={JSON.stringify(assignedVideos.map((v) => v.id || v.videoId))}
+        />
+      )}
 
-        <button
-          type="button"
-          onClick={() => {
-            setShowAddModal(true);
-            setError(null);
-          }}
-          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-blue-600/10 self-start sm:self-auto shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar vídeo
-        </button>
-      </div>
-
-      {error && !showAddModal && (
-        <div className="p-3 text-xs bg-red-500/10 text-red-400 rounded-xl flex items-center gap-2 border border-red-500/20">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-          <span>{error}</span>
+      {errorMessage && (
+        <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/40 text-red-200 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {/* Videos List or Elegant Compact Empty State */}
-      {loading ? (
-        <div className="py-8 flex flex-col items-center justify-center text-zinc-400">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500 mb-2" />
-          <span className="text-xs">Carregando vídeos...</span>
+      {/* SECTION HEADER (Requirement #2) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800 p-4 rounded-xl">
+        <div>
+          <h4 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+            <Film className="w-4 h-4 text-amber-500" />
+            VÍDEOS DA ENTREGA
+          </h4>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Selecione os vídeos da sua Biblioteca que serão liberados ao comprador após o pagamento.
+          </p>
         </div>
-      ) : currentList.length === 0 ? (
-        <div className="p-6 rounded-2xl bg-[#1A1A1E] border border-white/5 flex flex-col items-center justify-center text-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Film className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-white">Nenhum vídeo adicionado</p>
-            <p className="text-[11px] text-zinc-400 max-w-md mt-0.5">
-              Adicione episódios, aulas ou conteúdos que serão entregues automaticamente após a compra.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setShowAddModal(true);
-              setError(null);
-            }}
-            className="mt-1 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 hover:text-white font-semibold text-xs rounded-xl transition"
-          >
-            Adicionar primeiro vídeo
-          </button>
+
+        <Button
+          type="button"
+          onClick={handleOpenPicker}
+          className="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs h-9 px-4 shrink-0"
+        >
+          <Plus className="w-4 h-4 mr-1.5" />
+          Selecionar da Biblioteca
+        </Button>
+      </div>
+
+      {/* ASSIGNED VIDEOS LIST (Requirement #9) */}
+      {loadingAssigned ? (
+        <div className="p-6 text-center text-zinc-500 text-xs flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+          Carregando vídeos vinculados...
+        </div>
+      ) : assignedVideos.length === 0 ? (
+        <div className="border border-dashed border-zinc-800 rounded-xl p-6 text-center text-zinc-500 text-xs space-y-1">
+          <p>Nenhum vídeo vinculado a este produto.</p>
+          <p className="text-zinc-600">Clique em "Selecionar da Biblioteca" acima para adicionar vídeos já processados.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {currentList.map((vid, idx) => (
+        <div className="space-y-2.5">
+          {assignedVideos.map((video, index) => (
             <div
-              key={vid.id}
-              className={`p-3.5 rounded-xl bg-[#1A1A1E] border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 transition hover:border-white/10 ${
-                !vid.active ? "opacity-50" : ""
-              }`}
+              key={video.id || video.videoId || index}
+              className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 flex items-center justify-between gap-3 hover:border-zinc-700 transition"
             >
-              {/* Thumbnail & Video Details */}
+              {/* Left Info */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="relative w-16 h-12 rounded-lg bg-black/90 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
-                  {vid.thumbnailUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={vid.thumbnailUrl}
-                      alt={vid.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Film className="w-5 h-5 text-zinc-600" />
-                  )}
-                  {vid.durationSeconds ? (
-                    <span className="absolute bottom-1 right-1 text-[9px] font-mono font-bold bg-black/80 text-white px-1 py-0.5 rounded">
-                      {formatDuration(vid.durationSeconds)}
-                    </span>
-                  ) : null}
+                {/* Reorder Buttons */}
+                <div className="flex flex-col gap-1 shrink-0 text-zinc-500">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => handleMove(index, "up")}
+                    className="p-1 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-500 transition"
+                    title="Mover para cima"
+                  >
+                    <MoveUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === assignedVideos.length - 1}
+                    onClick={() => handleMove(index, "down")}
+                    className="p-1 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-500 transition"
+                    title="Mover para baixo"
+                  >
+                    <MoveDown className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-zinc-500">
-                      #{String(idx + 1).padStart(2, "0")}
-                    </span>
-                    <h4 className="text-xs sm:text-sm font-semibold text-white truncate">
-                      {vid.title}
-                    </h4>
-                  </div>
-                  {vid.description && (
-                    <p className="text-xs text-zinc-400 truncate mt-0.5">{vid.description}</p>
+                {/* Thumbnail */}
+                <div className="w-16 aspect-video bg-zinc-950 rounded overflow-hidden relative shrink-0 border border-zinc-800">
+                  {video.thumbnailUrl ? (
+                    <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                      <Film className="w-4 h-4" />
+                    </div>
                   )}
-                  <div className="mt-1 flex items-center gap-2.5">
-                    {getStatusBadge(vid.status)}
-                    {!productId && (
-                      <span className="text-[10px] text-blue-400 font-semibold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
-                        Pendente de associação
-                      </span>
-                    )}
+                </div>
+
+                {/* Title & Metas */}
+                <div className="min-w-0 flex-1">
+                  <h5 className="font-semibold text-zinc-100 text-xs truncate">
+                    🎬 {video.title}
+                  </h5>
+                  <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono mt-0.5">
+                    <span>{formatDuration(video.durationSeconds)}</span>
+                    {video.fileSizeBytes && <span>• {formatFileSize(video.fileSizeBytes)}</span>}
+                    <span>•</span>
+                    <span className={video.status === "READY" ? "text-emerald-400" : "text-amber-400"}>
+                      {video.status === "READY" ? "✓ Pronto" : "Processando..."}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
-                <button
+              {/* Right Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
                   type="button"
-                  disabled={idx === 0}
-                  onClick={() => handleMovePosition(idx, "up")}
-                  className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-20 rounded-lg hover:bg-white/5 transition"
-                  title="Mover para cima"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePreview(video)}
+                  className="border-zinc-800 text-[11px] h-8 text-zinc-300 hover:bg-zinc-800"
                 >
-                  <MoveUp className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={idx === currentList.length - 1}
-                  onClick={() => handleMovePosition(idx, "down")}
-                  className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-20 rounded-lg hover:bg-white/5 transition"
-                  title="Mover para baixo"
-                >
-                  <MoveDown className="w-4 h-4" />
-                </button>
+                  <Eye className="w-3.5 h-3.5 mr-1" />
+                  Visualizar
+                </Button>
 
-                {productId && (
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(vid as ProductVideoItem)}
-                    className={`p-1.5 rounded-lg transition ${
-                      vid.active
-                        ? "text-emerald-400 hover:bg-emerald-500/10"
-                        : "text-zinc-500 hover:bg-white/5"
-                    }`}
-                    title={vid.active ? "Desativar vídeo" : "Ativar vídeo"}
-                  >
-                    {vid.active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-                )}
-
-                <button
+                <Button
                   type="button"
-                  onClick={() => handleDelete(vid.id, vid.bunnyVideoId)}
-                  className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition"
-                  title="Excluir vídeo"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRemoveAssignment(video)}
+                  className="border-zinc-800 text-[11px] h-8 text-red-400 hover:bg-red-950/40 hover:border-red-800"
+                  title="Remover vínculo do produto"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  Remover
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Modern WebGran Dark Theme Modal "Novo Vídeo do Produto" */}
-      <Dialog open={showAddModal} onOpenChange={(val) => { setShowAddModal(val); if (!val) setError(null); }}>
-        <DialogContent className="sm:max-w-lg w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/10 p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] shadow-2xl rounded-2xl">
-          <div className="p-4 sm:p-5 border-b border-white/5 shrink-0 flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <Film className="w-5 h-5 text-blue-500" />
-                Novo vídeo do produto
-              </DialogTitle>
-              <p className="text-xs text-zinc-400 mt-0.5">Adicione um episódio ou aula</p>
-            </div>
-          </div>
-
-          <div className="overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-4">
-            {error && (
-              <div className="p-3 text-xs bg-red-500/10 text-red-400 rounded-xl flex items-center gap-2 border border-red-500/20">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{error}</span>
+      {/* --- SELECTION MODAL / DRAWER (Requirements #4, #5, #6) --- */}
+      {isPickerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Film className="w-5 h-5 text-amber-500" />
+                  Selecionar vídeos
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Escolha os vídeos já processados que serão entregues neste produto.
+                </p>
               </div>
-            )}
+              <button onClick={() => setIsPickerOpen(false)} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <form id="add-video-form" onSubmit={handleUploadSubmit} className="space-y-4">
-              {/* Título */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-zinc-300">
-                  Título *
-                </label>
+            {/* Search & Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: Episódio 01 — A Origem"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                  placeholder="🔎 Buscar vídeo..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
-              {/* Descrição */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-zinc-300">
-                  Descrição (Opcional)
-                </label>
-                <textarea
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  rows={2}
-                  placeholder="Breve descrição do conteúdo..."
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
-                />
-              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-amber-500"
+              >
+                <option value="ALL">Todos os status</option>
+                <option value="READY">Prontos</option>
+                <option value="PROCESSING">Processando</option>
+              </select>
+            </div>
 
-              {/* Drag and Drop Upload Zone */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-zinc-300">
-                  Vídeo *
-                </label>
-                
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition ${
-                    isDragging
-                      ? "border-blue-500 bg-blue-500/10"
-                      : selectedFile
-                      ? "border-emerald-500/50 bg-emerald-500/5"
-                      : "border-white/10 bg-[#1A1A1E] hover:border-blue-500/40 hover:bg-[#1A1A1E]/80"
-                  }`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      setSelectedFile(e.target.files?.[0] || null);
-                      setError(null);
-                    }}
-                  />
-
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
-                    {selectedFile ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    ) : (
-                      <FileVideo className="w-5 h-5" />
-                    )}
-                  </div>
-
-                  {selectedFile ? (
-                    <div>
-                      <p className="text-xs font-bold text-emerald-400 truncate max-w-xs">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-[10px] text-zinc-400 mt-0.5">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Clique para alterar
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-xs font-semibold text-zinc-200">
-                        Arraste o vídeo aqui
-                      </p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        ou <span className="text-blue-400 underline">selecionar arquivo</span>
-                      </p>
-                      <p className="text-[10px] text-zinc-500 mt-1">MP4 ou MOV</p>
-                    </div>
-                  )}
+            {/* Video Cards Grid/List */}
+            <div className="overflow-y-auto custom-scrollbar flex-1 space-y-2.5 pr-1">
+              {loadingLibrary ? (
+                <div className="p-8 text-center text-zinc-500 text-xs flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                  <span>Carregando vídeos da biblioteca...</span>
                 </div>
-              </div>
+              ) : filteredLibraryVideos.length === 0 ? (
+                <div className="p-8 text-center text-zinc-500 text-xs border border-dashed border-zinc-800 rounded-xl">
+                  Nenhum vídeo encontrado na biblioteca.
+                </div>
+              ) : (
+                filteredLibraryVideos.map((video) => {
+                  const isSelected = selectedInModal.includes(video.id);
+                  const isReady = video.status === "READY";
+                  const isAlreadyAssigned = assignedVideos.some(
+                    (v) => v.id === video.id || v.videoId === video.id
+                  );
 
-              {/* Upload Progress Bar */}
-              {uploading && (
-                <div className="space-y-1.5 pt-2">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-zinc-300">{uploadStatusText}</span>
-                    <span className="text-blue-400 font-mono">{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-[#1A1A1E] rounded-full overflow-hidden border border-white/5">
+                  return (
                     <div
-                      className="h-full bg-blue-600 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </form>
-          </div>
+                      key={video.id}
+                      onClick={() => isReady && toggleVideoSelection(video)}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition ${
+                        !isReady
+                          ? "opacity-60 bg-zinc-950/40 border-zinc-800/60 cursor-not-allowed"
+                          : isSelected
+                          ? "bg-amber-500/10 border-amber-500/60 cursor-pointer"
+                          : "bg-zinc-950/80 border-zinc-800 hover:border-zinc-700 cursor-pointer"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Checkbox */}
+                        <div className="shrink-0">
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-amber-500" />
+                          ) : (
+                            <Square className={`w-5 h-5 ${isReady ? "text-zinc-500" : "text-zinc-700"}`} />
+                          )}
+                        </div>
 
-          <div className="p-4 sm:p-5 border-t border-white/5 shrink-0 flex items-center justify-end gap-3 bg-[#121214]">
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => {
-                setShowAddModal(false);
-                setError(null);
-              }}
-              className="px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white rounded-xl transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="add-video-form"
-              disabled={uploading}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-50"
-            >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {uploading ? "Enviando..." : "Enviar"}
-            </button>
+                        {/* Thumbnail */}
+                        <div className="w-16 aspect-video bg-zinc-900 rounded overflow-hidden relative shrink-0 border border-zinc-800">
+                          {video.thumbnailUrl ? (
+                            <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                              <Film className="w-4 h-4" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title & Info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-semibold text-zinc-100 text-xs truncate">
+                              🎬 {video.title}
+                            </h5>
+                            {isAlreadyAssigned && (
+                              <span className="bg-zinc-800 text-zinc-400 text-[10px] px-2 py-0.5 rounded font-mono shrink-0">
+                                Já adicionado
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono mt-0.5">
+                            <span>{formatDuration(video.durationSeconds)}</span>
+                            {video.fileSizeBytes && <span>• {formatFileSize(video.fileSizeBytes)}</span>}
+                            <span>•</span>
+                            {isReady ? (
+                              <span className="text-emerald-400 font-bold">✓ Pronto</span>
+                            ) : (
+                              <span className="text-amber-400 font-bold flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" /> Processando...
+                              </span>
+                            )}
+                          </div>
+
+                          {!isReady && (
+                            <p className="text-[10px] text-amber-500/80 mt-1">
+                              Apenas vídeos com status PRONTO podem ser vinculados.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-zinc-800 pt-4 shrink-0">
+              <span className="text-xs text-zinc-400 font-mono">
+                {selectedInModal.length} vídeo(s) selecionado(s)
+              </span>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPickerOpen(false)}
+                  className="border-zinc-800 text-zinc-300 text-xs hover:bg-zinc-800"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleConfirmAddVideos}
+                  disabled={isSavingAssignments}
+                  className="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs"
+                >
+                  {isSavingAssignments ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Adicionar vídeos"
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
+      {/* --- PREVIEW PLAYER MODAL (Requirement #18) --- */}
+      {previewVideo && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-md font-bold text-white flex items-center gap-2">
+                <Film className="w-4 h-4 text-amber-500" />
+                {previewVideo.title}
+              </h3>
+              <button onClick={() => setPreviewVideo(null)} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="aspect-video bg-black rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800">
+              {isLoadingPreview ? (
+                <div className="flex flex-col items-center text-zinc-400 space-y-2">
+                  <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                  <span className="text-xs">Gerando token de autorização...</span>
+                </div>
+              ) : previewPlayback ? (
+                <ProductVideoPlayer
+                  videoId={previewVideo.id || previewVideo.videoId}
+                  playbackUrl={previewPlayback.playbackUrl}
+                  directUrl={previewPlayback.directUrl}
+                  posterUrl={previewVideo.thumbnailUrl || undefined}
+                  title={previewVideo.title}
+                />
+              ) : (
+                <span className="text-xs text-red-400">Não foi possível carregar o preview.</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

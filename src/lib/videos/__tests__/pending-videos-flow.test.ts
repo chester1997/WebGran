@@ -4,6 +4,7 @@ vi.mock("@/db", () => ({
   db: {
     query: {
       productVideos: { findFirst: vi.fn(), findMany: vi.fn() },
+      productVideoAssignments: { findFirst: vi.fn(), findMany: vi.fn(() => Promise.resolve([])) },
       videoProgress: { findFirst: vi.fn() },
       accesses: { findFirst: vi.fn() },
       products: { findFirst: vi.fn() },

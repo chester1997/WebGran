@@ -54,7 +54,7 @@ export async function DELETE(
 
     const { productId, videoId } = await params;
 
-    const result = await ProductVideoService.deleteProductVideo(
+    const result = await ProductVideoService.removeVideoAssignment(
       store.id,
       productId,
       videoId

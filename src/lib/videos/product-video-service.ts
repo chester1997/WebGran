@@ -45,20 +45,85 @@ export class ProductVideoService {
 
   /**
    * List all Product Videos for a specific product within a store (ordered by position).
+   * Supports both product_video_assignments table and legacy direct productId field.
    */
   static async listProductVideos(storeId: string, productId: string, activeOnly = false) {
-    const conditions = [
+    const assignments = await db.query.productVideoAssignments.findMany({
+      where: and(
+        eq(productVideoAssignments.storeId, storeId),
+        eq(productVideoAssignments.productId, productId)
+      ),
+      with: {
+        video: true,
+      },
+      orderBy: [asc(productVideoAssignments.position), asc(productVideoAssignments.createdAt)],
+    });
+
+    const legacyConditions = [
       eq(productVideos.storeId, storeId),
       eq(productVideos.productId, productId),
     ];
     if (activeOnly) {
-      conditions.push(eq(productVideos.active, true));
+      legacyConditions.push(eq(productVideos.active, true));
     }
-
-    return await db.query.productVideos.findMany({
-      where: and(...conditions),
+    const legacyVideos = await db.query.productVideos.findMany({
+      where: and(...legacyConditions),
       orderBy: [asc(productVideos.position), asc(productVideos.createdAt)],
     });
+
+    const resultList: any[] = [];
+    const seenVideoIds = new Set<string>();
+
+    for (const a of assignments) {
+      if (a.video && (!activeOnly || a.video.active)) {
+        seenVideoIds.add(a.video.id);
+        resultList.push({
+          id: a.video.id,
+          assignmentId: a.id,
+          storeId: a.storeId,
+          productId: a.productId,
+          videoId: a.videoId,
+          bunnyVideoId: a.video.bunnyVideoId,
+          title: a.video.title,
+          description: a.video.description,
+          position: a.position,
+          durationSeconds: a.video.durationSeconds,
+          fileSizeBytes: a.video.fileSizeBytes,
+          thumbnailUrl: a.video.thumbnailUrl,
+          status: a.video.status,
+          active: a.video.active,
+          createdAt: a.video.createdAt,
+          updatedAt: a.video.updatedAt,
+        });
+      }
+    }
+
+    for (const v of legacyVideos) {
+      if (!seenVideoIds.has(v.id)) {
+        seenVideoIds.add(v.id);
+        resultList.push({
+          id: v.id,
+          assignmentId: null,
+          storeId: v.storeId,
+          productId: v.productId,
+          videoId: v.id,
+          bunnyVideoId: v.bunnyVideoId,
+          title: v.title,
+          description: v.description,
+          position: v.position,
+          durationSeconds: v.durationSeconds,
+          fileSizeBytes: v.fileSizeBytes,
+          thumbnailUrl: v.thumbnailUrl,
+          status: v.status,
+          active: v.active,
+          createdAt: v.createdAt,
+          updatedAt: v.updatedAt,
+        });
+      }
+    }
+
+    resultList.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    return resultList;
   }
 
   /**
@@ -383,20 +448,143 @@ export class ProductVideoService {
   }
 
   /**
+   * Assigns videos from seller library to a product via product_video_assignments.
+   * Enforces multi-tenant security, entitlement (product_videos_enabled, max_product_videos), and READY status requirement.
+   */
+  static async assignVideosToProduct(
+    storeId: string,
+    productId: string,
+    videoIds: string[],
+    sellerId?: string
+  ) {
+    if (!videoIds || videoIds.length === 0) return await this.listProductVideos(storeId, productId);
+
+    // 1. Multi-tenant Product Check
+    const targetProduct = await db.query.products.findFirst({
+      where: and(eq(products.id, productId), eq(products.storeId, storeId)),
+    });
+    if (!targetProduct) {
+      throw new Error("Produto não encontrado ou sem permissão nesta loja.");
+    }
+
+    // 2. Entitlement Check
+    if (sellerId) {
+      const isEnabled = await hasFeature(sellerId, "product_videos_enabled");
+      if (!isEnabled) {
+        throw new Error("A funcionalidade de Vídeos de Produtos não está ativa no seu plano.");
+      }
+
+      const currentVideos = await this.listProductVideos(storeId, productId);
+      const newTotal = currentVideos.length + videoIds.length;
+      const limitCheck = await checkLimit(sellerId, "max_product_videos", currentVideos.length);
+      if (!limitCheck.allowed && limitCheck.limit !== null && newTotal > limitCheck.limit) {
+        throw new Error(`Limite máximo de vídeos por produto atingido (${limitCheck.limit}).`);
+      }
+    }
+
+    const existingList = await this.listProductVideos(storeId, productId);
+    let maxPos = existingList.length > 0 ? Math.max(...existingList.map((v) => v.position || 0)) + 1 : 0;
+
+    for (const vid of videoIds) {
+      // 3. Multi-tenant Video & READY status check
+      const video = await db.query.productVideos.findFirst({
+        where: and(eq(productVideos.id, vid), eq(productVideos.storeId, storeId)),
+      });
+
+      if (!video) {
+        throw new Error(`Vídeo não encontrado ou não pertence a esta loja.`);
+      }
+
+      if (video.status !== "READY") {
+        throw new Error(`O vídeo "${video.title}" ainda está sendo processado e não pode ser vinculado ao produto.`);
+      }
+
+      // 4. Upsert Assignment
+      await db
+        .insert(productVideoAssignments)
+        .values({
+          storeId,
+          productId,
+          videoId: vid,
+          position: maxPos++,
+        })
+        .onConflictDoNothing();
+    }
+
+    return await this.listProductVideos(storeId, productId);
+  }
+
+  /**
+   * Removes a video assignment from a product (removes association ONLY, DOES NOT delete from library or Bunny).
+   */
+  static async removeVideoAssignment(storeId: string, productId: string, videoId: string) {
+    const targetProduct = await db.query.products.findFirst({
+      where: and(eq(products.id, productId), eq(products.storeId, storeId)),
+    });
+    if (!targetProduct) {
+      throw new Error("Produto não encontrado ou sem permissão nesta loja.");
+    }
+
+    // 1. Remove assignment record
+    await db
+      .delete(productVideoAssignments)
+      .where(
+        and(
+          eq(productVideoAssignments.storeId, storeId),
+          eq(productVideoAssignments.productId, productId),
+          eq(productVideoAssignments.videoId, videoId)
+        )
+      );
+
+    // 2. Clear legacy productId if set on productVideos
+    await db
+      .update(productVideos)
+      .set({ productId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(productVideos.id, videoId),
+          eq(productVideos.storeId, storeId),
+          eq(productVideos.productId, productId)
+        )
+      );
+
+    return { success: true, removedVideoId: videoId };
+  }
+
+  /**
    * Reorders product videos by position.
    */
   static async reorderProductVideos(storeId: string, productId: string, orderedVideoIds: string[]) {
-    const videos = await this.listProductVideos(storeId, productId);
-    const videoMap = new Map(videos.map((v) => [v.id, v]));
+    const targetProduct = await db.query.products.findFirst({
+      where: and(eq(products.id, productId), eq(products.storeId, storeId)),
+    });
+    if (!targetProduct) {
+      throw new Error("Produto não encontrado ou sem permissão nesta loja.");
+    }
 
     for (let index = 0; index < orderedVideoIds.length; index++) {
       const vid = orderedVideoIds[index];
-      if (videoMap.has(vid)) {
-        await db
-          .update(productVideos)
-          .set({ position: index, updatedAt: new Date() })
-          .where(eq(productVideos.id, vid));
-      }
+      await db
+        .update(productVideoAssignments)
+        .set({ position: index, updatedAt: new Date() })
+        .where(
+          and(
+            eq(productVideoAssignments.storeId, storeId),
+            eq(productVideoAssignments.productId, productId),
+            eq(productVideoAssignments.videoId, vid)
+          )
+        );
+
+      await db
+        .update(productVideos)
+        .set({ position: index, updatedAt: new Date() })
+        .where(
+          and(
+            eq(productVideos.id, vid),
+            eq(productVideos.storeId, storeId),
+            eq(productVideos.productId, productId)
+          )
+        );
     }
 
     return await this.listProductVideos(storeId, productId);

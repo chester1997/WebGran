@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { ProductVideoService } from "@/lib/videos/product-video-service";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
     const seller = await requireSeller();

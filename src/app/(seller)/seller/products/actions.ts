@@ -9,6 +9,7 @@ import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storag
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
+import { ProductVideoService } from "@/lib/videos/product-video-service";
 
 async function processImageUrl(
   rawUrl: string | null,
@@ -167,6 +168,18 @@ export async function createProductAction(formData: FormData) {
       position: 0,
     })
     .returning();
+
+  const videoIdsRaw = (formData.get("videoIds") as string) || (formData.get("selectedVideoIds") as string);
+  if (deliveryType === "product_video" && videoIdsRaw) {
+    try {
+      const videoIds = JSON.parse(videoIdsRaw);
+      if (Array.isArray(videoIds) && videoIds.length > 0) {
+        await ProductVideoService.assignVideosToProduct(store.id, createdProduct.id, videoIds, seller.id);
+      }
+    } catch (err: any) {
+      console.warn("[createProductAction] Video assignment warning:", err.message);
+    }
+  }
 
   revalidatePath("/seller/products");
   revalidatePath("/miniapp/[slug]", "layout");
