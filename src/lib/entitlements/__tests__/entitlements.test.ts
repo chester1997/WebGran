@@ -61,6 +61,7 @@ vi.mock('@/db/ensure-entitlements', () => ({
 }));
 
 import { db } from '@/db';
+import * as ensureModule from '@/db/ensure-entitlements';
 
 describe('Entitlements & Features Domain Unit Test Suite', () => {
   const sellerId = 'seller-123';
@@ -495,6 +496,20 @@ describe('Entitlements & Features Domain Unit Test Suite', () => {
 
       const resB = await getSellerEntitlement('seller-B', 'telegram_bot');
       expect(resB.source).toBe('DEFAULT');
+    });
+
+    it('M) getSellerEntitlement e hasFeature NUNCA chamam ensureEntitlementTablesAndSeed em runtime', async () => {
+      const ensureSpy = vi.spyOn(ensureModule, 'ensureEntitlementTablesAndSeed');
+      ensureSpy.mockClear();
+
+      (db.query.users.findFirst as any).mockResolvedValue({ id: 'seller-test', role: 'seller' });
+      (db.query.features.findFirst as any).mockResolvedValue({ id: 'f-1', key: 'product_videos_enabled', type: 'BOOLEAN', isActive: true, defaultValue: { value: true } });
+      (db.query.subscriptions.findFirst as any).mockResolvedValue({ status: 'ACTIVE' });
+
+      await getSellerEntitlement('seller-test', 'product_videos_enabled');
+      await hasFeature('seller-test', 'product_videos_enabled');
+
+      expect(ensureSpy).not.toHaveBeenCalled();
     });
   });
 });

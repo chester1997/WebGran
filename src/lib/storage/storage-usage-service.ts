@@ -11,7 +11,6 @@ import {
 } from "@/db/schema";
 import { eq, and, sql, lt, inArray } from "drizzle-orm";
 import { getSellerEntitlement } from "@/lib/entitlements/entitlement-service";
-import { ensureEntitlementTablesAndSeed } from "@/db/ensure-entitlements";
 
 export const GB_IN_BYTES = 1024 * 1024 * 1024; // 1 GB = 1,073,741,824 bytes
 
@@ -63,8 +62,6 @@ export class StorageUsageService {
    * Returns current storage usage summary for seller
    */
   static async getUsage(sellerId: string): Promise<StorageUsageSummary> {
-    await ensureEntitlementTablesAndSeed();
-
     const row = await db.query.sellerStorageUsage.findFirst({
       where: eq(sellerStorageUsage.sellerId, sellerId),
     });
@@ -111,7 +108,6 @@ export class StorageUsageService {
    * Increments usedBytes atomically
    */
   static async incrementUsedBytes(sellerId: string, bytes: number): Promise<void> {
-    await ensureEntitlementTablesAndSeed();
     if (bytes <= 0) return;
 
     await db.execute(sql`
@@ -127,7 +123,6 @@ export class StorageUsageService {
    * Decrements usedBytes atomically
    */
   static async decrementUsedBytes(sellerId: string, bytes: number): Promise<void> {
-    await ensureEntitlementTablesAndSeed();
     if (bytes <= 0) return;
 
     await db.execute(sql`
@@ -168,7 +163,6 @@ export class StorageUsageService {
     referenceId?: string;
     expirationMinutes?: number;
   }): Promise<ReservationResult> {
-    await ensureEntitlementTablesAndSeed();
     const { sellerId, storeId, bytes, referenceType, referenceId } = params;
     const requestedBytes = Math.max(0, Math.round(bytes));
 
@@ -292,7 +286,6 @@ export class StorageUsageService {
     reservationIdOrParams?: string | { reservationId: string; actualBytes?: number },
     actualBytesArg?: number
   ): Promise<boolean> {
-    await ensureEntitlementTablesAndSeed();
     if (!reservationIdOrParams) return false;
     const reservationId = typeof reservationIdOrParams === "string" ? reservationIdOrParams : reservationIdOrParams.reservationId;
     const actualBytes = typeof reservationIdOrParams === "string" ? actualBytesArg : reservationIdOrParams.actualBytes;
@@ -333,8 +326,6 @@ export class StorageUsageService {
    * Releases an active reservation without increasing usedBytes (Idempotent)
    */
   static async releaseReservation(reservationId: string): Promise<boolean> {
-    await ensureEntitlementTablesAndSeed();
-
     const reservation = await db.query.storageReservations.findFirst({
       where: eq(storageReservations.id, reservationId),
     });
@@ -369,7 +360,6 @@ export class StorageUsageService {
     referenceId: string,
     actualBytes: number
   ): Promise<boolean> {
-    await ensureEntitlementTablesAndSeed();
     const reservation = await db.query.storageReservations.findFirst({
       where: and(
         eq(storageReservations.referenceType, referenceType),
@@ -389,7 +379,6 @@ export class StorageUsageService {
     referenceType: "clip_upload" | "image_upload" | "generic" | "product_video_upload",
     referenceId: string
   ): Promise<boolean> {
-    await ensureEntitlementTablesAndSeed();
     const reservation = await db.query.storageReservations.findFirst({
       where: and(
         eq(storageReservations.referenceType, referenceType),
@@ -407,7 +396,6 @@ export class StorageUsageService {
    * Extends active processing clip reservations so valid uploads are not prematurely expired.
    */
   static async expireAbandonedReservations(): Promise<number> {
-    await ensureEntitlementTablesAndSeed();
     const now = new Date();
 
     const expiredItems = await db.query.storageReservations.findMany({
@@ -449,8 +437,6 @@ export class StorageUsageService {
    * Reconciles seller storage by querying actual active DB entities
    */
   static async reconcileSellerStorage(sellerId: string): Promise<StorageUsageSummary> {
-    await ensureEntitlementTablesAndSeed();
-
     const sellerStores = await db.query.stores.findMany({
       where: eq(stores.ownerId, sellerId),
       columns: { id: true, logoUrl: true },

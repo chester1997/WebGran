@@ -8,7 +8,6 @@ import {
   sellerFeatureOverrides 
 } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { ensureEntitlementTablesAndSeed } from '@/db/ensure-entitlements';
 
 export type FeatureType = 'BOOLEAN' | 'LIMIT' | 'QUOTA';
 export type EntitlementSource = 
@@ -57,8 +56,6 @@ export async function getSellerEntitlement<T = any>(
   sellerId: string,
   featureKey: string
 ): Promise<EntitlementResult<T>> {
-  await ensureEntitlementTablesAndSeed();
-
   // 1. Check if user is ADMIN / SUPER_ADMIN (Exempt)
   const user = await db.query.users.findFirst({
     where: eq(users.id, sellerId),
@@ -277,8 +274,6 @@ export async function setSellerOverride(params: {
   expiresAt?: Date | null;
   createdBy?: string;
 }) {
-  await ensureEntitlementTablesAndSeed();
-
   const feature = await db.query.features.findFirst({
     where: eq(features.key, params.featureKey),
   });

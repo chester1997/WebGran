@@ -3,7 +3,6 @@ import { products, categories, banners, stores, clips, pendingDeletions } from "
 import { eq, and, ne, sql, isNull, lt } from "drizzle-orm";
 import { getStorageProvider } from "@/lib/storage/provider";
 import { BunnyStreamService } from "@/lib/bunny/stream";
-import { ensureEntitlementTablesAndSeed } from "@/db/ensure-entitlements";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 
 /**
@@ -214,8 +213,6 @@ export class MediaLifecycleService {
     resourceId?: string;
     lastError?: string;
   }): Promise<void> {
-    await ensureEntitlementTablesAndSeed();
-
     try {
       await db.insert(pendingDeletions).values({
         storeId: params.storeId || null,
@@ -236,8 +233,6 @@ export class GarbageCollectionService {
    * Processes outstanding items in pending_deletions table (Idempotent retry loop)
    */
   static async processPendingDeletions(limit = 20): Promise<{ processed: number; failed: number }> {
-    await ensureEntitlementTablesAndSeed();
-
     const items = await db.query.pendingDeletions.findMany({
       where: and(
         isNull(pendingDeletions.processedAt),
