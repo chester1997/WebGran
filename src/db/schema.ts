@@ -331,6 +331,8 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   floatingNotifications: many(storeFloatingNotifications),
   clips: many(clips),
   botChats: many(telegramBotChats),
+  productVideos: many(productVideos),
+  videoProgresses: many(videoProgress),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -393,6 +395,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   orderItems: many(orderItems),
   accesses: many(accesses),
+  productVideos: many(productVideos),
 }));
 
 export const telegramCustomersRelations = relations(telegramCustomers, ({ one, many }) => ({
@@ -402,6 +405,7 @@ export const telegramCustomersRelations = relations(telegramCustomers, ({ one, m
   }),
   orders: many(orders),
   accesses: many(accesses),
+  videoProgresses: many(videoProgress),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -627,6 +631,74 @@ export const clipsRelations = relations(clips, ({ one }) => ({
   product: one(products, {
     fields: [clips.productId],
     references: [products.id],
+  }),
+}));
+
+export const productVideos = pgTable('product_videos', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  bunnyVideoId: text('bunny_video_id').notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  position: integer('position').notNull().default(0),
+  durationSeconds: integer('duration_seconds'),
+  thumbnailUrl: text('thumbnail_url'),
+  status: text('status').notNull().default('UPLOADING'), // 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
+  active: boolean('active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  bunnyVideoIdIdx: index('product_videos_bunny_video_id_idx').on(t.bunnyVideoId),
+  storeIdIdx: index('product_videos_store_id_idx').on(t.storeId),
+  productIdIdx: index('product_videos_product_id_idx').on(t.productId),
+  storeProductIdx: index('product_videos_store_product_idx').on(t.storeId, t.productId),
+  statusIdx: index('product_videos_status_idx').on(t.status),
+  storeProductPositionIdx: index('product_videos_store_product_position_idx').on(t.storeId, t.productId, t.position),
+}));
+
+export const productVideosRelations = relations(productVideos, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [productVideos.storeId],
+    references: [stores.id],
+  }),
+  product: one(products, {
+    fields: [productVideos.productId],
+    references: [products.id],
+  }),
+  progresses: many(videoProgress),
+}));
+
+export const videoProgress = pgTable('video_progress', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  productVideoId: uuid('product_video_id').notNull().references(() => productVideos.id, { onDelete: 'cascade' }),
+  positionSeconds: integer('position_seconds').notNull().default(0),
+  durationSeconds: integer('duration_seconds').notNull().default(0),
+  progressPercent: decimal('progress_percent', { precision: 5, scale: 2 }).notNull().default('0'),
+  completed: boolean('completed').default(false).notNull(),
+  lastWatchedAt: timestamp('last_watched_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  customerVideoUnique: unique().on(t.customerId, t.productVideoId),
+  customerVideoIdx: index('video_progress_customer_video_idx').on(t.customerId, t.productVideoId),
+  storeIdx: index('video_progress_store_idx').on(t.storeId),
+}));
+
+export const videoProgressRelations = relations(videoProgress, ({ one }) => ({
+  store: one(stores, {
+    fields: [videoProgress.storeId],
+    references: [stores.id],
+  }),
+  customer: one(telegramCustomers, {
+    fields: [videoProgress.customerId],
+    references: [telegramCustomers.id],
+  }),
+  productVideo: one(productVideos, {
+    fields: [videoProgress.productVideoId],
+    references: [productVideos.id],
   }),
 }));
 

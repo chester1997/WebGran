@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ClipService } from "@/lib/clips/service";
+import { ProductVideoService } from "@/lib/videos/product-video-service";
 import { BunnyStreamService } from "@/lib/bunny/stream";
 import {
   verifyBunnyStreamSignature,
@@ -8,6 +9,25 @@ import {
   ClipStatus,
 } from "@/lib/bunny/webhook-utils";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
+
+export type ResolvedBunnyVideoType = "CLIP" | "PRODUCT_VIDEO" | "UNKNOWN";
+
+export async function resolveBunnyVideo(videoGuid: string): Promise<{
+  type: ResolvedBunnyVideoType;
+  entity: any;
+}> {
+  const clip = await ClipService.getClipByBunnyVideoId(videoGuid);
+  if (clip) {
+    return { type: "CLIP", entity: clip };
+  }
+
+  const productVideo = await ProductVideoService.getProductVideoByBunnyId(videoGuid);
+  if (productVideo) {
+    return { type: "PRODUCT_VIDEO", entity: productVideo };
+  }
+
+  return { type: "UNKNOWN", entity: null };
+}
 
 export async function POST(req: Request) {
   try {
@@ -70,7 +90,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 });
     }
 
-    // 8. Validate VideoLibraryId (payload.VideoLibraryId must match expected library ID 763931)
+    // 8. Validate VideoLibraryId (payload.VideoLibraryId must match expected library ID)
     const expectedLibraryId = String(process.env.BUNNY_STREAM_LIBRARY_ID || DEFAULT_LIBRARY_ID).trim();
     const incomingLibraryId = String(body.VideoLibraryId ?? body.libraryId ?? "").trim();
     if (!incomingLibraryId || incomingLibraryId !== expectedLibraryId) {
@@ -91,64 +111,112 @@ export async function POST(req: Request) {
       status: body.Status ?? body.status,
     });
 
-    // 10. Locate Clip in Neon database
-    const clip = await ClipService.getClipByBunnyVideoId(videoGuid);
-    if (!clip) {
-      console.warn("[BunnyStream] Clip not found in database for videoGuid:", videoGuid);
-      return NextResponse.json({ success: true, message: "Clip record not found in database, ignored" });
+    // 10. Resolve Video Domain (CLIP, PRODUCT_VIDEO, or UNKNOWN)
+    const resolved = await resolveBunnyVideo(videoGuid);
+
+    if (resolved.type === "UNKNOWN") {
+      console.warn("[BunnyStream] Video not found in database for videoGuid:", videoGuid);
+      return NextResponse.json({ success: true, message: "Video record not found in database, ignored" });
     }
 
-    // 11. Resolve target status using strict status mapping & transition rules
     const rawStatus = body.Status ?? body.status;
     const statusDetails = body.StatusDetails || body.message;
-    const newStatus = resolveClipStatusTransition(
-      rawStatus,
-      clip.status as ClipStatus,
-      statusDetails
-    );
 
-    // 12. Fetch details from Bunny Stream API if READY to retrieve exact duration & thumbnail
-    let duration: number | undefined = undefined;
-    let thumbnailUrl: string | undefined = undefined;
+    if (resolved.type === "CLIP") {
+      const clip = resolved.entity;
+      const newStatus = resolveClipStatusTransition(rawStatus, clip.status as ClipStatus, statusDetails);
 
-    if (newStatus === "READY") {
-      let actualBytes = 5 * 1024 * 1024; // Baseline 5MB fallback
-      try {
-        const videoInfo = await BunnyStreamService.getVideo(videoGuid);
-        if (videoInfo && typeof videoInfo.length === "number" && videoInfo.length > 0) {
-          duration = Math.round(videoInfo.length);
+      let duration: number | undefined = undefined;
+      let thumbnailUrl: string | undefined = undefined;
+
+      if (newStatus === "READY") {
+        let actualBytes = 5 * 1024 * 1024;
+        try {
+          const videoInfo = await BunnyStreamService.getVideo(videoGuid);
+          if (videoInfo && typeof videoInfo.length === "number" && videoInfo.length > 0) {
+            duration = Math.round(videoInfo.length);
+          }
+          if (videoInfo?.thumbnailFileName) {
+            thumbnailUrl = BunnyStreamService.getThumbnailUrl(videoGuid, videoInfo.thumbnailFileName);
+          }
+          const info = videoInfo as any;
+          if (info && (info.storageSize || info.size)) {
+            actualBytes = Number(info.storageSize || info.size);
+          } else if (duration) {
+            actualBytes = duration * 200 * 1024;
+          }
+        } catch (err) {
+          console.error("[BunnyStream] Failed to fetch video info from Bunny API during clip webhook:", err);
         }
-        if (videoInfo?.thumbnailFileName) {
-          thumbnailUrl = BunnyStreamService.getThumbnailUrl(videoGuid, videoInfo.thumbnailFileName);
-        }
-        const info = videoInfo as any;
-        if (info && (info.storageSize || info.size)) {
-          actualBytes = Number(info.storageSize || info.size);
-        } else if (duration) {
-          actualBytes = duration * 200 * 1024; // ~200 KB/sec bitrate estimate if storageSize unpopulated
-        }
-      } catch (err) {
-        console.error("[BunnyStream] Failed to fetch video info from Bunny API during webhook:", err);
+
+        await StorageUsageService.confirmReservationByReference("clip_upload", videoGuid, actualBytes);
+      } else if (newStatus === "FAILED") {
+        await StorageUsageService.releaseReservationByReference("clip_upload", videoGuid);
       }
 
-      // Confirm reservation for completed clip using actual storage size from Bunny Stream
-      await StorageUsageService.confirmReservationByReference("clip_upload", videoGuid, actualBytes);
-    } else if (newStatus === "FAILED") {
-      // Release reservation if video processing failed
-      await StorageUsageService.releaseReservationByReference("clip_upload", videoGuid);
+      const updated = await ClipService.updateClipStatusByBunnyId(videoGuid, newStatus, {
+        duration,
+        thumbnailUrl,
+      });
+
+      return NextResponse.json({
+        success: true,
+        type: "CLIP",
+        clipId: updated?.id || clip.id,
+        status: newStatus,
+      });
     }
 
-    // 13. Update status in database (Idempotent)
-    const updated = await ClipService.updateClipStatusByBunnyId(videoGuid, newStatus, {
-      duration,
-      thumbnailUrl,
-    });
+    if (resolved.type === "PRODUCT_VIDEO") {
+      const productVideo = resolved.entity;
+      const newStatus = resolveClipStatusTransition(
+        rawStatus,
+        productVideo.status as ClipStatus,
+        statusDetails
+      );
 
-    return NextResponse.json({
-      success: true,
-      clipId: updated?.id || clip.id,
-      status: newStatus,
-    });
+      let duration: number | undefined = undefined;
+      let thumbnailUrl: string | undefined = undefined;
+
+      if (newStatus === "READY") {
+        let actualBytes = 10 * 1024 * 1024;
+        try {
+          const videoInfo = await BunnyStreamService.getVideo(videoGuid);
+          if (videoInfo && typeof videoInfo.length === "number" && videoInfo.length > 0) {
+            duration = Math.round(videoInfo.length);
+          }
+          if (videoInfo?.thumbnailFileName) {
+            thumbnailUrl = BunnyStreamService.getThumbnailUrl(videoGuid, videoInfo.thumbnailFileName);
+          }
+          const info = videoInfo as any;
+          if (info && (info.storageSize || info.size)) {
+            actualBytes = Number(info.storageSize || info.size);
+          } else if (duration) {
+            actualBytes = duration * 200 * 1024;
+          }
+        } catch (err) {
+          console.error("[BunnyStream] Failed to fetch video info from Bunny API during product video webhook:", err);
+        }
+
+        await StorageUsageService.confirmReservationByReference("product_video_upload", videoGuid, actualBytes);
+      } else if (newStatus === "FAILED") {
+        await StorageUsageService.releaseReservationByReference("product_video_upload", videoGuid);
+      }
+
+      const updated = await ProductVideoService.updateProductVideoStatusByBunnyId(videoGuid, newStatus, {
+        duration,
+        thumbnailUrl,
+      });
+
+      return NextResponse.json({
+        success: true,
+        type: "PRODUCT_VIDEO",
+        productVideoId: updated?.id || productVideo.id,
+        status: newStatus,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: "Processed" });
   } catch (error: any) {
     console.error("[BunnyStream] Webhook internal error:", error);
     return NextResponse.json(

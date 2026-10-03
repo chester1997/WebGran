@@ -145,7 +145,7 @@ export class StorageUsageService {
     sellerId: string;
     storeId?: string;
     bytes: number;
-    referenceType: "clip_upload" | "image_upload" | "generic";
+    referenceType: "clip_upload" | "image_upload" | "generic" | "product_video_upload";
     referenceId?: string;
     expirationMinutes?: number;
   }): Promise<ReservationResult> {
@@ -344,7 +344,7 @@ export class StorageUsageService {
    * Confirms reservation using referenceType and referenceId (Idempotent)
    */
   static async confirmReservationByReference(
-    referenceType: "clip_upload" | "image_upload" | "generic",
+    referenceType: "clip_upload" | "image_upload" | "generic" | "product_video_upload",
     referenceId: string,
     actualBytes: number
   ): Promise<boolean> {
@@ -365,7 +365,7 @@ export class StorageUsageService {
    * Releases reservation using referenceType and referenceId (Idempotent)
    */
   static async releaseReservationByReference(
-    referenceType: "clip_upload" | "image_upload" | "generic",
+    referenceType: "clip_upload" | "image_upload" | "generic" | "product_video_upload",
     referenceId: string
   ): Promise<boolean> {
     await ensureEntitlementTablesAndSeed();

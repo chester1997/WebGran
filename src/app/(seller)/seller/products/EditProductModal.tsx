@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, X, Edit3, ImageIcon, AlertCircle } from "lucide-react";
 import { updateProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
+import { ProductVideosManager } from "./ProductVideosManager";
 
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
@@ -413,7 +414,12 @@ export function EditProductModal({ categories, bots, product }: { categories: an
               />
             </div>
 
-
+            {/* Gerenciador de Vídeos do Produto */}
+            {product?.id && (
+              <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+                <ProductVideosManager productId={product.id} productTitle={product.title} />
+              </div>
+            )}
           </form>
         </div>
 
