@@ -641,11 +641,13 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
             return (
               <div
                 key={video.id}
-                className="bg-[#0F0F12] border border-white/5 rounded-2xl overflow-hidden flex flex-col shadow-lg hover:border-white/10 transition-all duration-200 group relative"
+                className={`bg-[#0F0F12] border border-white/5 rounded-2xl flex flex-col shadow-lg hover:border-white/10 transition-all duration-200 group relative ${
+                  activeMenuId === video.id ? "z-40" : "z-10"
+                }`}
               >
                 {/* Compact Fixed Height Image Banner (h-36 = 144px) */}
                 <div
-                  className="w-full h-36 bg-zinc-900 relative overflow-hidden shrink-0 border-b border-white/5 cursor-pointer"
+                  className="w-full h-36 bg-zinc-900 relative rounded-t-2xl overflow-hidden shrink-0 border-b border-white/5 cursor-pointer"
                   onClick={() => video.status === "READY" && handleOpenPreview(video)}
                 >
                   {video.thumbnailUrl ? (
@@ -703,7 +705,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
                 </div>
 
                 {/* Card Body */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-3 rounded-b-2xl">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between gap-2">
                       <h3
@@ -726,7 +728,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
                         </button>
 
                         {activeMenuId === video.id && (
-                          <div className="absolute right-0 top-7 z-30 w-44 bg-[#121216] border border-white/10 rounded-xl shadow-2xl py-1 text-xs text-zinc-200">
+                          <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-[#121216] border border-white/10 rounded-xl shadow-2xl py-1 text-xs text-zinc-200 animate-in fade-in zoom-in-95 duration-100">
                             {video.status === "READY" && (
                               <button
                                 onClick={() => handleOpenPreview(video)}
