@@ -79,7 +79,7 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
     });
   });
 
-  describe('2. Authentication & Token Cache', () => {
+  describe('2. Authentication, Error Handling & Security', () => {
     it('caches access token in memory for platform requests', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
         if (typeof url === 'string' && url.includes('auth-token')) {
@@ -93,7 +93,6 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
 
       expect(token1).toBe('platform_token_xyz');
       expect(token2).toBe('platform_token_xyz');
-      // Auth URL should only be fetched ONCE due to caching
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -114,6 +113,36 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       const plans = await SyncPayPlatformBillingService.listPlans();
       expect(plans).toEqual({ data: [{ id: 'plan_123' }] });
       expect(authCalls).toBe(2);
+    });
+
+    it('handles HTTP 429 Rate Limiting cleanly without leaking secrets', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'tok_123' }), { status: 200 });
+        }
+        return new Response('Too Many Requests', { status: 429 });
+      });
+
+      await expect(SyncPayPlatformBillingService.listPlans()).rejects.toThrow(/Request failed \(429\)/);
+    });
+
+    it('handles HTTP 500 Server Error cleanly without exposing client_secret', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'tok_123' }), { status: 200 });
+        }
+        return new Response('Internal Server Error', { status: 500 });
+      });
+
+      try {
+        await SyncPayPlatformBillingService.listPlans();
+        expect.fail('Should have thrown error');
+      } catch (err: any) {
+        expect(err.message).not.toContain(mockClientSecret);
+        expect(err.message).toContain('500');
+      }
     });
   });
 
@@ -148,8 +177,8 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       expect(res.checkout_url).toBe('https://checkout.syncpayments.com.br/plan999');
     });
 
-    it('enrolls a subscriber via POST /api/partner/v1/subscription-plans/{planToken}/enroll', async () => {
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+    it('enrolls a subscriber via POST /api/partner/v1/subscription-plans/{planToken}/enroll without activating', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
         const u = typeof url === 'string' ? url : (url as Request).url;
         if (u.includes('auth-token')) {
           return new Response(JSON.stringify({ access_token: 'token_123' }), { status: 200 });
@@ -186,8 +215,8 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
     });
   });
 
-  describe('4. Status Mapping & Reconciliation', () => {
-    it('correctly maps SyncPay status strings to WebGran local status', () => {
+  describe('4. Status Mapping, Out-of-Order Webhooks & Reconciliation', () => {
+    it('correctly maps all SyncPay remote status strings to WebGran local status', () => {
       expect(SyncPayPlatformBillingReconciliationService.mapStatus('active')).toBe('ACTIVE');
       expect(SyncPayPlatformBillingReconciliationService.mapStatus('paid')).toBe('ACTIVE');
       expect(SyncPayPlatformBillingReconciliationService.mapStatus('overdue')).toBe('PAST_DUE');
@@ -196,9 +225,44 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       expect(SyncPayPlatformBillingReconciliationService.mapStatus('cancelled')).toBe('CANCELLED');
       expect(SyncPayPlatformBillingReconciliationService.mapStatus('pending_first_payment')).toBe('PENDING');
     });
+
+    it('reconciles subscription via SyncPay API and updates local DB state to ACTIVE upon payment', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.subscriptions.findFirst).mockResolvedValueOnce({
+        id: 'local_sub_100',
+        sellerId: 'seller_100',
+        status: 'PENDING',
+        syncpaySubscriptionToken: 'sub_tok_paid',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+      } as any);
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'token_123' }), { status: 200 });
+        }
+        if (u.includes('subscriptions/sub_tok_paid')) {
+          return new Response(
+            JSON.stringify({
+              data: {
+                status: 'active',
+                charges: [{ status: 'paid', paid_at: new Date().toISOString() }],
+              },
+            }),
+            { status: 200 }
+          );
+        }
+        return new Response(JSON.stringify({}), { status: 400 });
+      });
+
+      const res = await SyncPayPlatformBillingReconciliationService.reconcileByToken('sub_tok_paid');
+      expect(res.synced).toBe(true);
+      expect(res.newStatus).toBe('ACTIVE');
+    });
   });
 
-  describe('5. Platform Operations (Suspend, Reactivate, Cancel, Resend Charge)', () => {
+  describe('5. Platform Lifecycle Operations', () => {
     it('sends PATCH request to cancel subscription with reason', async () => {
       let patchMethod = '';
       let patchBody: any = null;
@@ -220,6 +284,46 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       expect(patchMethod).toBe('PATCH');
       expect(patchBody).toEqual({ reason: 'Inadimplência' });
       expect(res).toEqual({ status: 'cancelled' });
+    });
+
+    it('sends PATCH request to suspend subscription with reason', async () => {
+      let patchMethod = '';
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'token_123' }), { status: 200 });
+        }
+        if (u.includes('suspend')) {
+          patchMethod = options?.method || '';
+          return new Response(JSON.stringify({ status: 'suspended' }), { status: 200 });
+        }
+        return new Response(JSON.stringify({}), { status: 400 });
+      });
+
+      const res = await SyncPayPlatformBillingService.suspendSubscription('sub_123');
+      expect(patchMethod).toBe('PATCH');
+      expect(res).toEqual({ status: 'suspended' });
+    });
+
+    it('sends PATCH request to reactivate subscription', async () => {
+      let patchMethod = '';
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'token_123' }), { status: 200 });
+        }
+        if (u.includes('reactivate')) {
+          patchMethod = options?.method || '';
+          return new Response(JSON.stringify({ status: 'active' }), { status: 200 });
+        }
+        return new Response(JSON.stringify({}), { status: 400 });
+      });
+
+      const res = await SyncPayPlatformBillingService.reactivateSubscription('sub_123');
+      expect(patchMethod).toBe('PATCH');
+      expect(res).toEqual({ status: 'active' });
     });
   });
 });

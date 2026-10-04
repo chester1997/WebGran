@@ -8,17 +8,6 @@ import { SyncPayPlatformBillingReconciliationService } from '@/lib/billing/syncp
 export const WEBGRAN_PLAN_SLUG = 'webgran';
 export const WEBGRAN_PLAN_PRICE = 89.90;
 
-let schemaEnsured = false;
-export async function ensureInvoiceSchema() {
-  if (schemaEnsured) return;
-  try {
-    await db.execute(sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;`);
-    schemaEnsured = true;
-  } catch (err) {
-    console.error('Error ensuring expires_at column:', err);
-  }
-}
-
 export async function getDefaultPlan() {
   let plan = await db.query.subscriptionPlans.findFirst({
     where: eq(subscriptionPlans.slug, WEBGRAN_PLAN_SLUG),
@@ -43,8 +32,6 @@ export async function getDefaultPlan() {
 }
 
 export async function getSellerSubscription(sellerId: string) {
-  await ensureInvoiceSchema();
-
   const userRecord = await db.query.users.findFirst({
     where: eq(users.id, sellerId),
   });
