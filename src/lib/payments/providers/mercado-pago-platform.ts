@@ -26,7 +26,7 @@ export class MercadoPagoPlatformProvider implements PlatformBillingProvider {
    * Generates OAuth URL for Platform Owner (SUPER_ADMIN)
    */
   async getOAuthConnectUrl(redirectUrl: string): Promise<string> {
-    const appId = process.env.MP_CLIENT_ID || process.env.MP_APP_ID || '6668765509875526';
+    const appId = process.env.MP_CLIENT_ID || process.env.MP_APP_ID || '1775404605721537';
     const state = Buffer.from(JSON.stringify({ role: 'super_admin', type: 'platform_subscription' })).toString('base64url');
     const encodedRedirect = encodeURIComponent(redirectUrl);
     return `https://auth.mercadopago.com.br/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${state}&redirect_uri=${encodedRedirect}`;
