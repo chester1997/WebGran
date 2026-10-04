@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, contentType, fileSize } = body;
+    const { title, description } = body;
+    const fileSize = body.fileSize || body.fileSizeBytes;
+    const contentType = body.contentType || body.fileType;
 
     const result = await ProductVideoService.createProductVideoUploadSession({
       sellerId: seller.id,

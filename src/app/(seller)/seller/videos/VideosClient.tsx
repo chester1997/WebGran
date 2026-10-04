@@ -201,7 +201,9 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         body: JSON.stringify({
           title: formData.title.trim(),
           description: formData.description.trim() || undefined,
+          fileSize: selectedFile.size,
           fileSizeBytes: selectedFile.size,
+          contentType: selectedFile.type || "video/mp4",
           fileName: selectedFile.name,
         }),
         signal: abortController.signal,
