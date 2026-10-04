@@ -48,6 +48,10 @@ export class ProductVideoService {
    * Supports both product_video_assignments table and legacy direct productId field.
    */
   static async listProductVideos(storeId: string, productId: string, activeOnly = false) {
+    if (!productId || productId === "pending" || productId === "library") {
+      return [];
+    }
+
     const assignments = await db.query.productVideoAssignments.findMany({
       where: and(
         eq(productVideoAssignments.storeId, storeId),
@@ -182,11 +186,14 @@ export class ProductVideoService {
       }
     }
 
-    // Multi-tenant Product Validation (only if productId is a real UUID, not "pending")
-    const isPending = !productId || productId === "pending";
-    if (!isPending) {
+    // Multi-tenant Product Validation (only if productId is a real UUID, not "pending" or "library")
+    const isPending = productId === "pending";
+    const isLibrary = !productId || productId === "library";
+    const isRealProduct = !isPending && !isLibrary;
+
+    if (isRealProduct) {
       const targetProduct = await db.query.products.findFirst({
-        where: and(eq(products.id, productId), eq(products.storeId, storeId)),
+        where: and(eq(products.id, productId!), eq(products.storeId, storeId)),
       });
       if (!targetProduct) {
         throw new Error("O produto selecionado é inválido ou não pertence a esta loja.");
@@ -232,20 +239,21 @@ export class ProductVideoService {
 
     // Determine position
     let nextPosition = 0;
-    if (!isPending) {
-      const currentVideos = await this.listProductVideos(storeId, productId);
+    if (isRealProduct) {
+      const currentVideos = await this.listProductVideos(storeId, productId!);
       nextPosition = currentVideos.length > 0 ? Math.max(...currentVideos.map((v) => v.position)) + 1 : 0;
     }
 
     // 3. Register Product Video metadata in Neon DB (skip DB insert if isPending)
     let videoRecord: any;
     if (!isPending) {
+      const targetProductId = isRealProduct ? productId! : null;
       try {
         const inserted = await db
           .insert(productVideos)
           .values({
             storeId,
-            productId,
+            productId: targetProductId,
             bunnyVideoId: bunnyVideo.videoId,
             title: title.trim(),
             description: description?.trim() || null,

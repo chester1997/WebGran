@@ -342,4 +342,25 @@ describe("Seller Video Library & Quota Suite", () => {
       })
     ).rejects.toThrow(/Limite de vídeos de produtos atingido/i);
   });
+
+  it("17. Aceita productId = 'library' sem realizar consulta de produto por UUID", async () => {
+    const { hasFeature, checkLimit, getSellerEntitlement } = await import("@/lib/entitlements/entitlement-service");
+    vi.mocked(hasFeature).mockResolvedValueOnce(true);
+    vi.mocked(checkLimit).mockResolvedValueOnce({ allowed: true, usage: 0, limit: 10, remaining: 10, isUnlimited: false, source: "PLAN" } as any);
+    vi.mocked(getSellerEntitlement).mockResolvedValueOnce({ featureKey: "max_video_size_mb", type: "NUMERIC", value: 500, isUnlimited: false, source: "PLAN" } as any);
+    vi.spyOn(StorageUsageService, "reserveStorageForUpload").mockResolvedValueOnce({ allowed: true, reservationId: "res-1" } as any);
+    vi.spyOn(BunnyStreamService, "createVideo").mockResolvedValueOnce({ videoId: "bunny-lib-1", title: "Video Library" } as any);
+
+    const session = await ProductVideoService.createProductVideoUploadSession({
+      sellerId: "seller-A",
+      storeId: "store-seller-A",
+      productId: "library",
+      title: "Vídeo Global para Biblioteca",
+      fileSize: 15 * 1024 * 1024,
+    });
+
+    expect(session).toBeDefined();
+    expect(session.productVideo).toBeDefined();
+    expect(session.productVideo.bunnyVideoId).toBe("bunny-v-123");
+  });
 });
