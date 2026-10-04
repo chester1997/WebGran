@@ -23,7 +23,7 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
     const state = JSON.stringify({ sellerId, storeId });
     const encodedState = Buffer.from(state).toString('base64url');
     const encodedRedirect = encodeURIComponent(redirectUrl);
-    return `https://auth.mercadopago.com.br/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${encodedState}&redirect_uri=${encodedRedirect}`;
+    return `https://auth.mercadopago.com/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${encodedState}&redirect_uri=${encodedRedirect}`;
   }
 
   /**

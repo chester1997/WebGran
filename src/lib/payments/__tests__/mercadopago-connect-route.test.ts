@@ -41,7 +41,7 @@ describe('Mercado Pago OAuth Seller Connect API Route Suite', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller', email: 'seller@test.com' });
     vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-123', name: 'Minha Loja' } as any);
     vi.mocked(hasFeature).mockResolvedValue(true);
-    vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com.br/authorization?client_id=test_app_id');
+    vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com/authorization?client_id=test_app_id');
 
     const req = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', {
       method: 'POST',
@@ -54,7 +54,7 @@ describe('Mercado Pago OAuth Seller Connect API Route Suite', () => {
 
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.url).toContain('https://auth.mercadopago.com.br/authorization');
+    expect(body.url).toContain('https://auth.mercadopago.com/authorization');
   });
 
   it('2. POST com seller não autenticado é rejeitado com HTTP 401', async () => {
@@ -83,13 +83,13 @@ describe('Mercado Pago OAuth Seller Connect API Route Suite', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller' });
     vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-123' } as any);
     vi.mocked(hasFeature).mockResolvedValue(true);
-    vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com.br/authorization?client_id=test_app_id&state=xyz');
+    vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com/authorization?client_id=test_app_id&state=xyz');
 
     const getReq = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'GET' });
     const getRes = await GET(getReq);
 
     expect(getRes.status).toBe(307); // NextResponse.redirect default
-    expect(getRes.headers.get('location')).toBe('https://auth.mercadopago.com.br/authorization?client_id=test_app_id&state=xyz');
+    expect(getRes.headers.get('location')).toBe('https://auth.mercadopago.com/authorization?client_id=test_app_id&state=xyz');
 
     const postReq = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'POST' });
     const postRes = await POST(postReq);
