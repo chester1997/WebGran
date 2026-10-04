@@ -7,9 +7,13 @@ import VideosClient from "./VideosClient";
 import { ShieldAlert } from "lucide-react";
 
 export default async function SellerVideosPage() {
+  console.log("[SELLER_VIDEOS] STEP 1 - page started");
   await connection();
+  console.log("[SELLER_VIDEOS] STEP 2 - connection passed");
   const seller = await requireSeller();
+  console.log("[SELLER_VIDEOS] STEP 3 - requireSeller passed");
   const store = await getCurrentStore();
+  console.log("[SELLER_VIDEOS] STEP 4 - getCurrentStore passed");
 
   if (!store) {
     return <SetupStoreClient />;
@@ -17,6 +21,7 @@ export default async function SellerVideosPage() {
 
   // Verify entitlement: product_videos_enabled
   const isEnabled = await hasFeature(seller.id, "product_videos_enabled");
+  console.log("[SELLER_VIDEOS] STEP 5 - entitlement passed:", isEnabled);
   if (!isEnabled) {
     return (
       <div className="p-6 md:p-8 max-w-4xl mx-auto">
@@ -34,8 +39,25 @@ export default async function SellerVideosPage() {
     );
   }
 
-  const videos = await ProductVideoService.listSellerLibraryVideos(store.id);
-  const rawUsage = await ProductVideoService.getSellerVideoStorageUsage(seller.id, store.id);
+  let videos;
+  try {
+    console.log("[SELLER_VIDEOS] STEP 6 - loading library");
+    videos = await ProductVideoService.listSellerLibraryVideos(store.id);
+    console.log("[SELLER_VIDEOS] STEP 7 - library loaded successfully, count:", videos.length);
+  } catch (error) {
+    console.error("[SELLER_VIDEOS] LIBRARY ERROR in listSellerLibraryVideos:", error);
+    throw error;
+  }
+
+  let rawUsage;
+  try {
+    console.log("[SELLER_VIDEOS] STEP 8 - loading storage usage");
+    rawUsage = await ProductVideoService.getSellerVideoStorageUsage(seller.id, store.id);
+    console.log("[SELLER_VIDEOS] STEP 9 - storage usage loaded successfully");
+  } catch (error) {
+    console.error("[SELLER_VIDEOS] STORAGE ERROR in getSellerVideoStorageUsage:", error);
+    throw error;
+  }
 
   const usedGB = rawUsage.usedBytes / (1024 * 1024 * 1024);
   const quotaGB = rawUsage.quotaGb || 50;
