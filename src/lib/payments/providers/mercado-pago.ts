@@ -16,10 +16,7 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
    * Generates OAuth URL for seller connection
    */
   async connectSeller(sellerId: string, redirectUrl: string, storeId?: string): Promise<string> {
-    const appId = process.env.MP_CLIENT_ID || process.env.MP_APP_ID;
-    if (!appId) {
-      throw new Error('Mercado Pago MP_CLIENT_ID/MP_APP_ID is not configured.');
-    }
+    const appId = process.env.MP_CLIENT_ID || process.env.MP_APP_ID || '6668765509875526';
     const state = JSON.stringify({ sellerId, storeId });
     const encodedState = Buffer.from(state).toString('base64url');
     const encodedRedirect = encodeURIComponent(redirectUrl);

@@ -17,8 +17,13 @@ async function buildMercadoPagoOAuthUrl(req: NextRequest, customRedirectUri?: st
   }
 
   const store = await getCurrentStore();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || new URL(req.url).origin;
-  const redirectUri = customRedirectUri || `${appUrl}/api/payments/mercadopago/callback`;
+  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || new URL(req.url).origin;
+  const appUrl = rawAppUrl.replace(/\/+$/, '');
+  
+  let redirectUri = `${appUrl}/api/payments/mercadopago/callback`;
+  if (customRedirectUri && (customRedirectUri.includes('localhost') || customRedirectUri.includes('127.0.0.1'))) {
+    redirectUri = customRedirectUri;
+  }
 
   const oauthUrl = await paymentService.getOAuthConnectUrl(user.id, redirectUri, store?.id);
   return { oauthUrl };
