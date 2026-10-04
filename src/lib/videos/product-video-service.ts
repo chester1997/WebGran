@@ -258,6 +258,7 @@ export class ProductVideoService {
             title: title.trim(),
             description: description?.trim() || null,
             position: nextPosition,
+            fileSizeBytes: fileSize ? Number(fileSize) : null,
             status: "UPLOADING",
             active: true,
           })
@@ -971,6 +972,86 @@ export class ProductVideoService {
         product: true,
       },
     });
+
+    // Auto-sync pending videos (UPLOADING or PROCESSING) directly with Bunny Stream API
+    const pendingVideos = videos.filter(
+      (v) => v.status === "UPLOADING" || v.status === "PROCESSING"
+    );
+
+    if (pendingVideos.length > 0) {
+      await Promise.all(
+        pendingVideos.map(async (v) => {
+          try {
+            const bunnyInfo = await BunnyStreamService.getVideo(v.bunnyVideoId);
+            if (!bunnyInfo) return;
+
+            let newStatus = v.status;
+            let durationSeconds = v.durationSeconds;
+            let thumbnailUrl = v.thumbnailUrl;
+            let fileSizeBytes = v.fileSizeBytes;
+
+            // status mapping: 0 = Created, 1 = Uploading/Processing, 2 = Encoding Failed, 3 = Transcoded/Ready
+            if (bunnyInfo.status === 3) {
+              newStatus = "READY";
+              durationSeconds = bunnyInfo.length ? Math.round(bunnyInfo.length) : v.durationSeconds;
+              thumbnailUrl = BunnyStreamService.getThumbnailUrl(
+                v.bunnyVideoId,
+                bunnyInfo.thumbnailFileName
+              );
+              const info = bunnyInfo as any;
+              if (info.storageSize || info.size) {
+                fileSizeBytes = Number(info.storageSize || info.size);
+              }
+            } else if (bunnyInfo.status === 2) {
+              newStatus = "FAILED";
+            } else if (bunnyInfo.status === 1) {
+              newStatus = "PROCESSING";
+            }
+
+            if (
+              newStatus !== v.status ||
+              durationSeconds !== v.durationSeconds ||
+              thumbnailUrl !== v.thumbnailUrl ||
+              fileSizeBytes !== v.fileSizeBytes
+            ) {
+              v.status = newStatus;
+              v.durationSeconds = durationSeconds;
+              v.thumbnailUrl = thumbnailUrl;
+              if (fileSizeBytes) v.fileSizeBytes = fileSizeBytes;
+
+              await db
+                .update(productVideos)
+                .set({
+                  status: newStatus,
+                  durationSeconds,
+                  thumbnailUrl,
+                  fileSizeBytes: fileSizeBytes || undefined,
+                  updatedAt: new Date(),
+                })
+                .where(eq(productVideos.id, v.id));
+
+              if (newStatus === "READY") {
+                const actualBytes =
+                  fileSizeBytes ||
+                  (durationSeconds ? durationSeconds * 200 * 1024 : 10 * 1024 * 1024);
+                await StorageUsageService.confirmReservationByReference(
+                  "product_video_upload",
+                  v.bunnyVideoId,
+                  actualBytes
+                );
+              } else if (newStatus === "FAILED") {
+                await StorageUsageService.releaseReservationByReference(
+                  "product_video_upload",
+                  v.bunnyVideoId
+                );
+              }
+            }
+          } catch (syncErr) {
+            // Ignore temporary API fetch errors gracefully during polling
+          }
+        })
+      );
+    }
 
     return videos.map((v) => {
       const productMap = new Map<string, { id: string; title: string; slug: string }>();
