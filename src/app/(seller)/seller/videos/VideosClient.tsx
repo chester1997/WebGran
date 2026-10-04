@@ -42,6 +42,7 @@ export interface LibraryVideoItem {
   createdAt: string;
   updatedAt: string;
   assignmentCount?: number;
+  assignedProductsCount?: number;
   assignments?: {
     id: string;
     productId: string;
@@ -64,9 +65,37 @@ interface VideosClientProps {
   initialUsage: VideoStorageUsage;
 }
 
+const GB = 1024 * 1024 * 1024;
+const num = (v: unknown, fallback = 0): number => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/**
+ * Accepts either the UI shape (usedGB/quotaGB/freeGB/percentage) or the raw
+ * service shape returned by /api/seller/videos (usedBytes/quotaGb/remainingBytes/percentUsed)
+ * and always returns a fully-populated VideoStorageUsage.
+ */
+function normalizeUsage(raw: any): VideoStorageUsage {
+  const r = raw || {};
+  const usedBytes = num(r.usedBytes);
+  const reservedBytes = num(r.reservedBytes);
+  const quotaGB = num(r.quotaGB ?? r.quotaGb, 50) || 50;
+  const quotaBytes = num(r.quotaBytes, quotaGB * GB) || quotaGB * GB;
+  const usedGB = num(r.usedGB, usedBytes / GB);
+  const freeGB =
+    r.freeGB !== undefined
+      ? num(r.freeGB)
+      : r.remainingBytes !== undefined && r.remainingBytes !== null
+        ? num(r.remainingBytes) / GB
+        : Math.max(0, quotaGB - usedGB);
+  const percentage = num(r.percentage ?? r.percentUsed);
+  return { usedBytes, quotaBytes, reservedBytes, usedGB, quotaGB, freeGB, percentage };
+}
+
 export default function VideosClient({ initialVideos, initialUsage }: VideosClientProps) {
   const [videosList, setVideosList] = useState<LibraryVideoItem[]>(initialVideos);
-  const [usage, setUsage] = useState<VideoStorageUsage>(initialUsage);
+  const [usage, setUsage] = useState<VideoStorageUsage>(() => normalizeUsage(initialUsage));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
@@ -106,8 +135,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
       const res = await fetch("/api/seller/videos");
       const data = await res.json();
       if (data.success) {
-        setVideosList(data.videos || []);
-        if (data.usage) setUsage(data.usage);
+        setVideosList(Array.isArray(data.videos) ? data.videos : []);
+        if (data.usage) setUsage(normalizeUsage(data.usage));
       }
     } catch (err) {
       console.error("[VideosClient] Refresh Error:", err);
@@ -298,7 +327,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   const handleOpenDelete = (video: LibraryVideoItem) => {
     setDeletingVideo(video);
     setActiveMenuId(null);
-    const assignedCount = video.assignmentCount || video.assignments?.length || 0;
+    const assignedCount = video.assignedProductsCount || video.assignmentCount || video.assignments?.length || 0;
     if (assignedCount > 0) {
       setDeleteWarningInfo({
         isAssigned: true,
@@ -608,7 +637,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         /* 9. GRID DE VÍDEOS (Standardized WebGran Product Grid Layout) */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
           {filteredVideos.map((video) => {
-            const assignedCount = video.assignmentCount || video.assignments?.length || 0;
+            const assignedCount = video.assignedProductsCount || video.assignmentCount || video.assignments?.length || 0;
             return (
               <div
                 key={video.id}
@@ -747,7 +776,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         <div className="bg-[#0F0F12] border border-white/5 rounded-2xl overflow-hidden shadow-lg">
           <div className="divide-y divide-white/5">
             {filteredVideos.map((video) => {
-              const assignedCount = video.assignmentCount || video.assignments?.length || 0;
+              const assignedCount = video.assignedProductsCount || video.assignmentCount || video.assignments?.length || 0;
               return (
                 <div
                   key={video.id}
