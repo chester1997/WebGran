@@ -103,10 +103,31 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ redirectUri }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Falha ao iniciar conexão com Mercado Pago.');
+
+      if (!res.ok) {
+        let errorMsg = 'Não foi possível iniciar a conexão com o Mercado Pago.';
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) {
+            errorMsg = errData.error;
+          }
+        } catch {
+          // Response was not JSON
+        }
+        throw new Error(errorMsg);
       }
+
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Não foi possível iniciar a conexão com o Mercado Pago.');
+      }
+
+      if (!data || !data.success || !data.url) {
+        throw new Error(data?.error || 'Falha ao iniciar conexão com Mercado Pago.');
+      }
+
       window.location.href = data.url;
     } catch (err: any) {
       setFeedbackMsg({ provider: 'mercado_pago', type: 'error', text: err.message });
