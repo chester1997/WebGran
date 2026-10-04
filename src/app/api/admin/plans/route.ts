@@ -32,6 +32,8 @@ export async function GET() {
           price: Number(p.price),
           billingInterval: p.billingInterval,
           active: p.active,
+          syncpayPlanTokenMasked: p.syncpayPlanToken ? `${p.syncpayPlanToken.slice(0, 6)}...` : null,
+          isSyncPayIntegrated: Boolean(p.syncpayPlanToken),
           configuredFeaturesCount: featCount[0]?.count || 0,
           activeSubscriptionsCount: subCount[0]?.count || 0,
           maxProducts: p.maxProducts,

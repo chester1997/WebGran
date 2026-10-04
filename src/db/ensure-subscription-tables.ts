@@ -66,6 +66,16 @@ async function main() {
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
   `;
 
+  // Ensure SyncPay platform tokens columns exist
+  await sql`
+    ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS syncpay_plan_token TEXT;
+  `;
+
+  await sql`
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS syncpay_subscription_token TEXT;
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS syncpay_subscriber_token TEXT;
+  `;
+
   // 4. Create system_settings table
   await sql`
     CREATE TABLE IF NOT EXISTS system_settings (

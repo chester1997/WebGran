@@ -512,6 +512,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   maxBots: integer('max_bots'),
   maxCustomers: integer('max_customers'),
   active: boolean('active').default(true).notNull(),
+  syncpayPlanToken: text('syncpay_plan_token'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -521,6 +522,8 @@ export const subscriptions = pgTable('subscriptions', {
   sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   planId: uuid('plan_id').notNull().references(() => subscriptionPlans.id),
   status: text('status').notNull().default('TRIAL'), // TRIAL, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED
+  syncpaySubscriptionToken: text('syncpay_subscription_token'),
+  syncpaySubscriberToken: text('syncpay_subscriber_token'),
   startedAt: timestamp('started_at').defaultNow().notNull(),
   currentPeriodStart: timestamp('current_period_start').defaultNow().notNull(),
   currentPeriodEnd: timestamp('current_period_end').notNull(),

@@ -2,6 +2,8 @@ import { db } from '@/db';
 import { subscriptionPlans, subscriptions, invoices, users } from '@/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { mercadoPagoPlatformProvider } from '@/lib/payments/providers/mercado-pago-platform';
+import { SyncPayPlatformBillingService } from '@/lib/billing/syncpay-platform-billing-service';
+import { SyncPayPlatformBillingReconciliationService } from '@/lib/billing/syncpay-platform-reconciliation-service';
 
 export const WEBGRAN_PLAN_SLUG = 'webgran';
 export const WEBGRAN_PLAN_PRICE = 89.90;
@@ -62,6 +64,8 @@ export async function getSellerSubscription(sellerId: string) {
         sellerId,
         planId: "exempt-plan",
         status: "EXEMPT",
+        syncpaySubscriptionToken: null,
+        syncpaySubscriberToken: null,
         startedAt: userRecord?.createdAt || new Date(),
         currentPeriodStart: new Date(),
         currentPeriodEnd: new Date(Date.now() + 365 * 10 * 86400000),
@@ -238,7 +242,7 @@ export async function getSellerSubscription(sellerId: string) {
 }
 
 /**
- * Generate a new Mercado Pago PIX Invoice for Subscription (30 MINUTES EXPIRATION)
+ * Generate a new PIX Invoice for Subscription via SyncPay Platform (or Mercado Pago fallback)
  */
 export async function createPlatformBillingInvoice(sellerId: string, forceNew = false) {
   const userRecord = await db.query.users.findFirst({
@@ -272,12 +276,91 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
     }
   }
 
-  // Calculate EXACT 30 MINUTES EXPIRATION server-side
   const amount = Number(plan.price);
   const dueDate = new Date(now.getTime() + 30 * 60 * 1000); // 30 min due date
-  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // EXACT 30 MINUTES EXPIRATION
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 min expiration
 
-  // Create REAL PIX Payment on Mercado Pago API (Platform Owner Account)
+  // Attempt SyncPay Platform Billing flow first
+  try {
+    const platformCreds = await SyncPayPlatformBillingService.getPlatformCredentials();
+    if (platformCreds.clientId && platformCreds.clientSecret) {
+      let syncpayPlanToken = plan.syncpayPlanToken;
+      if (!syncpayPlanToken) {
+        const createdPlan = await SyncPayPlatformBillingService.createPlan({
+          name: plan.name,
+          amount,
+          billing_method: 'qr_code',
+          description: plan.description || 'Plano WebGran SaaS',
+        });
+        syncpayPlanToken = createdPlan.token;
+        await db
+          .update(subscriptionPlans)
+          .set({ syncpayPlanToken, updatedAt: now })
+          .where(eq(subscriptionPlans.id, plan.id));
+      }
+
+      let enrollRes;
+      const existingSubToken = (subscription as any).syncpaySubscriptionToken;
+      if (existingSubToken) {
+        try {
+          enrollRes = await SyncPayPlatformBillingService.resendCharge(existingSubToken);
+        } catch {
+          enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
+            name: userRecord?.name || 'Vendedor WebGran',
+            email: userRecord?.email || 'vendedor@webgran.online',
+            document: (userRecord as any)?.cpf || '00000000000',
+          });
+        }
+      } else {
+        enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
+          name: userRecord?.name || 'Vendedor WebGran',
+          email: userRecord?.email || 'vendedor@webgran.online',
+          document: (userRecord as any)?.cpf || '00000000000',
+        });
+
+        await db
+          .update(subscriptions)
+          .set({
+            syncpaySubscriptionToken: enrollRes.subscriptionToken,
+            syncpaySubscriberToken: enrollRes.subscriberToken || null,
+            updatedAt: now,
+          })
+          .where(eq(subscriptions.id, subscription.id));
+      }
+
+      const insertedInvoice = await db
+        .insert(invoices)
+        .values({
+          sellerId,
+          subscriptionId: subscription.id,
+          provider: 'syncpay',
+          externalId: enrollRes.subscriptionToken || existingSubToken,
+          amount: amount.toFixed(2),
+          status: 'PENDING',
+          dueDate,
+          expiresAt,
+          qrCode: enrollRes.qrCode || null,
+          qrCodeText: enrollRes.pixCode || null,
+        })
+        .returning();
+
+      return {
+        invoiceId: insertedInvoice[0].id,
+        externalId: insertedInvoice[0].externalId,
+        amount: amount,
+        status: 'PENDING',
+        qrCode: insertedInvoice[0].qrCode,
+        qrCodeText: insertedInvoice[0].qrCodeText,
+        dueDate: dueDate.toISOString(),
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+      };
+    }
+  } catch (err: any) {
+    console.warn('[PlatformBilling] SyncPay platform billing optional attempt:', err.message);
+  }
+
+  // Fallback to Mercado Pago Platform Provider if SyncPay is not set up
   const mpRes = await mercadoPagoPlatformProvider.createInvoice({
     sellerId,
     subscriptionId: subscription.id,
@@ -320,7 +403,7 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
 export const createCoraBillingInvoice = createPlatformBillingInvoice;
 
 /**
- * Confirm / verify subscription invoice payment with REAL Mercado Pago API call
+ * Confirm / verify subscription invoice payment with SyncPay or Mercado Pago
  */
 export async function confirmInvoicePayment(invoiceId: string, sellerId: string) {
   const inv = await db.query.invoices.findFirst({
@@ -336,6 +419,25 @@ export async function confirmInvoicePayment(invoiceId: string, sellerId: string)
   }
 
   const now = new Date();
+
+  // SyncPay Platform Billing verification
+  if (inv.provider === 'syncpay' && inv.externalId) {
+    const recRes = await SyncPayPlatformBillingReconciliationService.reconcileByToken(inv.externalId);
+    if (recRes.newStatus === 'ACTIVE') {
+      await db
+        .update(invoices)
+        .set({ status: 'PAID', paidAt: now, updatedAt: now })
+        .where(eq(invoices.id, inv.id));
+
+      return {
+        success: true,
+        message: 'Pagamento confirmado e assinatura ativada com sucesso!',
+        paidAt: now.toISOString(),
+      };
+    } else {
+      throw new Error('O pagamento ainda não foi identificado na SyncPay. Se você já pagou, aguarde alguns instantes e tente novamente.');
+    }
+  }
 
   // Check if invoice has expired (30 minutes rule)
   if (inv.expiresAt && new Date(inv.expiresAt) <= now) {
