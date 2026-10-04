@@ -32,7 +32,7 @@ export class MercadoPagoPlatformProvider implements PlatformBillingProvider {
     }
     const state = Buffer.from(JSON.stringify({ role: 'super_admin', type: 'platform_subscription' })).toString('base64url');
     const encodedRedirect = encodeURIComponent(redirectUrl);
-    return `https://auth.mercadopago.com/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${state}&redirect_uri=${encodedRedirect}`;
+    return `https://auth.mercadopago.com.br/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${state}&redirect_uri=${encodedRedirect}`;
   }
 
   /**
