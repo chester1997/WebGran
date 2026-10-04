@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result,
+      uploadAuth: result.uploadSession,
     });
   } catch (error: any) {
     console.error("[Seller Videos Upload Session Error]:", error);

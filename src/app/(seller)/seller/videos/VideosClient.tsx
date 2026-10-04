@@ -212,7 +212,10 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         throw new Error(sessionData.error || "Falha ao iniciar sessão de upload.");
       }
 
-      const { uploadAuth } = sessionData;
+      const uploadAuth = sessionData.uploadSession || sessionData.uploadAuth;
+      if (!uploadAuth) {
+        throw new Error("Sessão de upload inválida (parâmetros de autenticação ausentes).");
+      }
 
       setUploadStep("UPLOADING");
       const uploader = new TusVideoUploader();
