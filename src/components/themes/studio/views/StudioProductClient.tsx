@@ -49,9 +49,14 @@ export function StudioProductClient({
   // Product Videos state for buyers with access
   const [productVideos, setProductVideos] = useState<any[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
+  const [clientHasAccess, setClientHasAccess] = useState(hasAccess);
 
   // Storage key for Favorites
   const favoritesKey = `webgran_favorites_${storeSlug}`;
+
+  useEffect(() => {
+    setClientHasAccess(hasAccess);
+  }, [hasAccess]);
 
   useEffect(() => {
     try {
@@ -68,27 +73,26 @@ export function StudioProductClient({
   }, [favoritesKey, product.id]);
 
   useEffect(() => {
-    if (hasAccess) {
-      setLoadingVideos(true);
-      fetch(`/api/miniapp/products/${product.id}/videos?storeSlug=${encodeURIComponent(storeSlug)}`, {
-        headers: {
-          "x-store-slug": storeSlug,
-        },
+    setLoadingVideos(true);
+    fetch(`/api/miniapp/products/${product.id}/videos?storeSlug=${encodeURIComponent(storeSlug)}`, {
+      headers: {
+        "x-store-slug": storeSlug,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.videos)) {
+          setProductVideos(data.videos);
+          setClientHasAccess(true);
+        }
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && Array.isArray(data.videos)) {
-            setProductVideos(data.videos);
-          }
-        })
-        .catch((err) => {
-          console.warn("[StudioProductClient] Failed to load product videos:", err);
-        })
-        .finally(() => {
-          setLoadingVideos(false);
-        });
-    }
-  }, [hasAccess, product.id, storeSlug]);
+      .catch((err) => {
+        console.warn("[StudioProductClient] Failed to load product videos:", err);
+      })
+      .finally(() => {
+        setLoadingVideos(false);
+      });
+  }, [product.id, storeSlug]);
 
   const toggleMyList = () => {
     try {
@@ -245,7 +249,7 @@ export function StudioProductClient({
 
         {/* PRIMARY ACTION BUTTON (BUY VS ACCESS) */}
         <div className="pt-1 space-y-3">
-          {hasAccess ? (
+          {clientHasAccess ? (
             <Link
               href={`/miniapp/${storeSlug}/accesses`}
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all text-sm active:scale-95"
@@ -305,12 +309,12 @@ export function StudioProductClient({
         </div>
 
         {/* VÍDEOS DA ENTREGA SECTION */}
-        {hasAccess && (
+        {(clientHasAccess || productVideos.length > 0) && (
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
-                Vídeos da Entrega
+                VÍDEOS DA SUA COMPRA
               </h3>
             </div>
 
@@ -369,6 +373,10 @@ export function StudioProductClient({
                           )}
                         </div>
                       </div>
+
+                      <span className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shrink-0 flex items-center gap-1.5">
+                        <Play className="w-3.5 h-3.5 fill-current" /> ASSISTIR
+                      </span>
                     </Link>
                   );
                 })}
