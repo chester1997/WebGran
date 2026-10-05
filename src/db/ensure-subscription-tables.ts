@@ -73,6 +73,8 @@ async function main() {
 
   await sql`
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS syncpay_subscription_token TEXT;
+  `;
+  await sql`
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS syncpay_subscriber_token TEXT;
   `;
 

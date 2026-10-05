@@ -208,12 +208,20 @@ export class SyncPayPlatformBillingService {
 
     // Extract first cycle details
     const firstCycle = data?.first_cycle || data?.charge || data?.current_cycle || data;
-    const pixCode = firstCycle?.pix_code || firstCycle?.pix_copia_e_cola || firstCycle?.br_code || firstCycle?.emv || firstCycle?.qr_code_text;
-    const qrCode = firstCycle?.qr_code || firstCycle?.qr_code_url || firstCycle?.image_url;
-    const dueDate = firstCycle?.due_date || firstCycle?.dueDate;
-    const expiresAt = firstCycle?.expires_at || firstCycle?.expiresAt;
-    const status = (data?.status || firstCycle?.status || 'pending_first_payment').toLowerCase();
-    const amount = firstCycle?.amount || data?.amount;
+    const firstCharge = (data?.charges && data.charges[0]) || {};
+    const pixCode =
+      firstCycle?.pix_code ||
+      firstCycle?.pix_copia_e_cola ||
+      firstCycle?.payment?.pix_code ||
+      firstCharge?.payment?.pix_code ||
+      firstCycle?.br_code ||
+      firstCycle?.emv ||
+      firstCycle?.qr_code_text;
+    const qrCode = firstCycle?.qr_code || firstCycle?.qr_code_url || firstCycle?.image_url || firstCharge?.payment?.qr_code;
+    const dueDate = firstCycle?.due_date || firstCycle?.dueDate || firstCharge?.due_date;
+    const expiresAt = firstCycle?.expires_at || firstCycle?.expiresAt || firstCharge?.expires_at;
+    const status = (data?.status || firstCycle?.status || firstCharge?.status || 'pending_first_payment').toLowerCase();
+    const amount = firstCycle?.amount || firstCharge?.amount || data?.amount;
 
     return {
       subscriptionToken,
