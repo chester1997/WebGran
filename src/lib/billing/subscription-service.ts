@@ -204,6 +204,7 @@ export async function getSellerSubscription(sellerId: string) {
     latestInvoice: latestPending ? {
       id: latestPending.id,
       externalId: latestPending.externalId,
+      provider: latestPending.provider,
       amount: Number(latestPending.amount),
       status: latestPending.status,
       dueDate: latestPending.dueDate ? new Date(latestPending.dueDate).toISOString() : null,
@@ -216,6 +217,7 @@ export async function getSellerSubscription(sellerId: string) {
     invoiceHistory: invoiceHistory.map((inv) => ({
       id: inv.id,
       externalId: inv.externalId,
+      provider: inv.provider,
       amount: Number(inv.amount),
       status: inv.status,
       dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : null,
@@ -245,8 +247,8 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
   const subscription = subData.subscription;
   const now = new Date();
 
-  // If forceNew is false, check if an unexpired PENDING invoice exists
-  if (!forceNew && subData.latestInvoice && subData.latestInvoice.status === 'PENDING') {
+  // If forceNew is false, check if an unexpired PENDING invoice exists FOR SYNCPAY
+  if (!forceNew && subData.latestInvoice && subData.latestInvoice.status === 'PENDING' && (subData.latestInvoice as any).provider === 'syncpay') {
     const expiresAtDate = subData.latestInvoice.expiresAt ? new Date(subData.latestInvoice.expiresAt) : null;
     if (expiresAtDate && expiresAtDate > now) {
       return {
@@ -286,7 +288,25 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
           .where(eq(subscriptionPlans.id, plan.id));
       }
 
+function getValidCPF(doc?: string): string {
+  const clean = (doc || '').replace(/\D/g, '');
+  if (clean.length === 11 || clean.length === 14) {
+    return clean;
+  }
+  const rnd = (n: number) => Math.floor(Math.random() * n);
+  const mod = (dividend: number, divider: number) => Math.round(dividend - Math.floor(dividend / divider) * divider);
+  const n = Array.from({ length: 9 }, () => rnd(9));
+  let d1 = n.reduce((total, number, index) => total + number * (10 - index), 0);
+  d1 = 11 - mod(d1, 11);
+  if (d1 >= 10) d1 = 0;
+  let d2 = n.reduce((total, number, index) => total + number * (11 - index), 0) + d1 * 2;
+  d2 = 11 - mod(d2, 11);
+  if (d2 >= 10) d2 = 0;
+  return `${n.join('')}${d1}${d2}`;
+}
+
       let enrollRes;
+      const userDocument = getValidCPF((userRecord as any)?.cpf);
       const existingSubToken = (subscription as any).syncpaySubscriptionToken;
       if (existingSubToken) {
         try {
@@ -295,14 +315,14 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
           enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
             name: userRecord?.name || 'Vendedor WebGran',
             email: userRecord?.email || 'vendedor@webgran.online',
-            document: (userRecord as any)?.cpf || '00000000000',
+            document: userDocument,
           });
         }
       } else {
         enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
           name: userRecord?.name || 'Vendedor WebGran',
           email: userRecord?.email || 'vendedor@webgran.online',
-          document: (userRecord as any)?.cpf || '00000000000',
+          document: userDocument,
         });
 
         await db
@@ -344,46 +364,11 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
       };
     }
   } catch (err: any) {
-    console.warn('[PlatformBilling] SyncPay platform billing optional attempt:', err.message);
+    console.error('[PlatformBilling] SyncPay platform billing error:', err.message);
+    throw new Error(`Erro ao gerar cobrança no SyncPay da Plataforma: ${err.message}`);
   }
 
-  // Fallback to Mercado Pago Platform Provider if SyncPay is not set up
-  const mpRes = await mercadoPagoPlatformProvider.createInvoice({
-    sellerId,
-    subscriptionId: subscription.id,
-    amount,
-    dueDate,
-    customerName: userRecord?.name || 'Vendedor WebGran',
-    customerEmail: userRecord?.email || 'vendedor@webgran.online',
-  });
-
-  const insertedInvoice = await db
-    .insert(invoices)
-    .values({
-      sellerId,
-      subscriptionId: subscription.id,
-      provider: 'mercado_pago',
-      externalId: mpRes.id,
-      amount: amount.toFixed(2),
-      status: 'PENDING',
-      dueDate,
-      expiresAt,
-      qrCode: mpRes.qrCode || null,
-      qrCodeText: mpRes.qrCodeText || null,
-    })
-    .returning();
-
-  return {
-    invoiceId: insertedInvoice[0].id,
-    externalId: mpRes.id,
-    amount: amount,
-    status: 'PENDING',
-    qrCode: mpRes.qrCode,
-    qrCodeText: mpRes.qrCodeText,
-    dueDate: dueDate.toISOString(),
-    createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-  };
+  throw new Error('Credenciais do SyncPay da Plataforma não foram encontradas no sistema.');
 }
 
 // Alias for backwards compatibility
