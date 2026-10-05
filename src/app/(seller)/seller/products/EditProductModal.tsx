@@ -122,7 +122,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!deliveryValue.trim()) {
+    if (deliveryType !== "product_video" && !deliveryValue.trim()) {
       setErrorMessage(
         deliveryType === "telegram"
           ? "Informe o ID do Grupo/Canal do Telegram para entrega."
@@ -134,7 +134,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     formData.set("deliveryType", deliveryType);
-    formData.set("deliveryValue", deliveryValue.trim());
+    formData.set("deliveryValue", deliveryType === "product_video" ? "" : deliveryValue.trim());
     formData.set("coverUrl", imageUrl);
     formData.set("bannerUrl", bannerUrl);
 

@@ -2,7 +2,7 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { products } from "@/db/schema";
+import { products, productVideos } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, and, count } from "drizzle-orm";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
@@ -100,6 +100,32 @@ export async function createProductAction(formData: FormData) {
     );
   }
 
+  const videoIdsRaw = (formData.get("videoIds") as string) || (formData.get("selectedVideoIds") as string);
+  let videoIds: string[] = [];
+  if (videoIdsRaw) {
+    try {
+      videoIds = JSON.parse(videoIdsRaw);
+    } catch {}
+  }
+
+  if (deliveryType === "product_video") {
+    if (!Array.isArray(videoIds) || videoIds.length === 0) {
+      throw new Error("Produtos do tipo Vídeo exigem pelo menos um vídeo com status PRONTO associado.");
+    }
+
+    for (const vid of videoIds) {
+      const v = await db.query.productVideos.findFirst({
+        where: and(eq(productVideos.id, vid), eq(productVideos.storeId, store.id)),
+      });
+      if (!v) {
+        throw new Error("Vídeo não encontrado ou não pertence a esta loja.");
+      }
+      if (v.status !== "READY") {
+        throw new Error(`O vídeo "${v.title}" ainda não está pronto para entrega (status: ${v.status}).`);
+      }
+    }
+  }
+
   // Validate Telegram Chat & Bot Permissions on Product Creation
   if ((deliveryType === "telegram" || deliveryType === "TELEGRAM_CHAT") && deliveryValue) {
     if (!deliveryValue.startsWith("http://") && !deliveryValue.startsWith("https://")) {
@@ -169,13 +195,9 @@ export async function createProductAction(formData: FormData) {
     })
     .returning();
 
-  const videoIdsRaw = (formData.get("videoIds") as string) || (formData.get("selectedVideoIds") as string);
-  if (deliveryType === "product_video" && videoIdsRaw) {
+  if (deliveryType === "product_video" && Array.isArray(videoIds) && videoIds.length > 0) {
     try {
-      const videoIds = JSON.parse(videoIdsRaw);
-      if (Array.isArray(videoIds) && videoIds.length > 0) {
-        await ProductVideoService.assignVideosToProduct(store.id, createdProduct.id, videoIds, seller.id);
-      }
+      await ProductVideoService.assignVideosToProduct(store.id, createdProduct.id, videoIds, seller.id);
     } catch (err: any) {
       console.warn("[createProductAction] Video assignment warning:", err.message);
     }
@@ -214,6 +236,31 @@ export async function updateProductAction(productId: string, formData: FormData)
         ? "Informe o ID do Grupo/Canal do Telegram (Ex: -1001234567890)."
         : "Informe o Link externo para entrega após o pagamento."
     );
+  }
+
+  if (deliveryType === "product_video") {
+    const videoIdsRaw = (formData.get("videoIds") as string) || (formData.get("selectedVideoIds") as string);
+    if (videoIdsRaw) {
+      try {
+        const videoIds = JSON.parse(videoIdsRaw);
+        if (Array.isArray(videoIds) && videoIds.length > 0) {
+          await ProductVideoService.assignVideosToProduct(store.id, productId, videoIds, seller.id);
+        }
+      } catch (err: any) {
+        throw new Error(err.message || "Erro ao vincular vídeos ao produto.");
+      }
+    }
+
+    const assignedVideos = await ProductVideoService.listProductVideos(store.id, productId);
+    if (!assignedVideos || assignedVideos.length === 0) {
+      throw new Error("Produtos do tipo Vídeo exigem pelo menos um vídeo com status PRONTO associado.");
+    }
+
+    for (const v of assignedVideos) {
+      if (v.status !== "READY") {
+        throw new Error(`O vídeo "${v.title}" ainda não está pronto para entrega (status: ${v.status}).`);
+      }
+    }
   }
 
   // Validate Telegram Chat & Bot Permissions on Product Update

@@ -30,6 +30,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
   const [testingAccess, setTestingAccess] = useState(false);
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
   const [pendingVideos, setPendingVideos] = useState<PendingVideo[]>([]);
+  const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
@@ -122,7 +123,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!deliveryValue.trim()) {
+    if (deliveryType !== "product_video" && !deliveryValue.trim()) {
       setErrorMessage(
         deliveryType === "telegram"
           ? "Informe o ID do Grupo/Canal do Telegram para entrega."
@@ -131,12 +132,18 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
       return;
     }
 
+    if (deliveryType === "product_video" && selectedVideoIds.length === 0 && pendingVideos.length === 0) {
+      setErrorMessage("Selecione pelo menos um vídeo da Biblioteca com status PRONTO para este produto.");
+      return;
+    }
+
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     formData.set("deliveryType", deliveryType);
-    formData.set("deliveryValue", deliveryValue.trim());
+    formData.set("deliveryValue", deliveryType === "product_video" ? "" : deliveryValue.trim());
     formData.set("coverUrl", imageUrl);
     formData.set("bannerUrl", bannerUrl);
+    formData.set("videoIds", JSON.stringify(selectedVideoIds));
 
     try {
       const res = await createProductAction(formData);
@@ -404,7 +411,10 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
 
               {deliveryType === "product_video" && (
                 <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
-                  <ProductVideosManager onPendingVideosChange={setPendingVideos} />
+                  <ProductVideosManager
+                    onSelectedVideoIdsChange={setSelectedVideoIds}
+                    onPendingVideosChange={setPendingVideos}
+                  />
                 </div>
               )}
             </div>
