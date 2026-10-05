@@ -532,6 +532,38 @@ export const subscriptions = pgTable('subscriptions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const videoLibraryPlans = pgTable('video_library_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  billingInterval: text('billing_interval').notNull().default('month'), // 'month' | 'year'
+  storageQuotaGb: integer('storage_quota_gb').notNull().default(20), // -1 for unlimited, or GB integer
+  active: boolean('active').default(true).notNull(),
+  syncpayPlanToken: text('syncpay_plan_token'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const videoLibrarySubscriptions = pgTable('video_library_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  planId: uuid('plan_id').notNull().references(() => videoLibraryPlans.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('ACTIVE'), // PENDING, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED
+  syncpaySubscriptionToken: text('syncpay_subscription_token'),
+  syncpaySubscriberToken: text('syncpay_subscriber_token'),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  currentPeriodStart: timestamp('current_period_start').defaultNow().notNull(),
+  currentPeriodEnd: timestamp('current_period_end'),
+  cancelledAt: timestamp('cancelled_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  sellerIdx: index('video_library_subscriptions_seller_idx').on(t.sellerId),
+  statusIdx: index('video_library_subscriptions_status_idx').on(t.status),
+}));
+
 export const invoices = pgTable('invoices', {
   id: uuid('id').primaryKey().defaultRandom(),
   sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -591,6 +623,21 @@ export const subscriptionsRelations = relations(subscriptions, ({ one, many }) =
     references: [subscriptionPlans.id],
   }),
   invoices: many(invoices),
+}));
+
+export const videoLibraryPlansRelations = relations(videoLibraryPlans, ({ many }) => ({
+  subscriptions: many(videoLibrarySubscriptions),
+}));
+
+export const videoLibrarySubscriptionsRelations = relations(videoLibrarySubscriptions, ({ one }) => ({
+  seller: one(users, {
+    fields: [videoLibrarySubscriptions.sellerId],
+    references: [users.id],
+  }),
+  plan: one(videoLibraryPlans, {
+    fields: [videoLibrarySubscriptions.planId],
+    references: [videoLibraryPlans.id],
+  }),
 }));
 
 export const invoicesRelations = relations(invoices, ({ one }) => ({
@@ -883,6 +930,8 @@ export const paymentWebhookEvents = pgTable('payment_webhook_events', {
   providerEventUnique: unique().on(t.provider, t.eventId),
   providerEventIdx: index('payment_webhook_events_idx').on(t.provider, t.eventId),
 }));
+
+
 
 
 

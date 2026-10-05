@@ -143,7 +143,10 @@ export class StorageUsageService {
       return { quotaBytes: null, isUnlimited: true, source: entitlement.source };
     }
 
-    const quotaGb = typeof entitlement.value === "number" ? entitlement.value : Number(entitlement.value) || 50;
+    const quotaGb = typeof entitlement.value === "number" 
+      ? entitlement.value 
+      : (entitlement.value !== null && entitlement.value !== undefined && !isNaN(Number(entitlement.value)) ? Number(entitlement.value) : 0);
+
     if (quotaGb === -1) {
       return { quotaBytes: null, isUnlimited: true, source: entitlement.source };
     }

@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { subscriptions, invoices } from '@/db/schema';
+import { subscriptions, invoices, videoLibrarySubscriptions } from '@/db/schema';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { SyncPayPlatformBillingService } from './syncpay-platform-billing-service';
 
@@ -52,17 +52,89 @@ export class SyncPayPlatformBillingReconciliationService {
       where: eq(subscriptions.syncpaySubscriptionToken, syncpaySubscriptionToken),
     });
 
-    if (!localSub) {
+    if (localSub) {
+      return this.reconcileSubscriptionRecord(localSub);
+    }
+
+    // Check videoLibrarySubscriptions table
+    const videoSub = await db.query.videoLibrarySubscriptions.findFirst({
+      where: eq(videoLibrarySubscriptions.syncpaySubscriptionToken, syncpaySubscriptionToken),
+    });
+
+    if (videoSub) {
+      return this.reconcileVideoSubscriptionRecord(videoSub);
+    }
+
+    return {
+      subscriptionId: 'unknown',
+      previousStatus: 'UNKNOWN',
+      newStatus: 'UNKNOWN',
+      synced: false,
+      error: `Assinatura não encontrada no banco local para o token SyncPay ${syncpaySubscriptionToken}`,
+    };
+  }
+
+  static async reconcileVideoSubscriptionRecord(videoSub: any): Promise<ReconciliationResult> {
+    const token = videoSub.syncpaySubscriptionToken;
+    if (!token) {
       return {
-        subscriptionId: 'unknown',
-        previousStatus: 'UNKNOWN',
-        newStatus: 'UNKNOWN',
+        subscriptionId: videoSub.id,
+        previousStatus: videoSub.status,
+        newStatus: videoSub.status,
         synced: false,
-        error: `Assinatura não encontrada no banco local para o token SyncPay ${syncpaySubscriptionToken}`,
+        error: 'Assinatura de vídeo não possui syncpaySubscriptionToken vinculada.',
       };
     }
 
-    return this.reconcileSubscriptionRecord(localSub);
+    try {
+      const res = await SyncPayPlatformBillingService.getSubscription(token);
+      const data = res?.data || res;
+      const remoteStatus = data?.status || data?.subscription?.status || 'pending_first_payment';
+      const mappedStatus = this.mapStatus(remoteStatus);
+
+      const now = new Date();
+      let currentPeriodStart = videoSub.currentPeriodStart;
+      let currentPeriodEnd = videoSub.currentPeriodEnd;
+
+      const periodStartRemote = data?.current_period_start || data?.cycle_start || data?.started_at;
+      const periodEndRemote = data?.current_period_end || data?.due_date || data?.next_billing_date;
+
+      if (periodStartRemote) {
+        currentPeriodStart = new Date(periodStartRemote);
+      }
+      if (periodEndRemote) {
+        currentPeriodEnd = new Date(periodEndRemote);
+      } else if (mappedStatus === 'ACTIVE' && videoSub.status !== 'ACTIVE') {
+        currentPeriodStart = now;
+        currentPeriodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      }
+
+      await db
+        .update(videoLibrarySubscriptions)
+        .set({
+          status: mappedStatus,
+          currentPeriodStart,
+          currentPeriodEnd,
+          updatedAt: now,
+        })
+        .where(eq(videoLibrarySubscriptions.id, videoSub.id));
+
+      return {
+        subscriptionId: videoSub.id,
+        previousStatus: videoSub.status,
+        newStatus: mappedStatus,
+        synced: true,
+      };
+    } catch (err: any) {
+      console.error(`[Reconciliation] Erro ao reconciliar assinatura de vídeo ${videoSub.id}:`, err);
+      return {
+        subscriptionId: videoSub.id,
+        previousStatus: videoSub.status,
+        newStatus: videoSub.status,
+        synced: false,
+        error: err.message || 'Erro ao consultar API da SyncPay',
+      };
+    }
   }
 
   /**

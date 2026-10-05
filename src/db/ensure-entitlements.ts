@@ -332,6 +332,55 @@ export async function ensureEntitlementTablesAndSeed() {
       );
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS video_library_plans (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        billing_interval TEXT NOT NULL DEFAULT 'month',
+        storage_quota_gb INTEGER NOT NULL DEFAULT 20,
+        active BOOLEAN NOT NULL DEFAULT true,
+        syncpay_plan_token TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS video_library_subscriptions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        seller_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        plan_id UUID NOT NULL REFERENCES video_library_plans(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'ACTIVE',
+        syncpay_subscription_token TEXT,
+        syncpay_subscriber_token TEXT,
+        started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        current_period_start TIMESTAMP NOT NULL DEFAULT NOW(),
+        current_period_end TIMESTAMP,
+        cancelled_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // Seed default Video Library Plans if table is empty
+    const existingVideoPlans = await db.execute(sql`SELECT count(*)::int as count FROM video_library_plans`).catch(() => null);
+    const vPlanCount = Number((existingVideoPlans as any)?.[0]?.count ?? (existingVideoPlans as any)?.rows?.[0]?.count ?? 0);
+
+    if (vPlanCount === 0) {
+      await db.execute(sql`
+        INSERT INTO video_library_plans (name, slug, description, price, billing_interval, storage_quota_gb, active)
+        VALUES 
+          ('STARTER VÍDEO', 'starter-video', 'Ideal para iniciantes com até 20 GB de armazenamento de vídeos.', 29.90, 'month', 20, true),
+          ('PRO VÍDEO', 'pro-video', 'Ideal para produtores com alta demanda de vídeos até 100 GB.', 89.90, 'month', 100, true),
+          ('BUSINESS VÍDEO', 'business-video', 'Plano avançado com 500 GB de espaço de armazenamento.', 199.90, 'month', 500, true),
+          ('ILIMITADO VÍDEO', 'ilimitado-video', 'Espaço ilimitado de armazenamento de vídeos.', 499.90, 'month', -1, true)
+        ON CONFLICT (slug) DO NOTHING;
+      `);
+    }
+
     // 2. Fetch default WebGran plan
     const defaultPlan = await getDefaultPlan();
 

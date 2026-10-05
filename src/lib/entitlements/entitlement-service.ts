@@ -5,7 +5,8 @@ import {
   subscriptionPlans, 
   features, 
   planFeatures, 
-  sellerFeatureOverrides 
+  sellerFeatureOverrides,
+  videoLibrarySubscriptions
 } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -98,14 +99,80 @@ export async function getSellerEntitlement<T = any>(
   }
 
   const featureType = feature.type as FeatureType;
+  const now = new Date();
 
-  // 3. Check Subscription Status & Precedence
+  // SPECIAL HANDLE: Video Library Storage Quota (Add-On Product)
+  // Must NOT be inherited from main WebGran plan. Must come from active Video Library Subscription.
+  if (featureKey === 'video_storage_quota_gb') {
+    // 2.1 Check for active seller override first
+    const override = await db.query.sellerFeatureOverrides.findFirst({
+      where: and(
+        eq(sellerFeatureOverrides.sellerId, sellerId),
+        eq(sellerFeatureOverrides.featureId, feature.id)
+      ),
+    });
+
+    if (override) {
+      const isExpired = override.expiresAt && new Date(override.expiresAt) <= now;
+      if (!isExpired) {
+        const rawVal = parseValue(override.overrideValue);
+        const isUnlimited = rawVal === -1 || rawVal === Infinity;
+        return {
+          featureKey,
+          type: featureType,
+          value: rawVal as T,
+          source: 'OVERRIDE',
+          isUnlimited,
+          overrideReason: override.reason,
+          expiresAt: override.expiresAt ? new Date(override.expiresAt) : null,
+        };
+      }
+    }
+
+    // 2.2 Check Video Library Subscriptions
+    try {
+      const videoSub = await db.query.videoLibrarySubscriptions.findFirst({
+        where: and(
+          eq(videoLibrarySubscriptions.sellerId, sellerId),
+          eq(videoLibrarySubscriptions.status, 'ACTIVE')
+        ),
+        with: {
+          plan: true,
+        },
+        orderBy: [desc(videoLibrarySubscriptions.createdAt)],
+      });
+
+      if (videoSub && videoSub.plan) {
+        const quotaGb = Number(videoSub.plan.storageQuotaGb ?? (videoSub.plan as any).storage_quota_gb ?? 0);
+        const isUnlimited = quotaGb === -1 || quotaGb === Infinity;
+        return {
+          featureKey,
+          type: featureType,
+          value: quotaGb as unknown as T,
+          source: 'PLAN',
+          isUnlimited,
+        };
+      }
+    } catch (err) {
+      console.warn('Error resolving video library subscription:', err);
+    }
+
+    // 2.3 No active Video Library Subscription -> Quota = 0, INACTIVE
+    return {
+      featureKey,
+      type: featureType,
+      value: 0 as unknown as T,
+      source: 'INACTIVE',
+      isUnlimited: false,
+    };
+  }
+
+  // 3. Check Subscription Status & Precedence for standard WebGran features
   const sub = await db.query.subscriptions.findFirst({
     where: eq(subscriptions.sellerId, sellerId),
     orderBy: [desc(subscriptions.createdAt)],
   });
 
-  const now = new Date();
   let statusUpper = (sub?.status || '').toUpperCase();
   const periodEndMs = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd).getTime() : 0;
 

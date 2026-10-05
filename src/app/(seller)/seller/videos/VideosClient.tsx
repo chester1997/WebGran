@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
 import { TusVideoUploader } from "@/lib/bunny/client-upload";
 import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
+import { VideoPlanUpgradeModal } from "@/components/billing/VideoPlanUpgradeModal";
 
 export interface LibraryVideoItem {
   id: string;
@@ -60,6 +61,10 @@ export interface VideoStorageUsage {
   quotaGB: number;
   freeGB: number;
   percentage: number;
+  hasVideoSubscription?: boolean;
+  planName?: string | null;
+  planPriceCents?: number | null;
+  isUnlimited?: boolean;
 }
 
 interface VideosClientProps {
@@ -109,6 +114,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   // Feedback Messages
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isVideoPlanModalOpen, setIsVideoPlanModalOpen] = useState(false);
 
   // Close active dropdown menu when clicking outside
   useEffect(() => {
@@ -457,17 +463,19 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
       {/* 5. HEADER (Standardized WebGran Header) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 text-red-500 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center font-bold">
             <Film className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-xl text-white">BIBLIOTECA DE VÍDEOS</h1>
-              <span className="bg-red-600/20 border border-red-500/30 text-red-400 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                {videosList.length}
-              </span>
+              {usage.hasVideoSubscription && (
+                <span className="bg-violet-600/20 border border-violet-500/30 text-violet-400 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  {videosList.length} vídeos
+                </span>
+              )}
             </div>
-            <p className="text-xs text-zinc-400">Gerencie seus vídeos e use-os nos seus produtos.</p>
+            <p className="text-xs text-zinc-400">Gerencie seus vídeos e utilize-os na entrega automática de produtos digitais.</p>
           </div>
         </div>
 
@@ -479,108 +487,144 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
             disabled={isRefreshing}
             className="bg-[#16161C] border-white/10 text-zinc-300 hover:bg-zinc-800 hover:text-white text-xs rounded-xl"
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin text-red-500" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin text-violet-500" : ""}`} />
             Atualizar
           </Button>
 
-          <Button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-red-600/20 transition-all"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Adicionar vídeo
-          </Button>
+          {usage.hasVideoSubscription && (
+            <Button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-violet-600/20 transition-all"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Adicionar vídeo
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* 6. STORAGE CARD (Standardized WebGran Storage Block) */}
-      {(() => {
-        const isUnlimited = usage.quotaGB <= 0 || (usage as any).isUnlimited || (usage as any).quotaGb === null;
-        const isOverQuota = !isUnlimited && usage.usedGB > usage.quotaGB;
-        const isFull = !isUnlimited && (usage.percentage >= 100 || isOverQuota);
-        const isNearFull = !isUnlimited && usage.percentage >= 90 && usage.percentage < 100;
-        const isWarning = !isUnlimited && usage.percentage >= 80 && usage.percentage < 90;
-
-        return (
-          <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-zinc-300 font-bold text-xs uppercase tracking-wider">
-                <HardDrive className="w-4 h-4 text-red-500" />
-                <span>ARMAZENAMENTO DE VÍDEOS</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-zinc-300 font-bold">
-                  {usage.usedGB.toFixed(1)} GB / {isUnlimited ? "ILIMITADO" : `${usage.quotaGB} GB`}
-                </span>
-                {!isUnlimited && (
-                  <Button
-                    size="sm"
-                    onClick={() => setIsUpgradeModalOpen(true)}
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-3 py-1 shadow-md shadow-red-600/20"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
-                    Fazer Upgrade
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-[#16161C] border border-white/10 rounded-full h-3 overflow-hidden p-0.5 shadow-inner">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  isFull ? "bg-red-600 animate-pulse" : isNearFull ? "bg-orange-500" : isWarning ? "bg-amber-500" : "bg-red-600"
-                }`}
-                style={{ width: `${isUnlimited ? 100 : Math.min(Math.max(usage.percentage, 1), 100)}%` }}
-              />
-            </div>
-
-            <div className="flex justify-between items-center text-xs text-zinc-400 font-mono">
-              <span>{isUnlimited ? "Uso sem restrições" : `${usage.percentage.toFixed(1)}% utilizado`}</span>
-              <span>{isUnlimited ? "Ilimitado" : `${usage.freeGB.toFixed(1)} GB disponíveis`}</span>
-            </div>
-
-            {/* Warnings Banners */}
-            {isOverQuota && (
-              <div className="mt-2 p-3 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                  <span>Seu plano atual possui {usage.quotaGB} GB, mas você utiliza {usage.usedGB.toFixed(1)} GB. Exclua arquivos ou faça upgrade para continuar enviando vídeos.</span>
-                </div>
-                <Button size="sm" onClick={() => setIsUpgradeModalOpen(true)} className="bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg shrink-0">
-                  Aumentar Armazenamento
-                </Button>
-              </div>
-            )}
-
-            {!isOverQuota && isFull && (
-              <div className="mt-2 p-3 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                  <span>Seu armazenamento está cheio. Faça upgrade para continuar enviando vídeos.</span>
-                </div>
-                <Button size="sm" onClick={() => setIsUpgradeModalOpen(true)} className="bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg shrink-0">
-                  Aumentar Armazenamento
-                </Button>
-              </div>
-            )}
-
-            {!isFull && isNearFull && (
-              <div className="mt-2 p-3 rounded-xl bg-orange-950/80 border border-orange-500/30 text-orange-200 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" />
-                <span>Seu armazenamento está quase cheio (90%).</span>
-              </div>
-            )}
-
-            {!isFull && !isNearFull && isWarning && (
-              <div className="mt-2 p-3 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Você já utilizou 80% do armazenamento.</span>
-              </div>
-            )}
+      {/* PAYWALL / LOCK SCREEN FOR UN-SUBSCRIBED SELLERS */}
+      {!usage.hasVideoSubscription && !usage.isUnlimited ? (
+        <div className="bg-[#0F0F12] border border-violet-500/30 rounded-3xl p-8 shadow-2xl text-center space-y-6 max-w-3xl mx-auto my-8">
+          <div className="w-16 h-16 rounded-2xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+            <span className="text-3xl">🔒</span>
           </div>
-        );
-      })()}
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-extrabold text-white tracking-tight">BIBLIOTECA DE VÍDEOS</h2>
+            <p className="text-violet-400 font-semibold text-sm">
+              A Biblioteca de Vídeos é um recurso adicional da WebGran.
+            </p>
+            <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+              Escolha um plano de armazenamento para hospedar vídeos no Bunny Stream, associá-los aos produtos e realizar a entrega automática após o pagamento.
+            </p>
+          </div>
+
+          <div>
+            <Button
+              onClick={() => setIsVideoPlanModalOpen(true)}
+              className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm rounded-xl px-8 py-3 shadow-xl shadow-violet-600/30 transition-all"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              VER PLANOS
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* ACTIVE SUBSCRIPTION STORAGE BAR */
+        (() => {
+          const isUnlimited = Boolean(usage.isUnlimited);
+          const isOverQuota = !isUnlimited && usage.usedGB > usage.quotaGB;
+          const isFull = !isUnlimited && (usage.percentage >= 100 || isOverQuota);
+          const isNearFull = !isUnlimited && usage.percentage >= 90 && usage.percentage < 100;
+          const isWarning = !isUnlimited && usage.percentage >= 80 && usage.percentage < 90;
+
+          return (
+            <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-zinc-300 font-bold text-xs uppercase tracking-wider">
+                  <HardDrive className="w-4 h-4 text-violet-400" />
+                  <span>PLANO: {usage.planName || (isUnlimited ? "ADMIN / ILIMITADO" : "ATIVO")}</span>
+                  {usage.planPriceCents && (
+                    <span className="text-[10px] text-zinc-400 font-normal">
+                      (R$ {(usage.planPriceCents / 100).toFixed(2).replace(".", ",")} / mês)
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-zinc-300 font-bold">
+                    {usage.usedGB.toFixed(1)} GB / {isUnlimited ? "ILIMITADO" : `${usage.quotaGB} GB`}
+                  </span>
+                  {!isUnlimited && (
+                    <Button
+                      size="sm"
+                      onClick={() => setIsVideoPlanModalOpen(true)}
+                      className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl px-3 py-1 shadow-md shadow-violet-600/20"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1" />
+                      FAZER UPGRADE
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-[#16161C] border border-white/10 rounded-full h-3 overflow-hidden p-0.5 shadow-inner">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isFull ? "bg-red-600 animate-pulse" : isNearFull ? "bg-orange-500" : isWarning ? "bg-amber-500" : "bg-violet-500"
+                  }`}
+                  style={{ width: `${isUnlimited ? 100 : Math.min(Math.max(usage.percentage, 1), 100)}%` }}
+                />
+              </div>
+
+              <div className="flex justify-between items-center text-xs text-zinc-400 font-mono">
+                <span>{isUnlimited ? "Uso sem restrições" : `${usage.percentage.toFixed(1)}% utilizado`}</span>
+                <span>{isUnlimited ? "Ilimitado" : `${usage.freeGB.toFixed(1)} GB disponíveis`}</span>
+              </div>
+
+              {/* Warnings Banners */}
+              {isOverQuota && (
+                <div className="mt-2 p-3 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                    <span>Seu plano atual possui {usage.quotaGB} GB, mas você utiliza {usage.usedGB.toFixed(1)} GB. Exclua arquivos ou faça upgrade para continuar enviando vídeos.</span>
+                  </div>
+                  <Button size="sm" onClick={() => setIsVideoPlanModalOpen(true)} className="bg-violet-600 hover:bg-violet-500 text-white text-xs rounded-lg shrink-0">
+                    Aumentar Armazenamento
+                  </Button>
+                </div>
+              )}
+
+              {!isOverQuota && isFull && (
+                <div className="mt-2 p-3 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                    <span>Seu armazenamento está cheio. Faça upgrade para continuar enviando vídeos.</span>
+                  </div>
+                  <Button size="sm" onClick={() => setIsVideoPlanModalOpen(true)} className="bg-violet-600 hover:bg-violet-500 text-white text-xs rounded-lg shrink-0">
+                    Aumentar Armazenamento
+                  </Button>
+                </div>
+              )}
+
+              {!isFull && isNearFull && (
+                <div className="mt-2 p-3 rounded-xl bg-orange-950/80 border border-orange-500/30 text-orange-200 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" />
+                  <span>Seu armazenamento está quase cheio (90%).</span>
+                </div>
+              )}
+
+              {!isFull && !isNearFull && isWarning && (
+                <div className="mt-2 p-3 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Você já utilizou 80% do armazenamento.</span>
+                </div>
+              )}
+            </div>
+          );
+        })()
+      )}
 
       {/* 7. KPIs (Matching Dashboard KPI Grid) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full max-w-full">
@@ -1247,6 +1291,14 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
         onSuccess={() => refreshData()}
+      />
+
+      {/* VIDEO LIBRARY PLAN UPGRADE MODAL */}
+      <VideoPlanUpgradeModal
+        isOpen={isVideoPlanModalOpen}
+        onClose={() => setIsVideoPlanModalOpen(false)}
+        onSuccess={() => refreshData()}
+        currentPlanName={usage.planName}
       />
     </div>
   );

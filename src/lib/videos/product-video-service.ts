@@ -8,6 +8,7 @@ import {
   telegramCustomers,
   storageReservations,
   pendingDeletions,
+  videoLibrarySubscriptions,
 } from "@/db/schema";
 import { eq, and, asc, desc, count, sql, ilike, gt, ne, inArray } from "drizzle-orm";
 import { BunnyStreamService } from "@/lib/bunny/stream";
@@ -1119,7 +1120,8 @@ export class ProductVideoService {
   static async getSellerVideoStorageUsage(sellerId: string, storeId: string) {
     const entitlement = await getSellerEntitlement(sellerId, "video_storage_quota_gb");
     const isUnlimited = entitlement.source === "ADMIN_EXEMPT" || entitlement.isUnlimited || entitlement.value === -1;
-    const quotaGb = isUnlimited ? null : (typeof entitlement.value === "number" ? entitlement.value : Number(entitlement.value) || 50);
+    const hasVideoSubscription = entitlement.source === "ADMIN_EXEMPT" || entitlement.source === "PLAN" || entitlement.source === "OVERRIDE";
+    const quotaGb = isUnlimited ? null : (typeof entitlement.value === "number" ? entitlement.value : (entitlement.value !== null && entitlement.value !== undefined && !isNaN(Number(entitlement.value)) ? Number(entitlement.value) : 0));
     const quotaBytes = (quotaGb === null || quotaGb === -1) ? null : Math.max(0, quotaGb * 1024 * 1024 * 1024);
 
     const [usedRes] = await db
@@ -1160,6 +1162,28 @@ export class ProductVideoService {
     const processingCount = videos.filter((v) => v.status === "PROCESSING" || v.status === "UPLOADING").length;
     const failedCount = videos.filter((v) => v.status === "FAILED").length;
 
+    let planName: string | null = isUnlimited ? "ADMIN / ILIMITADO" : null;
+    let planPriceCents: number | null = null;
+
+    if (!isUnlimited) {
+      try {
+        const videoSub = await db.query.videoLibrarySubscriptions.findFirst({
+          where: and(
+            eq(videoLibrarySubscriptions.sellerId, sellerId),
+            eq(videoLibrarySubscriptions.status, "ACTIVE")
+          ),
+          with: { plan: true },
+          orderBy: [desc(videoLibrarySubscriptions.createdAt)],
+        });
+        if (videoSub && videoSub.plan) {
+          planName = videoSub.plan.name;
+          planPriceCents = Math.round(Number(videoSub.plan.price || 0) * 100);
+        }
+      } catch (subErr) {
+        console.warn("Error fetching video plan details:", subErr);
+      }
+    }
+
     return {
       sellerId,
       storeId,
@@ -1171,6 +1195,9 @@ export class ProductVideoService {
       remainingBytes,
       percentUsed: Number(percentUsed.toFixed(1)),
       isUnlimited,
+      hasVideoSubscription,
+      planName,
+      planPriceCents,
       totalVideosCount,
       readyCount,
       processingCount,

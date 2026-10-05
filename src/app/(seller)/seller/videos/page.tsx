@@ -67,7 +67,7 @@ export default async function SellerVideosPage() {
   }
 
   const usedGB = rawUsage.usedBytes / (1024 * 1024 * 1024);
-  const quotaGB = rawUsage.quotaGb || 50;
+  const quotaGB = rawUsage.quotaGb ?? 0;
   const freeGB = rawUsage.remainingBytes !== null ? rawUsage.remainingBytes / (1024 * 1024 * 1024) : Math.max(0, quotaGB - usedGB);
 
   const usage = {
@@ -78,6 +78,10 @@ export default async function SellerVideosPage() {
     quotaGB,
     freeGB,
     percentage: rawUsage.percentUsed,
+    hasVideoSubscription: Boolean(rawUsage.hasVideoSubscription),
+    planName: rawUsage.planName || null,
+    planPriceCents: rawUsage.planPriceCents || null,
+    isUnlimited: Boolean(rawUsage.isUnlimited),
   };
 
   return (
