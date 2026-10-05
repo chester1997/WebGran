@@ -35,7 +35,6 @@ export async function POST(req: Request) {
     // Enroll subscriber on SyncPay Platform
     const syncpayPlanToken = (plan as any).syncpayPlanToken || plan.slug;
     
-    // Create/Enroll charge via SyncPay Platform Billing Service
     let enrollRes;
     try {
       enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
@@ -44,19 +43,14 @@ export async function POST(req: Request) {
         document: "00000000000",
       });
     } catch (enrollErr: any) {
-      console.warn("[VideoSubEnroll] SyncPay enroll call warning:", enrollErr.message);
-      // Fallback: create mock/pending invoice structure if SyncPay sandbox API credentials are in dev mode
-      const amount = Number(plan.price || 0);
-      const subToken = `vsub_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      enrollRes = {
-        subscriptionToken: subToken,
-        subscriberToken: `sub_${seller.id.slice(0, 8)}`,
-        pixCode: `00020126580014BR.GOV.BCB.PIX0136vsub-${subToken}520400005303986540${amount.toFixed(2)}5802BR5912WEBGRAN6009SAO_PAULO62070503***6304`,
-        qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020126580014BR.GOV.BCB.PIX0136vsub-${subToken}`,
-        status: "pending",
-        amount,
-        raw: {},
-      };
+      console.error("[VideoSubEnroll] SyncPay enroll error:", enrollErr);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Não foi possível gerar a cobrança Pix no gateway de pagamento: ${enrollErr.message || "Credenciais SyncPay da plataforma não configuradas ou plano inválido."}`,
+        },
+        { status: 400 }
+      );
     }
 
     const now = new Date();
