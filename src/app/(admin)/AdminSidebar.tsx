@@ -19,7 +19,9 @@ import {
   LogOut,
   Store,
   CreditCard,
-  Sliders
+  Sliders,
+  Film,
+  HardDrive
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -34,10 +36,10 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const menuItems = [
+  const platformItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: CreditCard },
-    { label: "Planos de Assinatura", href: "/admin/plans", icon: Package },
+    { label: "Planos WebGran", href: "/admin/plans", icon: Package },
     { label: "Recursos & Features", href: "/admin/features", icon: Sliders },
     { label: "Vendedores", href: "/admin/sellers", icon: Users },
     { label: "Bots", href: "/admin/bots", icon: Bot },
@@ -45,6 +47,11 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     { label: "Clientes", href: "/admin/customers", icon: UserCheck },
     { label: "Temas", href: "/admin/themes", icon: Palette },
     { label: "Configurações", href: "/admin/settings", icon: Settings },
+  ];
+
+  const videoLibraryItems = [
+    { label: "Visão Geral", href: "/admin/video-library", icon: Film },
+    { label: "Planos de Armazenamento", href: "/admin/video-library/plans", icon: HardDrive },
   ];
 
   return (
@@ -94,37 +101,78 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-          <div className="px-3 pb-2 text-[10px] font-bold text-gray-400 tracking-wider uppercase">
-            Navegação Principal
-          </div>
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-4 custom-scrollbar">
+          <div>
+            <div className="px-3 pb-2 text-[10px] font-bold text-gray-400 tracking-wider uppercase">
+              Navegação Principal
+            </div>
+            <div className="space-y-1">
+              {platformItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`
-                  flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
-                  ${isActive 
-                    ? "bg-[#18181B] text-white border border-[#27272A] shadow-sm" 
-                    : "text-gray-400 hover:text-white hover:bg-[#141416]"
-                  }
-                `}
-              >
-                {/* Active Indicator Bar */}
-                {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-red-600 shadow-sm shadow-red-600/50" />
-                )}
-                
-                <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-red-500" : "text-gray-400 group-hover:text-gray-200"}`} />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`
+                      flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
+                      ${isActive 
+                        ? "bg-[#18181B] text-white border border-[#27272A] shadow-sm" 
+                        : "text-gray-400 hover:text-white hover:bg-[#141416]"
+                      }
+                    `}
+                  >
+                    {/* Active Indicator Bar */}
+                    {isActive && (
+                      <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-red-600 shadow-sm shadow-red-600/50" />
+                    )}
+                    
+                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-red-500" : "text-gray-400 group-hover:text-gray-200"}`} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* BIBLIOTECA DE VÍDEOS Section */}
+          <div className="pt-2 border-t border-[#27272A]">
+            <div className="px-3 pb-2 text-[10px] font-bold text-violet-400 tracking-wider uppercase flex items-center gap-1.5">
+              <Film className="w-3.5 h-3.5 text-violet-400" />
+              <span>Biblioteca de Vídeos</span>
+            </div>
+            <div className="space-y-1">
+              {videoLibraryItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || (item.href !== "/admin/video-library" && pathname.startsWith(item.href));
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`
+                      flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
+                      ${isActive 
+                        ? "bg-[#18181B] text-white border border-[#27272A] shadow-sm" 
+                        : "text-gray-400 hover:text-white hover:bg-[#141416]"
+                      }
+                    `}
+                  >
+                    {/* Active Indicator Bar */}
+                    {isActive && (
+                      <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-violet-600 shadow-sm shadow-violet-600/50" />
+                    )}
+                    
+                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-violet-400" : "text-gray-400 group-hover:text-gray-200"}`} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Store Access Button for Platform Owner */}
           <div className="pt-4 mt-4 border-t border-[#27272A]">

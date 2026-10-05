@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptionPlans, planFeatures, subscriptions } from "@/db/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, and } from "drizzle-orm";
 import { requirePlatformAdmin } from "@/lib/auth";
 
 export async function GET() {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   try {
     const adminUser = await requirePlatformAdmin();
     const body = await req.json();
-    const { id, name, slug, price, description, billingInterval, active } = body;
+    const { id, name, slug, price, description, billingInterval, active, featureValues } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "Nome do plano é obrigatório." }, { status: 400 });
@@ -84,6 +84,8 @@ export async function POST(req: Request) {
     }
 
     const now = new Date();
+    let targetPlanId = id;
+    let returnedPlan: any = null;
 
     if (id) {
       // Check slug collision
@@ -109,14 +111,7 @@ export async function POST(req: Request) {
         .where(eq(subscriptionPlans.id, id))
         .returning();
 
-      console.log("[ADMIN_AUDIT]", JSON.stringify({
-        adminId: adminUser.id,
-        action: "UPDATE_PLAN",
-        planId: id,
-        timestamp: now.toISOString(),
-      }));
-
-      return NextResponse.json({ success: true, plan: updated[0] });
+      returnedPlan = updated[0];
     } else {
       // Create new plan
       const existingSlug = await db.query.subscriptionPlans.findFirst({
@@ -139,15 +134,53 @@ export async function POST(req: Request) {
         })
         .returning();
 
-      console.log("[ADMIN_AUDIT]", JSON.stringify({
-        adminId: adminUser.id,
-        action: "CREATE_PLAN",
-        planId: created[0].id,
-        timestamp: now.toISOString(),
-      }));
-
-      return NextResponse.json({ success: true, plan: created[0] });
+      returnedPlan = created[0];
+      targetPlanId = returnedPlan.id;
     }
+
+    // Save feature values if provided
+    if (Array.isArray(featureValues) && targetPlanId) {
+      for (const item of featureValues) {
+        if (!item.featureId) continue;
+
+        const formattedVal = typeof item.value === "object" && item.value !== null && "value" in item.value
+          ? item.value
+          : { value: item.value };
+
+        const existingFeature = await db.query.planFeatures.findFirst({
+          where: and(
+            eq(planFeatures.planId, targetPlanId),
+            eq(planFeatures.featureId, item.featureId)
+          ),
+        });
+
+        if (existingFeature) {
+          await db
+            .update(planFeatures)
+            .set({
+              value: formattedVal,
+              updatedAt: now,
+            })
+            .where(eq(planFeatures.id, existingFeature.id));
+        } else {
+          await db.insert(planFeatures).values({
+            planId: targetPlanId,
+            featureId: item.featureId,
+            value: formattedVal,
+          });
+        }
+      }
+    }
+
+    console.log("[ADMIN_AUDIT]", JSON.stringify({
+      adminId: adminUser.id,
+      action: id ? "UPDATE_PLAN" : "CREATE_PLAN",
+      planId: targetPlanId,
+      featuresUpdated: Array.isArray(featureValues) ? featureValues.length : 0,
+      timestamp: now.toISOString(),
+    }));
+
+    return NextResponse.json({ success: true, plan: returnedPlan });
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });

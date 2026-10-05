@@ -14,7 +14,9 @@ import {
   Info,
   Check,
   AlertCircle,
-  Loader2
+  Loader2,
+  Sparkles,
+  InfinityIcon,
 } from "lucide-react";
 
 interface PlanItem {
@@ -51,6 +53,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
   // Modal Plan Edit/Create
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PlanItem | null>(null);
+  const [activeTab, setActiveTab] = useState<"info" | "features">("info");
   const [planForm, setPlanForm] = useState({
     name: "",
     slug: "",
@@ -61,12 +64,14 @@ export default function AdminPlansClient({ user }: { user: any }) {
   });
   const [savingPlan, setSavingPlan] = useState(false);
 
-  // Modal Configure Features
+  // Features list for Plan modal
+  const [allCatalogFeatures, setAllCatalogFeatures] = useState<FeatureConfigItem[]>([]);
+  const [featureFormValues, setFeatureFormValues] = useState<Record<string, any>>({});
+  const [loadingModalFeatures, setLoadingModalFeatures] = useState(false);
+
+  // Modal Configure Features (Standalone)
   const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
   const [selectedPlanForFeatures, setSelectedPlanForFeatures] = useState<PlanItem | null>(null);
-  const [planFeaturesList, setPlanFeaturesList] = useState<FeatureConfigItem[]>([]);
-  const [featureFormValues, setFeatureFormValues] = useState<Record<string, any>>({});
-  const [loadingPlanFeatures, setLoadingPlanFeatures] = useState(false);
   const [savingPlanFeatures, setSavingPlanFeatures] = useState(false);
 
   useEffect(() => {
@@ -79,7 +84,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
     try {
       const res = await fetch("/api/admin/plans");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao carregar planos");
+      if (!res.ok) throw new Error(data.error || "Erro ao carregar planos WebGran");
       setPlans(data.plans || []);
     } catch (err: any) {
       setError(err.message);
@@ -88,8 +93,48 @@ export default function AdminPlansClient({ user }: { user: any }) {
     }
   };
 
+  const loadFeaturesForPlan = async (planId?: string) => {
+    setLoadingModalFeatures(true);
+    try {
+      if (planId) {
+        const res = await fetch(`/api/admin/plans/${planId}/features`);
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.features)) {
+          setAllCatalogFeatures(data.features);
+          const initialVals: Record<string, any> = {};
+          for (const f of data.features) {
+            initialVals[f.id] = f.configuredValue;
+          }
+          setFeatureFormValues(initialVals);
+          return;
+        }
+      }
+
+      // Fallback or new plan: load generic feature catalog
+      const resFeats = await fetch("/api/admin/features");
+      const dataFeats = await resFeats.json();
+      if (resFeats.ok && Array.isArray(dataFeats.features)) {
+        const formatted = dataFeats.features.map((f: any) => ({
+          ...f,
+          configuredValue: f.defaultValue,
+        }));
+        setAllCatalogFeatures(formatted);
+        const initialVals: Record<string, any> = {};
+        for (const f of formatted) {
+          initialVals[f.id] = f.defaultValue;
+        }
+        setFeatureFormValues(initialVals);
+      }
+    } catch (err) {
+      console.error("Error loading catalog features:", err);
+    } finally {
+      setLoadingModalFeatures(false);
+    }
+  };
+
   const handleOpenCreatePlan = () => {
     setEditingPlan(null);
+    setActiveTab("info");
     setPlanForm({
       name: "",
       slug: "",
@@ -99,10 +144,12 @@ export default function AdminPlansClient({ user }: { user: any }) {
       active: true,
     });
     setIsPlanModalOpen(true);
+    loadFeaturesForPlan();
   };
 
   const handleOpenEditPlan = (plan: PlanItem) => {
     setEditingPlan(plan);
+    setActiveTab("info");
     setPlanForm({
       name: plan.name,
       slug: plan.slug,
@@ -112,6 +159,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       active: plan.active,
     });
     setIsPlanModalOpen(true);
+    loadFeaturesForPlan(plan.id);
   };
 
   const handleSavePlan = async (e: React.FormEvent) => {
@@ -121,9 +169,15 @@ export default function AdminPlansClient({ user }: { user: any }) {
     setSuccessMsg(null);
 
     try {
+      const featureValuesArray = Object.entries(featureFormValues).map(([featureId, value]) => ({
+        featureId,
+        value,
+      }));
+
       const payload = {
         id: editingPlan?.id,
         ...planForm,
+        featureValues: featureValuesArray,
       };
 
       const res = await fetch("/api/admin/plans", {
@@ -133,9 +187,9 @@ export default function AdminPlansClient({ user }: { user: any }) {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao salvar plano.");
+      if (!res.ok) throw new Error(data.error || "Erro ao salvar plano WebGran.");
 
-      setSuccessMsg(editingPlan ? "Plano atualizado com sucesso!" : "Novo plano criado com sucesso!");
+      setSuccessMsg(editingPlan ? "Plano WebGran atualizado com sucesso!" : "Novo plano WebGran criado com sucesso!");
       setIsPlanModalOpen(false);
       fetchPlans();
     } catch (err: any) {
@@ -159,7 +213,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao excluir plano.");
 
-      setSuccessMsg("Plano excluído com sucesso!");
+      setSuccessMsg("Plano WebGran excluído com sucesso!");
       fetchPlans();
     } catch (err: any) {
       setError(err.message);
@@ -169,27 +223,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
   const handleOpenConfigureFeatures = async (plan: PlanItem) => {
     setSelectedPlanForFeatures(plan);
     setIsFeatureModalOpen(true);
-    setLoadingPlanFeatures(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`/api/admin/plans/${plan.id}/features`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao carregar recursos do plano");
-
-      const feats: FeatureConfigItem[] = data.features || [];
-      setPlanFeaturesList(feats);
-
-      const initialVals: Record<string, any> = {};
-      for (const f of feats) {
-        initialVals[f.id] = f.configuredValue;
-      }
-      setFeatureFormValues(initialVals);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoadingPlanFeatures(false);
-    }
+    loadFeaturesForPlan(plan.id);
   };
 
   const handleSavePlanFeatures = async () => {
@@ -225,8 +259,8 @@ export default function AdminPlansClient({ user }: { user: any }) {
   };
 
   // Group features by category
-  const groupedFeatures = planFeaturesList.reduce((acc, feat) => {
-    const cat = feat.category || "Geral";
+  const groupedFeatures = allCatalogFeatures.reduce((acc, feat) => {
+    const cat = feat.category || "general";
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(feat);
     return acc;
@@ -235,12 +269,40 @@ export default function AdminPlansClient({ user }: { user: any }) {
   const categoryLabels: Record<string, string> = {
     catalog: "Catálogo & Produtos",
     integrations: "Integrações & Telegram",
-    media: "Mídia & Vídeo (Clips)",
+    media: "Mídia & Vídeos",
     marketing: "Marketing & Cupons",
     customization: "Personalização & Temas",
     payments: "Gateways de Pagamento",
     analytics: "Relatórios & Métricas",
     general: "Configurações Gerais",
+  };
+
+  // Compute live summary of included features for preview box
+  const getIncludedFeaturesPreview = () => {
+    const previewList: string[] = [];
+
+    for (const feat of allCatalogFeatures) {
+      const val = featureFormValues[feat.id];
+      if (val === undefined || val === null || val === false) continue;
+
+      if (feat.type === "BOOLEAN" && val === true) {
+        previewList.push(feat.name);
+      } else if (feat.type === "LIMIT") {
+        if (val === -1) {
+          previewList.push(`${feat.name}: Ilimitado`);
+        } else if (typeof val === "number" && val > 0) {
+          previewList.push(`${feat.name}: ${val}`);
+        }
+      } else if (feat.type === "QUOTA") {
+        if (val === -1) {
+          previewList.push(`${feat.name}: Ilimitado GB`);
+        } else if (typeof val === "number" && val > 0) {
+          previewList.push(`${feat.name}: ${val} GB`);
+        }
+      }
+    }
+
+    return previewList;
   };
 
   return (
@@ -252,18 +314,18 @@ export default function AdminPlansClient({ user }: { user: any }) {
             <Package className="w-4 h-4" />
             <span>Gestão Comercial</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Planos de Assinatura</h1>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">Planos WebGran</h1>
           <p className="text-zinc-400 text-sm mt-1">
-            Configure planos comerciais, limites, permissões e quotas para os vendedores.
+            Configure os planos comerciais da plataforma WebGran, recursos inclusos, limites e permissões dos vendedores.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreatePlan}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium text-sm hover:from-red-500 hover:to-red-600 transition shadow-lg shadow-red-600/20"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium text-sm hover:from-red-500 hover:to-red-600 transition shadow-lg shadow-red-600/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Novo Plano</span>
+          <span>Novo Plano WebGran</span>
         </button>
       </div>
 
@@ -285,7 +347,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[#141416] border border-[#27272A] p-5 rounded-xl">
-          <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider">Total de Planos</div>
+          <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider">Total de Planos WebGran</div>
           <div className="text-2xl font-bold text-white mt-1">{plans.length}</div>
         </div>
         <div className="bg-[#141416] border border-[#27272A] p-5 rounded-xl">
@@ -305,10 +367,10 @@ export default function AdminPlansClient({ user }: { user: any }) {
         {loading ? (
           <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-red-500" />
-            <span>Carregando planos...</span>
+            <span>Carregando planos WebGran...</span>
           </div>
         ) : plans.length === 0 ? (
-          <div className="p-12 text-center text-zinc-400">Nenhum plano cadastrado.</div>
+          <div className="p-12 text-center text-zinc-400">Nenhum plano WebGran cadastrado.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-zinc-300">
@@ -359,21 +421,21 @@ export default function AdminPlansClient({ user }: { user: any }) {
                     <td className="px-6 py-4 text-right space-x-2">
                       <button
                         onClick={() => handleOpenConfigureFeatures(plan)}
-                        className="p-2 rounded-lg bg-[#27272A] text-zinc-200 hover:text-white hover:bg-[#323238] transition"
-                        title="Configurar Recursos do Plano"
+                        className="p-2 rounded-lg bg-[#27272A] text-zinc-200 hover:text-white hover:bg-[#323238] transition cursor-pointer"
+                        title="Configurar Rápido os Recursos do Plano"
                       >
                         <Sliders className="w-4 h-4 text-red-400" />
                       </button>
                       <button
                         onClick={() => handleOpenEditPlan(plan)}
-                        className="p-2 rounded-lg bg-[#27272A] text-zinc-200 hover:text-white hover:bg-[#323238] transition"
-                        title="Editar Plano"
+                        className="p-2 rounded-lg bg-[#27272A] text-zinc-200 hover:text-white hover:bg-[#323238] transition cursor-pointer"
+                        title="Editar Plano WebGran"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeletePlan(plan)}
-                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
+                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition cursor-pointer"
                         title="Excluir Plano"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -387,121 +449,307 @@ export default function AdminPlansClient({ user }: { user: any }) {
         )}
       </div>
 
-      {/* MODAL 1: CREATE / EDIT PLAN */}
+      {/* MODAL: CREATE / EDIT PLAN WEBGRAN (COMPREHENSIVE 2-PART FORM + PREVIEW) */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141416] border border-[#27272A] w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-[#27272A] pb-4">
-              <h2 className="text-lg font-bold text-white">
-                {editingPlan ? "Editar Plano" : "Novo Plano de Assinatura"}
-              </h2>
+          <div className="bg-[#141416] border border-[#27272A] w-full max-w-4xl rounded-2xl p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            {/* Header Modal */}
+            <div className="flex items-center justify-between border-b border-[#27272A] pb-4 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Package className="w-5 h-5 text-red-400" />
+                  {editingPlan ? `Editar Plano WebGran: ${editingPlan.name}` : "Novo Plano WebGran"}
+                </h2>
+                <p className="text-xs text-zinc-400">
+                  Defina as informações comerciais e selecione os recursos do pacote.
+                </p>
+              </div>
               <button
                 onClick={() => setIsPlanModalOpen(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSavePlan} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                  Nome do Plano
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={planForm.name}
-                  onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                  placeholder="Ex: Plano Pro"
-                  className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                />
-              </div>
+            {/* Tabs Navigation */}
+            <div className="flex border-b border-[#27272A] gap-4 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab("info")}
+                className={`pb-3 text-sm font-bold transition-all relative border-b-2 ${
+                  activeTab === "info"
+                    ? "border-red-600 text-white"
+                    : "border-transparent text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                1. Informações do Plano
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("features")}
+                className={`pb-3 text-sm font-bold transition-all relative border-b-2 flex items-center gap-2 ${
+                  activeTab === "features"
+                    ? "border-red-600 text-white"
+                    : "border-transparent text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                <span>2. Recursos do Plano</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400 border border-red-500/30">
+                  {Object.keys(featureFormValues).length} recursos
+                </span>
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                  Slug (Identificador URL)
-                </label>
-                <input
-                  type="text"
-                  value={planForm.slug}
-                  onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })}
-                  placeholder="ex: plano-pro"
-                  className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono"
-                />
-              </div>
+            <form onSubmit={handleSavePlan} className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+              {/* TAB 1: INFORMAÇÕES DO PLANO */}
+              {activeTab === "info" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                        Nome do Plano WebGran *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={planForm.name}
+                        onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+                        placeholder="Ex: Plano Pro, Plano Starter, Business"
+                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                    Preço (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={planForm.price}
-                    onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-                    className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono"
-                  />
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                        Slug (Identificador URL) *
+                      </label>
+                      <input
+                        type="text"
+                        value={planForm.slug}
+                        onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })}
+                        placeholder="ex: plano-pro"
+                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                        Preço Comercial (R$) *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={planForm.price}
+                        onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
+                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                        Ciclo de Cobrança *
+                      </label>
+                      <select
+                        value={planForm.billingInterval}
+                        onChange={(e) => setPlanForm({ ...planForm, billingInterval: e.target.value })}
+                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      >
+                        <option value="month">Mensal</option>
+                        <option value="year">Anual</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
+                      Descrição do Plano
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={planForm.description}
+                      onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+                      placeholder="Descrição dos benefícios e diferenciais do plano..."
+                      className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <input
+                      type="checkbox"
+                      id="activePlanCheck"
+                      checked={planForm.active}
+                      onChange={(e) => setPlanForm({ ...planForm, active: e.target.checked })}
+                      className="w-4 h-4 rounded border-[#27272A] bg-[#1A1A1E] text-red-600 focus:ring-red-500 cursor-pointer"
+                    />
+                    <label htmlFor="activePlanCheck" className="text-sm font-medium text-zinc-200 cursor-pointer">
+                      Plano ativo para novas contratações pelos vendedores
+                    </label>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                    Ciclo de Cobrança
-                  </label>
-                  <select
-                    value={planForm.billingInterval}
-                    onChange={(e) => setPlanForm({ ...planForm, billingInterval: e.target.value })}
-                    className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                  >
-                    <option value="month">Mensal</option>
-                    <option value="year">Anual</option>
-                  </select>
+              {/* TAB 2: RECURSOS DO PLANO */}
+              {activeTab === "features" && (
+                <div className="space-y-6">
+                  {loadingModalFeatures ? (
+                    <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-red-500" />
+                      <span>Carregando recursos do catálogo...</span>
+                    </div>
+                  ) : Object.keys(groupedFeatures).length === 0 ? (
+                    <div className="p-8 text-center text-zinc-400">
+                      Nenhum recurso cadastrado no catálogo.
+                    </div>
+                  ) : (
+                    Object.entries(groupedFeatures).map(([category, items]) => (
+                      <div key={category} className="bg-[#1A1A1E] border border-[#27272A] rounded-xl p-5 space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-red-400 border-b border-[#27272A] pb-2">
+                          {categoryLabels[category] || category}
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {items.map((feat) => {
+                            const currentVal = featureFormValues[feat.id];
+
+                            return (
+                              <div key={feat.id} className="bg-[#141416] border border-[#27272A] p-4 rounded-xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-sm text-white">{feat.name}</span>
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                                    {feat.type}
+                                  </span>
+                                </div>
+                                {feat.description && (
+                                  <p className="text-xs text-zinc-400">{feat.description}</p>
+                                )}
+
+                                {/* CONTROLS ACCORDING TO FEATURE TYPE */}
+                                {feat.type === "BOOLEAN" && (
+                                  <div className="pt-2">
+                                    <select
+                                      value={currentVal ? "true" : "false"}
+                                      onChange={(e) => setFeatureFormValues({
+                                        ...featureFormValues,
+                                        [feat.id]: e.target.value === "true",
+                                      })}
+                                      className="w-full bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
+                                    >
+                                      <option value="true">Liberado (✓ Ativado)</option>
+                                      <option value="false">Bloqueado (✕ Desativado)</option>
+                                    </select>
+                                  </div>
+                                )}
+
+                                {feat.type === "LIMIT" && (
+                                  <div className="pt-2 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="number"
+                                        disabled={currentVal === -1}
+                                        value={currentVal === -1 ? "" : currentVal}
+                                        onChange={(e) => setFeatureFormValues({
+                                          ...featureFormValues,
+                                          [feat.id]: parseInt(e.target.value) || 0,
+                                        })}
+                                        placeholder={currentVal === -1 ? "Ilimitado" : "0"}
+                                        className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-50 font-mono"
+                                      />
+                                    </div>
+                                    <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={currentVal === -1}
+                                        onChange={(e) => setFeatureFormValues({
+                                          ...featureFormValues,
+                                          [feat.id]: e.target.checked ? -1 : 100,
+                                        })}
+                                        className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                      />
+                                      <span>Ilimitado (-1)</span>
+                                    </label>
+                                  </div>
+                                )}
+
+                                {feat.type === "QUOTA" && (
+                                  <div className="pt-2 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="number"
+                                        disabled={currentVal === -1}
+                                        value={currentVal === -1 ? "" : currentVal}
+                                        onChange={(e) => setFeatureFormValues({
+                                          ...featureFormValues,
+                                          [feat.id]: parseInt(e.target.value) || 0,
+                                        })}
+                                        placeholder={currentVal === -1 ? "Ilimitado" : "0"}
+                                        className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-50 font-mono"
+                                      />
+                                      <span className="text-xs text-zinc-400 font-bold">GB</span>
+                                    </div>
+                                    <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={currentVal === -1}
+                                        onChange={(e) => setFeatureFormValues({
+                                          ...featureFormValues,
+                                          [feat.id]: e.target.checked ? -1 : 50,
+                                        })}
+                                        className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                      />
+                                      <span>Ilimitado (-1 GB)</span>
+                                    </label>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
+              )}
+
+              {/* PREVISUALIZAÇÃO: RECURSOS INCLUÍDOS */}
+              <div className="bg-[#1A1A1E] border border-red-500/20 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-400">
+                  <Sparkles className="w-4 h-4 text-red-400" />
+                  <span>Recursos incluídos no plano (Pré-visualização)</span>
+                </div>
+                {getIncludedFeaturesPreview().length === 0 ? (
+                  <p className="text-xs text-zinc-500">Nenhum recurso ativo selecionado.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {getIncludedFeaturesPreview().map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs text-zinc-200 bg-[#141416] p-2 rounded-lg border border-[#27272A]">
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="truncate">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                  Descrição
-                </label>
-                <textarea
-                  rows={3}
-                  value={planForm.description}
-                  onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
-                  placeholder="Descrição das vantagens e limites comerciais..."
-                  className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <input
-                  type="checkbox"
-                  id="activeCheck"
-                  checked={planForm.active}
-                  onChange={(e) => setPlanForm({ ...planForm, active: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#27272A] bg-[#1A1A1E] text-red-600 focus:ring-red-500"
-                />
-                <label htmlFor="activeCheck" className="text-sm font-medium text-zinc-200">
-                  Plano ativo para novas assinaturas
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#27272A]">
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#27272A] flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#27272A] text-zinc-300 text-sm font-medium hover:text-white"
+                  className="px-4 py-2 rounded-xl bg-[#27272A] text-zinc-300 text-sm font-medium hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingPlan}
-                  className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-lg shadow-red-600/20"
                 >
                   {savingPlan && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Salvar Plano</span>
+                  <span>Salvar Plano WebGran</span>
                 </button>
               </div>
             </form>
@@ -509,7 +757,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
         </div>
       )}
 
-      {/* MODAL 2: CONFIGURE PLAN FEATURES DYNAMICALLY */}
+      {/* MODAL 2: STANDALONE FEATURE CONFIGURATION */}
       {isFeatureModalOpen && selectedPlanForFeatures && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#141416] border border-[#27272A] w-full max-w-3xl rounded-2xl p-6 shadow-2xl space-y-6 max-h-[90vh] flex flex-col">
@@ -531,7 +779,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-              {loadingPlanFeatures ? (
+              {loadingModalFeatures ? (
                 <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3">
                   <Loader2 className="w-5 h-5 animate-spin text-red-500" />
                   <span>Carregando recursos...</span>
@@ -563,7 +811,6 @@ export default function AdminPlansClient({ user }: { user: any }) {
                               <p className="text-xs text-zinc-400">{feat.description}</p>
                             )}
 
-                            {/* CONTROLS BASED ON FEATURE TYPE */}
                             {feat.type === "BOOLEAN" && (
                               <div className="pt-2">
                                 <select
@@ -574,8 +821,8 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                   })}
                                   className="w-full bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
                                 >
-                                  <option value="true">Liberado (Ativado)</option>
-                                  <option value="false">Bloqueado (Desativado)</option>
+                                  <option value="true">Liberado (✓ Ativado)</option>
+                                  <option value="false">Bloqueado (✕ Desativado)</option>
                                 </select>
                               </div>
                             )}
@@ -611,19 +858,33 @@ export default function AdminPlansClient({ user }: { user: any }) {
                             )}
 
                             {feat.type === "QUOTA" && (
-                              <div className="pt-2">
+                              <div className="pt-2 space-y-2">
                                 <div className="flex items-center gap-2">
                                   <input
                                     type="number"
-                                    value={currentVal}
+                                    disabled={currentVal === -1}
+                                    value={currentVal === -1 ? "" : currentVal}
                                     onChange={(e) => setFeatureFormValues({
                                       ...featureFormValues,
                                       [feat.id]: parseInt(e.target.value) || 0,
                                     })}
-                                    className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 font-mono"
+                                    placeholder={currentVal === -1 ? "Ilimitado" : "0"}
+                                    className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 font-mono disabled:opacity-50"
                                   />
                                   <span className="text-xs text-zinc-400 font-bold">GB</span>
                                 </div>
+                                <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={currentVal === -1}
+                                    onChange={(e) => setFeatureFormValues({
+                                      ...featureFormValues,
+                                      [feat.id]: e.target.checked ? -1 : 50,
+                                    })}
+                                    className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                  />
+                                  <span>Ilimitado (-1 GB)</span>
+                                </label>
                               </div>
                             )}
                           </div>
@@ -639,14 +900,14 @@ export default function AdminPlansClient({ user }: { user: any }) {
               <button
                 type="button"
                 onClick={() => setIsFeatureModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-[#27272A] text-zinc-300 text-sm font-medium hover:text-white"
+                className="px-4 py-2 rounded-xl bg-[#27272A] text-zinc-300 text-sm font-medium hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSavePlanFeatures}
                 disabled={savingPlanFeatures}
-                className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-2"
+                className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-lg shadow-red-600/20"
               >
                 {savingPlanFeatures && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>Salvar Recursos do Plano</span>
