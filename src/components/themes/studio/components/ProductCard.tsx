@@ -98,31 +98,33 @@ function ProductCardBase({
       </Link>
 
       <div className="flex flex-col px-0.5 flex-1 justify-between gap-1">
-        {/* Row 1: Price */}
-        <div className="flex items-center w-full min-w-0">
-          <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight truncate">
+        {/* Single Row: Price + Views + Fire Indicator (All 3 on the same horizontal line) */}
+        <div className="flex items-center justify-between w-full min-w-0 flex-nowrap gap-0.5 text-[10px] sm:text-xs select-none py-0.5">
+          {/* 1. Price */}
+          <span className="text-emerald-400 font-bold text-[10px] sm:text-xs tracking-tight shrink-0 whitespace-nowrap">
             R$ {Number(product.price).toFixed(2).replace('.', ',')}
           </span>
+
+          {/* 2. Views */}
+          {!isTopTen && hasViews ? (
+            <span className="flex items-center gap-0.5 leading-none shrink-0 text-zinc-400 whitespace-nowrap text-[9px] sm:text-[11px]">
+              <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-sky-300 shrink-0" />
+              <span>{formatViewsCount(rawViews)}</span>
+            </span>
+          ) : (
+            <span className="shrink-0" />
+          )}
+
+          {/* 3. Popularity / Fire Indicator */}
+          {!isTopTen && hasFire ? (
+            <span className="flex items-center gap-0.5 leading-none shrink-0 text-zinc-400 whitespace-nowrap text-[9px] sm:text-[11px]">
+              <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 fill-amber-500/20 shrink-0" />
+              <span>{formatViewsCount(rawFire)}</span>
+            </span>
+          ) : (
+            <span className="shrink-0" />
+          )}
         </div>
-
-        {/* Row 2: Metrics line (Eye on Left, Flame on Right with space-between) */}
-        {!isTopTen && (
-          <div className="flex items-center justify-between w-full min-w-0 text-zinc-400 text-[10px] sm:text-xs min-h-[16px] select-none gap-1">
-            {hasViews ? (
-              <span className="flex items-center gap-0.5 leading-none shrink-0 truncate">
-                <Eye className="w-3 h-3 text-sky-300 shrink-0" />
-                <span>{formatViewsCount(rawViews)}</span>
-              </span>
-            ) : <span />}
-
-            {hasFire ? (
-              <span className="flex items-center gap-0.5 leading-none shrink-0 truncate">
-                <Flame className="w-2.5 h-2.5 text-amber-500 fill-amber-500/20 shrink-0" />
-                <span>{formatViewsCount(rawFire)}</span>
-              </span>
-            ) : <span />}
-          </div>
-        )}
         
         {/* Row 3: Action Button */}
         {showButtons && (
