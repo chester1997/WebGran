@@ -3,13 +3,11 @@ import { db } from "@/db";
 import { videoLibraryPlans, videoLibrarySubscriptions } from "@/db/schema";
 import { eq, desc, count, and } from "drizzle-orm";
 import { requirePlatformAdmin } from "@/lib/auth";
-import { ensureEntitlementTablesAndSeed } from "@/db/ensure-entitlements";
 import { SyncPayPlatformBillingService } from "@/lib/billing/syncpay-platform-billing-service";
 
 export async function GET() {
   try {
     await requirePlatformAdmin();
-    await ensureEntitlementTablesAndSeed();
 
     const plans = await db.query.videoLibraryPlans.findMany({
       orderBy: [desc(videoLibraryPlans.createdAt)],

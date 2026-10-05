@@ -8,12 +8,10 @@ import {
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { requirePlatformAdmin } from "@/lib/auth";
-import { ensureEntitlementTablesAndSeed } from "@/db/ensure-entitlements";
 
 export async function GET() {
   try {
     await requirePlatformAdmin();
-    await ensureEntitlementTablesAndSeed();
 
     // 1. Fetch active Video Library Subscriptions with Plan and Seller
     const activeSubs = await db.query.videoLibrarySubscriptions.findMany({
