@@ -4,7 +4,7 @@ export default function FavoritesLoading() {
       {/* Title skeleton */}
       <div className="h-7 w-36 bg-white/8 rounded-lg mb-6" />
       {/* Grid skeleton */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-2">
             <div className="w-full aspect-[3/4] bg-white/6 rounded-xl" />

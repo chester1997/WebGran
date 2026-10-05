@@ -6,7 +6,7 @@ export default function SearchLoading() {
       {/* Search bar skeleton */}
       <div className="h-11 w-full bg-white/6 rounded-xl mb-6" />
       {/* Grid skeleton */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
         {Array.from({ length: 9 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-2">
             <div className="w-full aspect-[3/4] bg-white/6 rounded-xl" />

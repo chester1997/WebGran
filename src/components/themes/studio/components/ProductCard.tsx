@@ -54,7 +54,7 @@ function ProductCardBase({
   viewsCount: propViewsCount,
   showFire: propShowFire,
   fireCount: propFireCount,
-  className = "w-36 md:w-44",
+  className = "w-full",
 }: ProductCardProps) {
   const badgeConfig = getProductBadge(product.badge);
 
@@ -65,8 +65,8 @@ function ProductCardBase({
   const rawFire = propFireCount ?? product.fireCount ?? 0;
 
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="block relative rounded-xl overflow-hidden bg-zinc-900 group shadow-lg aspect-[2/3]">
+    <div className={`flex flex-col gap-1.5 h-full ${className}`}>
+      <Link href={`/miniapp/${storeSlug}/product/${product.slug}`} className="block relative rounded-xl overflow-hidden bg-zinc-900 group shadow-lg aspect-[2/3] shrink-0">
         {badgeConfig && (
           <div className="absolute top-1 left-1 z-20 pointer-events-none">
             <span className={badgeConfig.className}>
@@ -90,59 +90,62 @@ function ProductCardBase({
         )}
         
         {/* Title overlay at the bottom of the image */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-2.5">
-          <span className="text-white text-xs font-semibold leading-tight drop-shadow-md line-clamp-2 uppercase tracking-tight">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-2 sm:p-2.5">
+          <span className="text-white text-[11px] sm:text-xs font-semibold leading-tight drop-shadow-md line-clamp-2 uppercase tracking-tight">
             {product.title}
           </span>
         </div>
       </Link>
 
-      <div className="flex flex-col px-1">
-        {/* Single Row: Price on LEFT, Indicators (Eye + Flame) on RIGHT */}
-        <div className="flex items-center justify-between gap-1 w-full min-w-0 mb-1.5">
-          <span className="text-emerald-400 font-bold text-xs tracking-tight shrink-0">
+      <div className="flex flex-col px-0.5 flex-1 justify-between gap-1">
+        {/* Row 1: Price */}
+        <div className="flex items-center w-full min-w-0">
+          <span className="text-emerald-400 font-bold text-xs sm:text-sm tracking-tight truncate">
             R$ {Number(product.price).toFixed(2).replace('.', ',')}
           </span>
-
-          {!isTopTen && (hasViews || hasFire) && (
-            <div className="flex items-center gap-1.5 text-zinc-400 text-[10px] sm:text-xs shrink-0 select-none">
-              {hasViews && (
-                <span className="flex items-center gap-0.5 leading-none">
-                  <Eye className="w-3 h-3 text-sky-300 shrink-0" />
-                  <span>{formatViewsCount(rawViews)}</span>
-                </span>
-              )}
-              {hasFire && (
-                <span className="flex items-center gap-0.5 leading-none">
-                  <Flame className="w-2.5 h-2.5 text-amber-500 fill-amber-500/20 shrink-0" />
-                  <span>{formatViewsCount(rawFire)}</span>
-                </span>
-              )}
-            </div>
-          )}
         </div>
+
+        {/* Row 2: Metrics line (Eye on Left, Flame on Right with space-between) */}
+        {!isTopTen && (
+          <div className="flex items-center justify-between w-full min-w-0 text-zinc-400 text-[10px] sm:text-xs min-h-[16px] select-none gap-1">
+            {hasViews ? (
+              <span className="flex items-center gap-0.5 leading-none shrink-0 truncate">
+                <Eye className="w-3 h-3 text-sky-300 shrink-0" />
+                <span>{formatViewsCount(rawViews)}</span>
+              </span>
+            ) : <span />}
+
+            {hasFire ? (
+              <span className="flex items-center gap-0.5 leading-none shrink-0 truncate">
+                <Flame className="w-2.5 h-2.5 text-amber-500 fill-amber-500/20 shrink-0" />
+                <span>{formatViewsCount(rawFire)}</span>
+              </span>
+            ) : <span />}
+          </div>
+        )}
         
+        {/* Row 3: Action Button */}
         {showButtons && (
-          buttonVariant === "details" ? (
-            <div className="w-full">
+          <div className="w-full mt-auto pt-0.5">
+            {buttonVariant === "details" ? (
               <Link
                 href={`/miniapp/${storeSlug}/product/${product.slug}`}
-                className="w-full bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-[11px] font-bold py-1 px-2.5 rounded-lg text-center transition-all flex items-center justify-center gap-0.5 shadow-sm active:scale-95"
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-[11px] font-bold py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-0.5 shadow-sm active:scale-95"
               >
                 + Detalhes
               </Link>
-            </div>
-          ) : (
-            <div className="flex gap-1.5 w-full">
-              <Link
-                href={`/miniapp/${storeSlug}/product/${product.slug}`}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center"
-              >
-                Ver mais
-              </Link>
-              <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
-            </div>
-          )
+            ) : (
+              <div className="flex gap-1 w-full">
+                <Link
+                  href={`/miniapp/${storeSlug}/product/${product.slug}`}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center"
+                >
+                  Ver mais
+                </Link>
+                <AddToCartButton product={product} storeSlug={storeSlug} variant="card" />
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -42,7 +42,7 @@ export function ProductCarousel({
     >
       {products.map(product => (
         <div key={product.id} className="snap-start shrink-0">
-          <ProductCard storeSlug={storeSlug} product={product} />
+          <ProductCard storeSlug={storeSlug} product={product} className="w-32 sm:w-36 md:w-44" />
         </div>
       ))}
     </HorizontalCarousel>

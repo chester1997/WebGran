@@ -49,7 +49,7 @@ export function StudioFavorites({ storeSlug }: { storeSlug: string }) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-4">
           {favorites.map((prod) => (
             <div key={prod.id} className="w-full flex justify-center">
               <ProductCard storeSlug={storeSlug} product={prod} className="w-full" />
