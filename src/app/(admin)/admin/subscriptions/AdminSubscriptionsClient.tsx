@@ -70,10 +70,10 @@ export default function AdminSubscriptionsClient({
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
             <CreditCard className="w-7 h-7 text-emerald-500" />
-            Assinaturas WebGran SaaS (Mercado Pago)
+            Assinaturas WebGran SaaS (SyncPay Plataforma)
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Acompanhamento em tempo real das mensalidades de R$ 89,90 recebidas no Mercado Pago.
+            Acompanhamento em tempo real das mensalidades de R$ 89,90 recebidas na SyncPay.
           </p>
         </div>
       </div>

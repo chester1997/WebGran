@@ -247,7 +247,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
 
       if (data.success && data.invoice) {
         setActiveInvoice(data.invoice);
-        showToast(forceNew ? "Novo PIX gerado com sucesso via Mercado Pago!" : "Cobrança PIX gerada com sucesso via Mercado Pago.");
+        showToast(forceNew ? "Novo PIX gerado com sucesso via SyncPay Plataforma!" : "Cobrança PIX gerada com sucesso via SyncPay Plataforma.");
       } else {
         setErrorMessage(data.error || "Erro ao gerar PIX para assinatura.");
       }
@@ -285,7 +285,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
         setActiveInvoice(null);
         router.refresh();
       } else {
-        setErrorMessage(data.error || "Pagamento ainda não identificado no Mercado Pago.");
+        setErrorMessage(data.error || "Pagamento ainda não identificado na SyncPay.");
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Erro de conexão ao consultar status.");
@@ -609,8 +609,8 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                   <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Forma de Pagamento</span>
                   <div>
                     <div className="flex items-center gap-2 text-white font-bold text-base">
-                      <QrCode className="w-5 h-5 text-red-500 shrink-0" />
-                      <span>PIX via Mercado Pago</span>
+                      <QrCode className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <span>PIX via SyncPay Plataforma</span>
                     </div>
                     <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
                   </div>
@@ -745,7 +745,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                           {verifyingPayment ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              <span>Consultando Mercado Pago...</span>
+                              <span>Consultando SyncPay Plataforma...</span>
                             </>
                           ) : (
                             <>
@@ -755,7 +755,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                           )}
                         </Button>
                         <p className="text-[10px] text-zinc-500 text-center">
-                          O status do pagamento é verificado em tempo real diretamente no Mercado Pago.
+                          O status do pagamento é verificado em tempo real diretamente na SyncPay Plataforma.
                         </p>
                       </div>
                     </div>

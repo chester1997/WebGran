@@ -271,7 +271,7 @@ export default function AdminSettingsClient({
             Configurações da Plataforma
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Gerencie planos de assinatura SaaS, recebimento do proprietário no Mercado Pago e segurança global.
+            Gerencie planos de assinatura SaaS, recebimento da plataforma na SyncPay e segurança global.
           </p>
         </div>
 
@@ -330,7 +330,7 @@ export default function AdminSettingsClient({
               </div>
               <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
                 <span className="text-xs text-gray-400 font-medium">Forma de Pagamento</span>
-                <span className="text-xs font-semibold text-gray-300">PIX via Mercado Pago</span>
+                <span className="text-xs font-semibold text-emerald-400">PIX via SyncPay Plataforma</span>
               </div>
             </div>
           </div>
@@ -376,17 +376,64 @@ export default function AdminSettingsClient({
           </Link>
         </div>
 
-        {/* CARD 3: MERCADO PAGO - ASSINATURAS WEBGRAN (CONTA DO PROPRIETÁRIO) */}
+        {/* CARD 3: SYNCPAY PLATAFORMA WEBGRAN */}
+        <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">SyncPay Plataforma</h3>
+                  <p className="text-xs text-gray-400">Receba as mensalidades WebGran na conta SyncPay da plataforma</p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Conectado
+              </span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400">Status da Integração</span>
+                <span className="text-xs font-bold text-emerald-400">Ativo & Operacional</span>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                <span className="text-xs text-gray-400">Client ID da Plataforma</span>
+                <span className="text-xs font-mono text-white font-bold truncate max-w-[200px]">
+                  f0979e...2c76
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-[#27272A] pt-2">
+                <span className="text-xs text-gray-400">Endpoint Webhook</span>
+                <span className="text-xs font-mono text-emerald-400 font-bold truncate max-w-[220px]">
+                  /api/webhooks/syncpay/platform-billing
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 text-xs text-gray-400 flex items-center justify-between border-t border-[#27272A]">
+            <span>💡 O gateway dos vendedores continua 100% independente.</span>
+          </div>
+        </div>
+
+        {/* CARD 4: MERCADO PAGO PLATAFORMA (GATEWAY FALLBACK) */}
         <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
-                  <Zap className="w-5 h-5" />
+                  <ExternalLink className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Mercado Pago</h3>
-                  <p className="text-xs text-gray-400">Receba as assinaturas WebGran na sua conta Mercado Pago</p>
+                  <h3 className="text-base font-bold text-white">Mercado Pago Plataforma</h3>
+                  <p className="text-xs text-gray-400">Gateway secundário / fallback para assinaturas WebGran</p>
                 </div>
               </div>
 
@@ -405,7 +452,7 @@ export default function AdminSettingsClient({
 
             <div className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">Status</span>
+                <span className="text-xs text-gray-400">Status Fallback</span>
                 <span className={`text-xs font-bold ${mp.isConnected ? "text-emerald-400" : "text-amber-400"}`}>
                   {mp.isConnected ? "Ativo" : "Não conectado"}
                 </span>
