@@ -52,7 +52,7 @@ export default async function SettingsPage() {
     paidAt: subscriptionData.latestInvoice.paidAt ? new Date(subscriptionData.latestInvoice.paidAt).toISOString() : null,
     createdAt: subscriptionData.latestInvoice.createdAt ? new Date(subscriptionData.latestInvoice.createdAt).toISOString() : new Date().toISOString(),
     expiresAt: subscriptionData.latestInvoice.expiresAt ? new Date(subscriptionData.latestInvoice.expiresAt).toISOString() : null,
-    qrCode: subscriptionData.latestInvoice.qrCode || null,
+    qrCode: subscriptionData.latestInvoice.qrCode || (subscriptionData.latestInvoice.qrCodeText ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(subscriptionData.latestInvoice.qrCodeText)}` : null),
     qrCodeText: subscriptionData.latestInvoice.qrCodeText || null,
   } : null;
 
@@ -65,7 +65,7 @@ export default async function SettingsPage() {
     paidAt: inv.paidAt ? new Date(inv.paidAt).toISOString() : null,
     createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString() : new Date().toISOString(),
     expiresAt: inv.expiresAt ? new Date(inv.expiresAt).toISOString() : null,
-    qrCode: inv.qrCode || null,
+    qrCode: inv.qrCode || (inv.qrCodeText ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inv.qrCodeText)}` : null),
     qrCodeText: inv.qrCodeText || null,
   }));
 

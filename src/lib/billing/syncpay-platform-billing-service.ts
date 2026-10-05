@@ -219,7 +219,8 @@ export class SyncPayPlatformBillingService {
       firstCycle?.br_code ||
       firstCycle?.emv ||
       firstCycle?.qr_code_text;
-    const qrCode = paymentObj?.qr_code || firstCycle?.qr_code || firstCycle?.qr_code_url || firstCycle?.image_url;
+    const rawQrCode = paymentObj?.qr_code || firstCycle?.qr_code || firstCycle?.qr_code_url || firstCycle?.image_url;
+    const qrCode = rawQrCode || (pixCode ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}` : undefined);
     const dueDate = firstCycle?.due_date || firstCycle?.dueDate || firstCharge?.due_date;
     const expiresAt = paymentObj?.expires_at || firstCycle?.expires_at || firstCycle?.expiresAt || firstCharge?.expires_at;
     const status = (data?.status || firstCycle?.status || firstCharge?.status || 'pending_first_payment').toLowerCase();

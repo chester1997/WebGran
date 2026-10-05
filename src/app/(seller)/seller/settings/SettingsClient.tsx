@@ -699,15 +699,21 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    {/* QR Code Display */}
                     <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner border border-white/10">
-                      {activeInvoice.qrCode ? (
-                        <img src={activeInvoice.qrCode} alt="QR Code PIX Mercado Pago" className="w-48 h-48 object-contain" />
-                      ) : (
-                        <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
-                          Gerando QR Code...
-                        </div>
-                      )}
+                      {(() => {
+                        const qrImageUrl = activeInvoice.qrCode || (
+                          activeInvoice.qrCodeText
+                            ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(activeInvoice.qrCodeText)}`
+                            : null
+                        );
+                        return qrImageUrl ? (
+                          <img src={qrImageUrl} alt="QR Code PIX SyncPay" className="w-48 h-48 object-contain" />
+                        ) : (
+                          <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
+                            Gerando QR Code...
+                          </div>
+                        );
+                      })()}
                       <span className="text-[11px] text-zinc-600 font-semibold mt-2">Escaneie o QR Code no app do seu banco</span>
                     </div>
 
