@@ -233,7 +233,7 @@ export async function getSellerSubscription(sellerId: string) {
 /**
  * Generate a new PIX Invoice for Subscription via SyncPay Platform (or Mercado Pago fallback)
  */
-export async function createPlatformBillingInvoice(sellerId: string, forceNew = false) {
+export async function createPlatformBillingInvoice(sellerId: string, forceNew = false, targetPlanId?: string) {
   const userRecord = await db.query.users.findFirst({
     where: eq(users.id, sellerId),
   });
@@ -242,13 +242,22 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
     throw new Error("Contas do proprietário da plataforma são isentas de assinatura e não geram cobranças.");
   }
 
-  const plan = await getDefaultPlan();
+  let plan;
+  if (targetPlanId) {
+    plan = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.id, targetPlanId),
+    });
+  }
+  if (!plan) {
+    plan = await getDefaultPlan();
+  }
+
   const subData = await getSellerSubscription(sellerId);
   const subscription = subData.subscription;
   const now = new Date();
 
   // If forceNew is false, check if an unexpired PENDING invoice exists FOR SYNCPAY
-  if (!forceNew && subData.latestInvoice && subData.latestInvoice.status === 'PENDING' && (subData.latestInvoice as any).provider === 'syncpay') {
+  if (!forceNew && !targetPlanId && subData.latestInvoice && subData.latestInvoice.status === 'PENDING' && (subData.latestInvoice as any).provider === 'syncpay') {
     const expiresAtDate = subData.latestInvoice.expiresAt ? new Date(subData.latestInvoice.expiresAt) : null;
     if (expiresAtDate && expiresAtDate > now) {
       return {

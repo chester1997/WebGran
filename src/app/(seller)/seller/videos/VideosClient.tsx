@@ -23,10 +23,12 @@ import {
   AlertTriangle,
   Layers,
   CloudUpload,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
 import { TusVideoUploader } from "@/lib/bunny/client-upload";
+import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
 
 export interface LibraryVideoItem {
   id: string;
@@ -158,7 +160,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
     return () => clearInterval(interval);
   }, [hasPendingVideos]);
 
-  // Upload Modal State
+  // Upload & Upgrade Modal State
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [formData, setFormData] = useState({ title: "", description: "" });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -491,30 +494,93 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
       </div>
 
       {/* 6. STORAGE CARD (Standardized WebGran Storage Block) */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2 text-zinc-300 font-bold text-xs uppercase tracking-wider">
-            <HardDrive className="w-4 h-4 text-red-500" />
-            <span>ARMAZENAMENTO DE VÍDEOS</span>
+      {(() => {
+        const isUnlimited = usage.quotaGB <= 0 || (usage as any).isUnlimited || (usage as any).quotaGb === null;
+        const isOverQuota = !isUnlimited && usage.usedGB > usage.quotaGB;
+        const isFull = !isUnlimited && (usage.percentage >= 100 || isOverQuota);
+        const isNearFull = !isUnlimited && usage.percentage >= 90 && usage.percentage < 100;
+        const isWarning = !isUnlimited && usage.percentage >= 80 && usage.percentage < 90;
+
+        return (
+          <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-zinc-300 font-bold text-xs uppercase tracking-wider">
+                <HardDrive className="w-4 h-4 text-red-500" />
+                <span>ARMAZENAMENTO DE VÍDEOS</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono text-zinc-300 font-bold">
+                  {usage.usedGB.toFixed(1)} GB / {isUnlimited ? "ILIMITADO" : `${usage.quotaGB} GB`}
+                </span>
+                {!isUnlimited && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsUpgradeModalOpen(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-3 py-1 shadow-md shadow-red-600/20"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1" />
+                    Fazer Upgrade
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-[#16161C] border border-white/10 rounded-full h-3 overflow-hidden p-0.5 shadow-inner">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  isFull ? "bg-red-600 animate-pulse" : isNearFull ? "bg-orange-500" : isWarning ? "bg-amber-500" : "bg-red-600"
+                }`}
+                style={{ width: `${isUnlimited ? 100 : Math.min(Math.max(usage.percentage, 1), 100)}%` }}
+              />
+            </div>
+
+            <div className="flex justify-between items-center text-xs text-zinc-400 font-mono">
+              <span>{isUnlimited ? "Uso sem restrições" : `${usage.percentage.toFixed(1)}% utilizado`}</span>
+              <span>{isUnlimited ? "Ilimitado" : `${usage.freeGB.toFixed(1)} GB disponíveis`}</span>
+            </div>
+
+            {/* Warnings Banners */}
+            {isOverQuota && (
+              <div className="mt-2 p-3 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>Seu plano atual possui {usage.quotaGB} GB, mas você utiliza {usage.usedGB.toFixed(1)} GB. Exclua arquivos ou faça upgrade para continuar enviando vídeos.</span>
+                </div>
+                <Button size="sm" onClick={() => setIsUpgradeModalOpen(true)} className="bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg shrink-0">
+                  Aumentar Armazenamento
+                </Button>
+              </div>
+            )}
+
+            {!isOverQuota && isFull && (
+              <div className="mt-2 p-3 rounded-xl bg-red-950/80 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>Seu armazenamento está cheio. Faça upgrade para continuar enviando vídeos.</span>
+                </div>
+                <Button size="sm" onClick={() => setIsUpgradeModalOpen(true)} className="bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg shrink-0">
+                  Aumentar Armazenamento
+                </Button>
+              </div>
+            )}
+
+            {!isFull && isNearFull && (
+              <div className="mt-2 p-3 rounded-xl bg-orange-950/80 border border-orange-500/30 text-orange-200 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" />
+                <span>Seu armazenamento está quase cheio (90%).</span>
+              </div>
+            )}
+
+            {!isFull && !isNearFull && isWarning && (
+              <div className="mt-2 p-3 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Você já utilizou 80% do armazenamento.</span>
+              </div>
+            )}
           </div>
-          <span className="text-xs font-mono text-zinc-400">
-            {usage.usedGB.toFixed(1)} GB / {usage.quotaGB > 0 ? `${usage.quotaGB} GB` : "Ilimitado"}
-          </span>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-[#16161C] border border-white/10 rounded-full h-3 overflow-hidden p-0.5 mb-2 shadow-inner">
-          <div
-            className="h-full rounded-full bg-red-600 transition-all duration-500"
-            style={{ width: `${Math.min(Math.max(usage.percentage, 1), 100)}%` }}
-          />
-        </div>
-
-        <div className="flex justify-between items-center text-xs text-zinc-400 font-mono">
-          <span>{usage.percentage.toFixed(1)}% utilizado</span>
-          <span>{usage.freeGB.toFixed(1)} GB disponíveis</span>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* 7. KPIs (Matching Dashboard KPI Grid) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full max-w-full">
@@ -1175,6 +1241,13 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
           </div>
         </div>
       )}
+
+      {/* PLAN UPGRADE MODAL */}
+      <PlanUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => refreshData()}
+      />
     </div>
   );
 }

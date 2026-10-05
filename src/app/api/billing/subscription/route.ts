@@ -21,12 +21,14 @@ export async function POST(req: Request) {
   try {
     const seller = await requireSeller();
     let forceNew = false;
+    let planId: string | undefined = undefined;
     try {
       const body = await req.json();
       forceNew = Boolean(body?.forceNew);
+      if (body?.planId) planId = String(body.planId);
     } catch {}
 
-    const invoice = await createCoraBillingInvoice(seller.id, forceNew);
+    const invoice = await createCoraBillingInvoice(seller.id, forceNew, planId);
 
     return NextResponse.json({
       success: true,

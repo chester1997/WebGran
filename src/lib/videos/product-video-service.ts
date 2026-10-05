@@ -1004,7 +1004,7 @@ export class ProductVideoService {
               }
             } else if (bunnyInfo.status === 2) {
               newStatus = "FAILED";
-            } else if (bunnyInfo.status === 1) {
+            } else if (bunnyInfo.status === 1 || bunnyInfo.status === 0 || bunnyInfo.status === 6 || bunnyInfo.status === 7) {
               newStatus = "PROCESSING";
             }
 

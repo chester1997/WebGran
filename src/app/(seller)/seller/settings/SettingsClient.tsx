@@ -22,6 +22,7 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
 
 interface SellerProfile {
   id: string;
@@ -125,6 +126,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
   const [activeInvoice, setActiveInvoice] = useState<any>(subscriptionData.latestInvoice);
   const [copiedPix, setCopiedPix] = useState(false);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState<number | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // 10-Minute Server-Based Countdown Timer
   useEffect(() => {
@@ -615,7 +617,7 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                     <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-2">
                     <Button
                       onClick={() => handleGeneratePixPayment(false)}
                       disabled={generatingPix}
@@ -632,6 +634,16 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
                           <span>Pagar R$ {planPrice.toFixed(2).replace(".", ",")}</span>
                         </>
                       )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      className="w-full bg-[#121214] border-white/10 hover:bg-zinc-800 text-white font-bold py-2 rounded-xl text-xs gap-2 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 text-red-400" />
+                      <span>Fazer Upgrade de Plano</span>
                     </Button>
                   </div>
                 </div>
@@ -835,6 +847,14 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
           </div>
         </div>
       )}
+
+      {/* PLAN UPGRADE MODAL */}
+      <PlanUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        currentPlanId={subscriptionData.plan.id}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   );
 }
