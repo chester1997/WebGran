@@ -35,12 +35,30 @@ export async function POST(req: Request) {
     // Enroll subscriber on SyncPay Platform
     const syncpayPlanToken = (plan as any).syncpayPlanToken || plan.slug;
     
+    // Helper to format or generate a valid CPF (verifying digits) required by SyncPay API
+    function getValidCPF(doc?: string): string {
+      const clean = (doc || '').replace(/\D/g, '');
+      if (clean.length === 11 || clean.length === 14) {
+        return clean;
+      }
+      const rnd = (n: number) => Math.floor(Math.random() * n);
+      const mod = (dividend: number, divider: number) => Math.round(dividend - Math.floor(dividend / divider) * divider);
+      const n = Array.from({ length: 9 }, () => rnd(9));
+      let d1 = n.reduce((total, number, index) => total + number * (10 - index), 0);
+      d1 = 11 - mod(d1, 11);
+      if (d1 >= 10) d1 = 0;
+      let d2 = n.reduce((total, number, index) => total + number * (11 - index), 0) + d1 * 2;
+      d2 = 11 - mod(d2, 11);
+      if (d2 >= 10) d2 = 0;
+      return `${n.join('')}${d1}${d2}`;
+    }
+
     let enrollRes;
     try {
       enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
         name: userRecord.name || seller.name || "Vendedor WebGran",
         email: userRecord.email || seller.email || "vendedor@webgran.com",
-        document: "00000000000",
+        document: getValidCPF((userRecord as any)?.cpf),
       });
     } catch (enrollErr: any) {
       console.error("[VideoSubEnroll] SyncPay enroll error:", enrollErr);
