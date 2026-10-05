@@ -26,6 +26,17 @@ interface Product {
   category?: { id: string; name: string; slug: string } | null;
 }
 
+function formatSeconds(secs: number): string {
+  if (!secs || isNaN(secs) || secs <= 0) return "00:00";
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  if (h > 0) {
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 interface StudioProductClientProps {
   storeSlug: string;
   product: Product;
@@ -309,7 +320,7 @@ export function StudioProductClient({
         </div>
 
         {/* VÍDEOS DA ENTREGA SECTION */}
-        {(clientHasAccess || productVideos.length > 0) && (
+        {(clientHasAccess || product.deliveryType === "product_video" || productVideos.length > 0) && (
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
@@ -327,7 +338,8 @@ export function StudioProductClient({
               <div className="space-y-2.5">
                 {productVideos.map((vid, idx) => {
                   const isCompleted = vid.progress?.completed;
-                  const hasStarted = (vid.progress?.positionSeconds || 0) > 0;
+                  const posSecs = vid.progress?.positionSeconds || 0;
+                  const hasStarted = posSecs > 0;
                   const progressPercent = vid.progress?.progressPercent || 0;
 
                   return (
@@ -358,7 +370,7 @@ export function StudioProductClient({
                         </h4>
                         <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
                           {vid.durationSeconds > 0 && (
-                            <span>{Math.floor(vid.durationSeconds / 60)} min</span>
+                            <span className="font-mono">{formatSeconds(vid.durationSeconds)}</span>
                           )}
                           {isCompleted ? (
                             <span className="text-emerald-500 font-semibold flex items-center gap-1">
@@ -366,7 +378,7 @@ export function StudioProductClient({
                             </span>
                           ) : hasStarted ? (
                             <span className="text-amber-500 font-semibold">
-                              {progressPercent}% concluído
+                              Progresso: {formatSeconds(posSecs)}
                             </span>
                           ) : (
                             <span className="text-zinc-400">Não iniciado</span>
@@ -375,15 +387,22 @@ export function StudioProductClient({
                       </div>
 
                       <span className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shrink-0 flex items-center gap-1.5">
-                        <Play className="w-3.5 h-3.5 fill-current" /> ASSISTIR
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        {hasStarted && !isCompleted ? "CONTINUAR" : "ASSISTIR"}
                       </span>
                     </Link>
                   );
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-xs text-zinc-400">
-                Nenhum vídeo disponível neste produto no momento.
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1.5">
+                <div className="text-xs font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <span>⚡</span>
+                  <span>Conteúdo em preparação</span>
+                </div>
+                <p className="text-[12px] text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto">
+                  Os vídeos desta entrega estão sendo preparados pelo vendedor e estarão disponíveis em breve.
+                </p>
               </div>
             )}
           </div>

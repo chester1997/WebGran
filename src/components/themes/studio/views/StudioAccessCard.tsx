@@ -96,6 +96,7 @@ export function StudioAccessCard({
   const expInfo = formatAccessExpirationBR(expiresAtDate, currentStatus);
   const isExpired = currentStatus === "EXPIRED" || expInfo.isExpired;
   const isFailedDelivery = access.deliveryStatus === "FAILED";
+  const isVideoDelivery = initialDestinationType === "PRODUCT_VIDEO" || access.product.deliveryType === "product_video";
 
   // Short access code from access.id
   const accessCode = getShortOrderId(access.id);
@@ -272,6 +273,14 @@ export function StudioAccessCard({
             <RefreshCw className="w-4 h-4" />
             Tentar liberar acesso
           </Link>
+        ) : isVideoDelivery ? (
+          <Link
+            href={`/miniapp/${storeSlug}/product/${access.product.slug}`}
+            className="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-[13px] py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md shadow-red-600/20"
+          >
+            <span className="text-base">🎬</span>
+            <span>Assistir aos vídeos</span>
+          </Link>
         ) : (
           <button
             type="button"
@@ -286,20 +295,10 @@ export function StudioAccessCard({
               </>
             ) : (
               <>
-                {initialDestinationType === "PRODUCT_VIDEO" || access.product.deliveryType === "product_video" ? (
-                  <>
-                    <span className="text-amber-300">⚡</span>
-                    <span>Assistir Vídeos</span>
-                  </>
-                ) : (
-                  <>
-                    {/* Telegram airplane icon */}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.09 13.843l-2.963-.924c-.644-.203-.657-.644.136-.953l11.57-4.461c.537-.194 1.006.131.832.916h.029z"/>
-                    </svg>
-                    {initialDestinationType === "DIRECT_CHAT" ? "Entrar no Grupo" : "Acessar no Telegram"}
-                  </>
-                )}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.09 13.843l-2.963-.924c-.644-.203-.657-.644.136-.953l11.57-4.461c.537-.194 1.006.131.832.916h.029z"/>
+                </svg>
+                {initialDestinationType === "DIRECT_CHAT" ? "Entrar no Grupo" : "Acessar no Telegram"}
               </>
             )}
           </button>
