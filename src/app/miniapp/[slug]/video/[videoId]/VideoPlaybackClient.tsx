@@ -53,7 +53,9 @@ export function VideoPlaybackClient({ storeSlug, videoId }: VideoPlaybackClientP
   }, [storeSlug, videoId]);
 
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
+    if (data?.video?.productSlug) {
+      router.push(`/miniapp/${storeSlug}/product/${data.video.productSlug}`);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
       router.push(`/miniapp/${storeSlug}/accesses`);

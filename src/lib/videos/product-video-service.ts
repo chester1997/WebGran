@@ -869,6 +869,7 @@ export class ProductVideoService {
         storeId: video.storeId,
         productId: validAccessRecord.productId,
         productTitle: video.product?.title || "",
+        productSlug: video.product?.slug || null,
         title: video.title,
         description: video.description,
         position: video.position,

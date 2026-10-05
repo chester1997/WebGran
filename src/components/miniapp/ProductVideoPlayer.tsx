@@ -295,19 +295,19 @@ export function ProductVideoPlayer({
   const getWatermarkPositionClass = (pos: WatermarkPosition): string => {
     switch (pos) {
       case "top-left":
-        return "top-16 left-4 text-left";
+        return "top-20 left-4 text-left";
       case "top-right":
-        return "top-16 right-4 text-right";
+        return "top-20 right-4 text-right";
       case "center-left":
         return "top-1/2 -translate-y-1/2 left-4 text-left";
       case "center-right":
         return "top-1/2 -translate-y-1/2 right-4 text-right";
       case "bottom-left":
-        return "bottom-28 left-4 text-left";
+        return "bottom-32 left-4 text-left";
       case "bottom-right":
-        return "bottom-28 right-4 text-right";
+        return "bottom-32 right-4 text-right";
       default:
-        return "top-16 right-4 text-right";
+        return "top-20 right-4 text-right";
     }
   };
 
@@ -316,8 +316,8 @@ export function ProductVideoPlayer({
       ref={containerRef}
       className={`relative w-full mx-auto bg-black text-white overflow-hidden shadow-2xl select-none flex flex-col justify-between transition-all ${
         isFullscreen
-          ? "fixed inset-0 z-50 rounded-none h-screen"
-          : "max-w-[440px] h-[calc(100dvh-5.5rem)] sm:h-[calc(100dvh-6rem)] max-h-[860px] rounded-3xl border border-white/10"
+          ? "fixed inset-0 z-50 rounded-none h-screen w-screen"
+          : "w-full h-dvh sm:max-w-[480px] sm:h-[min(100dvh,860px)] sm:rounded-3xl sm:border sm:border-white/10"
       }`}
     >
       {/* Background Video Element */}
@@ -364,25 +364,20 @@ export function ProductVideoPlayer({
         )}
       </div>
 
-      {/* TOP OVERLAY HEADER */}
-      <div className="relative z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
-        {onBack && (
+      {/* TOP OVERLAY HEADER - ONLY VOLTAR ARROW BUTTON */}
+      <div className="relative z-20 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        {onBack ? (
           <button
             type="button"
             onClick={onBack}
+            aria-label="Voltar para a página do produto"
             className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-colors border border-white/10 active:scale-95 cursor-pointer shadow-lg"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
+        ) : (
+          <div className="w-10" />
         )}
-
-        {productTitle && (
-          <div className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white truncate max-w-[220px]">
-            {productTitle}
-          </div>
-        )}
-
-        <div className="w-10" />
       </div>
 
       {/* CENTER OVERLAY (Poster / Loading / Play Button / Error) */}
@@ -429,7 +424,7 @@ export function ProductVideoPlayer({
       </div>
 
       {/* BOTTOM OVERLAY (Title, Description, Progress & Controls) */}
-      <div className="relative z-20 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-4 sm:p-5 pt-12 flex flex-col gap-3">
+      <div className="relative z-20 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-4 sm:p-5 pt-12 pb-[max(1.25rem,env(safe-area-inset-bottom))] flex flex-col gap-3">
         {/* Title & Description compact section */}
         <div className="space-y-1 text-left">
           {title && (
