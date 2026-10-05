@@ -990,9 +990,10 @@ export class ProductVideoService {
             let thumbnailUrl = v.thumbnailUrl;
             let fileSizeBytes = v.fileSizeBytes;
 
-            // status mapping: 0 = Created, 1 = Uploading/Processing, 2 = Encoding Failed, 3 = Transcoded/Ready
-            if (bunnyInfo.status === 3) {
-              newStatus = "READY";
+            const resolvedStatus = resolveClipStatusTransition(bunnyInfo.status, v.status as ClipStatus);
+            newStatus = resolvedStatus;
+
+            if (resolvedStatus === "READY") {
               durationSeconds = bunnyInfo.length ? Math.round(bunnyInfo.length) : v.durationSeconds;
               thumbnailUrl = BunnyStreamService.getThumbnailUrl(
                 v.bunnyVideoId,
@@ -1002,10 +1003,6 @@ export class ProductVideoService {
               if (info.storageSize || info.size) {
                 fileSizeBytes = Number(info.storageSize || info.size);
               }
-            } else if (bunnyInfo.status === 2) {
-              newStatus = "FAILED";
-            } else if (bunnyInfo.status === 1 || bunnyInfo.status === 0 || bunnyInfo.status === 6 || bunnyInfo.status === 7) {
-              newStatus = "PROCESSING";
             }
 
             if (
