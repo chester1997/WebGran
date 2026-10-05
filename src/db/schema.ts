@@ -786,6 +786,47 @@ export const videoProgressRelations = relations(videoProgress, ({ one }) => ({
   }),
 }));
 
+export const videoTriggers = pgTable('video_triggers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  token: text('token').notNull().unique(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+  videoId: uuid('video_id').notNull().references(() => productVideos.id, { onDelete: 'cascade' }),
+  type: text('type').notNull().default('PUBLIC'), // 'PURCHASE' | 'PUBLIC'
+  accessId: uuid('access_id').references(() => accesses.id, { onDelete: 'set null' }),
+  active: boolean('active').default(true).notNull(),
+  expiresAt: timestamp('expires_at'),
+  clicksCount: integer('clicks_count').notNull().default(0),
+  uniqueViewsCount: integer('unique_views_count').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  tokenIdx: index('video_triggers_token_idx').on(t.token),
+  storeIdx: index('video_triggers_store_idx').on(t.storeId),
+  videoIdx: index('video_triggers_video_idx').on(t.videoId),
+  typeIdx: index('video_triggers_type_idx').on(t.type),
+  activeIdx: index('video_triggers_active_idx').on(t.active),
+}));
+
+export const videoTriggersRelations = relations(videoTriggers, ({ one }) => ({
+  store: one(stores, {
+    fields: [videoTriggers.storeId],
+    references: [stores.id],
+  }),
+  product: one(products, {
+    fields: [videoTriggers.productId],
+    references: [products.id],
+  }),
+  video: one(productVideos, {
+    fields: [videoTriggers.videoId],
+    references: [productVideos.id],
+  }),
+  access: one(accesses, {
+    fields: [videoTriggers.accessId],
+    references: [accesses.id],
+  }),
+}));
+
 // ============================================================================
 // ENTITLEMENTS / FEATURES / PLAN LIMITS & OVERRIDES
 // ============================================================================

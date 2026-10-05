@@ -20,12 +20,14 @@ export async function GET(
     const videoId = resolvedParams.videoId;
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get("productId") || undefined;
+    const triggerToken = searchParams.get("triggerToken") || searchParams.get("token") || searchParams.get("t") || undefined;
 
     const playbackData = await ProductVideoService.getProductVideoForPlayback(
       session.storeId,
       session.customerId,
       videoId,
-      productId
+      productId,
+      triggerToken
     );
 
     return NextResponse.json({

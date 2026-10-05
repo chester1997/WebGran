@@ -744,7 +744,8 @@ export class ProductVideoService {
     storeId: string,
     customerId: string,
     videoId: string,
-    productId?: string
+    productId?: string,
+    triggerToken?: string | null
   ) {
     // 1. Find Product Video
     const video = await db.query.productVideos.findFirst({
@@ -774,6 +775,21 @@ export class ProductVideoService {
       throw new Error("Este vídeo não está disponível para reprodução.");
     }
 
+    // Check Trigger Token if provided
+    let isPublicTrigger = false;
+    if (triggerToken) {
+      const { VideoTriggerService } = await import("@/lib/videos/video-trigger-service");
+      const resolvedTrigger = await VideoTriggerService.resolveTriggerToken(triggerToken);
+      
+      if (resolvedTrigger.video.id !== video.id) {
+        throw new Error("O link de vídeo não corresponde ao vídeo solicitado.");
+      }
+
+      if (!resolvedTrigger.requiresAccess) {
+        isPublicTrigger = true;
+      }
+    }
+
     // 2. Find associated product IDs for this video
     const assignments = await db.query.productVideoAssignments.findMany({
       where: and(
@@ -790,46 +806,48 @@ export class ProductVideoService {
       associatedProductIds.add(video.productId);
     }
 
-    if (associatedProductIds.size === 0) {
+    if (!isPublicTrigger && associatedProductIds.size === 0) {
       throw new Error("Vídeo sem produto vinculado.");
     }
 
-    if (productId && !associatedProductIds.has(productId)) {
+    if (!isPublicTrigger && productId && !associatedProductIds.has(productId)) {
       throw new Error("Vídeo não está associado ao produto especificado.");
     }
 
-    // 3. Server-side Access Authorization Check
-    const now = new Date();
-    const candidateProductIds = productId ? [productId] : Array.from(associatedProductIds);
-
+    // 3. Server-side Access Authorization Check (Skipped if isPublicTrigger)
     let validAccessRecord = null;
-    let hasExpiredAccess = false;
+    if (!isPublicTrigger) {
+      const now = new Date();
+      const candidateProductIds = productId ? [productId] : Array.from(associatedProductIds);
 
-    for (const pid of candidateProductIds) {
-      const accessRecord = await db.query.accesses.findFirst({
-        where: and(
-          eq(accesses.storeId, storeId),
-          eq(accesses.customerId, customerId),
-          eq(accesses.productId, pid),
-          eq(accesses.status, "ACTIVE")
-        ),
-      });
+      let hasExpiredAccess = false;
 
-      if (accessRecord) {
-        if (accessRecord.expiresAt && new Date(accessRecord.expiresAt) < now) {
-          hasExpiredAccess = true;
-        } else {
-          validAccessRecord = accessRecord;
-          break;
+      for (const pid of candidateProductIds) {
+        const accessRecord = await db.query.accesses.findFirst({
+          where: and(
+            eq(accesses.storeId, storeId),
+            eq(accesses.customerId, customerId),
+            eq(accesses.productId, pid),
+            eq(accesses.status, "ACTIVE")
+          ),
+        });
+
+        if (accessRecord) {
+          if (accessRecord.expiresAt && new Date(accessRecord.expiresAt) < now) {
+            hasExpiredAccess = true;
+          } else {
+            validAccessRecord = accessRecord;
+            break;
+          }
         }
       }
-    }
 
-    if (!validAccessRecord) {
-      if (hasExpiredAccess) {
-        throw new Error("Seu acesso a este produto expirou.");
+      if (!validAccessRecord) {
+        if (hasExpiredAccess) {
+          throw new Error("Seu acesso a este produto expirou.");
+        }
+        throw new Error("Você não possui acesso válido a este produto.");
       }
-      throw new Error("Você não possui acesso válido a este produto.");
     }
 
     // 4. Generate Temporary Bunny Playback Token Authorization
@@ -868,7 +886,7 @@ export class ProductVideoService {
       video: {
         id: video.id,
         storeId: video.storeId,
-        productId: validAccessRecord.productId,
+        productId: validAccessRecord?.productId || video.productId || "",
         productTitle: video.product?.title || "",
         productSlug: video.product?.slug || null,
         title: video.title,

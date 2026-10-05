@@ -355,6 +355,24 @@ export async function ensureEntitlementTablesAndSeed() {
       );
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS video_triggers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        token TEXT NOT NULL UNIQUE,
+        store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+        video_id UUID NOT NULL REFERENCES product_videos(id) ON DELETE CASCADE,
+        type TEXT NOT NULL DEFAULT 'PUBLIC',
+        access_id UUID REFERENCES accesses(id) ON DELETE SET NULL,
+        active BOOLEAN NOT NULL DEFAULT true,
+        expires_at TIMESTAMP,
+        clicks_count INTEGER NOT NULL DEFAULT 0,
+        unique_views_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     // Seed default Video Library Plans if table is empty
     const existingVideoPlans = await db.execute(sql`SELECT count(*)::int as count FROM video_library_plans`).catch(() => null);
     const vPlanCount = Number((existingVideoPlans as any)?.[0]?.count ?? (existingVideoPlans as any)?.rows?.[0]?.count ?? 0);

@@ -94,6 +94,44 @@ export async function POST(req: NextRequest) {
       const appUrl = rawAppUrl.replace(/\/+$/, "");
       const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
       
+      // Check if message is a video trigger deep link (/start v_...)
+      const startParam = text.replace(/^\/start\s*/i, "").trim();
+      if (startParam.startsWith("v_")) {
+        try {
+          const { VideoTriggerService } = await import("@/lib/videos/video-trigger-service");
+          const resolvedTrigger = await VideoTriggerService.resolveTriggerToken(startParam);
+          
+          if (resolvedTrigger.video) {
+            const videoPlayerUrl = `${miniAppUrl}/video/${resolvedTrigger.video.id}?token=${startParam}`;
+            const videoTitle = resolvedTrigger.video.title;
+            
+            const videoMessageText = `🎬 *${videoTitle}*\n\nClique no botão abaixo para assistir ao vídeo diretamente no Mini App:`;
+            const videoKeyboard = {
+              inline_keyboard: [
+                [
+                  {
+                    text: "🎬 Assistir ao Vídeo",
+                    web_app: {
+                      url: videoPlayerUrl
+                    }
+                  }
+                ]
+              ]
+            };
+
+            await botService.sendMessage(chatId, videoMessageText, videoKeyboard, "Markdown");
+            return NextResponse.json({ ok: true });
+          }
+        } catch (triggerErr: any) {
+          console.warn("[TELEGRAM WEBHOOK] Video trigger error:", triggerErr.message);
+          await botService.sendMessage(
+            chatId,
+            `⚠️ ${triggerErr.message || "Link de vídeo indisponível."}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+      }
+
       // Customer name formatting
       const customerFirstName = update.message.from?.first_name || "Cliente";
 

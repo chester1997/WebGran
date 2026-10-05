@@ -24,6 +24,7 @@ import {
   Layers,
   CloudUpload,
   Sparkles,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
@@ -31,6 +32,7 @@ import { TusVideoUploader } from "@/lib/bunny/client-upload";
 import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
 import { VideoPlanUpgradeModal } from "@/components/billing/VideoPlanUpgradeModal";
 import { InlineVideoLibraryOnboarding } from "./InlineVideoLibraryOnboarding";
+import { GenerateDeepLinkModal } from "@/components/seller/GenerateDeepLinkModal";
 
 export interface LibraryVideoItem {
   id: string;
@@ -197,6 +199,18 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   const [previewVideo, setPreviewVideo] = useState<LibraryVideoItem | null>(null);
   const [previewPlayback, setPreviewPlayback] = useState<{ playbackUrl: string; directUrl: string } | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  // Deep Link Modal State
+  const [deepLinkModalVideo, setDeepLinkModalVideo] = useState<LibraryVideoItem | null>(null);
+
+  const handleOpenDeepLinkModal = (video: LibraryVideoItem) => {
+    if (video.status !== "READY") {
+      showFeedback("Somente vídeos no status PRONTO (READY) podem gerar Deep Links.", true);
+      return;
+    }
+    setDeepLinkModalVideo(video);
+    setActiveMenuId(null);
+  };
 
   // --- Handlers: Upload ---
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -819,12 +833,20 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
                         {activeMenuId === video.id && (
                           <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-[#121216] border border-white/10 rounded-xl shadow-2xl py-1 text-xs text-zinc-200 animate-in fade-in zoom-in-95 duration-100">
                             {video.status === "READY" && (
-                              <button
-                                onClick={() => handleOpenPreview(video)}
-                                className="w-full text-left px-3 py-2 hover:bg-[#1A1A22] flex items-center gap-2 transition-colors"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-red-400" /> Visualizar
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleOpenDeepLinkModal(video)}
+                                  className="w-full text-left px-3 py-2 hover:bg-[#1A1A22] text-violet-400 font-semibold flex items-center gap-2 transition-colors"
+                                >
+                                  <LinkIcon className="w-3.5 h-3.5 text-violet-400" /> Gerar Deep Link
+                                </button>
+                                <button
+                                  onClick={() => handleOpenPreview(video)}
+                                  className="w-full text-left px-3 py-2 hover:bg-[#1A1A22] flex items-center gap-2 transition-colors"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-red-400" /> Visualizar
+                                </button>
+                              </>
                             )}
                             <button
                               onClick={() => handleOpenEdit(video)}
@@ -931,14 +953,25 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
 
                     <div className="flex items-center gap-2">
                       {video.status === "READY" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenPreview(video)}
-                          className="bg-[#16161C] border-white/10 text-xs text-zinc-300 hover:bg-zinc-800 rounded-xl"
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1 text-red-400" /> Visualizar
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDeepLinkModal(video)}
+                            className="bg-violet-600/10 border-violet-500/30 text-xs text-violet-300 hover:bg-violet-600/20 rounded-xl"
+                            title="Gerar Deep Link"
+                          >
+                            <LinkIcon className="w-3.5 h-3.5 mr-1 text-violet-400" /> Deep Link
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenPreview(video)}
+                            className="bg-[#16161C] border-white/10 text-xs text-zinc-300 hover:bg-zinc-800 rounded-xl"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1 text-red-400" /> Visualizar
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="outline"
@@ -1280,6 +1313,13 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         onClose={() => setIsVideoPlanModalOpen(false)}
         onSuccess={() => refreshData()}
         currentPlanName={usage.planName}
+      />
+
+      {/* GENERATE DEEP LINK MODAL */}
+      <GenerateDeepLinkModal
+        isOpen={Boolean(deepLinkModalVideo)}
+        onClose={() => setDeepLinkModalVideo(null)}
+        video={deepLinkModalVideo}
       />
     </div>
   );
