@@ -32,8 +32,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Vendedor não encontrado." }, { status: 404 });
     }
 
-    // Enroll subscriber on SyncPay Platform
-    const syncpayPlanToken = (plan as any).syncpayPlanToken || plan.slug;
+    // Enroll subscriber on SyncPay Platform using official provisioned plan token ONLY
+    const syncpayPlanToken = plan.syncpayPlanToken;
+
+    if (!syncpayPlanToken || !syncpayPlanToken.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Este plano da Biblioteca de Vídeos ainda não está sincronizado com o gateway de pagamento. A sincronização com a SyncPay está pendente.",
+        },
+        { status: 400 }
+      );
+    }
     
     // Helper to format or generate a valid CPF (verifying digits) required by SyncPay API
     function getValidCPF(doc?: string): string {

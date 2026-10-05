@@ -542,6 +542,8 @@ export const videoLibraryPlans = pgTable('video_library_plans', {
   storageQuotaGb: integer('storage_quota_gb').notNull().default(20), // -1 for unlimited, or GB integer
   active: boolean('active').default(true).notNull(),
   syncpayPlanToken: text('syncpay_plan_token'),
+  syncStatus: text('sync_status').notNull().default('SYNC_PENDING'), // 'SYNC_PENDING' | 'SYNCED' | 'SYNC_ERROR'
+  syncError: text('sync_error'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

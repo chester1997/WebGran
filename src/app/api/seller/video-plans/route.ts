@@ -13,7 +13,10 @@ export async function GET() {
       orderBy: [asc(videoLibraryPlans.price)],
     });
 
-    const formatted = plans.map((p) => ({
+    // Filter out plans that have not yet been provisioned on SyncPay Platform
+    const provisionedPlans = plans.filter(p => Boolean(p.syncpayPlanToken && p.syncpayPlanToken.trim()));
+
+    const formatted = provisionedPlans.map((p) => ({
       id: p.id,
       name: p.name,
       slug: p.slug,

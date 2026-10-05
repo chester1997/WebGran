@@ -333,9 +333,13 @@ export async function ensureEntitlementTablesAndSeed() {
         storage_quota_gb INTEGER NOT NULL DEFAULT 20,
         active BOOLEAN NOT NULL DEFAULT true,
         syncpay_plan_token TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'SYNC_PENDING',
+        sync_error TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE video_library_plans ADD COLUMN IF NOT EXISTS sync_status TEXT NOT NULL DEFAULT 'SYNC_PENDING';
+      ALTER TABLE video_library_plans ADD COLUMN IF NOT EXISTS sync_error TEXT;
     `);
 
     await db.execute(sql`

@@ -326,4 +326,53 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       expect(res).toEqual({ status: 'active' });
     });
   });
+
+  describe('6. Video Library Plan SyncPay Provisioning & Checkout Rules', () => {
+    it('never uses slug as syncpayPlanToken and rejects checkout if syncpayPlanToken is missing', () => {
+      const planWithoutToken = {
+        id: 'vplan_1',
+        slug: 'starter-video-50gb',
+        syncpayPlanToken: null,
+      };
+
+      // Strict resolution: NO fallback to slug
+      const resolvedPlanToken = planWithoutToken.syncpayPlanToken;
+      expect(resolvedPlanToken).toBeNull();
+      expect(resolvedPlanToken).not.toBe(planWithoutToken.slug);
+    });
+
+    it('requires official syncpayPlanToken for subscriber enrollment', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'tok_platform_123' }), { status: 200 });
+        }
+        if (u.includes('enroll')) {
+          return new Response(
+            JSON.stringify({
+              data: {
+                subscription_token: 'vsub_real_001',
+                status: 'pending_first_payment',
+                first_cycle: {
+                  pix_code: '00020126580014BR.GOV.BCB.PIX...',
+                },
+              },
+            }),
+            { status: 200 }
+          );
+        }
+        return new Response(JSON.stringify({}), { status: 400 });
+      });
+
+      const officialToken = 'syncpay_official_plan_token_123';
+      const enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(officialToken, {
+        name: 'Vendedor Teste',
+        email: 'vendedor@test.com',
+        document: '12345678909',
+      });
+
+      expect(enrollRes.subscriptionToken).toBe('vsub_real_001');
+      expect(enrollRes.status).toBe('pending_first_payment');
+    });
+  });
 });

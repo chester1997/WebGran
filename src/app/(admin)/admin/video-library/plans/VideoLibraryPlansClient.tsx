@@ -14,6 +14,7 @@ import {
   AlertCircle,
   InfinityIcon,
   ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 
 interface VideoPlanItem {
@@ -25,6 +26,9 @@ interface VideoPlanItem {
   billingInterval: string;
   active: boolean;
   storageQuotaGb: number; // -1 for unlimited, or GB integer
+  syncpayPlanToken?: string | null;
+  syncStatus?: string;
+  syncError?: string | null;
   activeSubscriptionsCount: number;
   createdAt: string;
   updatedAt: string;
@@ -350,26 +354,70 @@ export default function VideoLibraryPlansClient({ user }: { user: any }) {
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="pt-4 border-t border-zinc-800/60 flex items-center justify-between gap-3">
-                <button
-                  onClick={() => handleToggleActive(plan)}
-                  className={`text-xs font-medium px-3 py-2 rounded-xl transition-colors cursor-pointer border ${
-                    plan.active
-                      ? "bg-zinc-800/60 hover:bg-red-500/10 text-zinc-300 hover:text-red-400 border-zinc-700 hover:border-red-500/30"
-                      : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                  }`}
-                >
-                  {plan.active ? "Desativar" : "Ativar Plano"}
-                </button>
+              {/* Action buttons & SyncPay status */}
+              <div className="pt-4 border-t border-zinc-800/60 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400 font-medium">Gateway SyncPay:</span>
+                  {plan.syncStatus === "SYNCED" ? (
+                    <span className="inline-flex items-center gap-1 font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Sincronizado
+                    </span>
+                  ) : plan.syncStatus === "SYNC_ERROR" ? (
+                    <span className="inline-flex items-center gap-1 font-bold text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20" title={plan.syncError || ""}>
+                      <XCircle className="w-3.5 h-3.5" /> Erro de Sincronização
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                      <AlertCircle className="w-3.5 h-3.5" /> Aguardando Sincronização
+                    </span>
+                  )}
+                </div>
 
-                <button
-                  onClick={() => handleOpenEditModal(plan)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 font-medium rounded-xl text-xs border border-violet-500/30 transition-colors cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Editar Plano
-                </button>
+                {plan.syncStatus !== "SYNCED" && (
+                  <button
+                    onClick={async () => {
+                      setError(null);
+                      setSuccessMsg(null);
+                      try {
+                        const res = await fetch("/api/admin/video-library/plans", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "sync", id: plan.id }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Falha ao sincronizar com SyncPay.");
+                        setSuccessMsg(`Plano "${plan.name}" sincronizado com sucesso na SyncPay!`);
+                        fetchPlans();
+                      } catch (err: any) {
+                        setError(err.message);
+                      }
+                    }}
+                    className="w-full py-2 px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs rounded-xl border border-amber-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Sincronizar com SyncPay
+                  </button>
+                )}
+
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <button
+                    onClick={() => handleToggleActive(plan)}
+                    className={`text-xs font-medium px-3 py-2 rounded-xl transition-colors cursor-pointer border ${
+                      plan.active
+                        ? "bg-zinc-800/60 hover:bg-red-500/10 text-zinc-300 hover:text-red-400 border-zinc-700 hover:border-red-500/30"
+                        : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                    }`}
+                  >
+                    {plan.active ? "Desativar" : "Ativar Plano"}
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenEditModal(plan)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 font-medium rounded-xl text-xs border border-violet-500/30 transition-colors cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Editar Plano
+                  </button>
+                </div>
               </div>
             </div>
           ))}

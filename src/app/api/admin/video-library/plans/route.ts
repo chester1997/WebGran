@@ -4,6 +4,7 @@ import { videoLibraryPlans, videoLibrarySubscriptions } from "@/db/schema";
 import { eq, desc, count, and } from "drizzle-orm";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { ensureEntitlementTablesAndSeed } from "@/db/ensure-entitlements";
+import { SyncPayPlatformBillingService } from "@/lib/billing/syncpay-platform-billing-service";
 
 export async function GET() {
   try {
@@ -31,6 +32,9 @@ export async function GET() {
           billingInterval: p.billingInterval || "month",
           active: p.active,
           storageQuotaGb: p.storageQuotaGb ?? 0,
+          syncpayPlanToken: p.syncpayPlanToken || null,
+          syncStatus: p.syncStatus || (p.syncpayPlanToken ? "SYNCED" : "SYNC_PENDING"),
+          syncError: p.syncError || null,
           activeSubscriptionsCount: subCount[0]?.count || 0,
           createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
           updatedAt: p.updatedAt ? new Date(p.updatedAt).toISOString() : new Date().toISOString(),
@@ -52,7 +56,68 @@ export async function POST(req: Request) {
   try {
     const adminUser = await requirePlatformAdmin();
     const body = await req.json();
-    const { id, name, slug, price, description, billingInterval, storageQuotaGb, active } = body;
+    const { id, name, slug, price, description, billingInterval, storageQuotaGb, active, action } = body;
+
+    // Manual Re-sync Action for existing plan
+    if (action === "sync" && id) {
+      const existingPlan = await db.query.videoLibraryPlans.findFirst({
+        where: eq(videoLibraryPlans.id, id),
+      });
+
+      if (!existingPlan) {
+        return NextResponse.json({ error: "Plano não encontrado para sincronização." }, { status: 404 });
+      }
+
+      if (existingPlan.syncpayPlanToken && existingPlan.syncStatus === "SYNCED") {
+        return NextResponse.json({
+          success: true,
+          message: "Plano já está sincronizado com a SyncPay.",
+          plan: existingPlan,
+        });
+      }
+
+      try {
+        const createdPlan = await SyncPayPlatformBillingService.createPlan({
+          name: existingPlan.name,
+          amount: Number(existingPlan.price),
+          billing_method: "qr_code",
+          description: existingPlan.description || "Plano da Biblioteca de Vídeos WebGran",
+        });
+
+        const [syncedPlan] = await db
+          .update(videoLibraryPlans)
+          .set({
+            syncpayPlanToken: createdPlan.token,
+            syncStatus: "SYNCED",
+            syncError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(videoLibraryPlans.id, existingPlan.id))
+          .returning();
+
+        return NextResponse.json({ success: true, plan: syncedPlan });
+      } catch (syncErr: any) {
+        console.error("[SyncPayPlanSyncError]:", syncErr.message);
+        const [errorPlan] = await db
+          .update(videoLibraryPlans)
+          .set({
+            syncStatus: "SYNC_ERROR",
+            syncError: syncErr.message || "Falha ao sincronizar com SyncPay",
+            updatedAt: new Date(),
+          })
+          .where(eq(videoLibraryPlans.id, existingPlan.id))
+          .returning();
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível sincronizar este plano com a SyncPay: ${syncErr.message}`,
+            plan: errorPlan,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "Nome do plano é obrigatório." }, { status: 400 });
@@ -79,7 +144,11 @@ export async function POST(req: Request) {
     let planRecord;
 
     if (id) {
-      const updated = await db
+      const existingPlan = await db.query.videoLibraryPlans.findFirst({
+        where: eq(videoLibraryPlans.id, id),
+      });
+
+      const [updated] = await db
         .update(videoLibraryPlans)
         .set({
           name: name.trim(),
@@ -94,9 +163,9 @@ export async function POST(req: Request) {
         .where(eq(videoLibraryPlans.id, id))
         .returning();
 
-      planRecord = updated[0];
+      planRecord = updated;
     } else {
-      const created = await db
+      const [created] = await db
         .insert(videoLibraryPlans)
         .values({
           name: name.trim(),
@@ -106,10 +175,49 @@ export async function POST(req: Request) {
           description: description ? description.trim() : null,
           billingInterval: billingInterval || "month",
           active: active !== undefined ? Boolean(active) : true,
+          syncStatus: "SYNC_PENDING",
         })
         .returning();
 
-      planRecord = created[0];
+      planRecord = created;
+    }
+
+    // Provision on SyncPay Platform if not already provisioned
+    if (!planRecord.syncpayPlanToken) {
+      try {
+        const createdSyncpayPlan = await SyncPayPlatformBillingService.createPlan({
+          name: planRecord.name,
+          amount: Number(planRecord.price),
+          billing_method: "qr_code",
+          description: planRecord.description || "Plano da Biblioteca de Vídeos WebGran",
+        });
+
+        const [synced] = await db
+          .update(videoLibraryPlans)
+          .set({
+            syncpayPlanToken: createdSyncpayPlan.token,
+            syncStatus: "SYNCED",
+            syncError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(videoLibraryPlans.id, planRecord.id))
+          .returning();
+
+        planRecord = synced;
+      } catch (syncErr: any) {
+        console.error("[SyncPayPlanCreateError]:", syncErr.message);
+        const [errorState] = await db
+          .update(videoLibraryPlans)
+          .set({
+            syncStatus: "SYNC_ERROR",
+            syncError: syncErr.message || "Falha ao provisionar na SyncPay",
+            updatedAt: new Date(),
+          })
+          .where(eq(videoLibraryPlans.id, planRecord.id))
+          .returning();
+
+        planRecord = errorState;
+      }
     }
 
     console.log("[ADMIN_AUDIT]", JSON.stringify({
@@ -117,6 +225,7 @@ export async function POST(req: Request) {
       action: "SAVE_VIDEO_LIBRARY_PLAN",
       planId: planRecord.id,
       quotaGb: quotaNumber,
+      syncStatus: planRecord.syncStatus,
       timestamp: now.toISOString(),
     }));
 
