@@ -2,7 +2,19 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
-import { Play, Pause, RotateCcw, AlertCircle, Loader2, Volume2, VolumeX } from "lucide-react";
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  AlertCircle,
+  Loader2,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Minimize,
+  ArrowLeft,
+  CheckCircle2,
+} from "lucide-react";
 
 export interface ProductVideoPlayerProps {
   videoId: string;
@@ -10,7 +22,10 @@ export interface ProductVideoPlayerProps {
   directUrl?: string;
   posterUrl?: string;
   title?: string;
+  description?: string | null;
+  productTitle?: string | null;
   initialPositionSeconds?: number;
+  completed?: boolean;
   onProgressUpdate?: (positionSeconds: number, durationSeconds: number) => void;
   onBack?: () => void;
 }
@@ -21,9 +36,14 @@ export function ProductVideoPlayer({
   directUrl,
   posterUrl,
   title,
+  description,
+  productTitle,
   initialPositionSeconds = 0,
+  completed = false,
   onProgressUpdate,
+  onBack,
 }: ProductVideoPlayerProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,6 +55,9 @@ export function ProductVideoPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasResumed, setHasResumed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isVideoVertical, setIsVideoVertical] = useState<boolean>(true); // Default to vertical 9:16
+  const [showDescription, setShowDescription] = useState(false);
 
   // Sync progress server-side periodically
   const sendProgress = useCallback(
@@ -50,7 +73,7 @@ export function ProductVideoPlayer({
           positionSeconds: Math.floor(pos),
           durationSeconds: Math.floor(dur || 0),
         }),
-      }).catch((err) => console.warn("[VideoPlayer] Progress sync failed (non-blocking):", err));
+      }).catch((err) => console.warn("[VideoPlayer] Progress sync failed:", err));
     },
     [videoId, onProgressUpdate]
   );
@@ -118,12 +141,19 @@ export function ProductVideoPlayer({
     };
   }, [playbackUrl, directUrl]);
 
-  // Handle Initial Position Seek Resume
+  // Handle Initial Position Seek Resume & Aspect Ratio Detection
   const handleLoadedMetadata = () => {
     setIsLoading(false);
     if (videoRef.current) {
       const dur = videoRef.current.duration || 0;
       setDuration(dur);
+
+      const width = videoRef.current.videoWidth;
+      const height = videoRef.current.videoHeight;
+      if (width > 0 && height > 0) {
+        // If height >= width, it's portrait/vertical video
+        setIsVideoVertical(height >= width);
+      }
 
       if (initialPositionSeconds > 0 && !hasResumed && initialPositionSeconds < dur - 3) {
         videoRef.current.currentTime = initialPositionSeconds;
@@ -133,14 +163,14 @@ export function ProductVideoPlayer({
     }
   };
 
-  // Setup periodic progress sync (every 12 seconds)
+  // Setup periodic progress sync (every 10 seconds)
   useEffect(() => {
     if (isPlaying) {
       progressTimerRef.current = setInterval(() => {
         if (videoRef.current) {
           sendProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
         }
-      }, 12000);
+      }, 10000);
     } else if (progressTimerRef.current) {
       clearInterval(progressTimerRef.current);
     }
@@ -189,6 +219,27 @@ export function ProductVideoPlayer({
     }
   };
 
+  const toggleFullscreen = () => {
+    const elem = containerRef.current;
+    if (!elem) return;
+
+    if (!document.fullscreenElement) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      } else if ((elem as any).webkitRequestFullscreen) {
+        (elem as any).webkitRequestFullscreen();
+        setIsFullscreen(true);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
     setCurrentTime(newTime);
@@ -206,77 +257,143 @@ export function ProductVideoPlayer({
   };
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto bg-black rounded-2xl overflow-hidden shadow-2xl group border border-white/10 select-none">
-      {/* Video Element */}
-      <video
-        ref={videoRef}
-        poster={posterUrl}
-        playsInline
-        className="w-full h-auto aspect-video object-contain bg-black cursor-pointer"
-        onLoadedMetadata={handleLoadedMetadata}
-        onTimeUpdate={handleTimeUpdate}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => {
-          setIsPlaying(false);
-          if (videoRef.current) sendProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
-        }}
-        onEnded={() => {
-          setIsPlaying(false);
-          if (videoRef.current) sendProgress(videoRef.current.duration || duration, videoRef.current.duration || duration);
-        }}
-        onClick={togglePlay}
-      />
-
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mb-2" />
-          <span className="text-white text-sm font-medium">Carregando vídeo...</span>
-        </div>
-      )}
-
-      {/* Error Overlay */}
-      {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-6 z-30 text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
-          <p className="text-white text-base font-semibold mb-4">{error}</p>
-          <button
-            onClick={() => {
-              setError(null);
-              if (videoRef.current) videoRef.current.load();
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-medium rounded-xl hover:opacity-90 transition"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Tentar Novamente
-          </button>
-        </div>
-      )}
-
-      {/* Center Play Button Overlay (when paused & not loading/error) */}
-      {!isPlaying && !isLoading && !error && (
-        <button
+    <div
+      ref={containerRef}
+      className={`relative w-full mx-auto bg-black text-white overflow-hidden shadow-2xl select-none flex flex-col justify-between transition-all ${
+        isFullscreen
+          ? "fixed inset-0 z-50 rounded-none h-screen"
+          : "max-w-[440px] h-[calc(100dvh-5.5rem)] sm:h-[calc(100dvh-6rem)] max-h-[860px] rounded-3xl border border-white/10"
+      }`}
+    >
+      {/* Background Video Element */}
+      <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center overflow-hidden">
+        <video
+          ref={videoRef}
+          poster={posterUrl}
+          playsInline
+          className={`w-full h-full cursor-pointer ${
+            isVideoVertical ? "object-cover" : "object-contain bg-black"
+          }`}
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => {
+            setIsPlaying(false);
+            if (videoRef.current) sendProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
+          }}
+          onEnded={() => {
+            setIsPlaying(false);
+            if (videoRef.current) sendProgress(videoRef.current.duration || duration, videoRef.current.duration || duration);
+          }}
           onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition z-10"
-        >
-          <div className="w-16 h-16 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-lg transform hover:scale-110 transition">
-            <Play className="w-8 h-8 fill-current ml-1" />
-          </div>
-        </button>
-      )}
+        />
+      </div>
 
-      {/* Custom Control Bar */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 z-20 flex flex-col gap-2 transition-opacity duration-300">
-        {/* Title Badge if provided */}
-        {title && (
-          <div className="text-white text-xs font-semibold truncate opacity-90 px-1">
-            {title}
+      {/* TOP OVERLAY HEADER */}
+      <div className="relative z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-colors border border-white/10 active:scale-95 cursor-pointer shadow-lg"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {productTitle && (
+          <div className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white truncate max-w-[220px]">
+            {productTitle}
           </div>
         )}
 
-        {/* Progress Bar Slider */}
+        <div className="w-10" />
+      </div>
+
+      {/* CENTER OVERLAY (Poster / Loading / Play Button / Error) */}
+      <div className="relative z-10 flex-1 flex items-center justify-center pointer-events-none">
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm z-30 pointer-events-auto">
+            {posterUrl && (
+              <img src={posterUrl} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+            )}
+            <Loader2 className="w-12 h-12 text-red-500 animate-spin mb-3 relative z-10" />
+            <span className="text-white text-sm font-semibold relative z-10 shadow-sm">Carregando vídeo...</span>
+          </div>
+        )}
+
+        {/* Error Overlay */}
+        {error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 p-6 z-30 text-center pointer-events-auto">
+            <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
+            <p className="text-white text-sm font-semibold mb-4 max-w-xs">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                if (videoRef.current) videoRef.current.load();
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg transition"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Tentar Novamente
+            </button>
+          </div>
+        )}
+
+        {/* Center Tap Play Button (When Paused & Ready) */}
+        {!isPlaying && !isLoading && !error && (
+          <button
+            type="button"
+            onClick={togglePlay}
+            className="w-16 h-16 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-2xl backdrop-blur-sm transform hover:scale-110 active:scale-95 transition pointer-events-auto cursor-pointer border border-white/20"
+          >
+            <Play className="w-8 h-8 fill-current ml-1" />
+          </button>
+        )}
+      </div>
+
+      {/* BOTTOM OVERLAY (Title, Description, Progress & Controls) */}
+      <div className="relative z-20 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-4 sm:p-5 pt-12 flex flex-col gap-3">
+        {/* Title & Description compact section */}
+        <div className="space-y-1 text-left">
+          {title && (
+            <h2 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug drop-shadow-md">
+              {title}
+            </h2>
+          )}
+
+          {completed && (
+            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/30">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Concluído
+            </div>
+          )}
+
+          {description && (
+            <div>
+              <p
+                onClick={() => setShowDescription(!showDescription)}
+                className={`text-xs text-zinc-300 leading-relaxed cursor-pointer transition-all ${
+                  showDescription ? "" : "line-clamp-2"
+                }`}
+              >
+                {description}
+              </p>
+              {description.length > 90 && (
+                <button
+                  onClick={() => setShowDescription(!showDescription)}
+                  className="text-[11px] font-semibold text-zinc-400 hover:text-white mt-0.5 cursor-pointer underline"
+                >
+                  {showDescription ? "Mostrar menos" : "Ler mais"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Scrubbable Progress Bar */}
         <div className="flex items-center gap-3">
-          <span className="text-white/80 text-xs font-mono min-w-[42px]">
+          <span className="text-zinc-300 text-[11px] font-mono min-w-[38px]">
             {formatTime(currentTime)}
           </span>
 
@@ -284,21 +401,23 @@ export function ProductVideoPlayer({
             type="range"
             min={0}
             max={duration || 100}
+            step={0.1}
             value={currentTime}
             onChange={handleSeek}
-            className="w-full h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
+            className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-red-600 focus:outline-none"
           />
 
-          <span className="text-white/80 text-xs font-mono min-w-[42px] text-right">
+          <span className="text-zinc-300 text-[11px] font-mono min-w-[38px] text-right">
             {formatTime(duration)}
           </span>
         </div>
 
-        {/* Action Controls */}
+        {/* Action Controls Row */}
         <div className="flex items-center justify-between pt-1">
           <button
+            type="button"
             onClick={togglePlay}
-            className="text-white hover:text-primary transition p-1.5 rounded-lg hover:bg-white/10"
+            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer border border-white/10 active:scale-95"
             title={isPlaying ? "Pausar" : "Reproduzir"}
           >
             {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
@@ -306,11 +425,21 @@ export function ProductVideoPlayer({
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={toggleMute}
-              className="text-white hover:text-primary transition p-1.5 rounded-lg hover:bg-white/10"
-              title={isMuted ? "Ativar som" : "Mutar"}
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer border border-white/10 active:scale-95"
+              title={isMuted ? "Ativar Som" : "Mutar"}
             >
               {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer border border-white/10 active:scale-95"
+              title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+            >
+              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
           </div>
         </div>
