@@ -13,20 +13,22 @@ export async function GET() {
       orderBy: [asc(videoLibraryPlans.price)],
     });
 
-    // Filter out plans that have not yet been provisioned on SyncPay Platform
-    const provisionedPlans = plans.filter(p => Boolean(p.syncpayPlanToken && p.syncpayPlanToken.trim()));
-
-    const formatted = provisionedPlans.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      description: p.description || "",
-      price: Number(p.price || 0),
-      priceCents: Math.round(Number(p.price || 0) * 100),
-      billingCycle: p.billingInterval || "month",
-      storageQuotaGb: p.storageQuotaGb ?? 0,
-      isUnlimited: p.storageQuotaGb === -1,
-    }));
+    const formatted = plans.map((p) => {
+      const isProvisioned = Boolean(p.syncpayPlanToken && p.syncpayPlanToken.trim());
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        description: p.description || "",
+        price: Number(p.price || 0),
+        priceCents: Math.round(Number(p.price || 0) * 100),
+        billingCycle: p.billingInterval || "month",
+        storageQuotaGb: p.storageQuotaGb ?? 0,
+        isUnlimited: p.storageQuotaGb === -1,
+        isProvisioned,
+        syncStatus: p.syncStatus || (isProvisioned ? "SYNCED" : "SYNC_PENDING"),
+      };
+    });
 
     return NextResponse.json({
       success: true,

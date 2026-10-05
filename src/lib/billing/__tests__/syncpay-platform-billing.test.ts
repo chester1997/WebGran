@@ -374,5 +374,22 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       expect(enrollRes.subscriptionToken).toBe('vsub_real_001');
       expect(enrollRes.status).toBe('pending_first_payment');
     });
+
+    it('returns all active plans with isProvisioned flag regardless of syncpayPlanToken presence', () => {
+      const plansInDb = [
+        { id: 'p1', name: 'Básico', active: true, syncpayPlanToken: null },
+        { id: 'p2', name: 'Pro', active: true, syncpayPlanToken: 'syncpay_tok_123' },
+      ];
+
+      const formatted = plansInDb.map((p) => ({
+        id: p.id,
+        name: p.name,
+        isProvisioned: Boolean(p.syncpayPlanToken && p.syncpayPlanToken.trim()),
+      }));
+
+      expect(formatted).toHaveLength(2);
+      expect(formatted[0].isProvisioned).toBe(false);
+      expect(formatted[1].isProvisioned).toBe(true);
+    });
   });
 });

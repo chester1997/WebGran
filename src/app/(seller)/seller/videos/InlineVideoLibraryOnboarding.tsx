@@ -30,6 +30,8 @@ export interface VideoPlanItem {
   billingCycle: string;
   storageQuotaGb: number;
   isUnlimited: boolean;
+  isProvisioned?: boolean;
+  syncStatus?: string;
 }
 
 interface InlineVideoLibraryOnboardingProps {
@@ -99,6 +101,10 @@ export function InlineVideoLibraryOnboarding({
   }, [activeInvoice, onSubscriptionSuccess]);
 
   const handleSelectPlan = async (plan: VideoPlanItem) => {
+    if (plan.isProvisioned === false) {
+      setErrorMsg("Este plano está temporariamente indisponível para contratação. O pagamento está sendo configurado pelo Administrador.");
+      return;
+    }
     setSelectedPlanId(plan.id);
     setIsGeneratingPix(true);
     setErrorMsg(null);
@@ -339,17 +345,27 @@ export function InlineVideoLibraryOnboarding({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {plans.map((plan) => {
                 const quotaText = plan.storageQuotaGb === -1 ? "Ilimitado" : `${plan.storageQuotaGb} GB`;
+                const isAvailable = plan.isProvisioned !== false;
 
                 return (
                   <div
                     key={plan.id}
-                    className="bg-[#0F0F12] border border-white/10 hover:border-violet-500/50 rounded-3xl p-6 flex flex-col justify-between space-y-6 transition-all duration-300 shadow-xl group hover:-translate-y-1"
+                    className={`bg-[#0F0F12] border ${
+                      isAvailable ? "border-white/10 hover:border-violet-500/50" : "border-amber-500/30 bg-[#141217]"
+                    } rounded-3xl p-6 flex flex-col justify-between space-y-6 transition-all duration-300 shadow-xl group hover:-translate-y-1`}
                   >
                     <div className="space-y-4">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-violet-400 bg-violet-600/10 border border-violet-500/20 px-2.5 py-0.5 rounded-full">
-                          PLANO BIBLIOTECA
-                        </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-violet-400 bg-violet-600/10 border border-violet-500/20 px-2.5 py-0.5 rounded-full">
+                            PLANO BIBLIOTECA
+                          </span>
+                          {!isAvailable && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> PENDENTE
+                            </span>
+                          )}
+                        </div>
                         <h4 className="text-xl font-black text-white uppercase mt-2">{plan.name}</h4>
                         <p className="text-xs text-zinc-400 mt-1 line-clamp-2 min-h-[32px]">{plan.description}</p>
                       </div>
@@ -375,26 +391,42 @@ export function InlineVideoLibraryOnboarding({
                           <span>Entrega Automática: <strong className="text-emerald-400 font-bold">Inclusa</strong></span>
                         </div>
                       </div>
+
+                      {!isAvailable && (
+                        <p className="text-[11px] text-amber-300/80 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 leading-tight">
+                          Este plano está temporariamente indisponível para contratação. O pagamento está sendo configurado.
+                        </p>
+                      )}
                     </div>
 
                     <div>
-                      <Button
-                        onClick={() => handleSelectPlan(plan)}
-                        disabled={isGeneratingPix && selectedPlanId === plan.id}
-                        className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl py-3 shadow-lg shadow-violet-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        {isGeneratingPix && selectedPlanId === plan.id ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Gerando Pix...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Contratar Plano</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </Button>
+                      {isAvailable ? (
+                        <Button
+                          onClick={() => handleSelectPlan(plan)}
+                          disabled={isGeneratingPix && selectedPlanId === plan.id}
+                          className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl py-3 shadow-lg shadow-violet-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          {isGeneratingPix && selectedPlanId === plan.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Gerando Pix...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Contratar Plano</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          disabled
+                          className="w-full bg-zinc-800 text-zinc-500 font-bold text-xs rounded-xl py-3 cursor-not-allowed flex items-center justify-center gap-2 border border-zinc-700/50"
+                        >
+                          <Lock className="w-4 h-4" />
+                          <span>INDISPONÍVEL</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
