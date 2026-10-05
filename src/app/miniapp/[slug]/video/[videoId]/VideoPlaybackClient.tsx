@@ -104,7 +104,7 @@ export function VideoPlaybackClient({ storeSlug, videoId }: VideoPlaybackClientP
     );
   }
 
-  const { video, playback, progress } = data;
+  const { video, playback, progress, watermark } = data;
 
   return (
     <div className="min-h-screen bg-black text-white p-0 sm:p-4 flex flex-col items-center justify-center">
@@ -118,6 +118,7 @@ export function VideoPlaybackClient({ storeSlug, videoId }: VideoPlaybackClientP
         productTitle={video.productTitle}
         initialPositionSeconds={progress?.positionSeconds || 0}
         completed={Boolean(progress?.completed)}
+        watermark={watermark}
         onBack={handleBack}
       />
     </div>

@@ -16,6 +16,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+export interface WatermarkData {
+  brand?: string;
+  label?: string;
+}
+
 export interface ProductVideoPlayerProps {
   videoId: string;
   playbackUrl: string;
@@ -26,9 +31,27 @@ export interface ProductVideoPlayerProps {
   productTitle?: string | null;
   initialPositionSeconds?: number;
   completed?: boolean;
+  watermark?: WatermarkData | null;
   onProgressUpdate?: (positionSeconds: number, durationSeconds: number) => void;
   onBack?: () => void;
 }
+
+type WatermarkPosition =
+  | "top-left"
+  | "top-right"
+  | "center-left"
+  | "center-right"
+  | "bottom-left"
+  | "bottom-right";
+
+const WATERMARK_POSITIONS: WatermarkPosition[] = [
+  "top-left",
+  "top-right",
+  "center-left",
+  "center-right",
+  "bottom-left",
+  "bottom-right",
+];
 
 export function ProductVideoPlayer({
   videoId,
@@ -40,6 +63,7 @@ export function ProductVideoPlayer({
   productTitle,
   initialPositionSeconds = 0,
   completed = false,
+  watermark,
   onProgressUpdate,
   onBack,
 }: ProductVideoPlayerProps) {
@@ -58,6 +82,16 @@ export function ProductVideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isVideoVertical, setIsVideoVertical] = useState<boolean>(true); // Default to vertical 9:16
   const [showDescription, setShowDescription] = useState(false);
+  const [watermarkIndex, setWatermarkIndex] = useState(0);
+
+  // Rotate watermark position every 10 seconds without interrupting video playback
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setWatermarkIndex((prev) => (prev + 1) % WATERMARK_POSITIONS.length);
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Sync progress server-side periodically
   const sendProgress = useCallback(
@@ -256,6 +290,27 @@ export function ProductVideoPlayer({
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const currentWatermarkPosition = WATERMARK_POSITIONS[watermarkIndex];
+
+  const getWatermarkPositionClass = (pos: WatermarkPosition): string => {
+    switch (pos) {
+      case "top-left":
+        return "top-16 left-4 text-left";
+      case "top-right":
+        return "top-16 right-4 text-right";
+      case "center-left":
+        return "top-1/2 -translate-y-1/2 left-4 text-left";
+      case "center-right":
+        return "top-1/2 -translate-y-1/2 right-4 text-right";
+      case "bottom-left":
+        return "bottom-28 left-4 text-left";
+      case "bottom-right":
+        return "bottom-28 right-4 text-right";
+      default:
+        return "top-16 right-4 text-right";
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -287,6 +342,26 @@ export function ProductVideoPlayer({
           }}
           onClick={togglePlay}
         />
+
+        {/* DYNAMIC WATERMARK OVERLAY */}
+        {watermark && (watermark.brand || watermark.label) && (
+          <div
+            className={`absolute z-20 pointer-events-none select-none transition-all duration-700 ease-in-out ${getWatermarkPositionClass(
+              currentWatermarkPosition
+            )}`}
+          >
+            <div className="flex flex-col opacity-35 dark:opacity-40 tracking-wider">
+              <span className="text-[10px] sm:text-xs font-black text-white uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                {watermark.brand || "WEBGRAN"}
+              </span>
+              {watermark.label && (
+                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                  {watermark.label}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* TOP OVERLAY HEADER */}

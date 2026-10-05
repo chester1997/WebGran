@@ -265,8 +265,8 @@ export function StudioProductClient({
               href={`/miniapp/${storeSlug}/accesses`}
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all text-sm active:scale-95"
             >
-              <Zap className="w-5 h-5 fill-current" />
-              <span>⚡ Acesso Liberado</span>
+              <Check className="w-5 h-5 stroke-[2.5]" />
+              <span>Acesso Liberado</span>
             </Link>
           ) : (
             <AddToCartButton 

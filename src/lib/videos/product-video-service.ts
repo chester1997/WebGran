@@ -5,6 +5,7 @@ import {
   videoProgress,
   products,
   accesses,
+  telegramCustomers,
   storageReservations,
   pendingDeletions,
 } from "@/db/schema";
@@ -839,6 +840,29 @@ export class ProductVideoService {
     // 5. Load Customer Progress if exists
     const progress = await this.getVideoProgress(storeId, customerId, video.id);
 
+    // 6. Build Server-Verified Watermark for Buyer Traceability
+    let watermarkLabel = "";
+    try {
+      const customer = db.query?.telegramCustomers?.findFirst
+        ? await db.query.telegramCustomers.findFirst({
+            where: eq(telegramCustomers.id, customerId),
+          })
+        : null;
+
+      if (customer?.username) {
+        const cleanUsername = customer.username.trim();
+        watermarkLabel = cleanUsername.startsWith("@") ? cleanUsername : `@${cleanUsername}`;
+      } else if (customer?.firstName || customer?.lastName) {
+        watermarkLabel = [customer.firstName, customer.lastName].filter(Boolean).join(" ").trim();
+      } else {
+        const cleanId = (validAccessRecord?.id || "access").replace(/-/g, "");
+        watermarkLabel = `#WG${cleanId.slice(-6).toUpperCase()}`;
+      }
+    } catch {
+      const cleanId = (validAccessRecord?.id || "access").replace(/-/g, "");
+      watermarkLabel = `#WG${cleanId.slice(-6).toUpperCase()}`;
+    }
+
     return {
       video: {
         id: video.id,
@@ -865,6 +889,10 @@ export class ProductVideoService {
             lastWatchedAt: progress.lastWatchedAt,
           }
         : null,
+      watermark: {
+        brand: "WEBGRAN",
+        label: watermarkLabel,
+      },
     };
   }
 
