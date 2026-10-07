@@ -1180,7 +1180,11 @@ export class ProductVideoService {
     const processingCount = videos.filter((v) => v.status === "PROCESSING" || v.status === "UPLOADING").length;
     const failedCount = videos.filter((v) => v.status === "FAILED").length;
 
-    let planName: string | null = isUnlimited ? "ADMIN / ILIMITADO" : null;
+    let planName: string | null = isUnlimited
+      ? entitlement.source === "ADMIN_EXEMPT"
+        ? "PROPRIETÁRIO / ILIMITADO"
+        : "ADMIN / ILIMITADO"
+      : null;
     let planPriceCents: number | null = null;
 
     if (!isUnlimited) {

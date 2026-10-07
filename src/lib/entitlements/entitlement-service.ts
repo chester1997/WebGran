@@ -62,12 +62,23 @@ export async function getSellerEntitlement<T = any>(
     where: eq(users.id, sellerId),
   });
 
-  const roleUpper = (user?.role || '').toUpperCase();
-  if (user && (roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN')) {
+  const roleUpper = (user?.role || '').toUpperCase().trim();
+  const isAdminOrOwner = Boolean(
+    user && (
+      roleUpper === 'ADMIN' ||
+      roleUpper === 'SUPER_ADMIN' ||
+      roleUpper === 'OWNER' ||
+      roleUpper === 'SUPERADMIN' ||
+      roleUpper === 'PLATFORM_ADMIN'
+    )
+  );
+
+  if (isAdminOrOwner) {
+    const isBoolFeature = featureKey === 'product_videos_enabled' || featureKey === 'video_clips_enabled';
     return {
       featureKey,
-      type: 'LIMIT',
-      value: -1 as unknown as T,
+      type: isBoolFeature ? 'BOOLEAN' : 'LIMIT',
+      value: (isBoolFeature ? true : -1) as unknown as T,
       source: 'ADMIN_EXEMPT',
       isUnlimited: true,
     };
