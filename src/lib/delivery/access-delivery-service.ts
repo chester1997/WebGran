@@ -244,8 +244,8 @@ export class AccessDeliveryService {
           }
 
           let redirectUrl = "";
-          if (product.deliveryType === 'product_video' && botUsername && accessRecord?.id) {
-            redirectUrl = `https://t.me/${botUsername}?startapp=access_${accessRecord.id}`;
+          if (product.deliveryType === 'product_video' && accessRecord?.id) {
+            redirectUrl = `${appUrl}/miniapp/${storeSlug || ''}?access=${accessRecord.id}`;
           } else {
             redirectUrl = accessRecord?.id ? `${appUrl}/api/telegram/access/redirect?accessId=${accessRecord.id}${storeSlug ? `&storeSlug=${storeSlug}` : ''}` : deliveryUrl;
           }

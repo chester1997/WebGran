@@ -349,7 +349,7 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
     ).rejects.toThrow("Você não possui acesso válido a este produto.");
   });
 
-  it("CENÁRIO 11: Telegram bot notification generates native Telegram Mini App deep link (t.me/bot?startapp=access_xxx)", async () => {
+  it("CENÁRIO 11: Telegram bot notification generates web_app WebApp link (https://www.webgran.online/miniapp/loja?access=access_xxx)", async () => {
     const mockOrder = {
       id: "order-deep-1",
       storeId: "store-1",
@@ -379,7 +379,7 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
       "mock-bot-token",
       "111",
       "Curso Em Vídeo DeepLink",
-      expect.stringMatching(/^https:\/\/t\.me\/meubot_bot\?startapp=access_/),
+      expect.stringMatching(/^https:\/\/www\.webgran\.online\/miniapp\/loja-teste\?access=/),
       false,
       false,
       "loja-teste"

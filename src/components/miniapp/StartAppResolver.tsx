@@ -27,12 +27,19 @@ export function StartAppResolver({ storeSlug }: { storeSlug: string }) {
       hashParams.get("tgWebAppStartParam") ||
       hashParams.get("start_param");
 
-    if (!rawStartParam || !rawStartParam.startsWith("access_")) {
-      return;
+    let accessId = "";
+
+    if (rawStartParam && (rawStartParam.startsWith("access_") || rawStartParam.startsWith("access="))) {
+      accessId = rawStartParam.replace(/^access[=_]/, "");
+    } else if (searchParams.get("access")) {
+      accessId = searchParams.get("access") || "";
+    } else if (hashParams.get("access")) {
+      accessId = hashParams.get("access") || "";
     }
 
-    const accessId = rawStartParam.replace(/^access_/, "");
-    if (!accessId) return;
+    if (!accessId) {
+      return;
+    }
 
     hasProcessed.current = true;
 

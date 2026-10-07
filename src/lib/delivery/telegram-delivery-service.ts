@@ -140,6 +140,8 @@ export class TelegramDeliveryService {
     let msgText = "";
     let inlineKeyboard: Array<Array<{ text: string; url?: string; web_app?: { url: string } }>> = [];
 
+    const isWebAppLink = inviteLink.includes("/miniapp") || inviteLink.includes("access=") || inviteLink.includes("startapp=");
+
     if (deliveryFailed) {
       msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi recebido.\n\n⚠️ Estamos finalizando a liberação do seu acesso.\n\nVocê não precisa pagar novamente.`;
       inlineKeyboard.push([
@@ -151,12 +153,16 @@ export class TelegramDeliveryService {
     } else if (isAlreadyMember) {
       msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\n📦 *${productTitle}*\n\nVocê já possui acesso ao conteúdo.`;
       inlineKeyboard.push([
-        { text: "🔴 ASSISTIR AGORA", url: inviteLink }
+        isWebAppLink 
+          ? { text: "🔴 ASSISTIR AGORA", web_app: { url: inviteLink } }
+          : { text: "🔴 ASSISTIR AGORA", url: inviteLink }
       ]);
     } else {
       msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi identificado com sucesso.\n\n📦 *Produto:*\n${productTitle}\n\n🔐 Seu acesso foi liberado.\n\nClique abaixo para acessar:`;
       inlineKeyboard.push([
-        { text: "🔴 ASSISTIR AGORA", url: inviteLink }
+        isWebAppLink 
+          ? { text: "🔴 ASSISTIR AGORA", web_app: { url: inviteLink } }
+          : { text: "🔴 ASSISTIR AGORA", url: inviteLink }
       ]);
     }
 
