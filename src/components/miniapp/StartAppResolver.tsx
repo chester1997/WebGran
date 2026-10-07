@@ -28,20 +28,63 @@ export function StartAppResolver({ storeSlug }: { storeSlug: string }) {
       hashParams.get("start_param");
 
     let accessId = "";
+    let productId = "";
 
     if (rawStartParam && (rawStartParam.startsWith("access_") || rawStartParam.startsWith("access="))) {
       accessId = rawStartParam.replace(/^access[=_]/, "");
+    } else if (rawStartParam && (rawStartParam.startsWith("product_") || rawStartParam.startsWith("product=") || rawStartParam.startsWith("p_"))) {
+      productId = rawStartParam.replace(/^(product[=_]|p_)/, "");
     } else if (searchParams.get("access")) {
       accessId = searchParams.get("access") || "";
     } else if (hashParams.get("access")) {
       accessId = hashParams.get("access") || "";
+    } else if (searchParams.get("product")) {
+      productId = searchParams.get("product") || "";
+    } else if (hashParams.get("product")) {
+      productId = hashParams.get("product") || "";
     }
 
-    if (!accessId) {
+    if (!accessId && !productId) {
       return;
     }
 
     hasProcessed.current = true;
+
+    if (productId) {
+      const resolveProduct = async () => {
+        try {
+          const initData = wa?.initData || searchParams.get("tgWebAppData") || "";
+          const res = await fetch("/api/telegram/product/resolve", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-telegram-init-data": initData,
+              "x-store-slug": storeSlug,
+            },
+            body: JSON.stringify({ productId, storeSlug }),
+          });
+
+          const data = await res.json();
+
+          if (data.success && data.destinationUrl) {
+            try {
+              const urlObj = new URL(data.destinationUrl, window.location.origin);
+              const targetPath = urlObj.pathname + urlObj.search;
+              router.replace(targetPath);
+            } catch (_e) {
+              router.replace(data.destinationUrl);
+            }
+          } else {
+            router.replace(`/miniapp/${storeSlug}`);
+          }
+        } catch (err) {
+          console.error("[StartAppResolver] Erro ao resolver product deep link:", err);
+        }
+      };
+
+      resolveProduct();
+      return;
+    }
 
     const resolveAccess = async () => {
       try {
