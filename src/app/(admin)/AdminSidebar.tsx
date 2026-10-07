@@ -57,24 +57,25 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
   return (
     <>
       {/* Mobile Header Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#141416] border-b border-[#27272A] text-white z-40 sticky top-0">
-        <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#141416] border-b border-[#27272A] text-white z-30 w-full flex-shrink-0">
+        <div className="flex items-center gap-2 font-bold text-base tracking-tight">
           <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
           <span className="text-white">WebGran</span>
-          <span className="text-xs bg-red-500/20 text-red-400 font-semibold px-2 py-0.5 rounded border border-red-500/30">ADMIN</span>
+          <span className="text-[10px] bg-red-500/20 text-red-400 font-bold px-2 py-0.5 rounded border border-red-500/30 tracking-wider">ADMIN</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg bg-[#18181B] text-gray-300 hover:text-white border border-[#27272A]"
+          aria-label="Abrir menu de navegação"
+          className="p-2 rounded-lg bg-[#18181B] text-gray-300 hover:text-white border border-[#27272A] active:scale-95 transition-all"
         >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {mobileOpen ? <X className="w-5 h-5 text-red-400" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Backdrop for Mobile */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -83,21 +84,30 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
       <aside className={`
         fixed md:static inset-y-0 left-0 z-50
         w-64 bg-[#0B0B0D] border-r border-[#27272A] flex-shrink-0 flex flex-col
-        transition-transform duration-300 ease-in-out
+        transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none
         ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       `}>
         {/* Brand Header */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-[#27272A] bg-[#101114]">
-          <Link href="/admin" className="flex items-center">
+          <Link href="/admin" className="flex items-center" onClick={() => setMobileOpen(false)}>
             <img 
               src="/logo-expanded.png" 
               alt="WebGran Logo" 
-              className="h-12 w-auto max-w-[195px] object-contain drop-shadow-md" 
+              className="h-10 w-auto max-w-[170px] object-contain drop-shadow-md" 
             />
           </Link>
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-md tracking-wider uppercase">
-            ADMIN
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 rounded-md tracking-wider uppercase">
+              ADMIN
+            </span>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#18181B] transition-colors"
+              aria-label="Fechar menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Navigation Links */}
