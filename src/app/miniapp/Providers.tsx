@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { CartProvider } from "@/components/miniapp/CartProvider";
+import { StartAppResolver } from "@/components/miniapp/StartAppResolver";
 
 interface TelegramContextType {
   webApp: unknown;
@@ -348,7 +349,10 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
           </div>
         </div>
       ) : (
-        <CartProvider storeSlug={storeSlug}>{children}</CartProvider>
+        <CartProvider storeSlug={storeSlug}>
+          <StartAppResolver storeSlug={storeSlug} />
+          {children}
+        </CartProvider>
       )}
     </TelegramContext.Provider>
   );

@@ -348,4 +348,66 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
       )
     ).rejects.toThrow("Você não possui acesso válido a este produto.");
   });
+
+  it("CENÁRIO 11: Telegram bot notification generates native Telegram Mini App deep link (t.me/bot?startapp=access_xxx)", async () => {
+    const mockOrder = {
+      id: "order-deep-1",
+      storeId: "store-1",
+      customerId: "cust-1",
+      status: "paid",
+      customer: { id: "cust-1", telegramUserId: "111" },
+      items: [{ productId: "prod-deep-1" }],
+    };
+
+    const mockProduct = {
+      id: "prod-deep-1",
+      storeId: "store-1",
+      title: "Curso Em Vídeo DeepLink",
+      slug: "curso-deeplink",
+      deliveryType: "product_video",
+    };
+
+    (db.query.orders.findFirst as any).mockResolvedValue(mockOrder);
+    (db.query.stores.findFirst as any).mockResolvedValue({ id: "store-1", slug: "loja-teste" });
+    (db.query.products.findFirst as any).mockResolvedValue(mockProduct);
+    (db.query.telegramBots.findFirst as any).mockResolvedValue({ id: "bot-1", tokenEncrypted: "enc-token", username: "meubot_bot" });
+    (db.query.accesses.findFirst as any).mockResolvedValue(null);
+
+    await AccessDeliveryService.processOrderDelivery("order-deep-1");
+
+    expect(TelegramDeliveryService.sendPaymentConfirmationMessage).toHaveBeenCalledWith(
+      "mock-bot-token",
+      "111",
+      "Curso Em Vídeo DeepLink",
+      expect.stringMatching(/^https:\/\/t\.me\/meubot_bot\?startapp=access_/),
+      false,
+      false,
+      "loja-teste"
+    );
+  });
+
+  it("CENÁRIO 12: User B opens User A's startapp deep link -> resolveAccessDestination checks expectedTelegramUserId and returns FAILED", async () => {
+    (db.query.accesses.findFirst as any).mockResolvedValue({
+      id: "access-user-a",
+      storeId: "store-1",
+      customerId: "cust-a",
+      productId: "prod-1",
+      status: "ACTIVE",
+      expiresAt: null,
+      customer: { id: "cust-a", telegramUserId: "111" }, // User A = 111
+      product: { id: "prod-1", slug: "curso-a", deliveryType: "product_video" },
+      store: { slug: "minha-loja" },
+    });
+
+    // User B = 999 attempts to open access-user-a
+    const result = await AccessLifecycleService.resolveAccessDestination(
+      "access-user-a",
+      "minha-loja",
+      "999"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe("FAILED");
+    expect(result.error).toBe("Acesso não autorizado para este usuário.");
+  });
 });

@@ -121,14 +121,24 @@ export default async function OrderStatusPage({
       {/* Action Buttons */}
       <div className="w-full space-y-3 pt-2">
         {isPaid ? (
-          <Link
-            href={`/miniapp/${slug}/accesses`}
-            className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all text-sm"
-          >
-            <ShieldCheck className="w-5 h-5" />
-            Acessar Meus Conteúdos
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+          (() => {
+            const firstProduct = order.items?.[0]?.product;
+            const isVideo = firstProduct?.deliveryType === 'product_video';
+            const targetUrl = isVideo && firstProduct?.slug
+              ? `/miniapp/${slug}/product/${firstProduct.slug}`
+              : `/miniapp/${slug}/accesses`;
+
+            return (
+              <Link
+                href={targetUrl}
+                className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all text-sm"
+              >
+                <ShieldCheck className="w-5 h-5" />
+                {isVideo ? "🎬 ACESSAR MEU PRODUTO" : "Acessar Meus Conteúdos"}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            );
+          })()
         ) : (
           <Link
             href={`/miniapp/${slug}`}

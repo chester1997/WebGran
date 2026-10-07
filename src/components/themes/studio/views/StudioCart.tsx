@@ -128,6 +128,9 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     }
   };
 
+  const [paidDeliveryType, setPaidDeliveryType] = useState<string | null>(null);
+  const [paidProductSlug, setPaidProductSlug] = useState<string | null>(null);
+
   // Poll Order Status when PIX is active
   useEffect(() => {
     if (!pixState?.orderId || isPaid) return;
@@ -138,6 +141,11 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           const data = await res.json();
           if (data.status === "paid") {
             setIsPaid(true);
+            const firstProd = data.items?.[0]?.product;
+            if (firstProd) {
+              setPaidDeliveryType(firstProd.deliveryType);
+              setPaidProductSlug(firstProd.slug);
+            }
             if (data.accesses && data.accesses.length > 0) {
               setAccessLink(
                 `/api/telegram/access/redirect?accessId=${data.accesses[0].id}&storeSlug=${storeSlug}`
@@ -151,7 +159,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [pixState?.orderId, isPaid]);
+  }, [pixState?.orderId, isPaid, storeSlug]);
 
   const handleCopyPix = () => {
     if (!pixState?.qrCode) return;
@@ -162,6 +170,8 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
 
   /* ── Paid state ── */
   if (isPaid) {
+    const isVideo = paidDeliveryType === "product_video";
+
     return (
       <div className="p-4 pt-12 flex flex-col items-center justify-center min-h-[60vh] text-center text-zinc-900 dark:text-white space-y-6">
         <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shadow-lg shadow-emerald-500/20">
@@ -171,7 +181,15 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-xs">
           Seu pagamento via PIX foi aprovado. Seu acesso foi liberado!
         </p>
-        {accessLink ? (
+        {isVideo ? (
+          <Link
+            href={paidProductSlug ? `/miniapp/${storeSlug}/product/${paidProductSlug}` : `/miniapp/${storeSlug}/accesses`}
+            className="w-full max-w-xs py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all text-sm"
+          >
+            <ShieldCheck className="w-5 h-5" />
+            🎬 ACESSAR MEU PRODUTO
+          </Link>
+        ) : accessLink ? (
           <a
             href={accessLink}
             target="_blank"

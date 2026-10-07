@@ -232,7 +232,23 @@ export class AccessDeliveryService {
           let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
           if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
           const appUrl = rawAppUrl.replace(/\/+$/, "");
-          const redirectUrl = accessRecord?.id ? `${appUrl}/api/telegram/access/redirect?accessId=${accessRecord.id}${storeSlug ? `&storeSlug=${storeSlug}` : ''}` : deliveryUrl;
+
+          let botUsername = bot?.username ? String(bot.username).replace(/^@/, '') : null;
+          if (!botUsername && accessRecord.storeId) {
+            const botRecord = await db.query.telegramBots.findFirst({
+              where: eq(telegramBots.storeId, accessRecord.storeId)
+            });
+            if (botRecord?.username) {
+              botUsername = botRecord.username.replace(/^@/, '');
+            }
+          }
+
+          let redirectUrl = "";
+          if (product.deliveryType === 'product_video' && botUsername && accessRecord?.id) {
+            redirectUrl = `https://t.me/${botUsername}?startapp=access_${accessRecord.id}`;
+          } else {
+            redirectUrl = accessRecord?.id ? `${appUrl}/api/telegram/access/redirect?accessId=${accessRecord.id}${storeSlug ? `&storeSlug=${storeSlug}` : ''}` : deliveryUrl;
+          }
 
           await TelegramDeliveryService.sendPaymentConfirmationMessage(
             botToken,

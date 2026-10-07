@@ -58,6 +58,18 @@ export async function GET(
         inviteLink: a.inviteLink,
         status: a.status,
       })),
+      items: order.items.map((i) => ({
+        id: i.id,
+        productId: i.productId,
+        quantity: i.quantity,
+        total: i.total,
+        product: i.product ? {
+          id: i.product.id,
+          title: i.product.title,
+          slug: i.product.slug,
+          deliveryType: i.product.deliveryType,
+        } : null,
+      })),
     });
   } catch (error: any) {
     console.error('Error fetching order status:', error);

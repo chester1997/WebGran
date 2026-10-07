@@ -35,7 +35,7 @@ export class AccessLifecycleService {
    * Resolves the exact content destination URL or renews single-use invite link dynamically based on real Telegram membership & access validity.
    * Returns a structured AccessDestinationResult object.
    */
-  static async resolveAccessDestination(accessId: string, storeSlug?: string): Promise<AccessDestinationResult> {
+  static async resolveAccessDestination(accessId: string, storeSlug?: string, expectedTelegramUserId?: string): Promise<AccessDestinationResult> {
     const accessRecord = await db.query.accesses.findFirst({
       where: eq(accesses.id, accessId),
       with: {
@@ -70,6 +70,19 @@ export class AccessLifecycleService {
         expiresAt: accessRecord.expiresAt,
         error: "Acesso não pertence a esta loja."
       };
+    }
+
+    if (expectedTelegramUserId && accessRecord.customer?.telegramUserId) {
+      if (accessRecord.customer.telegramUserId !== String(expectedTelegramUserId)) {
+        return {
+          success: false,
+          status: 'FAILED',
+          destinationType: 'ERROR',
+          destinationUrl: null,
+          expiresAt: accessRecord.expiresAt,
+          error: "Acesso não autorizado para este usuário."
+        };
+      }
     }
 
     const now = new Date();
