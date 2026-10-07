@@ -100,7 +100,24 @@ function normalizeUsage(raw: any): VideoStorageUsage {
         ? num(r.remainingBytes) / GB
         : Math.max(0, quotaGB - usedGB);
   const percentage = num(r.percentage ?? r.percentUsed);
-  return { usedBytes, quotaBytes, reservedBytes, usedGB, quotaGB, freeGB, percentage };
+  const isUnlimited = Boolean(r.isUnlimited);
+  const hasVideoSubscription = Boolean(r.hasVideoSubscription ?? isUnlimited);
+  const planName = r.planName || (isUnlimited ? "PROPRIETÁRIO / ILIMITADO" : null);
+  const planPriceCents = r.planPriceCents || null;
+
+  return {
+    usedBytes,
+    quotaBytes,
+    reservedBytes,
+    usedGB,
+    quotaGB,
+    freeGB,
+    percentage,
+    hasVideoSubscription,
+    planName,
+    planPriceCents,
+    isUnlimited,
+  };
 }
 
 export default function VideosClient({ initialVideos, initialUsage }: VideosClientProps) {
