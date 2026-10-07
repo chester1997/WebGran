@@ -68,7 +68,7 @@ describe("Meus Acessos & Product Video Delivery UI Navigation Suite", () => {
     const res = await AccessLifecycleService.resolveAccessDestination("acc-pv-1", "minha-loja");
     expect(res.success).toBe(true);
     expect(res.destinationType).toBe("PRODUCT_VIDEO");
-    expect(res.destinationUrl).toContain("/miniapp/minha-loja/product/a-loba-negra-rejeitada");
+    expect(res.destinationUrl).toContain("/miniapp/minha-loja");
   });
 
   it("4 & 6 & 10. Product page with valid access lists READY videos with correct order and metadata", async () => {

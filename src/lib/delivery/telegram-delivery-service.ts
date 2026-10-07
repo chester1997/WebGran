@@ -151,12 +151,12 @@ export class TelegramDeliveryService {
     } else if (isAlreadyMember) {
       msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\n📦 *${productTitle}*\n\nVocê já possui acesso ao conteúdo.`;
       inlineKeyboard.push([
-        { text: "📺 ACESSAR CONTEÚDO", url: inviteLink }
+        { text: "🔴 ASSISTIR AGORA", url: inviteLink }
       ]);
     } else {
       msgText = `🎉 *PAGAMENTO CONFIRMADO!*\n\nSeu pagamento foi identificado com sucesso.\n\n📦 *Produto:*\n${productTitle}\n\n🔐 Seu acesso foi liberado.\n\nClique abaixo para acessar:`;
       inlineKeyboard.push([
-        { text: "📺 ACESSAR CONTEÚDO", url: inviteLink }
+        { text: "🔴 ASSISTIR AGORA", url: inviteLink }
       ]);
     }
 

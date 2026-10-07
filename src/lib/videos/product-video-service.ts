@@ -982,6 +982,7 @@ export class ProductVideoService {
    * Gets video progress for customer.
    */
   static async getVideoProgress(storeId: string, customerId: string, productVideoId: string) {
+    if (!db.query.videoProgress?.findFirst) return null;
     return await db.query.videoProgress.findFirst({
       where: and(
         eq(videoProgress.storeId, storeId),

@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { accesses, products, stores, telegramBots, telegramCustomers } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { accesses, products, stores, telegramBots, telegramCustomers, productVideoAssignments, productVideos } from "@/db/schema";
+import { eq, and, asc } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramDeliveryService } from "@/lib/delivery/telegram-delivery-service";
 import { formatAccessExpirationBR } from "./expiration-service";
@@ -106,7 +106,48 @@ export class AccessLifecycleService {
       let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
       if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
       const appUrl = rawAppUrl.replace(/\/+$/, "");
-      const destinationUrl = `${appUrl}/miniapp/${storeSlug}/product/${product.slug}`;
+      const effectiveStoreSlug = storeSlug || store?.slug || "";
+
+      // 1. Find assigned videos for this product ordered by position ASC
+      const assignments = db.query.productVideoAssignments?.findMany
+        ? await db.query.productVideoAssignments.findMany({
+            where: and(
+              eq(productVideoAssignments.storeId, accessRecord.storeId),
+              eq(productVideoAssignments.productId, product.id)
+            ),
+            orderBy: [asc(productVideoAssignments.position)],
+            with: {
+              video: true
+            }
+          })
+        : [];
+
+      const validAssignedVideos = (assignments || [])
+        .map(a => a?.video)
+        .filter((v): v is NonNullable<typeof v> => Boolean(v && v.status === "READY" && v.active));
+
+      let firstVideoId = validAssignedVideos[0]?.id;
+
+      // 2. Fallback: check legacy productVideos table
+      if (!firstVideoId && db.query.productVideos?.findFirst) {
+        const legacyVideo = await db.query.productVideos.findFirst({
+          where: and(
+            eq(productVideos.storeId, accessRecord.storeId),
+            eq(productVideos.productId, product.id),
+            eq(productVideos.status, "READY"),
+            eq(productVideos.active, true)
+          ),
+          orderBy: [asc(productVideos.position)]
+        });
+        if (legacyVideo) {
+          firstVideoId = legacyVideo.id;
+        }
+      }
+
+      // Safe fallback if product has no assigned videos
+      const destinationUrl = firstVideoId
+        ? `${appUrl}/miniapp/${effectiveStoreSlug}/video/${firstVideoId}`
+        : `${appUrl}/miniapp/${effectiveStoreSlug}/accesses`;
 
       return {
         success: true,

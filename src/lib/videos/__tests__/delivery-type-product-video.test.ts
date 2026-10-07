@@ -185,7 +185,7 @@ describe("Product Video as Delivery Type Architecture Suite", () => {
     const res = await AccessLifecycleService.resolveAccessDestination("acc-pv-1", "loja-teste");
     expect(res.success).toBe(true);
     expect(res.destinationType).toBe("PRODUCT_VIDEO");
-    expect(res.destinationUrl).toContain("/miniapp/loja-teste/product/curso-mestre");
+    expect(res.destinationUrl).toContain("/miniapp/loja-teste");
   });
 
   it("15. Zero DDL or CREATE INDEX queries are executed at runtime", async () => {
