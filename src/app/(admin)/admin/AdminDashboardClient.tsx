@@ -160,71 +160,91 @@ export default function AdminDashboardClient() {
       {loading && !data ? (
         <KPISkeletonGrid />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard
-            title="Lojas Ativas"
-            value={data?.metrics.activeStores.total.toString() || "0"}
-            changePercent={data?.metrics.activeStores.changePercent}
-            icon={Building2}
-            accentColor="purple"
-            description="Lojas ativas na plataforma"
-          />
-          <KPICard
-            title="Vendedores"
-            value={data?.metrics.sellers.total.toString() || "0"}
-            changePercent={data?.metrics.sellers.changePercent}
-            icon={Users}
-            accentColor="blue"
-            description="Lojistas cadastrados"
-          />
-          <KPICard
-            title="Bots Conectados"
-            value={data?.metrics.connectedBots.total.toString() || "0"}
-            changePercent={data?.metrics.connectedBots.changePercent}
-            icon={Bot}
-            accentColor="teal"
-            description="Bots do Telegram ativos"
-          />
-          <KPICard
-            title="Produtos Cadastrados"
-            value={data?.metrics.products.total.toString() || "0"}
-            changePercent={data?.metrics.products.changePercent}
-            icon={Package}
-            accentColor="indigo"
-            description="Catálogo geral de produtos"
-          />
-          <KPICard
-            title="Pedidos Pagos"
-            value={data?.metrics.paidOrders.total.toString() || "0"}
-            changePercent={data?.metrics.paidOrders.changePercent}
-            icon={ShoppingCart}
-            accentColor="orange"
-            description="Vendas concluídas com sucesso"
-          />
-          <KPICard
-            title="Faturamento Total"
-            value={formatCurrency(data?.metrics.revenue.total || 0)}
-            changePercent={data?.metrics.revenue.changePercent}
-            icon={DollarSign}
-            accentColor="green"
-            description="Volume total processado"
-          />
-          <KPICard
-            title="Clientes Telegram"
-            value={data?.metrics.telegramCustomers.total.toString() || "0"}
-            changePercent={data?.metrics.telegramCustomers.changePercent}
-            icon={UserCheck}
-            accentColor="sky"
-            description="Consumidores ativos nos bots"
-          />
-          <KPICard
-            title="Assinaturas Ativas"
-            value={data?.metrics.activeSubscriptions.total.toString() || "0"}
-            changePercent={data?.metrics.activeSubscriptions.changePercent}
-            icon={CreditCard}
-            accentColor="emerald"
-            description="Vendedores no plano SaaS"
-          />
+        <div className="space-y-4">
+          {/* Financeiro & Vendas Group */}
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Desempenho Financeiro & Vendas</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPICard
+                title="Faturamento Total"
+                value={formatCurrency(data?.metrics.revenue.total || 0)}
+                changePercent={data?.metrics.revenue.changePercent}
+                icon={DollarSign}
+                accentColor="green"
+                description="Volume total processado"
+                isFeatured={true}
+              />
+              <KPICard
+                title="Pedidos Pagos"
+                value={data?.metrics.paidOrders.total.toString() || "0"}
+                changePercent={data?.metrics.paidOrders.changePercent}
+                icon={ShoppingCart}
+                accentColor="orange"
+                description="Vendas concluídas com sucesso"
+              />
+              <KPICard
+                title="Assinaturas Ativas"
+                value={data?.metrics.activeSubscriptions.total.toString() || "0"}
+                changePercent={data?.metrics.activeSubscriptions.changePercent}
+                icon={CreditCard}
+                accentColor="emerald"
+                description="Vendedores no plano SaaS"
+              />
+              <KPICard
+                title="Clientes Telegram"
+                value={data?.metrics.telegramCustomers.total.toString() || "0"}
+                changePercent={data?.metrics.telegramCustomers.changePercent}
+                icon={UserCheck}
+                accentColor="sky"
+                description="Consumidores ativos nos bots"
+              />
+            </div>
+          </div>
+
+          {/* Ecossistema & Infraestrutura Group */}
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-purple-400" />
+              <span>Ecossistema & Infraestrutura</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPICard
+                title="Lojas Ativas"
+                value={data?.metrics.activeStores.total.toString() || "0"}
+                changePercent={data?.metrics.activeStores.changePercent}
+                icon={Building2}
+                accentColor="purple"
+                description="Lojas ativas na plataforma"
+              />
+              <KPICard
+                title="Vendedores"
+                value={data?.metrics.sellers.total.toString() || "0"}
+                changePercent={data?.metrics.sellers.changePercent}
+                icon={Users}
+                accentColor="blue"
+                description="Lojistas cadastrados"
+              />
+              <KPICard
+                title="Bots Conectados"
+                value={data?.metrics.connectedBots.total.toString() || "0"}
+                changePercent={data?.metrics.connectedBots.changePercent}
+                icon={Bot}
+                accentColor="teal"
+                description="Bots do Telegram ativos"
+              />
+              <KPICard
+                title="Produtos Cadastrados"
+                value={data?.metrics.products.total.toString() || "0"}
+                changePercent={data?.metrics.products.changePercent}
+                icon={Package}
+                accentColor="indigo"
+                description="Catálogo geral de produtos"
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -354,58 +374,7 @@ export default function AdminDashboardClient() {
         </div>
       </div>
 
-      {/* SECTION 3: PRODUTOS MAIS VENDIDOS */}
-      <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Package className="w-5 h-5 text-purple-400" />
-              Produtos Mais Vendidos
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Top produtos com base em vendas acumuladas
-            </p>
-          </div>
-        </div>
-
-        {loading ? (
-          <ListSkeleton />
-        ) : data?.topProducts && data.topProducts.length > 0 ? (
-          <div className="space-y-4">
-            {data.topProducts.map((prod, idx) => (
-              <div key={prod.id || idx} className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-purple-500/30 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                    #{idx + 1}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">{prod.name}</p>
-                    <p className="text-xs text-gray-400">{prod.quantity} unidades vendidas</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 border-[#27272A] pt-2 sm:pt-0">
-                  <div className="text-right">
-                    <span className="text-xs text-gray-400 block">Faturamento</span>
-                    <span className="text-sm font-black text-emerald-400">{formatCurrency(prod.revenue)}</span>
-                  </div>
-                  <div className="w-24 bg-[#27272A] h-2 rounded-full overflow-hidden hidden md:block">
-                    <div
-                      className="bg-purple-500 h-full rounded-full"
-                      style={{
-                        width: `${Math.min(100, (prod.quantity / (data.topProducts[0]?.quantity || 1)) * 100)}%`
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyChartState message="Nenhum produto vendido no período" />
-        )}
-      </div>
-
-      {/* SECTION 4: FEEDS DE DADOS (ÚLTIMAS VENDAS, LOJAS RECENTES, ATIVIDADE) */}
+      {/* SECTION 3: FEEDS DE DADOS (ÚLTIMAS VENDAS E ATIVIDADE RECENTE) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ÚLTIMAS VENDAS (Tabela 2/3 width) */}
         <div className="lg:col-span-2 bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl flex flex-col justify-between">
@@ -504,65 +473,112 @@ export default function AdminDashboardClient() {
         </div>
       </div>
 
-      {/* SECTION 5: LOJAS RECENTES */}
-      <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
-        <div className="flex items-center justify-between mb-6">
+      {/* SECTION 4: PRODUTOS MAIS VENDIDOS & LOJAS RECENTES (SIDE-BY-SIDE GRID) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* PRODUTOS MAIS VENDIDOS (Left 1/2) */}
+        <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl flex flex-col justify-between">
           <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-purple-400" />
-              Lojas Recentes
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Lojas criadas na plataforma e seus respectivos bots
-            </p>
-          </div>
-          <a
-            href="/admin/stores"
-            className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
-          >
-            Ver todas
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </a>
-        </div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Package className="w-5 h-5 text-purple-400" />
+                  Produtos Mais Vendidos
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Top produtos por volume de vendas
+                </p>
+              </div>
+            </div>
 
-        {loading ? (
-          <KPISkeletonGrid />
-        ) : data?.recentStores && data.recentStores.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.recentStores.map((st) => (
-              <a
-                key={st.id}
-                href={`/admin/stores`}
-                className="p-4 rounded-xl bg-[#18181B] border border-[#27272A] hover:border-red-500/30 transition-all flex items-center justify-between gap-3 group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-300 font-bold text-sm flex-shrink-0">
-                    {st.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={st.logoUrl} alt={st.name} className="w-full h-full object-cover rounded-lg" />
-                    ) : (
-                      st.name[0]?.toUpperCase()
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate group-hover:text-red-400 transition-colors">{st.name}</p>
-                    <p className="text-xs text-gray-400 truncate">Vendedor: {st.owner}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-teal-400 font-medium">{st.botName || "Sem Bot"}</span>
-                      <span className="text-[10px] text-gray-400">• {st.productCount} produtos</span>
+            {loading ? (
+              <ListSkeleton />
+            ) : data?.topProducts && data.topProducts.length > 0 ? (
+              <div className="space-y-3">
+                {data.topProducts.map((prod, idx) => (
+                  <div key={prod.id || idx} className="p-3.5 rounded-xl bg-[#18181B] border border-[#27272A] flex items-center justify-between gap-3 hover:border-purple-500/30 transition-all">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-xs flex-shrink-0">
+                        #{idx + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{prod.name}</p>
+                        <p className="text-[11px] text-gray-400">{prod.quantity} un. vendidas</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-xs font-black text-emerald-400 block">{formatCurrency(prod.revenue)}</span>
                     </div>
                   </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <StatusBadge status={st.status} />
-                  <span className="text-[10px] text-gray-400 block mt-1">{st.createdAt}</span>
-                </div>
-              </a>
-            ))}
+                ))}
+              </div>
+            ) : (
+              <EmptyChartState message="Nenhum produto vendido no período" />
+            )}
           </div>
-        ) : (
-          <EmptyChartState message="Nenhuma loja cadastrada recentemente" />
-        )}
+        </div>
+
+        {/* LOJAS RECENTES (Right 1/2) */}
+        <div className="bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-purple-400" />
+                  Lojas Recentes
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Novas lojas e bots criados na plataforma
+                </p>
+              </div>
+              <a
+                href="/admin/stores"
+                className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
+              >
+                Ver todas
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            {loading ? (
+              <ListSkeleton />
+            ) : data?.recentStores && data.recentStores.length > 0 ? (
+              <div className="space-y-3">
+                {data.recentStores.map((st) => (
+                  <a
+                    key={st.id}
+                    href={`/admin/stores`}
+                    className="p-3.5 rounded-xl bg-[#18181B] border border-[#27272A] hover:border-red-500/30 transition-all flex items-center justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-300 font-bold text-xs flex-shrink-0">
+                        {st.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={st.logoUrl} alt={st.name} className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          st.name[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate group-hover:text-red-400 transition-colors">{st.name}</p>
+                        <p className="text-[11px] text-gray-400 truncate">Vendedor: {st.owner}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-teal-400 font-medium">{st.botName || "Sem Bot"}</span>
+                          <span className="text-[10px] text-gray-400">• {st.productCount} produtos</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <StatusBadge status={st.status} />
+                      <span className="text-[10px] text-gray-400 block mt-1">{st.createdAt}</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <EmptyChartState message="Nenhuma loja cadastrada recentemente" />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -576,7 +592,8 @@ function KPICard({
   changePercent,
   icon: Icon,
   accentColor,
-  description
+  description,
+  isFeatured = false
 }: {
   title: string;
   value: string;
@@ -584,6 +601,7 @@ function KPICard({
   icon: any;
   accentColor: "purple" | "blue" | "teal" | "indigo" | "orange" | "green" | "sky" | "emerald";
   description: string;
+  isFeatured?: boolean;
 }) {
   const colorStyles = {
     purple: "text-purple-400 bg-purple-500/10 border-purple-500/20",
@@ -599,7 +617,11 @@ function KPICard({
   const isPositive = changePercent !== null && changePercent !== undefined && changePercent >= 0;
 
   return (
-    <div className="bg-[#141416] p-5 rounded-2xl border border-[#27272A] shadow-lg hover:border-[#3F3F46] transition-all flex flex-col justify-between">
+    <div className={`p-5 rounded-2xl transition-all flex flex-col justify-between ${
+      isFeatured 
+        ? "bg-gradient-to-br from-[#141416] via-[#141416] to-emerald-950/30 border border-emerald-500/40 shadow-xl shadow-emerald-950/20 hover:border-emerald-500/60" 
+        : "bg-[#141416] border border-[#27272A] shadow-lg hover:border-[#3F3F46]"
+    }`}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</span>
         <div className={`p-2 rounded-xl border ${colorStyles[accentColor]}`}>
@@ -608,7 +630,7 @@ function KPICard({
       </div>
 
       <div className="my-3">
-        <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{value}</h3>
+        <h3 className={`text-2xl sm:text-3xl font-black tracking-tight ${isFeatured ? "text-emerald-400" : "text-white"}`}>{value}</h3>
       </div>
 
       <div className="flex items-center justify-between text-xs pt-2 border-t border-[#27272A]">
