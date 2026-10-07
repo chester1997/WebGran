@@ -75,7 +75,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
     }
 
     const cleanUsername = targetBot.username.replace(/^@/, '');
-    const deepLink = `https://t.me/${cleanUsername}?startapp=product_${prod.id}`;
+    const deepLink = `https://t.me/${cleanUsername}/shorts?startapp=product_${prod.id}`;
 
     if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
       navigator.clipboard.writeText(deepLink);

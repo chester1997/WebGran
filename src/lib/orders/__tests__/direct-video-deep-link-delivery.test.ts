@@ -411,13 +411,14 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
     expect(result.error).toBe("Acesso não autorizado para este usuário.");
   });
 
-  it("CENÁRIO 13: Seller generates manual product deep link -> Formats URL deterministically with sanitized bot username", () => {
+  it("CENÁRIO 13: Seller generates manual product deep link -> Formats Direct Mini App URL with /shorts short_name and sanitized bot username", () => {
     const mockBot = { id: "bot-1", username: "@studiioshorts_bot" };
     const productId = "prod-uuid-123";
     const cleanUsername = mockBot.username.replace(/^@/, '');
-    const generatedUrl = `https://t.me/${cleanUsername}?startapp=product_${productId}`;
+    const generatedUrl = `https://t.me/${cleanUsername}/shorts?startapp=product_${productId}`;
 
-    expect(generatedUrl).toBe("https://t.me/studiioshorts_bot?startapp=product_prod-uuid-123");
+    expect(generatedUrl).toBe("https://t.me/studiioshorts_bot/shorts?startapp=product_prod-uuid-123");
     expect(generatedUrl).not.toContain("@");
+    expect(generatedUrl).not.toBe("https://t.me/studiioshorts_bot?startapp=product_prod-uuid-123");
   });
 });
