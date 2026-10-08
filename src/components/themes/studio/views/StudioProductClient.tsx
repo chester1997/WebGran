@@ -417,110 +417,135 @@ export function StudioProductClient({
           </div>
         </div>
 
-        {/* VÍDEOS DA ENTREGA SECTION */}
+        {/* VÍDEOS / ENTREGA DA COMPRA SECTION */}
         {clientHasAccess ? (
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
-                VÍDEOS DA SUA COMPRA
+                {product.deliveryType === "product_video" ? "VÍDEOS DA SUA COMPRA" : "SUA ENTREGA"}
               </h3>
             </div>
 
-            {loadingVideos ? (
-              <div className="p-4 flex items-center justify-center text-xs text-zinc-400">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Carregando vídeos...
-              </div>
-            ) : productVideos.length > 0 ? (
-              /* ESTADO C — CONTEÚDO DISPONÍVEL */
-              <div className="space-y-2.5">
-                {productVideos.map((vid, idx) => {
-                  const isCompleted = vid.progress?.completed;
-                  const posSecs = vid.progress?.positionSeconds || 0;
-                  const hasStarted = posSecs > 0;
-
-                  return (
-                    <Link
-                      key={vid.id}
-                      href={`/miniapp/${storeSlug}/video/${vid.id}?productId=${product.id}`}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border border-zinc-200 dark:border-white/10 transition-all group cursor-pointer"
-                    >
-                      {/* Thumbnail / Icon */}
-                      <div className="relative w-16 aspect-video shrink-0 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center">
-                        {vid.thumbnailUrl ? (
-                          <img src={vid.thumbnailUrl} alt={vid.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <Play className="w-5 h-5 text-white/70" />
-                        )}
-                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                          <Play className="w-5 h-5 text-white fill-white drop-shadow" />
-                        </div>
-                      </div>
-
-                      {/* Title & Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                          Episódio {String(idx + 1).padStart(2, "0")}
-                        </div>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white truncate group-hover:text-red-500 transition-colors">
-                          {vid.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                          {vid.durationSeconds > 0 && (
-                            <span className="font-mono">{formatSeconds(vid.durationSeconds)}</span>
-                          )}
-                          {isCompleted ? (
-                            <span className="text-emerald-500 font-semibold flex items-center gap-1">
-                              <Check className="w-3 h-3" /> Concluído
-                            </span>
-                          ) : hasStarted ? (
-                            <span className="text-amber-500 font-semibold">
-                              Progresso: {formatSeconds(posSecs)}
-                            </span>
-                          ) : (
-                            <span className="text-zinc-400">Não iniciado</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <span className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shrink-0 flex items-center gap-1.5">
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        {hasStarted && !isCompleted ? "CONTINUAR" : "ASSISTIR"}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              /* ESTADO B — COMPROU / CONTEÚDO EM PREPARAÇÃO */
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1.5">
-                <div className="text-xs font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
-                  <span>⚡</span>
-                  <span>Conteúdo em preparação</span>
+            {product.deliveryType === "product_video" ? (
+              loadingVideos ? (
+                <div className="p-4 flex items-center justify-center text-xs text-zinc-400">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Carregando vídeos...
                 </div>
-                <p className="text-[12px] text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto">
-                  Os vídeos desta entrega estão sendo preparados pelo vendedor e estarão disponíveis em breve.
+              ) : productVideos.length > 0 ? (
+                /* ESTADO C — COMPROU / CONTEÚDO DISPONÍVEL */
+                <div className="space-y-2.5">
+                  {productVideos.map((vid, idx) => {
+                    const isCompleted = vid.progress?.completed;
+                    const posSecs = vid.progress?.positionSeconds || 0;
+                    const hasStarted = posSecs > 0;
+
+                    return (
+                      <Link
+                        key={vid.id}
+                        href={`/miniapp/${storeSlug}/video/${vid.id}?productId=${product.id}`}
+                        className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border border-zinc-200 dark:border-white/10 transition-all group cursor-pointer"
+                      >
+                        {/* Thumbnail / Icon */}
+                        <div className="relative w-16 aspect-video shrink-0 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center">
+                          {vid.thumbnailUrl ? (
+                            <img src={vid.thumbnailUrl} alt={vid.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <Play className="w-5 h-5 text-white/70" />
+                          )}
+                          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Play className="w-5 h-5 text-white fill-white drop-shadow" />
+                          </div>
+                        </div>
+
+                        {/* Title & Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                            Episódio {String(idx + 1).padStart(2, "0")}
+                          </div>
+                          <h4 className="text-sm font-bold text-zinc-900 dark:text-white truncate group-hover:text-red-500 transition-colors">
+                            {vid.title}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                            {vid.durationSeconds > 0 && (
+                              <span className="font-mono">{formatSeconds(vid.durationSeconds)}</span>
+                            )}
+                            {isCompleted ? (
+                              <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                                <Check className="w-3 h-3" /> Concluído
+                              </span>
+                            ) : hasStarted ? (
+                              <span className="text-amber-500 font-semibold">
+                                Progresso: {formatSeconds(posSecs)}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400">Não iniciado</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shrink-0 flex items-center gap-1.5">
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          {hasStarted && !isCompleted ? "CONTINUAR" : "ASSISTIR"}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* ESTADO B — COMPROU / CONTEÚDO EM PREPARAÇÃO */
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1.5">
+                  <div className="text-xs font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                    <span>⚡</span>
+                    <span>Conteúdo em preparação</span>
+                  </div>
+                  <p className="text-[12px] text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto">
+                    Os vídeos desta entrega estão sendo preparados pelo vendedor e estarão disponíveis em breve.
+                  </p>
+                </div>
+              )
+            ) : (
+              /* COMPROU - OUTROS TIPOS DE ENTREGA (Telegram / External) */
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center space-y-3">
+                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <Check className="w-4 h-4" />
+                  <span>Acesso Confirmado</span>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                  Seu acesso foi liberado com sucesso. Clique abaixo para visualizar seus acessos ativos.
                 </p>
+                <Link
+                  href={`/miniapp/${storeSlug}/accesses`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all"
+                >
+                  Ver Meus Acessos
+                </Link>
               </div>
             )}
           </div>
-        ) : product.deliveryType === "product_video" ? (
-          /* ESTADO A — NÃO COMPROU (Informacional) */
+        ) : (
+          /* ESTADO A — NÃO COMPROU (INFORMAÇÃO SOBRE A ENTREGA REAL DO PRODUTO) */
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
-                ENTREGA EM VÍDEO
+                ENTREGA DO PRODUTO
               </h3>
             </div>
             <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 text-center space-y-1.5">
               <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                🎬 Após a confirmação do pagamento, seu conteúdo ficará disponível nesta área.
+                {product.deliveryType === "product_video"
+                  ? "🎬 Após a confirmação do pagamento, os vídeos deste produto serão liberados para você assistir diretamente nesta Mini App."
+                  : product.deliveryType === "telegram" || product.deliveryType === "TELEGRAM_CHAT"
+                  ? "📲 Após a confirmação do pagamento, seu convite de acesso ao canal/grupo será enviado diretamente pelo Telegram."
+                  : product.deliveryType === "external"
+                  ? "🔗 Após a confirmação do pagamento, o link de acesso ao conteúdo será liberado pelo Telegram."
+                  : "⚡ Após a confirmação do pagamento, seu acesso será liberado automaticamente."}
               </p>
             </div>
           </div>
-        ) : null}
+        )}
 
         {/* DESCRIPTION SECTION */}
         {rawDescription && (
