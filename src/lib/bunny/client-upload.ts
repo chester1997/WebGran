@@ -4,6 +4,10 @@ export interface UploadProgress {
   bytesUploaded: number;
   totalBytes: number;
   percentage: number;
+  speedBytesPerSec?: number;
+  speedMbps?: number;
+  formattedSpeed?: string;
+  etaSeconds?: number;
 }
 
 export interface DirectUploadOptions {
@@ -17,23 +21,25 @@ export interface DirectUploadOptions {
 }
 
 /**
- * Calculates dynamic TUS chunk size based on file size to balance network RTT overhead and stability.
- * - Files < 100 MB: 10 MB chunks
- * - Files 100 MB to 500 MB: 25 MB chunks
- * - Files > 500 MB: 50 MB chunks (e.g. 1.7 GB file uses ~37 chunks instead of 365)
+ * Calculates dynamic TUS chunk size based on file size to balance network RTT overhead and TCP window stability.
+ * Bunny Stream TUS uploads perform best with chunks between 5 MB and 20 MB.
+ * 50 MB chunks cause browser TCP bufferbloat, window stalling, and long progress freezes.
+ * - Files < 50 MB: 5 MB chunks
+ * - Files 50 MB to 300 MB: 10 MB chunks
+ * - Files > 300 MB: 16 MB chunks (sweet spot for high-bandwidth fiber connections)
  */
 export function getDynamicChunkSize(fileSizeBytes: number): number {
   const MB = 1024 * 1024;
   if (!fileSizeBytes || fileSizeBytes <= 0) {
-    return 50 * MB; // Default fallback to 50MB
+    return 16 * MB; // Default fallback to 16MB
   }
 
-  if (fileSizeBytes < 100 * MB) {
+  if (fileSizeBytes < 50 * MB) {
+    return 5 * MB;
+  } else if (fileSizeBytes <= 300 * MB) {
     return 10 * MB;
-  } else if (fileSizeBytes <= 500 * MB) {
-    return 25 * MB;
   } else {
-    return 50 * MB;
+    return 16 * MB;
   }
 }
 
@@ -66,10 +72,13 @@ export class TusVideoUploader {
       }
 
       const effectiveChunkSize = chunkSize || getDynamicChunkSize(file.size);
+      const startTime = performance.now();
+      let lastTime = startTime;
+      let lastBytes = 0;
 
       this.upload = new tus.Upload(file, {
         endpoint: tusUploadUrl,
-        retryDelays: [0, 3000, 5000, 10000, 20000],
+        retryDelays: [0, 1000, 2000, 5000],
         headers,
         chunkSize: effectiveChunkSize,
         metadata: {
@@ -83,10 +92,43 @@ export class TusVideoUploader {
         onProgress: (bytesUploaded, totalBytes) => {
           if (onProgress && totalBytes > 0) {
             const percentage = Math.round((bytesUploaded / totalBytes) * 100);
+            const now = performance.now();
+            const elapsedTotalSec = (now - startTime) / 1000;
+            const elapsedStepSec = (now - lastTime) / 1000;
+
+            // Compute exponential moving average or instant speed
+            let speedBytesPerSec = 0;
+            if (elapsedStepSec >= 0.2) {
+              const stepBytes = bytesUploaded - lastBytes;
+              speedBytesPerSec = stepBytes / elapsedStepSec;
+              lastTime = now;
+              lastBytes = bytesUploaded;
+            } else if (elapsedTotalSec > 0) {
+              speedBytesPerSec = bytesUploaded / elapsedTotalSec;
+            }
+
+            const speedMbps = (speedBytesPerSec * 8) / (1024 * 1024);
+            const speedMBps = speedBytesPerSec / (1024 * 1024);
+
+            let formattedSpeed = "";
+            if (speedMBps >= 1) {
+              formattedSpeed = `${speedMBps.toFixed(1)} MB/s (${speedMbps.toFixed(1)} Mbps)`;
+            } else {
+              const speedKBps = speedBytesPerSec / 1024;
+              formattedSpeed = `${speedKBps.toFixed(0)} KB/s (${speedMbps.toFixed(2)} Mbps)`;
+            }
+
+            const remainingBytes = totalBytes - bytesUploaded;
+            const etaSeconds = speedBytesPerSec > 0 ? Math.ceil(remainingBytes / speedBytesPerSec) : 0;
+
             onProgress({
               bytesUploaded,
               totalBytes,
               percentage,
+              speedBytesPerSec,
+              speedMbps,
+              formattedSpeed,
+              etaSeconds,
             });
           }
         },

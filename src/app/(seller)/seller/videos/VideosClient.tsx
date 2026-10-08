@@ -193,6 +193,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStep, setUploadStep] = useState<"IDLE" | "CREATING" | "UPLOADING" | "PROCESSING" | "READY" | "FAILED">("IDLE");
   const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
+  const [uploadSpeedFormatted, setUploadSpeedFormatted] = useState<string>("");
+  const [uploadEtaSeconds, setUploadEtaSeconds] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadAbortRef = useRef<AbortController | null>(null);
@@ -259,6 +261,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
 
     setUploadStep("CREATING");
     setUploadProgressPercent(0);
+    setUploadSpeedFormatted("");
+    setUploadEtaSeconds(null);
     setUploadError(null);
 
     const abortController = new AbortController();
@@ -299,6 +303,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         signal: abortController.signal,
         onProgress: (p) => {
           setUploadProgressPercent(p.percentage);
+          if (p.formattedSpeed) setUploadSpeedFormatted(p.formattedSpeed);
+          if (p.etaSeconds !== undefined) setUploadEtaSeconds(p.etaSeconds);
         },
       });
 
@@ -319,6 +325,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
     setFormData({ title: "", description: "" });
     setUploadStep("IDLE");
     setUploadProgressPercent(0);
+    setUploadSpeedFormatted("");
+    setUploadEtaSeconds(null);
     setUploadError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -1099,14 +1107,14 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
               {/* Progress & Processing State */}
               {(uploadStep === "CREATING" || uploadStep === "UPLOADING" || uploadStep === "PROCESSING") && (
                 <div className="space-y-2 bg-[#16161C] p-3.5 border border-white/5 rounded-xl">
-                  <div className="flex justify-between text-xs font-mono text-zinc-300">
+                  <div className="flex justify-between items-center text-xs font-mono text-zinc-300">
                     <span className="flex items-center gap-2">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
                       {uploadStep === "CREATING" && "Reservando quota..."}
                       {uploadStep === "UPLOADING" && `Enviando (${uploadProgressPercent}%)`}
                       {uploadStep === "PROCESSING" && "PROCESSANDO VÍDEO..."}
                     </span>
-                    <span>{uploadProgressPercent}%</span>
+                    <span className="font-bold text-red-400">{uploadProgressPercent}%</span>
                   </div>
                   <div className="w-full bg-[#0F0F12] rounded-full h-2 overflow-hidden">
                     <div
@@ -1114,6 +1122,14 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
                       style={{ width: `${uploadProgressPercent}%` }}
                     />
                   </div>
+                  {uploadStep === "UPLOADING" && uploadSpeedFormatted && (
+                    <div className="flex justify-between items-center text-[11px] font-mono text-zinc-400 pt-1 border-t border-white/5">
+                      <span>Velocidade: <strong className="text-zinc-200">{uploadSpeedFormatted}</strong></span>
+                      {uploadEtaSeconds !== null && uploadEtaSeconds > 0 && (
+                        <span>Restante: <strong className="text-zinc-200">{uploadEtaSeconds > 60 ? `${Math.floor(uploadEtaSeconds / 60)}m ${uploadEtaSeconds % 60}s` : `${uploadEtaSeconds}s`}</strong></span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

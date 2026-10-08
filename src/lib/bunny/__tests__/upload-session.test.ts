@@ -40,14 +40,15 @@ describe("Bunny Stream Direct Upload Signature & TUS Security", () => {
 
   it("calculates dynamic TUS chunk size accurately based on file size", () => {
     const MB = 1024 * 1024;
-    // Small files < 100MB -> 10MB chunk
-    expect(getDynamicChunkSize(50 * MB)).toBe(10 * MB);
-    // Medium files 100MB - 500MB -> 25MB chunk
-    expect(getDynamicChunkSize(250 * MB)).toBe(25 * MB);
-    // Large files > 500MB (e.g. 1.7GB = 1740.8MB) -> 50MB chunk
-    expect(getDynamicChunkSize(1740.8 * MB)).toBe(50 * MB);
-    // Fallback for zero or missing size -> 50MB chunk
-    expect(getDynamicChunkSize(0)).toBe(50 * MB);
+    // Small files < 50MB -> 5MB chunk
+    expect(getDynamicChunkSize(30 * MB)).toBe(5 * MB);
+    // Medium files 50MB - 300MB -> 10MB chunk
+    expect(getDynamicChunkSize(150 * MB)).toBe(10 * MB);
+    // Large files > 300MB (e.g. 965MB or 1.7GB) -> 16MB chunk (Bunny Stream TUS sweet spot)
+    expect(getDynamicChunkSize(965.7 * MB)).toBe(16 * MB);
+    expect(getDynamicChunkSize(1740.8 * MB)).toBe(16 * MB);
+    // Fallback for zero or missing size -> 16MB chunk
+    expect(getDynamicChunkSize(0)).toBe(16 * MB);
   });
 });
 
