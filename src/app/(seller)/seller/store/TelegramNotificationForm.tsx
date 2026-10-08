@@ -15,6 +15,11 @@ export function TelegramNotificationForm({ initialTelegramId }: TelegramNotifica
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Sync state if initialTelegramId updates via server revalidation / props
+  React.useEffect(() => {
+    setTelegramId(initialTelegramId || "");
+  }, [initialTelegramId]);
+
   const handleSave = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -23,6 +28,7 @@ export function TelegramNotificationForm({ initialTelegramId }: TelegramNotifica
     try {
       const res = await saveTelegramNotificationIdAction(telegramId);
       if (res?.success) {
+        setTelegramId(res.telegramNotificationId ?? "");
         setSuccessMsg("Telegram ID salvo com sucesso!");
         setTimeout(() => setSuccessMsg(null), 4000);
       }
