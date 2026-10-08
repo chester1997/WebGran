@@ -308,21 +308,21 @@ export default function AdminPlansClient({ user }: { user: any }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141416] p-4 sm:p-6 rounded-2xl border border-[#27272A] shadow-xl">
         <div>
-          <div className="flex items-center gap-2 text-red-400 font-semibold text-sm mb-1">
+          <div className="flex items-center gap-2 text-red-400 font-semibold text-xs sm:text-sm mb-1">
             <Package className="w-4 h-4" />
             <span>Gestão Comercial</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Planos WebGran</h1>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Planos WebGran</h1>
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
             Configure os planos comerciais da plataforma WebGran, recursos inclusos, limites e permissões dos vendedores.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreatePlan}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium text-sm hover:from-red-500 hover:to-red-600 transition shadow-lg shadow-red-600/20 cursor-pointer"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium text-xs sm:text-sm hover:from-red-500 hover:to-red-600 transition shadow-lg shadow-red-600/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Plano WebGran</span>

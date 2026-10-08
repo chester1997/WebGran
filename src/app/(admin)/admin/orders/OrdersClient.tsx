@@ -44,71 +44,71 @@ export default function OrdersClient({ initialOrders }: { initialOrders: OrderIt
   return (
     <div className="space-y-8 pb-10">
       {/* HEADER & FILTERS */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#141416] p-4 sm:p-6 rounded-2xl border border-[#27272A] shadow-xl">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Pedidos Globais</h1>
-            <span className="px-2.5 py-1 text-xs font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">Pedidos Globais</h1>
+            <span className="px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full">
               Vendas da Plataforma
             </span>
           </div>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-gray-400 text-xs sm:text-sm mt-1">
             Histórico completo de pedidos realizados em todas as lojas
           </p>
         </div>
 
         {/* SEARCH INPUT */}
-        <div className="relative min-w-[280px]">
+        <div className="relative w-full md:min-w-[280px]">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Buscar por ID, cliente ou loja..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+            className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
           />
         </div>
       </div>
 
       {/* KPI METRIC CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#141416] p-5 rounded-2xl border border-[#27272A] flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Total de Pedidos</span>
-            <span className="text-3xl font-black text-white mt-1 block">{totalOrders}</span>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="bg-[#141416] p-3.5 sm:p-5 rounded-2xl border border-[#27272A] flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Total Pedidos</span>
+            <span className="text-xl sm:text-3xl font-black text-white mt-0.5 sm:mt-1 block truncate">{totalOrders}</span>
           </div>
-          <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400">
-            <ShoppingCart className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-[#141416] p-5 rounded-2xl border border-[#27272A] flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Pedidos Pagos</span>
-            <span className="text-3xl font-black text-emerald-400 mt-1 block">{paidOrders}</span>
-          </div>
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-            <CheckCircle2 className="w-6 h-6" />
+          <div className="p-2 sm:p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400 flex-shrink-0">
+            <ShoppingCart className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
 
-        <div className="bg-[#141416] p-5 rounded-2xl border border-[#27272A] flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Faturamento Acumulado</span>
-            <span className="text-3xl font-black text-emerald-400 mt-1 block">{formatCurrency(totalRevenue)}</span>
+        <div className="bg-[#141416] p-3.5 sm:p-5 rounded-2xl border border-[#27272A] flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Pedidos Pagos</span>
+            <span className="text-xl sm:text-3xl font-black text-emerald-400 mt-0.5 sm:mt-1 block truncate">{paidOrders}</span>
           </div>
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-            <DollarSign className="w-6 h-6" />
+          <div className="p-2 sm:p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 flex-shrink-0">
+            <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
 
-        <div className="bg-[#141416] p-5 rounded-2xl border border-[#27272A] flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Pendentes</span>
-            <span className="text-3xl font-black text-amber-400 mt-1 block">{pendingOrders}</span>
+        <div className="bg-[#141416] p-3.5 sm:p-5 rounded-2xl border border-[#27272A] flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Faturamento</span>
+            <span className="text-base sm:text-3xl font-black text-emerald-400 mt-0.5 sm:mt-1 block truncate">{formatCurrency(totalRevenue)}</span>
           </div>
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
-            <Clock className="w-6 h-6" />
+          <div className="p-2 sm:p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 flex-shrink-0">
+            <DollarSign className="w-4 h-4 sm:w-6 sm:h-6" />
+          </div>
+        </div>
+
+        <div className="bg-[#141416] p-3.5 sm:p-5 rounded-2xl border border-[#27272A] flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Pendentes</span>
+            <span className="text-xl sm:text-3xl font-black text-amber-400 mt-0.5 sm:mt-1 block truncate">{pendingOrders}</span>
+          </div>
+          <div className="p-2 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 flex-shrink-0">
+            <Clock className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
       </div>

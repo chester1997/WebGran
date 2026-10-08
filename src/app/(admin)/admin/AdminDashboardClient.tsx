@@ -167,7 +167,7 @@ export default function AdminDashboardClient() {
               <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
               <span>Desempenho Financeiro & Vendas</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <KPICard
                 title="Faturamento Total"
                 value={formatCurrency(data?.metrics.revenue.total || 0)}
@@ -210,7 +210,7 @@ export default function AdminDashboardClient() {
               <Building2 className="w-3.5 h-3.5 text-purple-400" />
               <span>Ecossistema & Infraestrutura</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <KPICard
                 title="Lojas Ativas"
                 value={data?.metrics.activeStores.total.toString() || "0"}
@@ -617,32 +617,32 @@ function KPICard({
   const isPositive = changePercent !== null && changePercent !== undefined && changePercent >= 0;
 
   return (
-    <div className={`p-5 rounded-2xl transition-all flex flex-col justify-between ${
+    <div className={`p-3.5 sm:p-5 rounded-2xl transition-all flex flex-col justify-between ${
       isFeatured 
         ? "bg-gradient-to-br from-[#141416] via-[#141416] to-emerald-950/30 border border-emerald-500/40 shadow-xl shadow-emerald-950/20 hover:border-emerald-500/60" 
         : "bg-[#141416] border border-[#27272A] shadow-lg hover:border-[#3F3F46]"
     }`}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</span>
-        <div className={`p-2 rounded-xl border ${colorStyles[accentColor]}`}>
-          <Icon className="w-4 h-4" />
+      <div className="flex items-center justify-between gap-1.5">
+        <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider truncate">{title}</span>
+        <div className={`p-1.5 sm:p-2 rounded-xl border flex-shrink-0 ${colorStyles[accentColor]}`}>
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </div>
 
-      <div className="my-3">
-        <h3 className={`text-2xl sm:text-3xl font-black tracking-tight ${isFeatured ? "text-emerald-400" : "text-white"}`}>{value}</h3>
+      <div className="my-2 sm:my-3">
+        <h3 className={`text-lg sm:text-2xl lg:text-3xl font-black tracking-tight truncate ${isFeatured ? "text-emerald-400" : "text-white"}`}>{value}</h3>
       </div>
 
-      <div className="flex items-center justify-between text-xs pt-2 border-t border-[#27272A]">
+      <div className="flex items-center justify-between text-[11px] sm:text-xs pt-1.5 sm:pt-2 border-t border-[#27272A] gap-1">
         {changePercent !== null && changePercent !== undefined ? (
-          <div className={`flex items-center gap-1 font-bold ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
-            {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+          <div className={`flex items-center gap-0.5 sm:gap-1 font-bold text-[10px] sm:text-xs ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+            {isPositive ? <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
             <span>{isPositive ? `+${changePercent}%` : `${changePercent}%`}</span>
           </div>
         ) : (
-          <span className="text-gray-400 font-medium">Dados do período</span>
+          <span className="text-gray-400 text-[10px] font-medium truncate">Período</span>
         )}
-        <span className="text-gray-400 text-[10px] truncate max-w-[130px]">{description}</span>
+        <span className="text-gray-400 text-[9px] sm:text-[10px] truncate max-w-[80px] sm:max-w-[130px] hidden xs:inline">{description}</span>
       </div>
     </div>
   );

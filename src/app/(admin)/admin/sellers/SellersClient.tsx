@@ -347,35 +347,35 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
   return (
     <div className="space-y-8 pb-10 fade-in">
       {/* HEADER & METRICS */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#141416] p-4 sm:p-6 rounded-2xl border border-[#27272A] shadow-xl">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Vendedores Globais</h1>
-            <span className="px-2.5 py-1 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">Vendedores Globais</h1>
+            <span className="px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
               Painel Super Admin
             </span>
           </div>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-gray-400 text-xs sm:text-sm mt-1">
             Gestão completa, auditoria, mensalidades e permissões dos lojistas da plataforma
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-10 px-4 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+            className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-9 sm:h-10 px-3.5 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Adicionar Vendedor
+            <span>Adicionar Vendedor</span>
           </Button>
 
           <Button
             variant="outline"
             onClick={handleRefresh}
-            className="bg-[#18181B] border-[#27272A] hover:bg-white/5 text-gray-300 hover:text-white rounded-xl text-xs h-10 px-3 flex items-center gap-1.5 cursor-pointer"
+            className="flex-1 sm:flex-initial bg-[#18181B] border-[#27272A] hover:bg-white/5 text-gray-300 hover:text-white rounded-xl text-xs h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            Atualizar
+            <span>Atualizar</span>
           </Button>
         </div>
       </div>
