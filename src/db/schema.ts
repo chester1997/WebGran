@@ -184,6 +184,7 @@ export const orders = pgTable('orders', {
   couponCode: text('coupon_code'),
   paidAt: timestamp('paid_at'),
   sellerNotificationSentAt: timestamp('seller_notification_sent_at'),
+  sellerNotificationClaimedAt: timestamp('seller_notification_claimed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({

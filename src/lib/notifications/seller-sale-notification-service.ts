@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { orders, orderItems, products, telegramBots, stores } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, asc } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
@@ -43,12 +43,61 @@ export function formatBRL(amount: number | string): string {
 export class SellerSaleNotificationService {
   /**
    * Sends Telegram sale notification message to the seller's configured Telegram ID.
-   * STRICT IDEMPOTENCY: checks order.sellerNotificationSentAt and skips if already sent.
-   * NON-BLOCKING: Any error is caught and logged, returning success: false without failing payment/order.
+   * ATOMIC CONCURRENCY LOCK: Uses seller_notification_claimed_at atomic SQL update to prevent race conditions.
+   * TELEGRAM RETRY SAFE: If Telegram API fails, seller_notification_claimed_at is released back to NULL so retries can process.
    */
   static async notifySellerOfSale(orderId: string): Promise<SaleNotificationResult> {
+    let claimAcquired = false;
+
     try {
-      // 1. Fetch Order with details
+      // 1. Initial quick check (in case already sent)
+      const initialOrder = await db.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+      });
+
+      if (!initialOrder) {
+        return { success: false, error: `Order ${orderId} not found.` };
+      }
+
+      if (initialOrder.status !== "paid") {
+        return { success: true, skipped: true, reason: "Order is not paid." };
+      }
+
+      if (initialOrder.sellerNotificationSentAt) {
+        return { success: true, skipped: true, reason: "Notification already sent for this order." };
+      }
+
+      // 2. ATOMIC DB CLAIM LOCK against concurrent executions
+      const claimResult = await db.execute(sql`
+        UPDATE orders
+        SET seller_notification_claimed_at = NOW()
+        WHERE id = ${orderId}
+          AND seller_notification_sent_at IS NULL
+          AND (
+            seller_notification_claimed_at IS NULL 
+            OR seller_notification_claimed_at < NOW() - INTERVAL '2 minutes'
+          )
+        RETURNING id
+      `);
+
+      let updated = false;
+      if (Array.isArray(claimResult)) {
+        updated = claimResult.length > 0;
+      } else if (Array.isArray((claimResult as any)?.rows)) {
+        updated = (claimResult as any).rows.length > 0;
+      } else {
+        const rowCount = Number((claimResult as any)?.rowCount ?? (claimResult as any)?.affectedRows ?? 0);
+        updated = rowCount > 0;
+      }
+
+      if (!updated) {
+        console.log(`[SellerSaleNotificationService] Order ${orderId} already sent or claimed by another concurrent process. Skipping.`);
+        return { success: true, skipped: true, reason: "Already claimed or sent by another concurrent execution." };
+      }
+
+      claimAcquired = true;
+
+      // 3. Fetch Full Order Details
       const order = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {
@@ -57,26 +106,18 @@ export class SellerSaleNotificationService {
         },
       });
 
-      if (!order) {
-        return { success: false, error: `Order ${orderId} not found.` };
+      if (!order || order.status !== "paid") {
+        await this.releaseClaimLock(orderId);
+        return { success: false, error: "Order not valid or not paid after acquiring claim lock." };
       }
 
-      // 2. Strict Paid Check
-      if (order.status !== "paid") {
-        return { success: true, skipped: true, reason: "Order is not paid." };
-      }
-
-      // 3. Strict Idempotency Check
-      if (order.sellerNotificationSentAt) {
-        return { success: true, skipped: true, reason: "Notification already sent for this order." };
-      }
-
-      // 4. Fetch Store and Check Seller Telegram Notification ID
+      // 4. Fetch Store & Check Seller Telegram Notification ID
       const store = await db.query.stores.findFirst({
         where: eq(stores.id, order.storeId),
       });
 
       if (!store || !store.telegramNotificationId || !store.telegramNotificationId.trim()) {
+        await this.releaseClaimLock(orderId);
         return { success: true, skipped: true, reason: "Store has no Telegram notification ID configured." };
       }
 
@@ -102,7 +143,7 @@ export class SellerSaleNotificationService {
 
       const productNames = productTitles.length > 0 ? productTitles.join(", ") : "Produto";
 
-      // 6. Resolve Telegram Bot for Store
+      // 6. Resolve Telegram Bot for Store deterministically
       let botRecord = null;
       if (targetBotId) {
         botRecord = await db.query.telegramBots.findFirst({
@@ -112,12 +153,14 @@ export class SellerSaleNotificationService {
 
       if (!botRecord) {
         botRecord = await db.query.telegramBots.findFirst({
-          where: eq(telegramBots.storeId, order.storeId),
+          where: and(eq(telegramBots.storeId, order.storeId), eq(telegramBots.status, "active")),
+          orderBy: [asc(telegramBots.createdAt)],
         });
       }
 
       if (!botRecord || !botRecord.tokenEncrypted) {
-        console.warn(`[SellerSaleNotificationService] No bot found for store ${order.storeId}. Cannot send notification.`);
+        await this.releaseClaimLock(orderId);
+        console.warn(`[SellerSaleNotificationService] No active bot found for store ${order.storeId}. Cannot send notification.`);
         return { success: true, skipped: true, reason: "No active bot found for store." };
       }
 
@@ -151,19 +194,36 @@ export class SellerSaleNotificationService {
       const botService = new TelegramBotService(botToken);
       await botService.sendMessage(store.telegramNotificationId.trim(), messageText);
 
-      // 11. Record Idempotency timestamp in DB
-      await db
-        .update(orders)
-        .set({ sellerNotificationSentAt: new Date() })
-        .where(eq(orders.id, order.id));
+      // 11. Confirm Permanent Success in DB
+      await db.execute(sql`
+        UPDATE orders
+        SET seller_notification_sent_at = NOW(),
+            seller_notification_claimed_at = NULL
+        WHERE id = ${orderId}
+      `);
 
       console.log(`[SellerSaleNotificationService] Notification sent successfully for order ${order.id} to Telegram ID ${store.telegramNotificationId}`);
 
       return { success: true, notified: true };
     } catch (err: any) {
       console.error("[SellerSaleNotificationService] Error sending seller notification:", err?.message || err);
-      // Non-blocking catch
+      if (claimAcquired) {
+        // Telegram failed -> RELEASE claim lock so retries can try again!
+        await this.releaseClaimLock(orderId);
+      }
       return { success: false, error: err?.message || "Failed to send notification" };
+    }
+  }
+
+  private static async releaseClaimLock(orderId: string): Promise<void> {
+    try {
+      await db.execute(sql`
+        UPDATE orders
+        SET seller_notification_claimed_at = NULL
+        WHERE id = ${orderId}
+      `);
+    } catch (releaseErr) {
+      console.error(`[SellerSaleNotificationService] Failed to release claim lock for order ${orderId}:`, releaseErr);
     }
   }
 }
