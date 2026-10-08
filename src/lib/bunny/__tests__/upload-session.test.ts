@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BunnyStreamService } from "../stream";
-import { TusVideoUploader } from "../client-upload";
+import { TusVideoUploader, getDynamicChunkSize } from "../client-upload";
 
 describe("Bunny Stream Direct Upload Signature & TUS Security", () => {
   const mockLibraryId = "763931";
@@ -37,7 +37,20 @@ describe("Bunny Stream Direct Upload Signature & TUS Security", () => {
     expect(typeof uploader.abort).toBe("function");
     expect(() => uploader.abort()).not.toThrow();
   });
+
+  it("calculates dynamic TUS chunk size accurately based on file size", () => {
+    const MB = 1024 * 1024;
+    // Small files < 100MB -> 10MB chunk
+    expect(getDynamicChunkSize(50 * MB)).toBe(10 * MB);
+    // Medium files 100MB - 500MB -> 25MB chunk
+    expect(getDynamicChunkSize(250 * MB)).toBe(25 * MB);
+    // Large files > 500MB (e.g. 1.7GB = 1740.8MB) -> 50MB chunk
+    expect(getDynamicChunkSize(1740.8 * MB)).toBe(50 * MB);
+    // Fallback for zero or missing size -> 50MB chunk
+    expect(getDynamicChunkSize(0)).toBe(50 * MB);
+  });
 });
+
 
 describe("Upload Session Payload & Validation Rules", () => {
   function validateUploadInput(body: {
