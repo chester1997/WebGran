@@ -3,6 +3,7 @@ import { accesses, orders, orderItems, products, telegramCustomers, telegramBots
 import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramDeliveryService } from "./telegram-delivery-service";
+import { SellerSaleNotificationService } from "@/lib/notifications/seller-sale-notification-service";
 
 export interface DeliveryResult {
   accessId: string;
@@ -108,6 +109,13 @@ export class AccessDeliveryService {
       );
 
       results.push(deliveryRes);
+    }
+
+    // Trigger seller sale notification asynchronously / non-blocking
+    try {
+      await SellerSaleNotificationService.notifySellerOfSale(orderId);
+    } catch (err) {
+      console.error("[AccessDeliveryService] Seller notification trigger failed:", err);
     }
 
     return results;

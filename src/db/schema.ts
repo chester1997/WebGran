@@ -59,6 +59,7 @@ export const stores = pgTable('stores', {
   floatingNotificationsDisplayDuration: integer('floating_notifications_display_duration').default(5).notNull(),
   floatingNotificationsIntervalMin: integer('floating_notifications_interval_min').default(15).notNull(),
   floatingNotificationsIntervalMax: integer('floating_notifications_interval_max').default(30).notNull(),
+  telegramNotificationId: text('telegram_notification_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -182,6 +183,7 @@ export const orders = pgTable('orders', {
   netAmount: decimal('net_amount', { precision: 10, scale: 2 }).default('0'),
   couponCode: text('coupon_code'),
   paidAt: timestamp('paid_at'),
+  sellerNotificationSentAt: timestamp('seller_notification_sent_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({

@@ -3,7 +3,7 @@
 import crypto from "crypto";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { telegramBots } from "@/db/schema";
+import { stores, telegramBots } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/encryption";
@@ -161,4 +161,24 @@ export async function deleteBotAction(botId: string) {
 
   await db.delete(telegramBots).where(eq(telegramBots.id, botId));
   revalidatePath("/seller/store");
+}
+
+export async function saveTelegramNotificationIdAction(telegramNotificationId: string) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  const cleanId = (telegramNotificationId || "").trim();
+
+  if (cleanId && !/^-?\d+$/.test(cleanId)) {
+    throw new Error("O Telegram ID deve conter apenas números (ex: 123456789).");
+  }
+
+  await db
+    .update(stores)
+    .set({ telegramNotificationId: cleanId || null, updatedAt: new Date() })
+    .where(and(eq(stores.id, store.id), eq(stores.ownerId, seller.id)));
+
+  revalidatePath("/seller/store");
+  return { success: true, telegramNotificationId: cleanId };
 }
