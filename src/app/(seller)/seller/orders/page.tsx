@@ -70,8 +70,8 @@ export default async function OrdersPage() {
         </div>
       </div>
 
-      {/* Orders List */}
-      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
+      {/* Orders List - Desktop Table */}
+      <div className="hidden md:block bg-[#121212] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -185,6 +185,96 @@ export default async function OrdersPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Orders List - Mobile Cards View */}
+      <div className="block md:hidden space-y-3">
+        {items.length === 0 ? (
+          <div className="bg-[#121212] border border-white/5 rounded-2xl p-8 text-center">
+            <div className="w-12 h-12 rounded-xl bg-zinc-800/50 flex items-center justify-center mx-auto mb-3 border border-white/5">
+              <ShoppingCart className="w-6 h-6 text-zinc-500" />
+            </div>
+            <p className="text-zinc-300 font-medium text-sm mb-1">Nenhum pedido ainda</p>
+            <p className="text-zinc-500 text-xs">As compras realizadas no seu Mini App aparecerão aqui.</p>
+          </div>
+        ) : (
+          items.map((order) => {
+            const access = order.accesses?.[0];
+            return (
+              <div 
+                key={order.id} 
+                className="bg-[#121214] border border-white/5 rounded-2xl p-4 space-y-3 shadow-lg"
+              >
+                {/* Header: ID + Status */}
+                <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-3">
+                  <span className="text-zinc-300 font-mono text-xs bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
+                    #{order.id.slice(0, 8)}
+                  </span>
+                  {order.status === 'paid' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> APROVADO
+                    </span>
+                  ) : order.status === 'pending' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div> PENDENTE
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> CANCELADO
+                    </span>
+                  )}
+                </div>
+
+                {/* Body Details */}
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span className="text-zinc-500">Cliente</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/20 font-bold text-[9px]">
+                        {order.customer?.photoUrl ? (
+                          <img src={order.customer.photoUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          (order.customer?.firstName?.[0] || 'U').toUpperCase()
+                        )}
+                      </div>
+                      <span className="text-zinc-200 font-medium truncate max-w-[140px]">
+                        {order.customer ? `${order.customer.firstName} ${order.customer.lastName || ''}`.trim() : 'Desconhecido'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span className="text-zinc-500">Data</span>
+                    <span className="text-zinc-300">
+                      {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span className="text-zinc-500">Total</span>
+                    <span className="text-emerald-400 font-semibold text-sm">
+                      R$ {Number(order.total).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+
+                  {access && (
+                    <div className="flex items-center justify-between pt-1 border-t border-white/5 text-zinc-400">
+                      <span className="text-zinc-500">Entrega</span>
+                      {access.deliveryStatus === 'DELIVERED' || access.status === 'ACTIVE' ? (
+                        <span className="text-emerald-400 font-medium">🟢 Entregue</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-400 font-medium">🔴 Falhou</span>
+                          <RetryDeliveryButton accessId={access.id} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

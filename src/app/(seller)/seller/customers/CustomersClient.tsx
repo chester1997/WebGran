@@ -140,9 +140,90 @@ export default function CustomersClient({ customers, stats }: Props) {
         </div>
       </div>
 
-      {/* Customers Table */}
+      {/* Customers List Container (Mobile Cards + Desktop Table) */}
       <div className="bg-[#121214] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden p-4 space-y-3 divide-y divide-white/5">
+          {filteredCustomers.length === 0 ? (
+            <div className="py-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-zinc-800/40 flex items-center justify-center mx-auto mb-3 border border-white/5">
+                <Users className="w-7 h-7 text-zinc-500" />
+              </div>
+              <p className="text-zinc-300 font-semibold text-sm mb-1">Nenhum cliente encontrado</p>
+              <p className="text-zinc-500 text-xs max-w-xs mx-auto">
+                {searchQuery ? "Nenhum resultado corresponde à sua busca." : "Quando os usuários interagirem com seu Mini App no Telegram, eles aparecerão aqui."}
+              </p>
+            </div>
+          ) : (
+            filteredCustomers.map((c) => {
+              const initial = (c.firstName?.[0] || c.username?.[0] || 'U').toUpperCase();
+              const fullName = `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Usuário Telegram";
+
+              return (
+                <div key={c.id} className="pt-3 first:pt-0 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {c.photoUrl ? (
+                        <img src={c.photoUrl} alt={fullName} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20 font-bold shrink-0 text-xs">
+                          {initial}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-white font-bold text-sm truncate">{fullName}</p>
+                        {c.username ? (
+                          <a 
+                            href={`https://t.me/${c.username}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-1 text-red-400 hover:text-red-300 font-semibold text-xs mt-0.5"
+                          >
+                            <span>@{c.username}</span>
+                            <ExternalLink className="w-3 h-3 opacity-70" />
+                          </a>
+                        ) : (
+                          <span className="text-zinc-500 text-xs font-mono">Sem @username</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-zinc-400 uppercase shrink-0">
+                      {c.languageCode || 'pt-br'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-[#16161A] p-3 rounded-xl border border-white/5">
+                    <div>
+                      <span className="text-zinc-500 text-[10px] uppercase font-mono block">Telegram ID</span>
+                      <span className="text-zinc-300 font-mono font-medium">{c.telegramUserId}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 text-[10px] uppercase font-mono block">Data Cadastro</span>
+                      <span className="text-zinc-300 font-medium">
+                        {new Date(c.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedCustomer(c)}
+                      className="w-full sm:w-auto bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border-white/10 text-xs py-2 rounded-xl cursor-pointer"
+                    >
+                      Ver Detalhes
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5 text-zinc-400 text-[11px] font-semibold uppercase tracking-wider bg-[#18181C]">

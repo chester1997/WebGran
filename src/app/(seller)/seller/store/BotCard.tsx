@@ -42,16 +42,28 @@ export function BotCard({ store, bot }: { store: any; bot: any }) {
     <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col h-full">
       {/* Card Header */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/5">
-          {bot.photoUrl ? (
-            <img src={bot.photoUrl} className="w-full h-full object-cover" alt={bot.displayName || bot.username} />
-          ) : store.logoUrl ? (
-            <img src={store.logoUrl} className="w-full h-full object-cover" alt="Logo" />
-          ) : (
-            <div className="w-full h-full bg-[#1A1A1E] flex items-center justify-center">
-              <Bot className="w-6 h-6 text-blue-400" />
-            </div>
-          )}
+        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/5 bg-[#1A1A1E] relative">
+          <img 
+            src={`/api/telegram/bot-avatar?botId=${bot.id}`} 
+            className="w-full h-full object-cover" 
+            alt={bot.displayName || bot.username}
+            onError={(e) => {
+              // Fallback to store logo or Bot icon if proxy fails
+              const target = e.currentTarget;
+              if (store.logoUrl && target.src !== store.logoUrl) {
+                target.src = store.logoUrl;
+              } else {
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent && !parent.querySelector('.bot-fallback-icon')) {
+                  const fallbackDiv = document.createElement('div');
+                  fallbackDiv.className = 'w-full h-full bg-[#1A1A1E] flex items-center justify-center bot-fallback-icon';
+                  fallbackDiv.innerHTML = `<svg class="w-6 h-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>`;
+                  parent.appendChild(fallbackDiv);
+                }
+              }
+            }}
+          />
         </div>
         <div className="min-w-0">
           <h3 className="font-bold text-white text-base uppercase leading-tight truncate">{store.name}</h3>

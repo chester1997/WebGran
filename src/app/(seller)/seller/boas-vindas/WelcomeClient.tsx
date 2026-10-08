@@ -94,7 +94,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
       </div>
 
       {/* Card 1: Banners do Mini App */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-6 space-y-5 shadow-xl relative overflow-hidden">
+      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
         <div>
           <h2 className="text-base font-semibold text-white">Banners do Mini App</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -102,14 +102,26 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
           </p>
         </div>
 
+        <div className="bg-blue-600/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+          <span>O <strong>Banner 1 (principal)</strong> será enviado automaticamente como a imagem da mensagem de boas-vindas do seu bot no Telegram.</span>
+        </div>
+
         <div className="space-y-4">
           {banners.map((bannerUrl, idx) => (
             <div key={idx} className="space-y-2">
-              <label className="text-xs text-zinc-400 font-medium block">
-                {idx === 0 ? "Banner 1 (principal)" : `Banner ${idx + 1}`}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-zinc-400 font-medium block">
+                  {idx === 0 ? "Banner 1 (principal)" : `Banner ${idx + 1}`}
+                </label>
+                {idx === 0 && (
+                  <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-medium border border-blue-500/30">
+                    📷 Enviado no Bot Telegram
+                  </span>
+                )}
+              </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="relative flex-1">
                   <input
                     type="text"
@@ -123,39 +135,39 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Placeholder for future file upload integration if needed
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.accept = "image/*";
-                    input.onchange = (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // Create object URL for local preview
-                        const url = URL.createObjectURL(file);
-                        handleBannerChange(idx, url);
-                      }
-                    };
-                    input.click();
-                  }}
-                  className="px-4 py-2.5 bg-[#1C1C22] hover:bg-[#25252E] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 flex items-center gap-2 transition-colors shrink-0"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Enviar</span>
-                </button>
-
-                {banners.length > 1 && (
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => removeBannerField(idx)}
-                    className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-colors shrink-0"
-                    title="Remover banner"
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = (e: any) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          handleBannerChange(idx, url);
+                        }
+                      };
+                      input.click();
+                    }}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-[#1C1C22] hover:bg-[#25252E] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-colors shrink-0"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Enviar</span>
                   </button>
-                )}
+
+                  {banners.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeBannerField(idx)}
+                      className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-colors shrink-0"
+                      title="Remover banner"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -165,7 +177,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
           <button
             type="button"
             onClick={addBannerField}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#18181E] hover:bg-[#202028] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#18181E] hover:bg-[#202028] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Adicionar banner</span>
@@ -174,7 +186,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
       </div>
 
       {/* Card 2: Mensagem de boas-vindas no bot */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-6 space-y-4 shadow-xl">
+      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
         <div>
           <h2 className="text-base font-semibold text-white">Mensagem de boas-vindas no bot</h2>
         </div>
@@ -194,8 +206,13 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
           />
 
           <p className="text-xs text-zinc-500">
-            Enviada quando o cliente enviar qualquer mensagem ao bot. Use <code className="bg-white/10 text-zinc-300 px-1.5 py-0.5 rounded font-mono">{`{nome}`}</code> para incluir o primeiro nome do cliente automaticamente.
+            Enviada quando o cliente iniciar ou mandar mensagem ao bot. Use <code className="bg-white/10 text-zinc-300 px-1.5 py-0.5 rounded font-mono">{`{nome}`}</code> para incluir o primeiro nome do cliente automaticamente.
           </p>
+
+          <div className="pt-2 flex items-center gap-2 text-xs text-zinc-400 bg-white/[0.02] p-3 rounded-xl border border-white/5">
+            <span className="text-base">📷</span>
+            <span>Quando houver um banner principal configurado acima, ele será enviado em <strong>uma única mensagem com esta legenda</strong>.</span>
+          </div>
         </div>
       </div>
 
