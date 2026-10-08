@@ -96,29 +96,27 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
       {/* Card 1: Banners do Mini App */}
       <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
         <div>
-          <h2 className="text-base font-semibold text-white">Banners do Mini App</h2>
+          <h2 className="text-base font-semibold text-white">Banner do Mini App</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Até 5 imagens em carrossel — tamanho recomendado: <span className="font-mono text-zinc-300">1200 × 400 px (proporção 3:1)</span>
+            Imagem do Mini App e do Bot — tamanho recomendado: <span className="font-mono text-zinc-300">1200 × 400 px (proporção 3:1)</span>
           </p>
         </div>
 
         <div className="bg-blue-600/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
-          <span>O <strong>Banner 1 (principal)</strong> será enviado automaticamente como a imagem da mensagem de boas-vindas do seu bot no Telegram.</span>
+          <span>Este banner será enviado automaticamente junto com a mensagem de boas-vindas do seu bot no Telegram.</span>
         </div>
 
         <div className="space-y-4">
-          {banners.map((bannerUrl, idx) => (
+          {banners.slice(0, 1).map((bannerUrl, idx) => (
             <div key={idx} className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-zinc-400 font-medium block">
-                  {idx === 0 ? "Banner 1 (principal)" : `Banner ${idx + 1}`}
+                  Banner (imagem principal)
                 </label>
-                {idx === 0 && (
-                  <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-medium border border-blue-500/30">
-                    📷 Enviado no Bot Telegram
-                  </span>
-                )}
+                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-medium border border-blue-500/30">
+                  📷 Enviado no Bot Telegram
+                </span>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -126,7 +124,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                   <input
                     type="text"
                     value={bannerUrl}
-                    onChange={(e) => handleBannerChange(idx, e.target.value)}
+                    onChange={(e) => handleBannerChange(0, e.target.value)}
                     placeholder="https://i.ibb.co/..."
                     className="w-full bg-[#16161A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/60 transition-all pr-10"
                   />
@@ -146,7 +144,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                         const file = e.target.files?.[0];
                         if (file) {
                           const url = URL.createObjectURL(file);
-                          handleBannerChange(idx, url);
+                          handleBannerChange(0, url);
                         }
                       };
                       input.click();
@@ -156,33 +154,11 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                     <Upload className="w-3.5 h-3.5" />
                     <span>Enviar</span>
                   </button>
-
-                  {banners.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeBannerField(idx)}
-                      className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-colors shrink-0"
-                      title="Remover banner"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
-
-        {banners.length < 5 && (
-          <button
-            type="button"
-            onClick={addBannerField}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#18181E] hover:bg-[#202028] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Adicionar banner</span>
-          </button>
-        )}
       </div>
 
       {/* Card 2: Mensagem de boas-vindas no bot */}
