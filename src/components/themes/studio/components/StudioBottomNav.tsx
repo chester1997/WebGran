@@ -38,152 +38,147 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
   return (
     <nav
       aria-label="Navegação inferior"
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))] px-3"
+      className="fixed bottom-0 left-0 right-0 z-50 w-full bg-[#111215]/95 dark:bg-[#0c0d10]/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] rounded-t-2xl pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto select-none"
     >
-      <div className="pointer-events-auto w-full max-w-[440px] mx-auto select-none relative">
-        {/* Floating Pill/Capsule Container - Liquid Glass Style */}
-        <div className="relative flex items-center justify-between h-[64px] px-2 rounded-[28px] bg-neutral-950/40 dark:bg-black/40 backdrop-blur-2xl border border-white/15 shadow-[0_10px_32px_0_rgba(0,0,0,0.5),inset_0_1px_1px_0_rgba(255,255,255,0.2)] overflow-visible">
-          
-          {/* 1. FAVORITOS */}
-          <Link
-            href={`${basePath}/favorites`}
-            prefetch={true}
-            onClick={(e) => handleNavClick(e, `${basePath}/favorites`)}
-            aria-label="Favoritos"
-            className="w-1/5 flex flex-col items-center justify-center py-1 transition-all duration-200 active:scale-95 group"
-          >
-            <div className="relative flex items-center justify-center">
-              <Heart
-                className={`w-5 h-5 transition-all duration-200 ${
-                  activeFavorites
-                    ? "text-red-500 fill-red-500/20 stroke-[2.2]"
-                    : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
-                }`}
-              />
-            </div>
-            <span
-              className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
-                activeFavorites ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+      <div className="max-w-[480px] mx-auto grid grid-cols-5 h-[64px] px-1 items-center relative">
+        
+        {/* 1. FAVORITOS */}
+        <Link
+          href={`${basePath}/favorites`}
+          prefetch={true}
+          onClick={(e) => handleNavClick(e, `${basePath}/favorites`)}
+          aria-label="Favoritos"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
+        >
+          <div className="relative flex items-center justify-center">
+            <Heart
+              className={`w-5 h-5 transition-all duration-200 ${
+                activeFavorites
+                  ? "text-red-500 fill-red-500/20 stroke-[2.2]"
+                  : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
-            >
-              Favoritos
-            </span>
-          </Link>
-
-          {/* 2. ACESSOS */}
-          <Link
-            href={`${basePath}/accesses`}
-            prefetch={true}
-            onClick={(e) => handleNavClick(e, `${basePath}/accesses`)}
-            aria-label="Acessos"
-            className="w-1/5 flex flex-col items-center justify-center py-1 transition-all duration-200 active:scale-95 group"
-          >
-            <div className="relative flex items-center justify-center">
-              <LibraryBig
-                className={`w-5 h-5 transition-all duration-200 ${
-                  activeAccesses
-                    ? "text-red-500 fill-red-500/20 stroke-[2.2]"
-                    : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
-                }`}
-              />
-            </div>
-            <span
-              className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
-                activeAccesses ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
-              }`}
-            >
-              Acessos
-            </span>
-          </Link>
-
-          {/* 3. INÍCIO (ELEVATED CIRCULAR BLACK BUTTON - EXACT CENTER, CLEAN DISCRETE SHADOW) */}
-          <div className="w-1/5 flex flex-col items-center justify-center relative -mt-5 z-20">
-            <Link
-              href={basePath}
-              prefetch={true}
-              onClick={(e) => handleNavClick(e, basePath)}
-              aria-label="Início"
-              className="flex flex-col items-center justify-center group active:scale-95 transition-transform duration-200"
-            >
-              <div
-                className={`w-[56px] h-[56px] rounded-full bg-black border flex items-center justify-center transition-all duration-300 ${
-                  activeHome
-                    ? "border-red-500/70 shadow-[0_4px_14px_rgba(0,0,0,0.8)] scale-105"
-                    : "border-white/15 hover:border-red-500/50 shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
-                }`}
-              >
-                <Home
-                  className={`w-6 h-6 stroke-[2.2] transition-colors duration-200 ${
-                    activeHome
-                      ? "text-red-500"
-                      : "text-red-500/80 group-hover:text-red-500"
-                  }`}
-                />
-              </div>
-              <span
-                className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
-                  activeHome ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
-                }`}
-              >
-                Início
-              </span>
-            </Link>
+            />
           </div>
-
-          {/* 4. BUSCA */}
-          <Link
-            href={`${basePath}/search`}
-            prefetch={true}
-            onClick={(e) => handleNavClick(e, `${basePath}/search`)}
-            aria-label="Busca"
-            className="w-1/5 flex flex-col items-center justify-center py-1 transition-all duration-200 active:scale-95 group"
+          <span
+            className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
+              activeFavorites ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+            }`}
           >
-            <div className="relative flex items-center justify-center">
-              <Search
-                className={`w-5 h-5 transition-all duration-200 ${
-                  activeSearch
-                    ? "text-red-500 stroke-[2.2]"
-                    : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
+            Favoritos
+          </span>
+        </Link>
+
+        {/* 2. ACESSOS */}
+        <Link
+          href={`${basePath}/accesses`}
+          prefetch={true}
+          onClick={(e) => handleNavClick(e, `${basePath}/accesses`)}
+          aria-label="Acessos"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
+        >
+          <div className="relative flex items-center justify-center">
+            <LibraryBig
+              className={`w-5 h-5 transition-all duration-200 ${
+                activeAccesses
+                  ? "text-red-500 fill-red-500/20 stroke-[2.2]"
+                  : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
+              }`}
+            />
+          </div>
+          <span
+            className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
+              activeAccesses ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+            }`}
+          >
+            Acessos
+          </span>
+        </Link>
+
+        {/* 3. INÍCIO (ELEVATED CIRCULAR BLACK BUTTON - EXACT CENTER) */}
+        <div className="flex flex-col items-center justify-center relative -mt-4 z-20">
+          <Link
+            href={basePath}
+            prefetch={true}
+            onClick={(e) => handleNavClick(e, basePath)}
+            aria-label="Início"
+            className="flex flex-col items-center justify-center group active:scale-95 transition-transform duration-200"
+          >
+            <div
+              className={`w-[48px] h-[48px] rounded-full bg-black border flex items-center justify-center transition-all duration-200 ${
+                activeHome
+                  ? "border-red-500/80 shadow-[0_4px_16px_rgba(0,0,0,0.8)] scale-105"
+                  : "border-white/15 hover:border-red-500/50 shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
+              }`}
+            >
+              <Home
+                className={`w-5 h-5 stroke-[2.2] transition-colors duration-200 ${
+                  activeHome ? "text-red-500" : "text-red-500/80 group-hover:text-red-500"
                 }`}
               />
             </div>
             <span
-              className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
-                activeSearch ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+              className={`text-[10px] font-medium mt-0.5 transition-colors duration-200 ${
+                activeHome ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
               }`}
             >
-              Busca
+              Início
             </span>
           </Link>
-
-          {/* 5. CARRINHO */}
-          <Link
-            href={`${basePath}/cart`}
-            prefetch={true}
-            onClick={(e) => handleNavClick(e, `${basePath}/cart`)}
-            aria-label="Carrinho"
-            className="w-1/5 flex flex-col items-center justify-center py-1 transition-all duration-200 active:scale-95 group relative"
-          >
-            <div className="relative flex items-center justify-center">
-              <ShoppingCart
-                className={`w-5 h-5 transition-all duration-200 ${
-                  activeCart
-                    ? "text-red-500 stroke-[2.2]"
-                    : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
-                }`}
-              />
-              <CartBadge active={activeCart} />
-            </div>
-            <span
-              className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
-                activeCart ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
-              }`}
-            >
-              Carrinho
-            </span>
-          </Link>
-
         </div>
+
+        {/* 4. BUSCA */}
+        <Link
+          href={`${basePath}/search`}
+          prefetch={true}
+          onClick={(e) => handleNavClick(e, `${basePath}/search`)}
+          aria-label="Busca"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
+        >
+          <div className="relative flex items-center justify-center">
+            <Search
+              className={`w-5 h-5 transition-all duration-200 ${
+                activeSearch
+                  ? "text-red-500 stroke-[2.2]"
+                  : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
+              }`}
+            />
+          </div>
+          <span
+            className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
+              activeSearch ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+            }`}
+          >
+            Busca
+          </span>
+        </Link>
+
+        {/* 5. CARRINHO */}
+        <Link
+          href={`${basePath}/cart`}
+          prefetch={true}
+          onClick={(e) => handleNavClick(e, `${basePath}/cart`)}
+          aria-label="Carrinho"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group relative"
+        >
+          <div className="relative flex items-center justify-center">
+            <ShoppingCart
+              className={`w-5 h-5 transition-all duration-200 ${
+                activeCart
+                  ? "text-red-500 stroke-[2.2]"
+                  : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
+              }`}
+            />
+            <CartBadge active={activeCart} />
+          </div>
+          <span
+            className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
+              activeCart ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+            }`}
+          >
+            Carrinho
+          </span>
+        </Link>
+
       </div>
     </nav>
   );
