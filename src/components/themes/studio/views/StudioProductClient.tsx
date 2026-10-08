@@ -43,6 +43,7 @@ interface StudioProductClientProps {
   storeSlug: string;
   product: Product;
   hasAccess: boolean;
+  accessId?: string | null;
   botUsername: string | null;
   recommendedProducts: Product[];
 }
@@ -51,6 +52,7 @@ export function StudioProductClient({
   storeSlug,
   product,
   hasAccess,
+  accessId,
   botUsername,
   recommendedProducts,
 }: StudioProductClientProps) {
@@ -63,6 +65,11 @@ export function StudioProductClient({
   const [productVideos, setProductVideos] = useState<any[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [clientHasAccess, setClientHasAccess] = useState(hasAccess);
+  const [currentAccessId, setCurrentAccessId] = useState<string | null>(accessId || null);
+
+  // Telegram Direct Access state
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramError, setTelegramError] = useState<string | null>(null);
 
   // Direct Checkout & Pix states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -82,6 +89,10 @@ export function StudioProductClient({
   useEffect(() => {
     setClientHasAccess(hasAccess);
   }, [hasAccess]);
+
+  useEffect(() => {
+    setCurrentAccessId(accessId || null);
+  }, [accessId]);
 
   useEffect(() => {
     try {
@@ -135,6 +146,9 @@ export function StudioProductClient({
             setClientHasAccess(true);
             setIsPaid(true);
             setPixState(null);
+            if (data.accesses?.[0]?.id) {
+              setCurrentAccessId(data.accesses[0].id);
+            }
             clearInterval(interval);
           }
         }
@@ -144,6 +158,55 @@ export function StudioProductClient({
     }, 3000);
     return () => clearInterval(interval);
   }, [pixState?.orderId, clientHasAccess, storeSlug]);
+
+  const handleOpenTelegramAccess = async () => {
+    if (!currentAccessId) {
+      router.push(`/miniapp/${storeSlug}/accesses`);
+      return;
+    }
+
+    try {
+      setTelegramLoading(true);
+      setTelegramError(null);
+
+      const res = await fetch("/api/telegram/access/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessId: currentAccessId, storeSlug }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setTelegramError(data.error || data.message || "Não foi possível abrir o acesso no momento.");
+        return;
+      }
+
+      if (data.destinationUrl) {
+        openLink(data.destinationUrl);
+      } else {
+        setTelegramError("Link de acesso indisponível.");
+      }
+    } catch (err) {
+      console.error("[StudioProductClient] Open Telegram Access error:", err);
+      setTelegramError("Erro de conexão ao abrir o Telegram.");
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  const openLink = (url: string) => {
+    if (typeof window !== "undefined") {
+      const tgWebApp = (window as any).Telegram?.WebApp;
+      if (tgWebApp && typeof tgWebApp.openTelegramLink === "function" && url.includes("t.me")) {
+        tgWebApp.openTelegramLink(url);
+      } else if (tgWebApp && typeof tgWebApp.openLink === "function") {
+        tgWebApp.openLink(url);
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    }
+  };
 
   const handleDirectBuy = async () => {
     setIsProcessing(true);
@@ -507,20 +570,49 @@ export function StudioProductClient({
               )
             ) : (
               /* COMPROU - OUTROS TIPOS DE ENTREGA (Telegram / External) */
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center space-y-3">
-                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
-                  <Check className="w-4 h-4" />
-                  <span>Acesso Confirmado</span>
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#111214] border border-zinc-200 dark:border-white/10 space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                    <Check className="w-4 h-4 stroke-[2.5]" />
+                    <span>Acesso Confirmado</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                    ● Ativo
+                  </span>
                 </div>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                  Seu acesso foi liberado com sucesso. Clique abaixo para visualizar seus acessos ativos.
+
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  Seu acesso foi liberado com sucesso. Clique no botão abaixo para entrar diretamente no seu conteúdo.
                 </p>
-                <Link
-                  href={`/miniapp/${storeSlug}/accesses`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all"
+
+                {telegramError && (
+                  <p className="text-xs text-red-400 font-medium bg-red-950/60 p-2.5 rounded-lg border border-red-800/40">
+                    {telegramError}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleOpenTelegramAccess}
+                  disabled={telegramLoading}
+                  className="w-full bg-[#229ED9] hover:bg-[#1a8bc0] active:scale-95 disabled:opacity-50 text-white font-bold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
                 >
-                  Ver Meus Acessos
-                </Link>
+                  {telegramLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Obtendo acesso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.09 13.843l-2.963-.924c-.644-.203-.657-.644.136-.953l11.57-4.461c.537-.194 1.006.131.832.916h.029z"/>
+                      </svg>
+                      <span>
+                        {product.deliveryType === "external" ? "Acessar Conteúdo" : "Entrar no Grupo Telegram"}
+                      </span>
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>

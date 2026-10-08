@@ -124,6 +124,7 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
         compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : null,
       }}
       hasAccess={hasAccess}
+      accessId={accessRecord?.id || null}
       botUsername={botUsername}
       recommendedProducts={recommendedProducts.map(p => ({
         ...p,
