@@ -91,14 +91,12 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
             <span>Salvar alterações</span>
           )}
         </button>
-      </div>
-
-      {/* Card 1: Banners do Mini App */}
+      </div>      {/* Card 1: Banner de boas-vindas */}
       <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
         <div>
-          <h2 className="text-base font-semibold text-white">Banner do Mini App</h2>
+          <h2 className="text-base font-semibold text-white">Banner de boas-vindas</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Imagem do Mini App e do Bot — tamanho recomendado: <span className="font-mono text-zinc-300">1200 × 400 px (proporção 3:1)</span>
+            Imagem enviada junto com a mensagem de boas-vindas do seu bot no Telegram.
           </p>
         </div>
 
@@ -112,7 +110,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
             <div key={idx} className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-zinc-400 font-medium block">
-                  Banner (imagem principal)
+                  Banner de boas-vindas
                 </label>
                 <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-medium border border-blue-500/30">
                   📷 Enviado no Bot Telegram
@@ -198,7 +196,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
           <div className="pt-2 flex items-center gap-2 text-xs text-zinc-400 bg-white/[0.02] p-3 rounded-xl border border-white/5">
             <span className="text-base">📷</span>
-            <span>Quando houver um banner principal configurado acima, ele será enviado em <strong>uma única mensagem com esta legenda</strong>.</span>
+            <span>Quando houver um banner configurado acima, ele será enviado em <strong>uma única mensagem com esta legenda</strong>.</span>
           </div>
         </div>
       </div>
