@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sun, Moon } from "lucide-react";
 import { useTelegram } from "@/app/miniapp/Providers";
 
 interface StudioHeaderProps {
@@ -13,18 +12,13 @@ interface StudioHeaderProps {
 
 export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: _headerLogoUrl }: StudioHeaderProps) {
   const { user } = useTelegram();
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [cachedUser, setCachedUser] = useState<any>(null);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("miniapp-theme") as "dark" | "light" | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      const isLight = document.documentElement.classList.contains("light");
-      setTheme(isLight ? "light" : "dark");
-    }
+    // Force Dark Mode by default for all users
+    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("light");
 
     if (!user && typeof window !== "undefined") {
       try {
@@ -35,19 +29,6 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
       } catch (_e) {}
     }
   }, [user, storeSlug]);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    localStorage.setItem("miniapp-theme", nextTheme);
-    if (nextTheme === "light") {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-    } else {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-    }
-  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeUser = (user || cachedUser) as any;
@@ -78,21 +59,6 @@ export function StudioHeader({ storeSlug, storeName: _storeName, headerLogoUrl: 
             </span>
           </div>
         </Link>
-
-        {/* Right: Light / Dark Mode Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          type="button"
-          aria-label="Alternar tema"
-          title={theme === "dark" ? "Mudar para Modo Claro" : "Mudar para Modo Escuro"}
-          className="p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 transition-all duration-200 active:scale-95 flex items-center justify-center shrink-0"
-        >
-          {theme === "dark" ? (
-            <Sun className="w-4 h-4 text-amber-400" />
-          ) : (
-            <Moon className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
-          )}
-        </button>
       </div>
     </header>
   );

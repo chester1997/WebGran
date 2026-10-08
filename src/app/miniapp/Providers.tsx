@@ -158,32 +158,10 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
       const root = document.documentElement;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wa = waInstance || (window as any).Telegram?.WebApp;
-      const savedTheme = localStorage.getItem("miniapp-theme");
 
-      let isLight = false;
-      if (savedTheme) {
-        isLight = savedTheme === "light";
-      } else if (wa?.colorScheme) {
-        isLight = wa.colorScheme === "light";
-      } else if (wa?.themeParams?.bg_color) {
-        const hex = wa.themeParams.bg_color.replace("#", "");
-        if (hex.length === 6) {
-          const r = parseInt(hex.substring(0, 2), 16);
-          const g = parseInt(hex.substring(2, 4), 16);
-          const b = parseInt(hex.substring(4, 6), 16);
-          isLight = (r * 299 + g * 587 + b * 114) / 1000 >= 128;
-        }
-      } else if (typeof window !== "undefined" && window.matchMedia) {
-        isLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-      }
-
-      if (isLight) {
-        root.classList.add("light");
-        root.classList.remove("dark");
-      } else {
-        root.classList.add("dark");
-        root.classList.remove("light");
-      }
+      // Always force dark mode as standard for all users
+      root.classList.add("dark");
+      root.classList.remove("light");
 
       if (wa?.themeParams) {
         if (wa.themeParams.bg_color) root.style.setProperty("--tg-theme-bg-color", wa.themeParams.bg_color);
