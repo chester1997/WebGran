@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock, PlayCircle, Play, Loader2 } from "lucide-react";
@@ -8,6 +8,8 @@ import { AddToCartButton } from "../components/AddToCartButton";
 import { HorizontalCarousel } from "../components/HorizontalCarousel";
 import { ProductCard } from "../components/ProductCard";
 import { getProductBadge } from "@/lib/product-badge";
+import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
+import { PixPaymentCard } from "@/components/payments/PixPaymentCard";
 
 interface Product {
   id: string;
@@ -57,10 +59,22 @@ export function StudioProductClient({
   const [copied, setCopied] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  // Product Videos state for buyers with access
+  // Product Videos state & client access state
   const [productVideos, setProductVideos] = useState<any[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [clientHasAccess, setClientHasAccess] = useState(hasAccess);
+
+  // Direct Checkout & Pix states
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pixState, setPixState] = useState<{
+    orderId: string;
+    qrCode: string;
+    qrCodeBase64: string;
+    expiresAt: string;
+    amount: number;
+  } | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
 
   // Storage key for Favorites
   const favoritesKey = `webgran_favorites_${storeSlug}`;
@@ -83,7 +97,8 @@ export function StudioProductClient({
     }
   }, [favoritesKey, product.id]);
 
-  useEffect(() => {
+  const fetchVideos = useCallback(() => {
+    if (!clientHasAccess) return;
     setLoadingVideos(true);
     fetch(`/api/miniapp/products/${product.id}/videos?storeSlug=${encodeURIComponent(storeSlug)}`, {
       headers: {
@@ -94,7 +109,6 @@ export function StudioProductClient({
       .then((data) => {
         if (data.success && Array.isArray(data.videos)) {
           setProductVideos(data.videos);
-          setClientHasAccess(true);
         }
       })
       .catch((err) => {
@@ -103,7 +117,68 @@ export function StudioProductClient({
       .finally(() => {
         setLoadingVideos(false);
       });
-  }, [product.id, storeSlug]);
+  }, [clientHasAccess, product.id, storeSlug]);
+
+  useEffect(() => {
+    fetchVideos();
+  }, [fetchVideos]);
+
+  // Poll Order Status when PIX is active for direct purchase
+  useEffect(() => {
+    if (!pixState?.orderId || clientHasAccess) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/orders/${pixState.orderId}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "paid") {
+            setClientHasAccess(true);
+            setIsPaid(true);
+            setPixState(null);
+            clearInterval(interval);
+          }
+        }
+      } catch (err) {
+        console.error("Error polling order status:", err);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [pixState?.orderId, clientHasAccess, storeSlug]);
+
+  const handleDirectBuy = async () => {
+    setIsProcessing(true);
+    setErrorMessage(null);
+    try {
+      const result = await createCheckoutSession(
+        storeSlug,
+        [{ id: product.id, quantity: 1 }]
+      );
+
+      if (result.success) {
+        if (result.pix) {
+          setPixState({
+            orderId: result.orderId,
+            qrCode: result.pix.qrCode,
+            qrCodeBase64: result.pix.qrCodeBase64,
+            expiresAt: result.pix.expiresAt,
+            amount: Number(product.price),
+          });
+        } else if (result.isDemoPaid) {
+          setClientHasAccess(true);
+          setIsPaid(true);
+        } else {
+          router.push(`/miniapp/${storeSlug}/accesses`);
+        }
+      } else {
+        setErrorMessage(result.error || "Não foi possível gerar o pagamento no momento.");
+      }
+    } catch (err: any) {
+      console.error("[StudioProductClient] Checkout error:", err);
+      setErrorMessage("Erro de conexão. Tente novamente em alguns instantes.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const toggleMyList = () => {
     try {
@@ -258,7 +333,7 @@ export function StudioProductClient({
           </div>
         )}
 
-        {/* PRIMARY ACTION BUTTON (BUY VS ACCESS) */}
+        {/* PRIMARY ACTION AREA (BUY / PIX / ACCESS) */}
         <div className="pt-1 space-y-3">
           {clientHasAccess ? (
             <Link
@@ -268,20 +343,43 @@ export function StudioProductClient({
               <Check className="w-5 h-5 stroke-[2.5]" />
               <span>Acesso Liberado</span>
             </Link>
+          ) : pixState ? (
+            <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl space-y-4">
+              <PixPaymentCard
+                pixCode={pixState.qrCode}
+                qrCodeBase64={pixState.qrCodeBase64}
+                amount={pixState.amount}
+                orderId={pixState.orderId}
+                status="pending"
+                onBack={() => setPixState(null)}
+              />
+            </div>
           ) : (
-            <AddToCartButton 
-              storeSlug={storeSlug}
-              product={{
-                id: product.id,
-                slug: product.slug,
-                title: product.title,
-                price: Number(product.price),
-                coverUrl: product.coverUrl,
-                storeId: (product as any).storeId,
-                compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : undefined
-              }}
-              variant="full"
-            />
+            <div className="space-y-2">
+              {errorMessage && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs text-center font-medium">
+                  {errorMessage}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleDirectBuy}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-red-600/30 transition-all text-sm active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Gerando pagamento...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 fill-white" />
+                    <span>Comprar agora por R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
           {/* ACTIONS ROW (FAVORITOS & COMPARTILHAR) */}
@@ -320,7 +418,7 @@ export function StudioProductClient({
         </div>
 
         {/* VÍDEOS DA ENTREGA SECTION */}
-        {(clientHasAccess || product.deliveryType === "product_video" || productVideos.length > 0) && (
+        {clientHasAccess ? (
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
@@ -335,12 +433,12 @@ export function StudioProductClient({
                 Carregando vídeos...
               </div>
             ) : productVideos.length > 0 ? (
+              /* ESTADO C — CONTEÚDO DISPONÍVEL */
               <div className="space-y-2.5">
                 {productVideos.map((vid, idx) => {
                   const isCompleted = vid.progress?.completed;
                   const posSecs = vid.progress?.positionSeconds || 0;
                   const hasStarted = posSecs > 0;
-                  const progressPercent = vid.progress?.progressPercent || 0;
 
                   return (
                     <Link
@@ -395,6 +493,7 @@ export function StudioProductClient({
                 })}
               </div>
             ) : (
+              /* ESTADO B — COMPROU / CONTEÚDO EM PREPARAÇÃO */
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1.5">
                 <div className="text-xs font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
                   <span>⚡</span>
@@ -406,7 +505,22 @@ export function StudioProductClient({
               </div>
             )}
           </div>
-        )}
+        ) : product.deliveryType === "product_video" ? (
+          /* ESTADO A — NÃO COMPROU (Informacional) */
+          <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
+            <div className="flex items-center gap-2">
+              <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
+                ENTREGA EM VÍDEO
+              </h3>
+            </div>
+            <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 text-center space-y-1.5">
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                🎬 Após a confirmação do pagamento, seu conteúdo ficará disponível nesta área.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {/* DESCRIPTION SECTION */}
         {rawDescription && (
