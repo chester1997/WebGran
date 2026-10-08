@@ -5,14 +5,19 @@ const sql = neon(process.env.DATABASE_URL!);
 
 async function main() {
   console.log("Ensuring seller notification columns in stores and orders tables...");
+  
   await sql`
     ALTER TABLE stores 
     ADD COLUMN IF NOT EXISTS telegram_notification_id text;
+  `;
 
+  await sql`
     ALTER TABLE orders 
     ADD COLUMN IF NOT EXISTS seller_notification_sent_at timestamp,
-    ADD COLUMN IF NOT EXISTS seller_notification_claimed_at timestamp;
+    ADD COLUMN IF NOT EXISTS seller_notification_claimed_at timestamp,
+    ADD COLUMN IF NOT EXISTS seller_notification_claim_token text;
   `;
+  
   console.log("Migration executed successfully!");
   process.exit(0);
 }

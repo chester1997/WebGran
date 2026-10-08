@@ -185,6 +185,7 @@ export const orders = pgTable('orders', {
   paidAt: timestamp('paid_at'),
   sellerNotificationSentAt: timestamp('seller_notification_sent_at'),
   sellerNotificationClaimedAt: timestamp('seller_notification_claimed_at'),
+  sellerNotificationClaimToken: text('seller_notification_claim_token'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({

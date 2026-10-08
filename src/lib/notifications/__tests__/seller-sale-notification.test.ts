@@ -30,6 +30,7 @@ vi.mock("@/db", () => ({
       if (queryStr.includes("seller_notification_claimed_at = NOW()")) {
         if (order && !order.sellerNotificationSentAt && !order.sellerNotificationClaimedAt) {
           order.sellerNotificationClaimedAt = new Date();
+          order.sellerNotificationClaimToken = "token-123";
           return [{ id: order.id }];
         }
         return [];
@@ -39,6 +40,7 @@ vi.mock("@/db", () => ({
         if (order) {
           order.sellerNotificationSentAt = new Date();
           order.sellerNotificationClaimedAt = null;
+          order.sellerNotificationClaimToken = null;
         }
         return [{ id: order?.id }];
       }
@@ -46,6 +48,7 @@ vi.mock("@/db", () => ({
       if (queryStr.includes("seller_notification_claimed_at = NULL")) {
         if (order) {
           order.sellerNotificationClaimedAt = null;
+          order.sellerNotificationClaimToken = null;
         }
         return [{ id: order?.id }];
       }
@@ -70,7 +73,7 @@ vi.mock("@/lib/telegram/bot", () => {
   };
 });
 
-describe("SellerSaleNotificationService & Concurrent Idempotency Suite (FASE 4)", () => {
+describe("SellerSaleNotificationService & Tokenized Concurrent Idempotency Suite", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSendMessage.mockResolvedValue({ message_id: 101 });
@@ -83,6 +86,7 @@ describe("SellerSaleNotificationService & Concurrent Idempotency Suite (FASE 4)"
         total: "6.00",
         sellerNotificationSentAt: null,
         sellerNotificationClaimedAt: null,
+        sellerNotificationClaimToken: null,
         paidAt: new Date("2026-10-06T22:05:00Z"),
         customer: {
           firstName: "Andriele",
@@ -157,7 +161,6 @@ describe("SellerSaleNotificationService & Concurrent Idempotency Suite (FASE 4)"
       SellerSaleNotificationService.notifySellerOfSale("order-123"),
     ]);
 
-    // One must succeed with notified=true, the other must skip
     const notifiedCount = [res1, res2].filter((r) => r.notified).length;
     const skippedCount = [res1, res2].filter((r) => r.skipped).length;
 

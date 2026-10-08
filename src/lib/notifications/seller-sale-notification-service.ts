@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { db } from "@/db";
 import { orders, orderItems, products, telegramBots, stores } from "@/db/schema";
 import { eq, and, sql, asc } from "drizzle-orm";
@@ -43,14 +44,28 @@ export function formatBRL(amount: number | string): string {
 export class SellerSaleNotificationService {
   /**
    * Sends Telegram sale notification message to the seller's configured Telegram ID.
-   * ATOMIC CONCURRENCY LOCK: Uses seller_notification_claimed_at atomic SQL update to prevent race conditions.
-   * TELEGRAM RETRY SAFE: If Telegram API fails, seller_notification_claimed_at is released back to NULL so retries can process.
+   *
+   * CONCURRENCY & LEASE STRATEGY:
+   * - Uses an atomic tokenized claim lock (`seller_notification_claim_token` crypto UUID).
+   * - Claim lease duration: 5 minutes (INTERVAL '5 minutes'). This aligns comfortably above HTTP request/retry timeouts
+   *   to prevent active, in-flight background tasks from losing their claim prematurely.
+   * - Prevents normal concurrent duplicate notifications (e.g. parallel webhook triggers).
+   *
+   * RETRY & FAILURE HANDLING:
+   * - Deterministic local/network errors BEFORE sending to Telegram safely release the claim token, allowing immediate retry.
+   * - Confirmation: Marks `seller_notification_sent_at` ONLY upon positive confirmation from the Telegram API.
+   *
+   * NETWORK BOUNDARY LIMITATION (No Exactly-Once Guarantee):
+   * - PostgreSQL controls local state; Telegram is an external API without distributed transaction / 2PC support.
+   * - If a network drop or crash occurs after Telegram accepts the request but before HTTP response/Postgres update,
+   *   a rare duplication could occur upon lease expiry. This is documented and accepted per standard distributed systems design.
    */
   static async notifySellerOfSale(orderId: string): Promise<SaleNotificationResult> {
+    const claimToken = crypto.randomUUID();
     let claimAcquired = false;
 
     try {
-      // 1. Initial quick check (in case already sent)
+      // 1. Initial quick check
       const initialOrder = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
       });
@@ -67,15 +82,16 @@ export class SellerSaleNotificationService {
         return { success: true, skipped: true, reason: "Notification already sent for this order." };
       }
 
-      // 2. ATOMIC DB CLAIM LOCK against concurrent executions
+      // 2. ATOMIC TOKENIZED CLAIM LOCK against concurrent executions (Lease: 5 minutes)
       const claimResult = await db.execute(sql`
         UPDATE orders
-        SET seller_notification_claimed_at = NOW()
+        SET seller_notification_claimed_at = NOW(),
+            seller_notification_claim_token = ${claimToken}
         WHERE id = ${orderId}
           AND seller_notification_sent_at IS NULL
           AND (
             seller_notification_claimed_at IS NULL 
-            OR seller_notification_claimed_at < NOW() - INTERVAL '2 minutes'
+            OR seller_notification_claimed_at < NOW() - INTERVAL '5 minutes'
           )
         RETURNING id
       `);
@@ -91,8 +107,8 @@ export class SellerSaleNotificationService {
       }
 
       if (!updated) {
-        console.log(`[SellerSaleNotificationService] Order ${orderId} already sent or claimed by another concurrent process. Skipping.`);
-        return { success: true, skipped: true, reason: "Already claimed or sent by another concurrent execution." };
+        console.log(`[SellerSaleNotificationService] Order ${orderId} already sent or claimed by another process. Skipping.`);
+        return { success: true, skipped: true, reason: "Already claimed or sent by another execution." };
       }
 
       claimAcquired = true;
@@ -107,7 +123,7 @@ export class SellerSaleNotificationService {
       });
 
       if (!order || order.status !== "paid") {
-        await this.releaseClaimLock(orderId);
+        await this.releaseClaimLock(orderId, claimToken);
         return { success: false, error: "Order not valid or not paid after acquiring claim lock." };
       }
 
@@ -117,7 +133,7 @@ export class SellerSaleNotificationService {
       });
 
       if (!store || !store.telegramNotificationId || !store.telegramNotificationId.trim()) {
-        await this.releaseClaimLock(orderId);
+        await this.releaseClaimLock(orderId, claimToken);
         return { success: true, skipped: true, reason: "Store has no Telegram notification ID configured." };
       }
 
@@ -159,7 +175,7 @@ export class SellerSaleNotificationService {
       }
 
       if (!botRecord || !botRecord.tokenEncrypted) {
-        await this.releaseClaimLock(orderId);
+        await this.releaseClaimLock(orderId, claimToken);
         console.warn(`[SellerSaleNotificationService] No active bot found for store ${order.storeId}. Cannot send notification.`);
         return { success: true, skipped: true, reason: "No active bot found for store." };
       }
@@ -194,12 +210,14 @@ export class SellerSaleNotificationService {
       const botService = new TelegramBotService(botToken);
       await botService.sendMessage(store.telegramNotificationId.trim(), messageText);
 
-      // 11. Confirm Permanent Success in DB
+      // 11. Confirm Permanent Success ONLY IF current claimToken still matches (prevents stale overwrites if thread hung)
       await db.execute(sql`
         UPDATE orders
         SET seller_notification_sent_at = NOW(),
-            seller_notification_claimed_at = NULL
+            seller_notification_claimed_at = NULL,
+            seller_notification_claim_token = NULL
         WHERE id = ${orderId}
+          AND seller_notification_claim_token = ${claimToken}
       `);
 
       console.log(`[SellerSaleNotificationService] Notification sent successfully for order ${order.id} to Telegram ID ${store.telegramNotificationId}`);
@@ -208,19 +226,21 @@ export class SellerSaleNotificationService {
     } catch (err: any) {
       console.error("[SellerSaleNotificationService] Error sending seller notification:", err?.message || err);
       if (claimAcquired) {
-        // Telegram failed -> RELEASE claim lock so retries can try again!
-        await this.releaseClaimLock(orderId);
+        // Release claim lock safely if this process still holds the token
+        await this.releaseClaimLock(orderId, claimToken);
       }
       return { success: false, error: err?.message || "Failed to send notification" };
     }
   }
 
-  private static async releaseClaimLock(orderId: string): Promise<void> {
+  private static async releaseClaimLock(orderId: string, claimToken: string): Promise<void> {
     try {
       await db.execute(sql`
         UPDATE orders
-        SET seller_notification_claimed_at = NULL
+        SET seller_notification_claimed_at = NULL,
+            seller_notification_claim_token = NULL
         WHERE id = ${orderId}
+          AND seller_notification_claim_token = ${claimToken}
       `);
     } catch (releaseErr) {
       console.error(`[SellerSaleNotificationService] Failed to release claim lock for order ${orderId}:`, releaseErr);
