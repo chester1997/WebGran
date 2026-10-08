@@ -165,20 +165,25 @@ export async function POST(req: NextRequest) {
       };
 
       const banners = welcomeAllowed ? ((store.welcomeBanners as string[]) || []) : [];
-      const primaryBanner = banners.find(b => b && b.trim() !== "");
+      let primaryBanner = banners.find(b => b && typeof b === "string" && b.trim() !== "");
 
       if (primaryBanner) {
+        primaryBanner = primaryBanner.trim();
+        console.log(`[TELEGRAM WEBHOOK] Attempting to send welcome photo to chatId=${chatId} using photo URL: ${primaryBanner}`);
         try {
-          await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard);
-        } catch (photoErr) {
-          console.error("Failed to send welcome photo, sending text message:", photoErr);
+          const photoResult = await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard);
+          console.log(`[TELEGRAM WEBHOOK] Welcome photo sent successfully to chatId=${chatId}. Result:`, photoResult);
+        } catch (photoErr: any) {
+          console.error(`[TELEGRAM WEBHOOK] Failed to send welcome photo (URL: ${primaryBanner}). Error:`, photoErr?.message || photoErr);
+          console.log(`[TELEGRAM WEBHOOK] Falling back to text-only welcome message for chatId=${chatId}`);
           await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
         }
       } else {
+        console.log(`[TELEGRAM WEBHOOK] No welcome banner configured. Sending text-only welcome message to chatId=${chatId}`);
         try {
           await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
-        } catch (msgErr) {
-          console.error("Failed to send welcome message:", msgErr);
+        } catch (msgErr: any) {
+          console.error(`[TELEGRAM WEBHOOK] Failed to send text welcome message to chatId=${chatId}:`, msgErr?.message || msgErr);
         }
       }
     }

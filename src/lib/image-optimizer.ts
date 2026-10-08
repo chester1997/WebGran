@@ -105,7 +105,8 @@ export async function optimizeBannerImage(
 }
 
 /**
- * Client-side helper: Optimizes image via Canvas AND uploads to Storage API
+ * Client-side helper: Optimizes image via Canvas AND uploads directly from browser to Bunny Storage CDN.
+ * The file binary NEVER passes through Vercel.
  */
 export async function uploadOptimizedImage(
   file: File,
@@ -117,28 +118,50 @@ export async function uploadOptimizedImage(
   optimizedSizeBytes: number;
   savedPercent: number;
 }> {
-  // 1. Optimize image locally in client canvas to WebP
+  // 1. Optimize image locally in client canvas to WebP Blob
   const optimized = await optimizeBannerImage(file, options);
+  
+  // Convert Data URL to binary Blob
+  const base64Data = optimized.dataUrl.split(',')[1] || '';
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const imageBlob = new Blob([byteArray], { type: 'image/webp' });
 
-  // 2. Send optimized WebP payload to storage upload API
-  const res = await fetch('/api/storage/upload', {
+  // 2. Request lightweight upload session metadata from backend
+  const sessionRes = await fetch('/api/storage/upload-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      dataUrl: optimized.dataUrl,
-      name: file.name,
-      type: 'image/webp',
-      entity: entityType,
+      fileName: file.name,
+      mimeType: 'image/webp',
+      fileSize: imageBlob.size,
+      entityType,
     }),
   });
 
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    throw new Error(data.error || 'Erro ao fazer upload da imagem para a CDN.');
+  const sessionData = await sessionRes.json();
+  if (!sessionRes.ok || !sessionData.success) {
+    throw new Error(sessionData.error || 'Erro ao gerar autorização de upload.');
+  }
+
+  // 3. Upload binary DIRECTLY from Browser to Bunny Storage CDN (Bypassing Vercel completely)
+  const uploadRes = await fetch(sessionData.uploadUrl, {
+    method: 'PUT',
+    headers: sessionData.headers,
+    body: imageBlob,
+  });
+
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text().catch(() => '');
+    throw new Error(`Falha no upload direto para Bunny Storage (${uploadRes.status}): ${errText}`);
   }
 
   return {
-    url: data.url,
+    url: sessionData.publicUrl,
     originalSizeBytes: optimized.originalSizeBytes,
     optimizedSizeBytes: optimized.optimizedSizeBytes,
     savedPercent: optimized.savedPercent,
