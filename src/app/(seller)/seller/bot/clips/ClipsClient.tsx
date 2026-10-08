@@ -68,8 +68,7 @@ interface ClipsClientProps {
   availableProducts?: ProductOption[];
 }
 
-const MAX_FILE_SIZE_MB = 4096;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 524,288,000 bytes
+
 
 export default function ClipsClient({ initialClips, initialStats, availableProducts = [] }: ClipsClientProps) {
   const [clipsList, setClipsList] = useState<ClipItem[]>(initialClips);
@@ -167,15 +166,6 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
     // Validation 1: MIME Type must be video
     if (!file.type || !file.type.toLowerCase().startsWith("video/")) {
       setUploadError("Selecione um arquivo de vídeo válido (MP4, MOV, WebM, etc.).");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setSelectedFile(null);
-      return;
-    }
-
-    // Validation 2: File Size must be <= 500MB
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      setUploadError(`Este arquivo ultrapassa o limite máximo de ${MAX_FILE_SIZE_MB} MB. O arquivo possui ${sizeMB} MB.`);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setSelectedFile(null);
       return;

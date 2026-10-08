@@ -77,9 +77,6 @@ describe("Upload Session Payload & Validation Rules", () => {
       if (isNaN(size) || size <= 0) {
         return { valid: false, error: "Tamanho de arquivo inválido." };
       }
-      if (size > MAX_FILE_SIZE_BYTES) {
-        return { valid: false, error: "O arquivo excede o limite máximo permitido de 4096MB." };
-      }
     }
 
     return { valid: true };
@@ -109,11 +106,14 @@ describe("Upload Session Payload & Validation Rules", () => {
     );
   });
 
-  it("rejects invalid file sizes (zero, negative, or exceeding 4096MB)", () => {
+  it("rejects invalid file sizes (zero, negative) and accepts large files (1.5GB, 5GB)", () => {
     expect(validateUploadInput({ title: "Clip Teste", fileSize: 0 }).error).toBe("Tamanho de arquivo inválido.");
     expect(validateUploadInput({ title: "Clip Teste", fileSize: -100 }).error).toBe("Tamanho de arquivo inválido.");
     expect(
-      validateUploadInput({ title: "Clip Teste", fileSize: 5000 * 1024 * 1024 }).error
-    ).toBe("O arquivo excede o limite máximo permitido de 4096MB.");
+      validateUploadInput({ title: "Clip Teste", fileSize: 1.5 * 1024 * 1024 * 1024 }).valid
+    ).toBe(true);
+    expect(
+      validateUploadInput({ title: "Clip Teste", fileSize: 5 * 1024 * 1024 * 1024 }).valid
+    ).toBe(true);
   });
 });

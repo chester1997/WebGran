@@ -120,8 +120,8 @@ export const INITIAL_FEATURES: SeedFeatureDefinition[] = [
     description: 'Tamanho máximo individual por arquivo de vídeo em MB',
     type: 'LIMIT',
     category: 'media',
-    defaultValue: { value: 4096 },
-    planValue: { value: 4096 },
+    defaultValue: { value: -1 },
+    planValue: { value: -1 },
   },
   {
     key: 'product_videos_enabled',

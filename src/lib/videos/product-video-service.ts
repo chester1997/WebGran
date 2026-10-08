@@ -157,13 +157,6 @@ export class ProductVideoService {
       );
     }
 
-    const sizeEntitlement = await getSellerEntitlement(sellerId, "max_video_size_mb");
-    const maxVideoSizeMb =
-      sizeEntitlement.isUnlimited || sizeEntitlement.value === -1
-        ? 4096
-        : Number(sizeEntitlement.value) || 4096;
-    const maxFileSizeBytes = maxVideoSizeMb * 1024 * 1024;
-
     // Input Validation
     if (!title || typeof title !== "string" || !title.trim()) {
       throw new Error("O título do vídeo é obrigatório.");
@@ -180,11 +173,6 @@ export class ProductVideoService {
       const size = Number(fileSize);
       if (isNaN(size) || size <= 0) {
         throw new Error("Tamanho de arquivo inválido.");
-      }
-      if (size > maxFileSizeBytes) {
-        throw new Error(
-          `O arquivo excede o limite máximo permitido de ${maxVideoSizeMb}MB para o seu plano.`
-        );
       }
     }
 

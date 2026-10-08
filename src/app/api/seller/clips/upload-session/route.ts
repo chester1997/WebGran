@@ -39,10 +39,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const sizeEntitlement = await getSellerEntitlement(seller.id, "max_video_size_mb");
-    const maxVideoSizeMb = sizeEntitlement.isUnlimited || sizeEntitlement.value === -1 ? 4096 : (Number(sizeEntitlement.value) || 4096);
-    const maxFileSizeBytes = maxVideoSizeMb * 1024 * 1024;
-
     const body = await req.json();
     const { title, description, contentType, fileSize, productId } = body;
 
@@ -62,12 +58,6 @@ export async function POST(req: Request) {
       const size = Number(fileSize);
       if (isNaN(size) || size <= 0) {
         return NextResponse.json({ success: false, error: "Tamanho de arquivo inválido." }, { status: 400 });
-      }
-      if (size > maxFileSizeBytes) {
-        return NextResponse.json(
-          { success: false, error: `O arquivo excede o limite máximo permitido de ${maxVideoSizeMb}MB para o seu plano.` },
-          { status: 400 }
-        );
       }
     }
 
