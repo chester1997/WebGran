@@ -136,20 +136,31 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
+                    disabled={isPending}
                     onClick={() => {
                       const input = document.createElement("input");
                       input.type = "file";
                       input.accept = "image/*";
-                      input.onchange = (e: any) => {
+                      input.onchange = async (e: any) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const url = URL.createObjectURL(file);
-                          handleBannerChange(0, url);
+                          try {
+                            const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+                            const res = await uploadOptimizedImage(file, "banners", {
+                              maxWidth: 1200,
+                              maxHeight: 540,
+                              quality: 0.85,
+                              format: "image/webp",
+                            });
+                            handleBannerChange(0, res.url);
+                          } catch (err: any) {
+                            alert(err.message || "Erro ao fazer upload da imagem para o Bunny CDN.");
+                          }
                         }
                       };
                       input.click();
                     }}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-[#1C1C22] hover:bg-[#25252E] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-colors shrink-0"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-[#1C1C22] hover:bg-[#25252E] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-colors shrink-0 disabled:opacity-50"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Enviar</span>
