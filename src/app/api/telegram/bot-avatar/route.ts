@@ -6,31 +6,23 @@ import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
-    const seller = await requireSeller();
-    const store = await getCurrentStore();
-    if (!store) {
-      return new NextResponse("Loja não encontrada", { status: 404 });
-    }
-
     const { searchParams } = new URL(req.url);
     const botId = searchParams.get("botId");
 
     let bot;
     if (botId) {
       bot = await db.query.telegramBots.findFirst({
-        where: and(
-          eq(telegramBots.id, botId),
-          eq(telegramBots.storeId, store.id)
-        )
+        where: eq(telegramBots.id, botId)
       });
     } else {
-      bot = await db.query.telegramBots.findFirst({
-        where: eq(telegramBots.storeId, store.id)
-      });
+      const store = await getCurrentStore().catch(() => null);
+      if (store) {
+        bot = await db.query.telegramBots.findFirst({
+          where: eq(telegramBots.storeId, store.id)
+        });
+      }
     }
 
     if (!bot) {
