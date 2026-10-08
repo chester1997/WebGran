@@ -9,7 +9,7 @@ import SetupStoreClient from "../SetupStoreClient";
 
 export default async function SellerProductsPage() {
   await connection();
-  await requireSeller();
+  const user = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -41,6 +41,7 @@ export default async function SellerProductsPage() {
       products={allProducts}
       categories={allCategories}
       bots={storeBots}
+      userRole={user?.role}
     />
   );
 }

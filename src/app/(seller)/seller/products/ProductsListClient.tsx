@@ -21,6 +21,7 @@ import { EditProductModal } from "./EditProductModal";
 import { deleteProductAction } from "./actions";
 
 import { getProductBadge } from "@/lib/product-badge";
+import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
 
 interface ProductItem {
   id: string;
@@ -47,6 +48,7 @@ interface Props {
   products: ProductItem[];
   categories: { id: string; name: string }[];
   bots: { id: string; username: string; displayName?: string | null }[];
+  userRole?: string | null;
 }
 
 const durationMap: Record<string, string> = {
@@ -59,7 +61,7 @@ const durationMap: Record<string, string> = {
   annual: 'Anual'
 };
 
-export default function ProductsListClient({ storeName, products, categories, bots }: Props) {
+export default function ProductsListClient({ storeName, products, categories, bots, userRole }: Props) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -67,18 +69,29 @@ export default function ProductsListClient({ storeName, products, categories, bo
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(userRole);
+
   const handleCopyDeepLink = (prod: ProductItem) => {
-    const targetBot = (prod.botId && bots.find(b => b.id === prod.botId)) || bots[0];
-    if (!targetBot || !targetBot.username) {
-      alert("Conecte um bot do Telegram para gerar o Deep Link.");
+    if (!isSuperAdmin) {
+      alert("Acesso negado. A geração manual de Deep Link é exclusiva para SUPER_ADMIN.");
       return;
     }
 
-    const cleanUsername = targetBot.username.replace(/^@/, '');
-    const deepLink = `https://t.me/${cleanUsername}/shorts?startapp=product_${prod.id}`;
+    const targetBot = (prod.botId && bots.find(b => b.id === prod.botId)) || bots[0];
+    const result = ProductManualDeepLinkService.generateDeepLink({
+      productId: prod.id,
+      botUsername: targetBot?.username,
+      shortName: "shorts",
+      userRole,
+    });
+
+    if (!result.success || !result.url) {
+      alert(result.error || "Erro ao gerar o Deep Link.");
+      return;
+    }
 
     if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-      navigator.clipboard.writeText(deepLink);
+      navigator.clipboard.writeText(result.url);
     }
     setCopiedId(prod.id);
     setTimeout(() => setCopiedId(null), 2500);
@@ -304,24 +317,26 @@ export default function ProductsListClient({ storeName, products, categories, bo
 
               {/* Action Buttons Footer */}
               <div className="p-2.5 border-t border-white/5 flex gap-2 bg-[#141418] shrink-0">
-                <Button
-                  onClick={() => handleCopyDeepLink(prod)}
-                  variant="outline"
-                  className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 h-8 px-2.5 text-xs rounded-lg font-semibold transition-all shrink-0 flex items-center gap-1"
-                  title="Copiar Deep Link do Telegram para divulgação deste produto"
-                >
-                  {copiedId === prod.id ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">Copiado!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="w-3.5 h-3.5" />
-                      <span>Deep Link</span>
-                    </>
-                  )}
-                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    onClick={() => handleCopyDeepLink(prod)}
+                    variant="outline"
+                    className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 h-8 px-2.5 text-xs rounded-lg font-semibold transition-all shrink-0 flex items-center gap-1"
+                    title="Copiar Deep Link do Telegram para divulgação deste produto"
+                  >
+                    {copiedId === prod.id ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-3.5 h-3.5" />
+                        <span>Deep Link</span>
+                      </>
+                    )}
+                  </Button>
+                )}
                 <EditProductModal product={prod} categories={categories} bots={bots} />
                 <Button 
                   onClick={() => handleDelete(prod.id, prod.title)}
@@ -381,24 +396,26 @@ export default function ProductsListClient({ storeName, products, categories, bo
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => handleCopyDeepLink(prod)}
-                      variant="outline"
-                      className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 h-8 px-2.5 text-xs rounded-lg font-semibold transition-all shrink-0 flex items-center gap-1"
-                      title="Copiar Deep Link do Telegram para divulgação deste produto"
-                    >
-                      {copiedId === prod.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Copiado!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Link2 className="w-3.5 h-3.5" />
-                          <span>Deep Link</span>
-                        </>
-                      )}
-                    </Button>
+                    {isSuperAdmin && (
+                      <Button
+                        onClick={() => handleCopyDeepLink(prod)}
+                        variant="outline"
+                        className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 h-8 px-2.5 text-xs rounded-lg font-semibold transition-all shrink-0 flex items-center gap-1"
+                        title="Copiar Deep Link do Telegram para divulgação deste produto"
+                      >
+                        {copiedId === prod.id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Link2 className="w-3.5 h-3.5" />
+                            <span>Deep Link</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <EditProductModal product={prod} categories={categories} bots={bots} />
                     <Button 
                       onClick={() => handleDelete(prod.id, prod.title)}
