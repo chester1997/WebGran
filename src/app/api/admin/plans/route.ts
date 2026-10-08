@@ -97,7 +97,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Este slug já está em uso por outro plano." }, { status: 400 });
       }
 
-      const updated = await db
+      const existingPlan = await db.query.subscriptionPlans.findFirst({
+        where: eq(subscriptionPlans.id, id),
+      });
+      const isPriceChanged = existingPlan && Number(existingPlan.price) !== numericPrice;
+
+      const [updated] = await db
         .update(subscriptionPlans)
         .set({
           name: name.trim(),
@@ -106,12 +111,13 @@ export async function POST(req: Request) {
           description: description ? description.trim() : null,
           billingInterval: billingInterval || 'month',
           active: active !== undefined ? Boolean(active) : true,
+          ...(isPriceChanged ? { syncpayPlanToken: null } : {}),
           updatedAt: now,
         })
         .where(eq(subscriptionPlans.id, id))
         .returning();
 
-      returnedPlan = updated[0];
+      returnedPlan = updated;
     } else {
       // Create new plan
       const existingSlug = await db.query.subscriptionPlans.findFirst({

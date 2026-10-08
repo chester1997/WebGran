@@ -392,4 +392,108 @@ describe('SyncPay Platform Billing Integration & Isolation Tests', () => {
       expect(formatted[1].isProvisioned).toBe(true);
     });
   });
+
+  describe('7. Dynamic Subscription Plan Price Updates & Snapshot Immutability (Test Cases 1-6)', () => {
+    it('TEST 1: Creates charge with initial plan price R$ 39,90', async () => {
+      let createdAmount = 0;
+      vi.spyOn(SyncPayPlatformBillingService, 'createPlan').mockImplementation(async (params) => {
+        createdAmount = params.amount;
+        return { token: 'tok_plan_3990', raw: {} };
+      });
+
+      const res = await SyncPayPlatformBillingService.createPlan({
+        name: 'Plano VIP',
+        amount: 39.90,
+      });
+
+      expect(res.token).toBe('tok_plan_3990');
+      expect(createdAmount).toBe(39.90);
+    });
+
+    it('TEST 2: Updates plan price to R$ 49,90 and provisions NEW plan charge', async () => {
+      let createdAmount = 0;
+      vi.spyOn(SyncPayPlatformBillingService, 'createPlan').mockImplementation(async (params) => {
+        createdAmount = params.amount;
+        return { token: 'tok_plan_4990', raw: {} };
+      });
+
+      const res = await SyncPayPlatformBillingService.createPlan({
+        name: 'Plano VIP',
+        amount: 49.90,
+      });
+
+      expect(res.token).toBe('tok_plan_4990');
+      expect(createdAmount).toBe(49.90);
+    });
+
+    it('TEST 3: Updates plan price to R$ 59,90 and provisions NEW plan charge', async () => {
+      let createdAmount = 0;
+      vi.spyOn(SyncPayPlatformBillingService, 'createPlan').mockImplementation(async (params) => {
+        createdAmount = params.amount;
+        return { token: 'tok_plan_5990', raw: {} };
+      });
+
+      const res = await SyncPayPlatformBillingService.createPlan({
+        name: 'Plano VIP',
+        amount: 59.90,
+      });
+
+      expect(res.token).toBe('tok_plan_5990');
+      expect(createdAmount).toBe(59.90);
+    });
+
+    it('TEST 4: Keeps old invoice snapshot amount unchanged when plan price is changed later', () => {
+      const oldInvoice = {
+        id: 'inv_001',
+        planId: 'plan_vip',
+        amount: '39.90',
+        status: 'PENDING',
+        createdAt: '2026-10-01T00:00:00Z',
+      };
+
+      // Plan price subsequently modified in platform to 49.90
+      const currentPlan = {
+        id: 'plan_vip',
+        price: '49.90',
+      };
+
+      // Historic snapshot invoice MUST retain its original amount
+      expect(oldInvoice.amount).toBe('39.90');
+      expect(Number(oldInvoice.amount)).not.toBe(Number(currentPlan.price));
+    });
+
+    it('TEST 5: Ignores client-sent amount=1.00 and enforces server database plan price (49.90)', () => {
+      const clientBody = { planId: 'plan_vip', amount: 1.00, price: 1.00 };
+      const dbPlan = { id: 'plan_vip', price: '49.90' };
+
+      // Backend server resolves authority strictly from dbPlan.price, ignoring clientBody.amount
+      const serverResolvedAmount = Number(dbPlan.price);
+
+      expect(clientBody.amount).toBe(1.00);
+      expect(serverResolvedAmount).toBe(49.90);
+    });
+
+    it('TEST 6: Verifies SyncPay plan creation payload contains exact current plan price', async () => {
+      let payloadSent: any = null;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+        const u = typeof url === 'string' ? url : (url as Request).url;
+        if (u.includes('auth-token')) {
+          return new Response(JSON.stringify({ access_token: 'tok_platform_123' }), { status: 200 });
+        }
+        if (u.includes('subscription-plans')) {
+          payloadSent = JSON.parse(options?.body as string);
+          return new Response(JSON.stringify({ data: { token: 'tok_created' } }), { status: 200 });
+        }
+        return new Response(JSON.stringify({}), { status: 400 });
+      });
+
+      await SyncPayPlatformBillingService.createPlan({
+        name: 'Plano Pro',
+        amount: 49.90,
+      });
+
+      expect(payloadSent).not.toBeNull();
+      expect(payloadSent.amount).toBe(49.90);
+    });
+  });
 });

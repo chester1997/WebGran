@@ -32,17 +32,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Vendedor não encontrado." }, { status: 404 });
     }
 
-    // Enroll subscriber on SyncPay Platform using official provisioned plan token ONLY
-    const syncpayPlanToken = plan.syncpayPlanToken;
+    // Auto-provision plan on SyncPay Platform if syncpayPlanToken is missing
+    let syncpayPlanToken = plan.syncpayPlanToken;
 
     if (!syncpayPlanToken || !syncpayPlanToken.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Este plano da Biblioteca de Vídeos ainda não está sincronizado com o gateway de pagamento. A sincronização com a SyncPay está pendente.",
-        },
-        { status: 400 }
-      );
+      try {
+        const createdSyncpayPlan = await SyncPayPlatformBillingService.createPlan({
+          name: plan.name,
+          amount: Number(plan.price),
+          billing_method: "qr_code",
+          description: plan.description || "Plano da Biblioteca de Vídeos WebGran",
+        });
+
+        syncpayPlanToken = createdSyncpayPlan.token;
+
+        await db
+          .update(videoLibraryPlans)
+          .set({
+            syncpayPlanToken,
+            syncStatus: "SYNCED",
+            syncError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(videoLibraryPlans.id, plan.id));
+      } catch (syncErr: any) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Este plano da Biblioteca de Vídeos ainda não está sincronizado com o gateway de pagamento: ${syncErr.message || "Erro de sincronização SyncPay."}`,
+          },
+          { status: 400 }
+        );
+      }
     }
     
     // Helper to format or generate a valid CPF (verifying digits) required by SyncPay API

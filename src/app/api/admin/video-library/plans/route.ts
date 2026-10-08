@@ -146,6 +146,8 @@ export async function POST(req: Request) {
         where: eq(videoLibraryPlans.id, id),
       });
 
+      const isPriceChanged = existingPlan && Number(existingPlan.price) !== numericPrice;
+
       const [updated] = await db
         .update(videoLibraryPlans)
         .set({
@@ -156,6 +158,7 @@ export async function POST(req: Request) {
           description: description ? description.trim() : null,
           billingInterval: billingInterval || "month",
           active: active !== undefined ? Boolean(active) : true,
+          ...(isPriceChanged ? { syncpayPlanToken: null, syncStatus: "SYNC_PENDING" } : {}),
           updatedAt: now,
         })
         .where(eq(videoLibraryPlans.id, id))
