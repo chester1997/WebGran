@@ -27,19 +27,16 @@ describe("Mini App WebGran Bottom Navigation Bar Architecture Suite", () => {
     expect(centerItem.isCenter).toBe(true);
   });
 
-  it("3. INÍCIO button specs: Black circular background with Red icon", () => {
+  it("3. INÍCIO button specs: Uniform icon and label styling aligned with all items", () => {
     const homeButtonSpecs = {
-      backgroundColor: "bg-black",
-      iconColor: "text-red-500",
-      shape: "rounded-full",
-      isElevated: true,
-      size: "w-[56px] h-[56px]",
+      isUniform: true,
+      activeIconColor: "text-red-500",
+      iconSize: "w-5 h-5",
     };
 
-    expect(homeButtonSpecs.backgroundColor).toBe("bg-black");
-    expect(homeButtonSpecs.iconColor).toBe("text-red-500");
-    expect(homeButtonSpecs.shape).toBe("rounded-full");
-    expect(homeButtonSpecs.isElevated).toBe(true);
+    expect(homeButtonSpecs.isUniform).toBe(true);
+    expect(homeButtonSpecs.activeIconColor).toBe("text-red-500");
+    expect(homeButtonSpecs.iconSize).toBe("w-5 h-5");
   });
 
   it("4. Routes mapping is correctly linked to WebGran Mini App paths", () => {

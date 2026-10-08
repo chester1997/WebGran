@@ -94,37 +94,31 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
           </span>
         </Link>
 
-        {/* 3. INÍCIO (ELEVATED CIRCULAR BLACK BUTTON - EXACT CENTER) */}
-        <div className="flex flex-col items-center justify-center relative -mt-4 z-20">
-          <Link
-            href={basePath}
-            prefetch={true}
-            onClick={(e) => handleNavClick(e, basePath)}
-            aria-label="Início"
-            className="flex flex-col items-center justify-center group active:scale-95 transition-transform duration-200"
-          >
-            <div
-              className={`w-[48px] h-[48px] rounded-full bg-black border flex items-center justify-center transition-all duration-200 ${
+        {/* 3. INÍCIO */}
+        <Link
+          href={basePath}
+          prefetch={true}
+          onClick={(e) => handleNavClick(e, basePath)}
+          aria-label="Início"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
+        >
+          <div className="relative flex items-center justify-center">
+            <Home
+              className={`w-5 h-5 transition-all duration-200 ${
                 activeHome
-                  ? "border-red-500/80 shadow-[0_4px_16px_rgba(0,0,0,0.8)] scale-105"
-                  : "border-white/15 hover:border-red-500/50 shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
+                  ? "text-red-500 stroke-[2.2]"
+                  : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
-            >
-              <Home
-                className={`w-5 h-5 stroke-[2.2] transition-colors duration-200 ${
-                  activeHome ? "text-red-500" : "text-red-500/80 group-hover:text-red-500"
-                }`}
-              />
-            </div>
-            <span
-              className={`text-[10px] font-medium mt-0.5 transition-colors duration-200 ${
-                activeHome ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
-              }`}
-            >
-              Início
-            </span>
-          </Link>
-        </div>
+            />
+          </div>
+          <span
+            className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
+              activeHome ? "text-red-500 font-bold" : "text-zinc-400 group-hover:text-zinc-200"
+            }`}
+          >
+            Início
+          </span>
+        </Link>
 
         {/* 4. BUSCA */}
         <Link
