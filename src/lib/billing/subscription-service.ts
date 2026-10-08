@@ -283,7 +283,22 @@ export async function createPlatformBillingInvoice(sellerId: string, forceNew = 
     const platformCreds = await SyncPayPlatformBillingService.getPlatformCredentials();
     if (platformCreds.clientId && platformCreds.clientSecret) {
       let syncpayPlanToken = plan.syncpayPlanToken;
-      if (!syncpayPlanToken) {
+
+      // Always verify remote plan amount or provision a fresh SyncPay plan token
+      let mustProvision = !syncpayPlanToken;
+      if (syncpayPlanToken) {
+        try {
+          const remotePlan = await SyncPayPlatformBillingService.getPlan(syncpayPlanToken);
+          const remoteAmount = Number(remotePlan?.data?.amount || remotePlan?.amount || 0);
+          if (remoteAmount > 0 && Math.abs(remoteAmount - amount) > 0.001) {
+            mustProvision = true;
+          }
+        } catch {
+          mustProvision = true;
+        }
+      }
+
+      if (mustProvision) {
         const createdPlan = await SyncPayPlatformBillingService.createPlan({
           name: plan.name,
           amount,
@@ -314,35 +329,27 @@ function getValidCPF(doc?: string): string {
   return `${n.join('')}${d1}${d2}`;
 }
 
-      let enrollRes;
       const userDocument = getValidCPF((userRecord as any)?.cpf);
-      const existingSubToken = (subscription as any).syncpaySubscriptionToken;
-      if (existingSubToken) {
-        try {
-          enrollRes = await SyncPayPlatformBillingService.resendCharge(existingSubToken);
-        } catch {
-          enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
-            name: userRecord?.name || 'Vendedor WebGran',
-            email: userRecord?.email || 'vendedor@webgran.online',
-            document: userDocument,
-          });
-        }
-      } else {
-        enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
-          name: userRecord?.name || 'Vendedor WebGran',
-          email: userRecord?.email || 'vendedor@webgran.online',
-          document: userDocument,
-        });
-
-        await db
-          .update(subscriptions)
-          .set({
-            syncpaySubscriptionToken: enrollRes.subscriptionToken,
-            syncpaySubscriberToken: enrollRes.subscriberToken || null,
-            updatedAt: now,
-          })
-          .where(eq(subscriptions.id, subscription.id));
+      
+      if (!syncpayPlanToken) {
+        throw new Error('Não foi possível gerar ou obter um token do plano SyncPay.');
       }
+
+      // Always enroll subscriber on the CURRENT plan token to guarantee the exact price
+      const enrollRes = await SyncPayPlatformBillingService.enrollSubscriber(syncpayPlanToken, {
+        name: userRecord?.name || 'Vendedor WebGran',
+        email: userRecord?.email || 'vendedor@webgran.online',
+        document: userDocument,
+      });
+
+      await db
+        .update(subscriptions)
+        .set({
+          syncpaySubscriptionToken: enrollRes.subscriptionToken,
+          syncpaySubscriberToken: enrollRes.subscriberToken || null,
+          updatedAt: now,
+        })
+        .where(eq(subscriptions.id, subscription.id));
 
       const insertedInvoice = await db
         .insert(invoices)
@@ -350,7 +357,7 @@ function getValidCPF(doc?: string): string {
           sellerId,
           subscriptionId: subscription.id,
           provider: 'syncpay',
-          externalId: enrollRes.subscriptionToken || existingSubToken,
+          externalId: enrollRes.subscriptionToken,
           amount: amount.toFixed(2),
           status: 'PENDING',
           dueDate,

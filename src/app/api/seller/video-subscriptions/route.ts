@@ -32,10 +32,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Vendedor não encontrado." }, { status: 404 });
     }
 
-    // Auto-provision plan on SyncPay Platform if syncpayPlanToken is missing
+    // Auto-provision plan on SyncPay Platform if syncpayPlanToken is missing or out of sync with Neon price
     let syncpayPlanToken = plan.syncpayPlanToken;
+    let mustProvision = !syncpayPlanToken || !syncpayPlanToken.trim();
 
-    if (!syncpayPlanToken || !syncpayPlanToken.trim()) {
+    if (syncpayPlanToken) {
+      try {
+        const remotePlan = await SyncPayPlatformBillingService.getPlan(syncpayPlanToken);
+        const remoteAmount = Number(remotePlan?.data?.amount || remotePlan?.amount || 0);
+        if (remoteAmount > 0 && Math.abs(remoteAmount - Number(plan.price)) > 0.001) {
+          mustProvision = true;
+        }
+      } catch {
+        mustProvision = true;
+      }
+    }
+
+    if (mustProvision) {
       try {
         const createdSyncpayPlan = await SyncPayPlatformBillingService.createPlan({
           name: plan.name,
@@ -82,6 +95,13 @@ export async function POST(req: Request) {
       d2 = 11 - mod(d2, 11);
       if (d2 >= 10) d2 = 0;
       return `${n.join('')}${d1}${d2}`;
+    }
+
+    if (!syncpayPlanToken) {
+      return NextResponse.json(
+        { success: false, error: "Não foi possível gerar a cobrança no gateway SyncPay." },
+        { status: 400 }
+      );
     }
 
     let enrollRes;
