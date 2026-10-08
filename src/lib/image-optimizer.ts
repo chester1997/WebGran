@@ -105,11 +105,12 @@ export async function optimizeBannerImage(
 }
 
 /**
- * Client-side helper: Optimizes image via Canvas.
+ * Client-side helper: Optimizes image via Canvas AND uploads securely via server gateway (/api/storage/upload) to Bunny Storage CDN.
+ * The server handles Bunny authentication using server-side environment variables. Zero credentials are exposed to the client.
  */
 export async function uploadOptimizedImage(
   file: File,
-  _entityType: 'products' | 'banners' | 'categories' | 'store' | 'profiles' = 'products',
+  entityType: 'products' | 'banners' | 'categories' | 'store' | 'profiles' = 'banners',
   options: OptimizeImageOptions = {}
 ): Promise<{
   url: string;
@@ -117,9 +118,33 @@ export async function uploadOptimizedImage(
   optimizedSizeBytes: number;
   savedPercent: number;
 }> {
+  // 1. Optimize image locally in client canvas to WebP
   const optimized = await optimizeBannerImage(file, options);
+
+  // 2. Send optimized WebP payload to authenticated storage upload API gateway
+  const res = await fetch('/api/storage/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dataUrl: optimized.dataUrl,
+      name: file.name,
+      type: 'image/webp',
+      entity: entityType,
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || 'Erro ao fazer upload da imagem para a CDN.');
+  }
+
+  // Verify response contains NO secrets
+  if (data.apiKey || data.AccessKey || data.headers) {
+    console.error("[Security Alert] Unexpected credential key in storage response!");
+  }
+
   return {
-    url: optimized.dataUrl,
+    url: data.url,
     originalSizeBytes: optimized.originalSizeBytes,
     optimizedSizeBytes: optimized.optimizedSizeBytes,
     savedPercent: optimized.savedPercent,

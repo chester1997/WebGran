@@ -24,6 +24,8 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
   const [supportType, setSupportType] = useState(initialSettings.supportType || "telegram");
   const [supportValue, setSupportValue] = useState(initialSettings.supportValue || "");
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleBannerChange = (index: number, val: string) => {
     const updated = [...banners];
     updated[index] = val;
@@ -134,7 +136,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    disabled={isPending}
+                    disabled={isPending || isUploading}
                     onClick={() => {
                       const input = document.createElement("input");
                       input.type = "file";
@@ -143,6 +145,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                         const file = e.target.files?.[0];
                         if (file) {
                           try {
+                            setIsUploading(true);
                             const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
                             const res = await uploadOptimizedImage(file, "banners", {
                               maxWidth: 1200,
@@ -152,7 +155,9 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                             });
                             handleBannerChange(0, res.url);
                           } catch (err: any) {
-                            alert(err.message || "Erro ao fazer upload da imagem para o Bunny CDN.");
+                            alert(err.message || "Erro ao fazer upload da imagem para a CDN.");
+                          } finally {
+                            setIsUploading(false);
                           }
                         }
                       };
@@ -160,8 +165,17 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                     }}
                     className="flex-1 sm:flex-none px-4 py-2.5 bg-[#1C1C22] hover:bg-[#25252E] text-zinc-300 text-xs font-medium rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-colors shrink-0 disabled:opacity-50"
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Enviar</span>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Enviar</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
