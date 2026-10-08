@@ -204,70 +204,20 @@ export function GenerateDeepLinkModal({
           </div>
         )}
 
-        {/* FORM: ACCESS TYPE SELECTION */}
+        {/* FORM: ACCESS TYPE INFO (PUBLIC ONLY) */}
         <div className="space-y-3 bg-[#16161C] border border-white/5 rounded-2xl p-5">
           <label className="block text-xs font-extrabold text-white uppercase tracking-wider">
             COMO O CONTEÚDO SERÁ ACESSADO?
           </label>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Option 1: PUBLIC / GRATUITO */}
-            <div
-              onClick={() => setAccessType("PUBLIC")}
-              className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-2 ${
-                accessType === "PUBLIC"
-                  ? "border-violet-500 bg-violet-600/10 shadow-lg shadow-violet-500/5"
-                  : "border-white/5 bg-[#121215] hover:border-white/20"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-violet-400" />
-                  <span className="text-xs font-bold text-white">Público / Gratuito</span>
-                </div>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    accessType === "PUBLIC"
-                      ? "border-violet-500 bg-violet-600 text-white"
-                      : "border-zinc-600"
-                  }`}
-                >
-                  {accessType === "PUBLIC" && <Check className="w-2.5 h-2.5" />}
-                </div>
-              </div>
-              <p className="text-[11px] text-zinc-400 leading-normal">
-                Qualquer usuário poderá acessar este conteúdo sem precisar ter comprado o produto.
-              </p>
+          <div className="p-4 rounded-xl border border-violet-500 bg-violet-600/10 shadow-lg shadow-violet-500/5 flex flex-col space-y-2">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-violet-400" />
+              <span className="text-xs font-bold text-white">🌐 Público / Gratuito</span>
             </div>
-
-            {/* Option 2: PURCHASE */}
-            <div
-              onClick={() => setAccessType("PURCHASE")}
-              className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-2 ${
-                accessType === "PURCHASE"
-                  ? "border-violet-500 bg-violet-600/10 shadow-lg shadow-violet-500/5"
-                  : "border-white/5 bg-[#121215] hover:border-white/20"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-amber-400" />
-                  <span className="text-xs font-bold text-white">Somente compradores</span>
-                </div>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    accessType === "PURCHASE"
-                      ? "border-violet-500 bg-violet-600 text-white"
-                      : "border-zinc-600"
-                  }`}
-                >
-                  {accessType === "PURCHASE" && <Check className="w-2.5 h-2.5" />}
-                </div>
-              </div>
-              <p className="text-[11px] text-zinc-400 leading-normal">
-                Exige uma compra válida e com pagamento aprovado do produto.
-              </p>
-            </div>
+            <p className="text-[11px] text-zinc-400 leading-normal">
+              Qualquer pessoa com o link poderá assistir ao vídeo, sem precisar ter comprado o produto.
+            </p>
           </div>
         </div>
 

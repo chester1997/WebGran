@@ -470,7 +470,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   const readyCount = videosList.filter((v) => v.status === "READY").length;
 
   return (
-    <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-16">
+    <div className="space-y-6 fade-in w-full max-w-full min-w-0 pb-24">
       {/* Toast Feedbacks */}
       {errorMsg && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-red-950/90 border border-red-500/30 text-red-200 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md">
@@ -848,7 +848,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
                         </button>
 
                         {activeMenuId === video.id && (
-                          <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-[#121216] border border-white/10 rounded-xl shadow-2xl py-1 text-xs text-zinc-200 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="absolute right-0 bottom-full mb-1 z-50 w-48 bg-[#121216] border border-white/10 rounded-xl shadow-2xl py-1 text-xs text-zinc-200 animate-in fade-in zoom-in-95 duration-100">
                             {video.status === "READY" && (
                               <>
                                 <button

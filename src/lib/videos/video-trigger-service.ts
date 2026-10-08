@@ -41,11 +41,12 @@ export class VideoTriggerService {
   }
 
   /**
-   * Generates a new Video Trigger (PUBLIC or PURCHASE).
+   * Generates a new Video Trigger (PUBLIC).
    * Validates multi-tenant ownership, video status (READY only).
    */
   static async createTrigger(options: CreateTriggerOptions) {
-    const { storeId, videoId, productId, type = "PUBLIC", expiresAt } = options;
+    const { storeId, videoId, productId, expiresAt } = options;
+    const type: TriggerType = "PUBLIC";
 
     // 1. Multi-tenant Video Ownership Check
     const video = await db.query.productVideos.findFirst({
