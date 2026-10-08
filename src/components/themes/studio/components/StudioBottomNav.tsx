@@ -41,8 +41,8 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[calc(10px+env(safe-area-inset-bottom,0px))] px-3"
     >
       <div className="pointer-events-auto w-full max-w-[440px] mx-auto select-none relative">
-        {/* Floating Pill/Capsule Container */}
-        <div className="relative flex items-center justify-between h-[64px] px-2 rounded-[28px] bg-[#121316]/95 dark:bg-[#0d0e11]/95 backdrop-blur-2xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-visible">
+        {/* Floating Pill/Capsule Container - Liquid Glass Style */}
+        <div className="relative flex items-center justify-between h-[64px] px-2 rounded-[28px] bg-neutral-950/40 dark:bg-black/40 backdrop-blur-2xl border border-white/15 shadow-[0_10px_32px_0_rgba(0,0,0,0.5),inset_0_1px_1px_0_rgba(255,255,255,0.2)] overflow-visible">
           
           {/* 1. FAVORITOS */}
           <Link
@@ -96,7 +96,7 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
             </span>
           </Link>
 
-          {/* 3. INÍCIO (ELEVATED CIRCULAR BLACK BUTTON - EXACT CENTER) */}
+          {/* 3. INÍCIO (ELEVATED CIRCULAR BLACK BUTTON - EXACT CENTER, CLEAN DISCRETE SHADOW) */}
           <div className="w-1/5 flex flex-col items-center justify-center relative -mt-5 z-20">
             <Link
               href={basePath}
@@ -106,16 +106,16 @@ export function StudioBottomNav({ storeSlug }: StudioBottomNavProps) {
               className="flex flex-col items-center justify-center group active:scale-95 transition-transform duration-200"
             >
               <div
-                className={`w-[56px] h-[56px] rounded-full bg-black border-2 flex items-center justify-center transition-all duration-300 ${
+                className={`w-[56px] h-[56px] rounded-full bg-black border flex items-center justify-center transition-all duration-300 ${
                   activeHome
-                    ? "border-red-500/80 shadow-[0_6px_20px_rgba(239,68,68,0.4)] scale-105"
-                    : "border-white/20 hover:border-red-500/50 shadow-[0_6px_16px_rgba(0,0,0,0.7)]"
+                    ? "border-red-500/70 shadow-[0_4px_14px_rgba(0,0,0,0.8)] scale-105"
+                    : "border-white/15 hover:border-red-500/50 shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
                 }`}
               >
                 <Home
                   className={`w-6 h-6 stroke-[2.2] transition-colors duration-200 ${
                     activeHome
-                      ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
+                      ? "text-red-500"
                       : "text-red-500/80 group-hover:text-red-500"
                   }`}
                 />
