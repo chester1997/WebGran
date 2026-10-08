@@ -6,6 +6,8 @@ import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const seller = await requireSeller();
