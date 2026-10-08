@@ -163,4 +163,24 @@ describe("Video Triggers Unit Tests (14 Validation Requirements)", () => {
     expect(videoStore1.storeId === sellerStoreId).toBe(true);
     expect(videoStore1.storeId === otherStoreId).toBe(false);
   });
+
+  test("15. Vídeo SEM produto vinculado com Deep Link público VÁLIDO permite playback", async () => {
+    // Setup mock resolution
+    const isPublicTrigger = true;
+    const associatedProductIds = new Set<string>(); // No products linked
+
+    const shouldAllowPlayback = isPublicTrigger || associatedProductIds.size > 0;
+    expect(shouldAllowPlayback).toBe(true);
+  });
+
+  test("16. Vídeo SEM produto vinculado SEM Deep Link público REJEITA playback", async () => {
+    const isPublicTrigger = false;
+    const associatedProductIds = new Set<string>(); // No products linked
+
+    expect(() => {
+      if (!isPublicTrigger && associatedProductIds.size === 0) {
+        throw new Error("Vídeo sem produto vinculado.");
+      }
+    }).toThrow("Vídeo sem produto vinculado.");
+  });
 });

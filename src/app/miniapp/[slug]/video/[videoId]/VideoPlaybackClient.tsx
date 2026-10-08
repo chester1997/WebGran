@@ -9,9 +9,10 @@ import { useRouter } from "next/navigation";
 interface VideoPlaybackClientProps {
   storeSlug: string;
   videoId: string;
+  initialToken?: string;
 }
 
-export function VideoPlaybackClient({ storeSlug, videoId }: VideoPlaybackClientProps) {
+export function VideoPlaybackClient({ storeSlug, videoId, initialToken }: VideoPlaybackClientProps) {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +23,15 @@ export function VideoPlaybackClient({ storeSlug, videoId }: VideoPlaybackClientP
     setLoading(true);
     setError(null);
 
-    fetch(`/api/miniapp/videos/${videoId}/playback?storeSlug=${encodeURIComponent(storeSlug)}`, {
+    let token = initialToken || "";
+    if (!token && typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      token = sp.get("token") || sp.get("triggerToken") || sp.get("t") || "";
+    }
+
+    const tokenQuery = token ? `&token=${encodeURIComponent(token)}` : "";
+
+    fetch(`/api/miniapp/videos/${videoId}/playback?storeSlug=${encodeURIComponent(storeSlug)}${tokenQuery}`, {
       headers: {
         "x-store-slug": storeSlug,
       },
