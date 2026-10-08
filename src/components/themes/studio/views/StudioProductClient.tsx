@@ -664,7 +664,7 @@ export function StudioProductClient({
 
         {/* RECOMMENDED PRODUCTS CAROUSEL */}
         {recommendedProducts.length > 0 && (
-          <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
+          <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3 pb-6">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
@@ -674,11 +674,16 @@ export function StudioProductClient({
 
             <HorizontalCarousel
               indicatorType="NONE"
-              trackClassName="pt-1 pb-4"
+              trackClassName="pt-1 pb-2"
             >
               {recommendedProducts.map((recProd) => (
-                <div key={recProd.id} className="snap-start shrink-0">
-                  <ProductCard storeSlug={storeSlug} product={recProd} showButtons={false} />
+                <div key={recProd.id} className="snap-start shrink-0 flex">
+                  <ProductCard
+                    storeSlug={storeSlug}
+                    product={recProd}
+                    showButtons={false}
+                    className="w-[135px] sm:w-[155px] md:w-[175px]"
+                  />
                 </div>
               ))}
             </HorizontalCarousel>
@@ -688,4 +693,5 @@ export function StudioProductClient({
     </div>
   );
 }
+
 
