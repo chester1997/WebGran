@@ -16,8 +16,7 @@ export async function GET() {
     const conn = await db.query.sellerPaymentConnections.findFirst({
       where: and(
         eq(sellerPaymentConnections.sellerId, seller.id),
-        eq(sellerPaymentConnections.provider, 'syncpay'),
-        eq(sellerPaymentConnections.status, 'active')
+        eq(sellerPaymentConnections.provider, 'syncpay')
       ),
     });
 
@@ -45,12 +44,12 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      isConnected: true,
+      isConnected: conn.status === 'active',
       connection: {
         id: conn.id,
         status: conn.status,
         clientIdMasked,
-        hasCredentials: true,
+        hasCredentials: !!conn.accessTokenEncrypted,
         updatedAt: conn.updatedAt ? new Date(conn.updatedAt).toISOString() : null,
       },
     });
@@ -95,8 +94,8 @@ export async function POST(req: NextRequest) {
       ),
     });
 
-    // If client provided blank fields while connection exists and active, preserve current encrypted credentials
-    if ((!clientId?.trim() || !clientSecret?.trim()) && conn && conn.status === 'active') {
+    // If client provided blank fields while connection exists with stored credentials, preserve current encrypted credentials
+    if ((!clientId?.trim() || !clientSecret?.trim()) && conn && conn.accessTokenEncrypted) {
       clientId = clientId?.trim() || decrypt(conn.accessTokenEncrypted);
       clientSecret = clientSecret?.trim() || (conn.refreshTokenEncrypted ? decrypt(conn.refreshTokenEncrypted) : '');
     }

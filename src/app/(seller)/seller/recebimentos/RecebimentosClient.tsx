@@ -153,15 +153,15 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
     }
   };
 
-  const handleConnectSyncPay = async () => {
-    // If connection is already active and seller submits blank fields, keep existing credentials
-    if (isSyncPayActive && !syncPayClientId.trim() && !syncPayClientSecret.trim()) {
-      setIsSyncPayConnectOpen(false);
-      return;
-    }
+  const handleOpenSyncPayModal = () => {
+    setSyncPayClientId('');
+    setSyncPayClientSecret('');
+    setIsSyncPayConnectOpen(true);
+  };
 
-    if (!syncPayClientId.trim() && !isSyncPayActive) {
-      setFeedbackMsg({ provider: 'syncpay', type: 'error', text: 'Preencha o Client ID da SyncPay.' });
+  const handleConnectSyncPay = async () => {
+    if (!syncPayClientId.trim() && !syncPayClientSecret.trim() && !syncPayConnection?.hasCredentials) {
+      setFeedbackMsg({ provider: 'syncpay', type: 'error', text: 'Preencha o Client ID e Client Secret da SyncPay.' });
       return;
     }
 
@@ -505,7 +505,7 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                 </Button>
 
                 <Button
-                  onClick={() => setIsSyncPayConnectOpen(true)}
+                  onClick={handleOpenSyncPayModal}
                   variant="outline"
                   className="bg-white/5 hover:bg-white/10 text-zinc-200 border-white/10 rounded-xl text-xs h-10 px-3 font-semibold cursor-pointer"
                 >
@@ -523,7 +523,7 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
             ) : (
               <Button
                 type="button"
-                onClick={() => setIsSyncPayConnectOpen(true)}
+                onClick={handleOpenSyncPayModal}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -553,16 +553,27 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
               </button>
             </div>
 
-            <div className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleConnectSyncPay(); }} autoComplete="off" className="space-y-4">
+              
+              {/* Info Badge for Existing Saved Credential */}
+              {syncPayConnection?.clientIdMasked && (
+                <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs flex items-center justify-between">
+                  <span className="text-zinc-400">Credencial atualmente salva:</span>
+                  <span className="font-mono font-semibold text-indigo-400">{syncPayConnection.clientIdMasked}</span>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-zinc-300">
                   Client ID (Partner)
                 </label>
                 <input
                   type="text"
+                  name="syncpay_partner_client_id"
+                  autoComplete="off"
                   value={syncPayClientId}
                   onChange={(e) => setSyncPayClientId(e.target.value)}
-                  placeholder={syncPayConnection?.clientIdMasked || "Cole seu Client ID da SyncPay..."}
+                  placeholder="Cole seu Client ID da SyncPay..."
                   className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
@@ -573,9 +584,11 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                 </label>
                 <input
                   type="password"
+                  name="syncpay_partner_client_secret"
+                  autoComplete="new-password"
                   value={syncPayClientSecret}
                   onChange={(e) => setSyncPayClientSecret(e.target.value)}
-                  placeholder={isSyncPayActive ? "•••••••••••••••• (Deixe em branco para manter)" : "Cole seu Client Secret da SyncPay..."}
+                  placeholder={syncPayConnection?.hasCredentials ? "•••••••••••••••• (Deixe em branco para manter a atual)" : "Cole seu Client Secret da SyncPay..."}
                   className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
@@ -583,30 +596,31 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs leading-relaxed flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                 <span>
-                  {isSyncPayActive
-                    ? "Suas credenciais estão ativas e protegidas com criptografia AES-256. Para manter as chaves atuais sem alterá-las, você pode fechar este modal."
-                    : "As credenciais são validadas imediatamente nos servidores da SyncPay e armazenadas no banco de dados com criptografia AES-256."}
+                  {syncPayConnection?.hasCredentials
+                    ? "Suas credenciais salvas estão protegidas com criptografia AES-256. Se deixar os campos em branco ao salvar, o sistema reutilizará as chaves criptografadas existentes."
+                    : "As credenciais são validadas imediatamente nos servidores da SyncPay e armazenadas com criptografia AES-256."}
                 </span>
               </div>
-            </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
-              <Button
-                variant="outline"
-                onClick={() => setIsSyncPayConnectOpen(false)}
-                className="bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10 rounded-xl text-xs h-10 px-4 font-semibold cursor-pointer"
-              >
-                Cancelar
-              </Button>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsSyncPayConnectOpen(false)}
+                  className="bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10 rounded-xl text-xs h-10 px-4 font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </Button>
 
-              <Button
-                onClick={handleConnectSyncPay}
-                disabled={syncPayLoading || !syncPayClientId.trim() || !syncPayClientSecret.trim()}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs h-10 px-5 shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
-              >
-                {syncPayLoading ? 'Validando...' : 'Salvar e Ativar SyncPay'}
-              </Button>
-            </div>
+                <Button
+                  type="submit"
+                  disabled={syncPayLoading || (!syncPayConnection?.hasCredentials && (!syncPayClientId.trim() || !syncPayClientSecret.trim()))}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs h-10 px-5 shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                >
+                  {syncPayLoading ? 'Validando...' : 'Salvar e Ativar SyncPay'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

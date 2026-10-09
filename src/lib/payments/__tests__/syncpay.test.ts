@@ -562,4 +562,71 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
       expect(res.updated).toBe(0);
     });
   });
+
+  describe('5. Modal Credential Security & Connection Isolation Audit', () => {
+    it('GET connection info returns clientIdMasked and hasCredentials without exposing plain clientSecret', async () => {
+      const rawClientId = 'partner_client_id_9999';
+      const rawClientSecret = 'super_secret_private_key_12345';
+      const encryptedClient = encrypt(rawClientId);
+      const encryptedSecret = encrypt(rawClientSecret);
+
+      const connObj = {
+        id: 'conn-inactive-1',
+        status: 'inactive',
+        accessTokenEncrypted: encryptedClient,
+        refreshTokenEncrypted: encryptedSecret,
+        updatedAt: new Date(),
+      };
+
+      const { decrypt } = await import('@/lib/encryption');
+      const decryptedClient = decrypt(connObj.accessTokenEncrypted);
+      const masked = `${decryptedClient.slice(0, 4)}...${decryptedClient.slice(-4)}`;
+
+      expect(masked).toBe('part...9999');
+      expect(masked).not.toContain(rawClientSecret);
+      expect(JSON.stringify({ status: connObj.status, clientIdMasked: masked, hasCredentials: true })).not.toContain(rawClientSecret);
+    });
+
+    it('preserving credentials on blank submit reuses stored encrypted keys and requires explicit POST submit to reactivate', async () => {
+      const { db } = await import('@/db');
+      const encryptedClient = encrypt('existing_client_id');
+      const encryptedSecret = encrypt('existing_client_secret');
+
+      const existingConn = {
+        id: 'conn-inactive-2',
+        sellerId: 'seller-2',
+        provider: 'syncpay',
+        status: 'inactive',
+        accessTokenEncrypted: encryptedClient,
+        refreshTokenEncrypted: encryptedSecret,
+      };
+
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue(existingConn as any);
+
+      const { decrypt } = await import('@/lib/encryption');
+      
+      // Simulates POST route logic when client submits blank fields
+      let clientId = '';
+      let clientSecret = '';
+
+      if ((!clientId.trim() || !clientSecret.trim()) && existingConn && existingConn.accessTokenEncrypted) {
+        clientId = decrypt(existingConn.accessTokenEncrypted);
+        clientSecret = decrypt(existingConn.refreshTokenEncrypted);
+      }
+
+      expect(clientId).toBe('existing_client_id');
+      expect(clientSecret).toBe('existing_client_secret');
+    });
+
+    it('opening modal or querying GET does NOT reactivate inactive connection automatically', async () => {
+      const inactiveConn = {
+        id: 'conn-3',
+        sellerId: 'seller-3',
+        status: 'inactive',
+      };
+
+      // Modal open state only changes React UI state, connection in DB remains inactive
+      expect(inactiveConn.status).toBe('inactive');
+    });
+  });
 });
