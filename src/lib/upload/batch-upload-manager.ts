@@ -370,6 +370,7 @@ export class BatchUploadQueue {
     if (this.onItemUpdateCb) {
       this.onItemUpdateCb({ ...item });
     }
+    this.notifyQueueUpdate();
   }
 
   private notifyQueueUpdate(): void {

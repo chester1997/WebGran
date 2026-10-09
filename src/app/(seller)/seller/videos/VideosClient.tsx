@@ -211,6 +211,9 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
           setBatchItems([...items]);
         },
         onItemUpdate: (item) => {
+          if (queueRef.current) {
+            setBatchItems(queueRef.current.getItems());
+          }
           if (item.status === "PROCESSING" || item.status === "READY") {
             refreshData(true);
           }

@@ -41,6 +41,57 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
     expect(["CREATING_SESSION", "UPLOADING", "PROCESSING", "READY"]).toContain(queue.getItems()[0].status);
   });
 
+  it("triggers onQueueUpdate with CREATING_SESSION status immediately when start() is called", async () => {
+    const queueUpdates: BatchUploadItem[][] = [];
+
+    const queue = new BatchUploadQueue({
+      freeQuotaBytes: mockFreeQuotaBytes,
+      onQueueUpdate: (items) => {
+        queueUpdates.push([...items.map((i) => ({ ...i }))]);
+      },
+    });
+
+    const file1 = createMockFile("aula_01.mp4", 200);
+    queue.addFiles([file1]);
+
+    expect(queue.getItems()[0].status).toBe("QUEUED");
+
+    queue.start();
+
+    // The status transition to CREATING_SESSION must happen synchronously/immediately inside start() -> processNext()
+    expect(queue.getItems()[0].status).toBe("CREATING_SESSION");
+    expect(queueUpdates.some((up) => up[0]?.status === "CREATING_SESSION")).toBe(true);
+  });
+
+  it("handles session creation failure gracefully, setting FAILED status and error message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ success: false, error: "Quota de armazenamento excedida na conta." }),
+      })
+    ));
+
+    const queueUpdates: BatchUploadItem[][] = [];
+    const queue = new BatchUploadQueue({
+      freeQuotaBytes: mockFreeQuotaBytes,
+      onQueueUpdate: (items) => {
+        queueUpdates.push([...items.map((i) => ({ ...i }))]);
+      },
+    });
+
+    const file1 = createMockFile("video_falha.mp4", 100);
+    queue.addFiles([file1]);
+
+    queue.start();
+
+    // Wait microtask tick for async fetch failure to resolve
+    await new Promise((r) => setTimeout(r, 50));
+
+    const item = queue.getItems()[0];
+    expect(item.status).toBe("FAILED");
+    expect(item.error).toBe("Quota de armazenamento excedida na conta.");
+    expect(queueUpdates.some((up) => up[0]?.status === "FAILED" && up[0]?.error?.includes("Quota"))).toBe(true);
+  });
+
   it("maintains sequential order and calculates total bytes correctly", () => {
     const queue = new BatchUploadQueue({ freeQuotaBytes: mockFreeQuotaBytes });
 
@@ -96,5 +147,3 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
     expect(["QUEUED", "CREATING_SESSION", "UPLOADING"]).toContain(queue.getItems()[0].status);
   });
 });
-
-
