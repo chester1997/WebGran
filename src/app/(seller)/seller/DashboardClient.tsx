@@ -189,7 +189,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 w-full max-w-full">
         
         {/* KPI 1: Faturamento */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]">
+        <div 
+          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
+          style={{
+            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.12) 25%, rgba(16, 185, 129, 0.05) 50%, rgba(16, 185, 129, 0.01) 70%, transparent 85%), #0E0E11`
+          }}
+        >
           {isPending ? (
             <SkeletonKpi />
           ) : (
@@ -222,7 +227,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* KPI 2: Total Vendas */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]">
+        <div 
+          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
+          style={{
+            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(59, 130, 246, 0.22) 0%, rgba(59, 130, 246, 0.12) 25%, rgba(59, 130, 246, 0.05) 50%, rgba(59, 130, 246, 0.01) 70%, transparent 85%), #0E0E11`
+          }}
+        >
           {isPending ? (
             <SkeletonKpi />
           ) : (
@@ -255,7 +265,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* KPI 3: Clientes */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]">
+        <div 
+          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
+          style={{
+            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(168, 85, 247, 0.22) 0%, rgba(168, 85, 247, 0.12) 25%, rgba(168, 85, 247, 0.05) 50%, rgba(168, 85, 247, 0.01) 70%, transparent 85%), #0E0E11`
+          }}
+        >
           {isPending ? (
             <SkeletonKpi />
           ) : (
@@ -264,8 +279,8 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 <span className="text-zinc-400 text-[11px] font-semibold uppercase tracking-wider truncate">
                   Clientes
                 </span>
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 text-indigo-400" />
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-purple-400" />
                 </div>
               </div>
 
@@ -288,7 +303,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
 
         {/* KPI 4: Ticket Médio */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]">
+        <div 
+          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
+          style={{
+            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(245, 158, 11, 0.22) 0%, rgba(245, 158, 11, 0.12) 25%, rgba(245, 158, 11, 0.05) 50%, rgba(245, 158, 11, 0.01) 70%, transparent 85%), #0E0E11`
+          }}
+        >
           {isPending ? (
             <SkeletonKpi />
           ) : (
