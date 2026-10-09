@@ -21,7 +21,7 @@ import Image from "next/image";
 import { useCart } from "@/components/miniapp/CartProvider";
 import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
 import { useRouter } from "next/navigation";
-import { PixPaymentCard } from "@/components/payments/PixPaymentCard";
+import { PixPaymentModal } from "@/components/payments/PixPaymentModal";
 
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const { items, updateQuantity, removeFromCart, subtotal, total, clearCart } = useCart();
@@ -45,6 +45,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     expiresAt: string;
     amount: number;
   } | null>(null);
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false);
 
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
@@ -93,6 +94,11 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   };
 
   const handleCheckout = async () => {
+    if (pixState) {
+      setIsPixModalOpen(true);
+      return;
+    }
+
     setIsProcessing(true);
     setErrorMessage(null);
     try {
@@ -113,6 +119,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
             expiresAt: result.pix.expiresAt,
             amount: checkoutAmount,
           });
+          setIsPixModalOpen(true);
         } else if (result.isDemoPaid) {
           setIsPaid(true);
         } else {
@@ -141,6 +148,8 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           const data = await res.json();
           if (data.status === "paid") {
             setIsPaid(true);
+            setPixState(null);
+            setIsPixModalOpen(false);
             const firstProd = data.items?.[0]?.product;
             if (firstProd) {
               setPaidDeliveryType(firstProd.deliveryType);
@@ -212,21 +221,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     );
   }
 
-  /* ── PIX state ── */
-  if (pixState) {
-    return (
-      <div className="p-4 pt-6 text-zinc-900 dark:text-white w-full max-w-lg mx-auto flex flex-col items-center">
-        <PixPaymentCard
-          pixCode={pixState.qrCode}
-          qrCodeBase64={pixState.qrCodeBase64}
-          amount={pixState.amount}
-          orderId={pixState.orderId}
-          status="pending"
-          onBack={() => setPixState(null)}
-        />
-      </div>
-    );
-  }
+
 
   /* ── Empty state ── */
   if (items.length === 0) {
@@ -473,6 +468,18 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           Após o pagamento, você recebe o acesso diretamente no seu Telegram.
         </p>
       </div>
+
+      {/* PIX CHECKOUT OVERLAY MODAL */}
+      <PixPaymentModal
+        isOpen={isPixModalOpen && Boolean(pixState)}
+        onClose={() => setIsPixModalOpen(false)}
+        pixCode={pixState?.qrCode}
+        qrCodeBase64={pixState?.qrCodeBase64}
+        amount={pixState?.amount}
+        orderId={pixState?.orderId}
+        productTitle="Carrinho de Compras"
+        status="pending"
+      />
     </div>
   );
 }

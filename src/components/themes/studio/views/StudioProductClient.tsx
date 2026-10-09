@@ -9,7 +9,7 @@ import { HorizontalCarousel } from "../components/HorizontalCarousel";
 import { ProductCard } from "../components/ProductCard";
 import { getProductBadge } from "@/lib/product-badge";
 import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
-import { PixPaymentCard } from "@/components/payments/PixPaymentCard";
+import { PixPaymentModal } from "@/components/payments/PixPaymentModal";
 
 interface Product {
   id: string;
@@ -81,6 +81,7 @@ export function StudioProductClient({
     expiresAt: string;
     amount: number;
   } | null>(null);
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
 
   // Storage key for Favorites
@@ -146,6 +147,7 @@ export function StudioProductClient({
             setClientHasAccess(true);
             setIsPaid(true);
             setPixState(null);
+            setIsPixModalOpen(false);
             if (data.accesses?.[0]?.id) {
               setCurrentAccessId(data.accesses[0].id);
             }
@@ -209,6 +211,11 @@ export function StudioProductClient({
   };
 
   const handleDirectBuy = async () => {
+    if (pixState) {
+      setIsPixModalOpen(true);
+      return;
+    }
+
     setIsProcessing(true);
     setErrorMessage(null);
     try {
@@ -226,6 +233,7 @@ export function StudioProductClient({
             expiresAt: result.pix.expiresAt,
             amount: Number(product.price),
           });
+          setIsPixModalOpen(true);
         } else if (result.isDemoPaid) {
           setClientHasAccess(true);
           setIsPaid(true);
@@ -406,17 +414,6 @@ export function StudioProductClient({
               <Check className="w-5 h-5 stroke-[2.5]" />
               <span>Acesso Liberado</span>
             </Link>
-          ) : pixState ? (
-            <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl space-y-4">
-              <PixPaymentCard
-                pixCode={pixState.qrCode}
-                qrCodeBase64={pixState.qrCodeBase64}
-                amount={pixState.amount}
-                orderId={pixState.orderId}
-                status="pending"
-                onBack={() => setPixState(null)}
-              />
-            </div>
           ) : (
             <div className="space-y-2">
               {errorMessage && (
@@ -435,6 +432,11 @@ export function StudioProductClient({
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span>Gerando pagamento...</span>
                   </>
+                ) : pixState ? (
+                  <>
+                    <Zap className="w-5 h-5 fill-white" />
+                    <span>Visualizar PIX Pendente (R$ {Number(product.price || 0).toFixed(2).replace('.', ',')})</span>
+                  </>
                 ) : (
                   <>
                     <Play className="w-5 h-5 fill-white" />
@@ -442,6 +444,11 @@ export function StudioProductClient({
                   </>
                 )}
               </button>
+              {pixState && (
+                <p className="text-[11px] text-center text-amber-500 dark:text-amber-400 font-semibold animate-pulse">
+                  ⚡ Cobrança PIX pendente ativa. Clique acima para abrir o QR Code.
+                </p>
+              )}
             </div>
           )}
 
@@ -690,6 +697,18 @@ export function StudioProductClient({
           </div>
         )}
       </div>
+
+      {/* PIX CHECKOUT OVERLAY MODAL */}
+      <PixPaymentModal
+        isOpen={isPixModalOpen && Boolean(pixState)}
+        onClose={() => setIsPixModalOpen(false)}
+        pixCode={pixState?.qrCode}
+        qrCodeBase64={pixState?.qrCodeBase64}
+        amount={pixState?.amount}
+        orderId={pixState?.orderId}
+        productTitle={product.title}
+        status="pending"
+      />
     </div>
   );
 }
