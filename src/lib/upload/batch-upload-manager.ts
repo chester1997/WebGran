@@ -88,7 +88,10 @@ export class BatchUploadQueue {
     let runningTotalBytes = currentQueueBytes;
 
     for (const file of files) {
-      if (!file.type.startsWith("video/")) {
+      const isVideoMime = file.type && file.type.startsWith("video/");
+      const isVideoExt = /\.(mp4|mov|mkv|avi|webm|m4v|3gp|flv)$/i.test(file.name);
+
+      if (!isVideoMime && !isVideoExt) {
         rejected.push(`${file.name}: Não é um arquivo de vídeo válido.`);
         continue;
       }

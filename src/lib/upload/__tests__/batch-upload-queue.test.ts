@@ -18,7 +18,7 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
     ));
   });
 
-  it("adds valid video files and rejects non-video files or files exceeding quota", () => {
+  it("adds valid video files and keeps them QUEUED without autostarting until start() is explicitly called", () => {
     const queue = new BatchUploadQueue({ freeQuotaBytes: mockFreeQuotaBytes });
 
     const file1 = createMockFile("video1.mp4", 500);
@@ -29,10 +29,16 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
 
     expect(res.added.length).toBe(1);
     expect(res.added[0].title).toBe("video1");
+    // CRITICAL: Adding files MUST NOT autostart queue!
+    expect(queue.getItems()[0].status).toBe("QUEUED");
     expect(res.rejected.length).toBe(2);
     expect(res.rejected[0]).toContain("image.png");
     expect(res.rejected[1]).toContain("video2.mp4");
     expect(queue.getItems().length).toBe(1);
+
+    // Explicitly start queue
+    queue.start();
+    expect(["CREATING_SESSION", "UPLOADING", "PROCESSING", "READY"]).toContain(queue.getItems()[0].status);
   });
 
   it("maintains sequential order and calculates total bytes correctly", () => {
@@ -67,6 +73,14 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
     expect(queue.getItems()[0].title).toBe("v2");
   });
 
+  it("accepts video files with empty MIME type but valid video extensions (.mov, .mkv, .avi)", () => {
+    const queue = new BatchUploadQueue({ freeQuotaBytes: mockFreeQuotaBytes });
+    const movFile = createMockFile("aula_01.mov", 100, ""); // empty MIME type
+    const res = queue.addFiles([movFile]);
+    expect(res.added.length).toBe(1);
+    expect(res.added[0].title).toBe("aula_01");
+  });
+
   it("supports retrying failed or canceled items", () => {
     const queue = new BatchUploadQueue({ freeQuotaBytes: mockFreeQuotaBytes });
 
@@ -82,4 +96,5 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
     expect(["QUEUED", "CREATING_SESSION", "UPLOADING"]).toContain(queue.getItems()[0].status);
   });
 });
+
 
