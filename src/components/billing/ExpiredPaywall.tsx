@@ -440,17 +440,17 @@ export function ExpiredPaywall({ plan, latestInvoice, onPaymentSuccess }: Expire
                     type="button"
                     disabled={generatingPix || !formattedPrice}
                     onClick={() => handleGeneratePix(false)}
-                    className="w-full py-3.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xl shadow-rose-600/25 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+                    className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xl shadow-rose-600/25 transition-all cursor-pointer flex items-center justify-center gap-2 overflow-hidden"
                   >
                     {generatingPix ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        <span>Gerando PIX com SyncPay...</span>
+                        <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
+                        <span className="truncate">Gerando PIX com SyncPay...</span>
                       </>
                     ) : (
                       <>
-                        <QrCode className="w-4.5 h-4.5" />
-                        <span>Pagar Assinatura ({formattedPrice || "R$ --"}) via PIX</span>
+                        <QrCode className="w-4.5 h-4.5 shrink-0" />
+                        <span className="truncate">Pagar via PIX ({formattedPrice || "R$ --"})</span>
                       </>
                     )}
                   </Button>
