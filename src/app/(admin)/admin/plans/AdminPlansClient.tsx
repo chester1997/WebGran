@@ -57,7 +57,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
   const [planForm, setPlanForm] = useState({
     name: "",
     slug: "",
-    price: "89.90",
+    price: "",
     description: "",
     billingInterval: "month",
     active: true,
@@ -138,7 +138,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
     setPlanForm({
       name: "",
       slug: "",
-      price: "89.90",
+      price: "",
       description: "",
       billingInterval: "month",
       active: true,

@@ -64,7 +64,7 @@ export async function GET() {
           subscription: sub ? {
             id: sub.id,
             planName: sub.plan?.name || 'WebGran SaaS',
-            price: sub.plan?.price ? Number(sub.plan.price) : 89.90,
+            price: sub.plan?.price ? Number(sub.plan.price) : 0,
             status: sub.status,
             currentPeriodStart: sub.currentPeriodStart ? new Date(sub.currentPeriodStart).toISOString() : null,
             currentPeriodEnd: periodEnd ? periodEnd.toISOString() : null,

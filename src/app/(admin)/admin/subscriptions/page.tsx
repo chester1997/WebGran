@@ -42,7 +42,7 @@ export default async function AdminSubscriptionsPage() {
   let expiredCount = 0;
 
   const formattedInvoices = invoicesList.map((inv) => {
-    const amountNum = Number(inv.amount || 89.90);
+    const amountNum = Number(inv.amount || 0);
     const isThisMonth = inv.paidAt && new Date(inv.paidAt) >= firstDayOfMonth;
 
     if (inv.status === "PAID" && isThisMonth) {

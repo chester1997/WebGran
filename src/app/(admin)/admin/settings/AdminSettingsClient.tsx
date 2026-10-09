@@ -141,7 +141,7 @@ export default function AdminSettingsClient({
       if (listJson.plans) setPlans(listJson.plans);
 
       setIsPlanModalOpen(false);
-      alert("✅ Plano salvo com sucesso! O valor de R$ 89,90 será refletido no painel dos vendedores.");
+      alert(`✅ Plano salvo com sucesso! O valor de R$ ${Number(planForm.price).toFixed(2).replace('.', ',')} será refletido no painel dos vendedores.`);
     } catch (err: any) {
       alert(`Erro: ${err.message}`);
     } finally {
@@ -304,7 +304,7 @@ export default function AdminSettingsClient({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">Plano de Assinatura SaaS</h3>
-                  <p className="text-xs text-gray-400">Cobrança única de R$ 89,90 / mês para os vendedores</p>
+                  <p className="text-xs text-gray-400">Cobrança única de R$ {Number(activePlan.price || 0).toFixed(2).replace('.', ',')} / mês para os vendedores</p>
                 </div>
               </div>
 
@@ -337,7 +337,7 @@ export default function AdminSettingsClient({
 
           <div className="flex items-center justify-between pt-2">
             <span className="text-[11px] text-gray-400 italic">
-              ⚡ O valor de R$ 89,90 é cobrado mensalmente via PIX.
+              ⚡ O valor de R$ {Number(activePlan.price || 0).toFixed(2).replace('.', ',')} é cobrado mensalmente via PIX.
             </span>
           </div>
         </div>

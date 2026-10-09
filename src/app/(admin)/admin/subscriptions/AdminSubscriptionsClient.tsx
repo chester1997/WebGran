@@ -73,7 +73,7 @@ export default function AdminSubscriptionsClient({
             Assinaturas WebGran SaaS (SyncPay Plataforma)
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Acompanhamento em tempo real das mensalidades de R$ 89,90 recebidas na SyncPay.
+            Acompanhamento em tempo real das mensalidades recebidas na SyncPay.
           </p>
         </div>
       </div>

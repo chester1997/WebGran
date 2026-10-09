@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { invoices, subscriptions } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
-import { WEBGRAN_PLAN_PRICE } from '@/lib/billing/subscription-service';
 
 
 export async function POST(req: Request) {
@@ -35,9 +34,9 @@ export async function POST(req: Request) {
 
     // Check if status represents payment completion
     if (status === 'PAID' || status === 'APPROVED' || status === 'COMPLETED' || status === 'CONFIRMED' || status.includes('PAID')) {
-      // Validate expected amount
-      if (Number(inv.amount) !== WEBGRAN_PLAN_PRICE) {
-        console.warn(`[AUDIT ALARM] Webhook invoice ${inv.id} amount mismatch: expected ${WEBGRAN_PLAN_PRICE}, received ${inv.amount}`);
+      // Validate non-zero amount
+      if (Number(inv.amount) <= 0) {
+        console.warn(`[AUDIT ALARM] Webhook invoice ${inv.id} amount invalid: ${inv.amount}`);
       }
 
       const now = new Date();

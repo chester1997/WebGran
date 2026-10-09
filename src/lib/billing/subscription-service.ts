@@ -6,26 +6,35 @@ import { SyncPayPlatformBillingService } from '@/lib/billing/syncpay-platform-bi
 import { SyncPayPlatformBillingReconciliationService } from '@/lib/billing/syncpay-platform-reconciliation-service';
 
 export const WEBGRAN_PLAN_SLUG = 'webgran';
-export const WEBGRAN_PLAN_PRICE = 89.90;
 
 export async function getDefaultPlan() {
   let plan = await db.query.subscriptionPlans.findFirst({
-    where: eq(subscriptionPlans.slug, WEBGRAN_PLAN_SLUG),
+    where: and(
+      eq(subscriptionPlans.slug, WEBGRAN_PLAN_SLUG),
+      eq(subscriptionPlans.active, true)
+    ),
   });
 
   if (!plan) {
-    const inserted = await db
-      .insert(subscriptionPlans)
-      .values({
-        name: 'WebGran',
-        slug: WEBGRAN_PLAN_SLUG,
-        description: 'Plano Único WebGran SaaS',
-        price: '89.90',
-        billingInterval: 'month',
-        active: true,
-      })
-      .returning();
-    plan = inserted[0];
+    plan = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.active, true),
+      orderBy: [desc(subscriptionPlans.updatedAt)],
+    });
+  }
+
+  if (!plan) {
+    plan = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.slug, WEBGRAN_PLAN_SLUG),
+    });
+  }
+
+  if (!plan) {
+    throw new Error('Nenhum plano de assinatura ativo foi encontrado no sistema.');
+  }
+
+  const numericPrice = Number(plan.price);
+  if (isNaN(numericPrice) || numericPrice <= 0) {
+    throw new Error(`O preço do plano de assinatura "${plan.name}" é inválido.`);
   }
 
   return plan;

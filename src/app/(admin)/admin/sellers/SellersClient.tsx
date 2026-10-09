@@ -1070,7 +1070,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                 <div>
                   <span className="text-gray-400 block text-[11px]">Valor</span>
                   <span className="text-emerald-400 font-bold text-sm block">
-                    R$ {(selectedSeller.subscription?.price || 89.90).toFixed(2)} / mês
+                    R$ {(selectedSeller.subscription?.price || 0).toFixed(2).replace('.', ',')} / mês
                   </span>
                 </div>
                 <div>

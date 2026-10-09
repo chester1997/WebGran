@@ -38,7 +38,7 @@ export default async function SettingsPage() {
   const safePlan = subscriptionData?.plan || {
     id: "default-plan",
     name: "WebGran",
-    price: 89.90,
+    price: 0,
     currency: "BRL",
     billingInterval: "MONTHLY",
   };
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
   const safeLatestInvoice = subscriptionData?.latestInvoice ? {
     id: subscriptionData.latestInvoice.id,
     externalId: subscriptionData.latestInvoice.externalId || null,
-    amount: Number(subscriptionData.latestInvoice.amount || 89.90),
+    amount: Number(subscriptionData.latestInvoice.amount || 0),
     status: subscriptionData.latestInvoice.status || "PENDING",
     dueDate: subscriptionData.latestInvoice.dueDate ? new Date(subscriptionData.latestInvoice.dueDate).toISOString() : null,
     paidAt: subscriptionData.latestInvoice.paidAt ? new Date(subscriptionData.latestInvoice.paidAt).toISOString() : null,
@@ -59,7 +59,7 @@ export default async function SettingsPage() {
   const safeInvoiceHistory = (subscriptionData?.invoiceHistory || []).map((inv: any) => ({
     id: inv.id,
     externalId: inv.externalId || null,
-    amount: Number(inv.amount || 89.90),
+    amount: Number(inv.amount || 0),
     status: inv.status || "PENDING",
     dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : null,
     paidAt: inv.paidAt ? new Date(inv.paidAt).toISOString() : null,

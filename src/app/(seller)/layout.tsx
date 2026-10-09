@@ -4,6 +4,7 @@ import { ReactNode, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { ExpiredPaywall } from "@/components/billing/ExpiredPaywall";
 import { 
   LayoutDashboard, 
   Bot,
@@ -122,6 +123,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     trialDaysRemaining: number;
     status: string;
     isExempt: boolean;
+    plan?: any;
+    latestInvoice?: any;
   } | null>(null);
 
   useEffect(() => {
@@ -145,8 +148,10 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               isSubscriptionActive: data.data.isSubscriptionActive,
               isTrialActive: data.data.isTrialActive,
               trialDaysRemaining: data.data.trialDaysRemaining,
-              status: data.data.subscription.status,
+              status: data.data.subscription?.status || 'EXPIRED',
               isExempt: data.data.isExempt,
+              plan: data.data.plan,
+              latestInvoice: data.data.latestInvoice,
             });
           }
         })
@@ -644,43 +649,28 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             
             {subInfo && subInfo.isSubscriptionActive === false && !pathname.startsWith("/seller/settings") ? (
               /* BLOCKING PAYWALL FOR EXPIRED 3-DAY TRIAL */
-              <div className="min-h-[500px] flex items-center justify-center p-6 fade-in">
-                <div className="max-w-lg w-full bg-[#0E0E11] border border-rose-500/30 rounded-2xl p-7 shadow-2xl space-y-6 text-center relative overflow-hidden">
-                  
-                  <div className="w-14 h-14 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500">
-                    <ShieldAlert className="w-7 h-7" />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h2 className="text-xl font-bold text-white tracking-tight">
-                      Seu período de teste de 3 dias expirou!
-                    </h2>
-                    <p className="text-xs text-zinc-400 leading-relaxed">
-                      Para continuar utilizando todas as funcionalidades da sua loja e gerenciando seus produtos no Telegram, realize o pagamento da assinatura mensal.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-[#141418] border border-white/[0.06] space-y-2.5 text-left">
-                    <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
-                      <span className="text-xs text-zinc-400 font-medium">Plano Único WebGran</span>
-                      <span className="text-xs font-bold text-white">R$ 89,90 / mês</span>
-                    </div>
-                    <ul className="text-xs text-zinc-300 space-y-1.5">
-                      <li className="flex items-center gap-2 text-emerald-400">✓ Bot Telegram e Miniapp ativados</li>
-                      <li className="flex items-center gap-2 text-emerald-400">✓ Vendas e PIX direto na sua conta Mercado Pago</li>
-                      <li className="flex items-center gap-2 text-emerald-400">✓ Produtos, clientes e categorias ilimitados</li>
-                    </ul>
-                  </div>
-
-                  <Link
-                    href="/seller/settings?tab=assinatura"
-                    className="w-full py-3 px-5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Pagar Assinatura (R$ 89,90 via PIX)
-                  </Link>
-                </div>
-              </div>
+              <ExpiredPaywall
+                plan={subInfo.plan}
+                latestInvoice={subInfo.latestInvoice}
+                onPaymentSuccess={() => {
+                  fetch(`/api/billing/subscription?t=${Date.now()}`, { cache: "no-store" })
+                    .then((res) => res.json())
+                    .then((data) => {
+                      if (data.success && data.data) {
+                        setSubInfo({
+                          isSubscriptionActive: data.data.isSubscriptionActive,
+                          isTrialActive: data.data.isTrialActive,
+                          trialDaysRemaining: data.data.trialDaysRemaining,
+                          status: data.data.subscription?.status || 'EXPIRED',
+                          isExempt: data.data.isExempt,
+                          plan: data.data.plan,
+                          latestInvoice: data.data.latestInvoice,
+                        });
+                      }
+                    })
+                    .catch(() => {});
+                }}
+              />
             ) : (
               <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
                 {children}
