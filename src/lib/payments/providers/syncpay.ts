@@ -136,6 +136,8 @@ export function isSyncPayPaymentConfirmed(eventType: string, rawStatusOrData: an
 }
 
 export class SyncPayProvider {
+  private static inFlightPixRequests: Map<string, Promise<PixPaymentResponse>> = new Map();
+
   getBaseUrl(): string {
     return 'https://api.syncpayments.com.br/api/partner/v1';
   }
@@ -263,11 +265,29 @@ export class SyncPayProvider {
 
   /**
    * Creates a PIX CashIn transaction on SyncPay.
+   * Guarantees atomic in-flight concurrency lock per orderId to avoid duplicate API calls.
    */
   async createPixPayment(params: CreatePaymentParams): Promise<PixPaymentResponse> {
+    const orderKey = params.orderId;
+
+    if (SyncPayProvider.inFlightPixRequests.has(orderKey)) {
+      return await SyncPayProvider.inFlightPixRequests.get(orderKey)!;
+    }
+
+    const task = this.executeCreatePixPayment(params);
+    SyncPayProvider.inFlightPixRequests.set(orderKey, task);
+
+    try {
+      return await task;
+    } finally {
+      SyncPayProvider.inFlightPixRequests.delete(orderKey);
+    }
+  }
+
+  private async executeCreatePixPayment(params: CreatePaymentParams): Promise<PixPaymentResponse> {
     const conn = await this.getSyncPayConnection(params.sellerId);
     if (!conn || !conn.clientId || !conn.clientSecret) {
-      throw new Error('SyncPay não está configurado para esta loja.');
+      throw new Error('SyncPay não está ativo ou configurado para esta loja.');
     }
 
     // 1. Verify Entitlement: payment_gateways_enabled
@@ -295,6 +315,57 @@ export class SyncPayProvider {
       throw new Error('Este pedido já foi pago.');
     }
 
+    // Idempotency Guard 1: Reuse existing non-expired Pix charge if already generated for this order in DB
+    if (
+      order.paymentMethod === 'syncpay' &&
+      order.paymentId &&
+      order.pixQrCode &&
+      order.pixExpiresAt &&
+      new Date(order.pixExpiresAt) > new Date()
+    ) {
+      return {
+        paymentId: order.paymentId,
+        status: 'pending',
+        qrCode: order.pixQrCode,
+        qrCodeBase64: order.pixQrCodeBase64 || '',
+        expiresAt: new Date(order.pixExpiresAt),
+      };
+    }
+
+    // Idempotency Guard 2: Pre-creation Provider Lookup
+    // Check if SyncPay already has a charge created for this order reference ID (e.g. from prior timeout or concurrent request)
+    try {
+      const existingStatus = await this.getPixPaymentStatus(params.orderId, conn.clientId, conn.clientSecret);
+      if (existingStatus) {
+        const txData = existingStatus.data?.transaction || existingStatus.data || existingStatus.transaction || existingStatus;
+        const foundPaymentId = String(txData.identifier || txData.reference_id || txData.id || txData.transaction_id || params.orderId);
+        const foundPixCode = txData.pix_code || txData.pix_copia_e_cola || txData.qr_code || txData.br_code || txData.emv || '';
+
+        if (foundPixCode || foundPaymentId) {
+          const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+          await db.update(orders)
+            .set({
+              paymentId: foundPaymentId,
+              paymentMethod: 'syncpay',
+              pixQrCode: foundPixCode || order.pixQrCode || '',
+              pixExpiresAt: expiresAt,
+              updatedAt: new Date(),
+            })
+            .where(eq(orders.id, params.orderId));
+
+          return {
+            paymentId: foundPaymentId,
+            status: extractSyncPayStatus(existingStatus) === 'completed' || extractSyncPayStatus(existingStatus) === 'paid' ? 'paid' : 'pending',
+            qrCode: foundPixCode || order.pixQrCode || '',
+            qrCodeBase64: '',
+            expiresAt,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[SyncPayProvider] Pre-creation status lookup warning:', err);
+    }
+
     const token = await SyncPayAuthService.getAccessToken(conn.clientId, conn.clientSecret);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.webgran.online');
@@ -311,36 +382,83 @@ export class SyncPayProvider {
       },
     };
 
-    let res = await fetch(`${this.getBaseUrl()}/cash-in`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    // Handle 401 retry once with fresh token
-    if (res.status === 401) {
-      console.warn('[SyncPayProvider] 401 received. Retrying with fresh token...');
-      SyncPayAuthService.invalidateCache(conn.clientId, conn.clientSecret);
-      const freshToken = await SyncPayAuthService.getAccessToken(conn.clientId, conn.clientSecret, true);
+    let res: Response;
+    try {
       res = await fetch(`${this.getBaseUrl()}/cash-in`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${freshToken}`,
+          Authorization: `Bearer ${token}`,
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
+
+      // Handle 401 retry once with fresh token
+      if (res.status === 401) {
+        console.warn('[SyncPayProvider] 401 received on cash-in. Retrying with fresh token...');
+        SyncPayAuthService.invalidateCache(conn.clientId, conn.clientSecret);
+        const freshToken = await SyncPayAuthService.getAccessToken(conn.clientId, conn.clientSecret, true);
+        res = await fetch(`${this.getBaseUrl()}/cash-in`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${freshToken}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch (fetchErr) {
+      console.error('[SyncPayProvider] Network error/timeout calling /cash-in:', fetchErr);
+      // Attempt status recovery after network exception/timeout
+      try {
+        const recoveredStatus = await this.getPixPaymentStatus(params.orderId, conn.clientId, conn.clientSecret);
+        if (recoveredStatus) {
+          const txData = recoveredStatus.data?.transaction || recoveredStatus.data || recoveredStatus.transaction || recoveredStatus;
+          const recoveredPaymentId = String(txData.identifier || txData.reference_id || txData.id || txData.transaction_id || params.orderId);
+          const recoveredPixCode = txData.pix_code || txData.pix_copia_e_cola || txData.qr_code || txData.br_code || txData.emv || '';
+
+          if (recoveredPixCode || recoveredPaymentId) {
+            const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+            await db.update(orders)
+              .set({
+                paymentId: recoveredPaymentId,
+                paymentMethod: 'syncpay',
+                pixQrCode: recoveredPixCode,
+                pixExpiresAt: expiresAt,
+                updatedAt: new Date(),
+              })
+              .where(eq(orders.id, params.orderId));
+
+            return {
+              paymentId: recoveredPaymentId,
+              status: extractSyncPayStatus(recoveredStatus) === 'completed' || extractSyncPayStatus(recoveredStatus) === 'paid' ? 'paid' : 'pending',
+              qrCode: recoveredPixCode,
+              qrCodeBase64: '',
+              expiresAt,
+            };
+          }
+        }
+      } catch (recErr) {
+        console.warn('[SyncPayProvider] Recovery attempt failed after network error:', recErr);
+      }
+
+      throw new Error('Falha de conexão com a SyncPay ao gerar cobrança Pix. Tente novamente em alguns instantes.');
     }
 
     if (!res.ok) {
       const errorBody = await res.text();
-      console.error('[SyncPayProvider] Cash-in error:', res.status, errorBody);
-      throw new Error(`SyncPay API Error (${res.status}): ${errorBody}`);
+      const redactedBody = errorBody.replace(/("client_secret"|"access_token"|"token"|"secret"|"cpf"|"cnpj")\s*:\s*"[^"]+"/gi, '$1:"[REDACTED]"');
+      console.error(`[SyncPayProvider] Cash-in HTTP ${res.status}:`, redactedBody);
+
+      if (res.status === 401) {
+        throw new Error('Falha de autenticação na SyncPay. Verifique as credenciais no painel de recebimentos.');
+      } else if (res.status === 400 || res.status === 422) {
+        throw new Error(`Dados de cobrança recusados pela SyncPay (Erro ${res.status}).`);
+      } else {
+        throw new Error(`Não foi possível gerar a cobrança Pix no momento (Erro ${res.status} no provedor SyncPay). Tente novamente em alguns instantes.`);
+      }
     }
 
     const data: SyncPayCashInResponse = await res.json();

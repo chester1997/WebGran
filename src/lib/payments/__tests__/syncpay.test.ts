@@ -206,6 +206,228 @@ describe('SyncPay Integration Audit — Comprehensive Security & Functional Suit
         })
       ).rejects.toThrow('plano atual da loja não permite');
     });
+
+    it('handles HTTP 500 from SyncPay API gracefully with sanitized user error message', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        sellerId: 'seller-1',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_1'),
+        refreshTokenEncrypted: encrypt('secret_1'),
+        status: 'active',
+      } as any);
+
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-500',
+        status: 'pending',
+      } as any);
+
+      vi.spyOn(SyncPayAuthService, 'getAccessToken').mockResolvedValue('mock_access_token');
+      vi.spyOn(provider, 'getPixPaymentStatus').mockResolvedValue(null);
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'An error occurred while processing the cash-in request.',
+      } as Response);
+
+      await expect(
+        provider.createPixPayment({
+          sellerId: 'seller-1',
+          orderId: 'order-500',
+          amount: 10.0,
+        })
+      ).rejects.toThrow('Não foi possível gerar a cobrança Pix no momento (Erro 500 no provedor SyncPay)');
+    });
+
+    it('reuses existing non-expired SyncPay Pix charge without making duplicate API call', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-1',
+        sellerId: 'seller-1',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_1'),
+        refreshTokenEncrypted: encrypt('secret_1'),
+        status: 'active',
+      } as any);
+
+      const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-existing-pix',
+        status: 'pending',
+        paymentMethod: 'syncpay',
+        paymentId: 'sync_existing_tx_123',
+        pixQrCode: '00020126580014BR.GOV.BCB.PIX...',
+        pixExpiresAt: expiresAt,
+      } as any);
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+      const res = await provider.createPixPayment({
+        sellerId: 'seller-1',
+        orderId: 'order-existing-pix',
+        amount: 15.0,
+      });
+
+      expect(res.paymentId).toBe('sync_existing_tx_123');
+      expect(res.qrCode).toContain('BR.GOV.BCB.PIX');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('prevents duplicate API calls when two concurrent requests hit createPixPayment at the same time', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-concurrent',
+        sellerId: 'seller-concurrent',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_c'),
+        refreshTokenEncrypted: encrypt('secret_c'),
+        status: 'active',
+      } as any);
+
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-concurrent-1',
+        status: 'pending',
+      } as any);
+
+      vi.spyOn(SyncPayAuthService, 'getAccessToken').mockResolvedValue('mock_token_c');
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        // Simulate a slight network latency of 50ms
+        await new Promise((r) => setTimeout(r, 50));
+        return {
+          ok: true,
+          json: async () => ({
+            identifier: 'sync_tx_concurrent_777',
+            pix_code: '00020126580014BR.GOV.BCB.PIX...',
+          }),
+        } as Response;
+      });
+
+      // Fire two concurrent requests for the exact same orderId
+      const [res1, res2] = await Promise.all([
+        provider.createPixPayment({ sellerId: 'seller-concurrent', orderId: 'order-concurrent-1', amount: 25.0 }),
+        provider.createPixPayment({ sellerId: 'seller-concurrent', orderId: 'order-concurrent-1', amount: 25.0 }),
+      ]);
+
+      expect(res1.paymentId).toBe('sync_tx_concurrent_777');
+      expect(res2.paymentId).toBe('sync_tx_concurrent_777');
+      // Fetch should ONLY have been called ONCE because of the in-flight lock!
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('recovers charge via getPixPaymentStatus if provider already has transaction created before cash-in call', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-rec-pre',
+        sellerId: 'seller-rec-pre',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_rp'),
+        refreshTokenEncrypted: encrypt('secret_rp'),
+        status: 'active',
+      } as any);
+
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-rec-pre-1',
+        status: 'pending',
+      } as any);
+
+      // Spy getPixPaymentStatus to simulate SyncPay already having this charge
+      vi.spyOn(provider, 'getPixPaymentStatus').mockResolvedValueOnce({
+        identifier: 'sync_already_on_provider_888',
+        pix_code: '00020126580014BR.GOV.BCB.PIX.PRE.EXISTS',
+        status: 'pending',
+      } as any);
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+      const res = await provider.createPixPayment({
+        sellerId: 'seller-rec-pre',
+        orderId: 'order-rec-pre-1',
+        amount: 35.0,
+      });
+
+      expect(res.paymentId).toBe('sync_already_on_provider_888');
+      expect(res.qrCode).toContain('PIX.PRE.EXISTS');
+      // fetch for /cash-in should NOT have been called because charge was recovered!
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('recovers charge via getPixPaymentStatus when /cash-in encounters a network error/timeout', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-net-err',
+        sellerId: 'seller-net-err',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_ne'),
+        refreshTokenEncrypted: encrypt('secret_ne'),
+        status: 'active',
+      } as any);
+
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-net-err-1',
+        status: 'pending',
+      } as any);
+
+      vi.spyOn(SyncPayAuthService, 'getAccessToken').mockResolvedValue('mock_token_ne');
+
+      // Pre-creation check returns null (not created yet)
+      vi.spyOn(provider, 'getPixPaymentStatus').mockResolvedValueOnce(null);
+
+      // fetch /cash-in throws a Network/Timeout Error
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network request failed / Timeout'));
+
+      // Recovery check after timeout finds the charge was created on SyncPay server
+      vi.spyOn(provider, 'getPixPaymentStatus').mockResolvedValueOnce({
+        identifier: 'sync_tx_recovered_after_timeout_999',
+        pix_code: '00020126580014BR.GOV.BCB.PIX.TIMEOUT.RECOVERED',
+        status: 'pending',
+      } as any);
+
+      const res = await provider.createPixPayment({
+        sellerId: 'seller-net-err',
+        orderId: 'order-net-err-1',
+        amount: 40.0,
+      });
+
+      expect(res.paymentId).toBe('sync_tx_recovered_after_timeout_999');
+      expect(res.qrCode).toContain('TIMEOUT.RECOVERED');
+    });
+
+    it('sanitizes customer error messages on 400/422 without revealing sensitive tokens or secret details', async () => {
+      const { db } = await import('@/db');
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue({
+        id: 'conn-sanitized',
+        sellerId: 'seller-sanitized',
+        provider: 'syncpay',
+        accessTokenEncrypted: encrypt('client_s'),
+        refreshTokenEncrypted: encrypt('secret_s'),
+        status: 'active',
+      } as any);
+
+      vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+        id: 'order-sanitized-1',
+        status: 'pending',
+      } as any);
+
+      vi.spyOn(SyncPayAuthService, 'getAccessToken').mockResolvedValue('mock_token_s');
+      vi.spyOn(provider, 'getPixPaymentStatus').mockResolvedValue(null);
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => JSON.stringify({ error: 'invalid payload', secret: 'super_secret_key', token: 'bearer_123' }),
+      } as Response);
+
+      await expect(
+        provider.createPixPayment({
+          sellerId: 'seller-sanitized',
+          orderId: 'order-sanitized-1',
+          amount: 50.0,
+        })
+      ).rejects.toThrow('Dados de cobrança recusados pela SyncPay (Erro 400).');
+    });
   });
 
   describe('4. Mandatory Requirement Test Cases (Section 7 Audit)', () => {
