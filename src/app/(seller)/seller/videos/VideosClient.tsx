@@ -25,6 +25,9 @@ import {
   CloudUpload,
   Sparkles,
   Link as LinkIcon,
+  Pause,
+  RotateCcw,
+  FileVideo,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
@@ -33,6 +36,7 @@ import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
 import { VideoPlanUpgradeModal } from "@/components/billing/VideoPlanUpgradeModal";
 import { InlineVideoLibraryOnboarding } from "./InlineVideoLibraryOnboarding";
 import { GenerateDeepLinkModal } from "@/components/seller/GenerateDeepLinkModal";
+import { BatchUploadQueue, BatchUploadItem } from "@/lib/upload/batch-upload-manager";
 
 export interface LibraryVideoItem {
   id: string;
@@ -189,15 +193,35 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   // Upload & Upgrade Modal State
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ title: "", description: "" });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadStep, setUploadStep] = useState<"IDLE" | "CREATING" | "UPLOADING" | "PROCESSING" | "READY" | "FAILED">("IDLE");
-  const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
-  const [uploadSpeedFormatted, setUploadSpeedFormatted] = useState<string>("");
-  const [uploadEtaSeconds, setUploadEtaSeconds] = useState<number | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadAbortRef = useRef<AbortController | null>(null);
+
+  // Batch Upload Queue State
+  const [batchItems, setBatchItems] = useState<BatchUploadItem[]>([]);
+  const [isQueuePaused, setIsQueuePaused] = useState(false);
+  const [rejectedFilesMessages, setRejectedFilesMessages] = useState<string[]>([]);
+  const queueRef = useRef<BatchUploadQueue | null>(null);
+
+  // Initialize Batch Queue
+  useEffect(() => {
+    const freeBytes = usage.isUnlimited ? Number.MAX_SAFE_INTEGER : Math.max(0, usage.quotaBytes - usage.usedBytes - usage.reservedBytes);
+    const queue = new BatchUploadQueue({
+      freeQuotaBytes: freeBytes,
+      onQueueUpdate: (items) => {
+        setBatchItems([...items]);
+      },
+      onItemUpdate: (item) => {
+        if (item.status === "PROCESSING" || item.status === "READY") {
+          refreshData(true);
+        }
+      },
+      onComplete: () => {
+        refreshData();
+        showFeedback("Fila de uploads concluída!");
+      },
+    });
+
+    queueRef.current = queue;
+  }, [usage.quotaBytes, usage.usedBytes, usage.reservedBytes, usage.isUnlimited]);
 
   // Edit Modal State
   const [editingVideo, setEditingVideo] = useState<LibraryVideoItem | null>(null);
@@ -231,104 +255,60 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
     setActiveMenuId(null);
   };
 
-  // --- Handlers: Upload ---
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // --- Handlers: Multi-File Batch Selection ---
+  const handleMultipleFilesSelect = (filesList: FileList | null) => {
+    if (!filesList || filesList.length === 0) return;
+    const filesArray = Array.from(filesList);
+    setRejectedFilesMessages([]);
 
-    if (!file.type.startsWith("video/")) {
-      setUploadError("Por favor, selecione um arquivo de vídeo válido.");
-      return;
-    }
-
-    setSelectedFile(file);
-    setUploadError(null);
-    if (!formData.title) {
-      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-      setFormData((prev) => ({ ...prev, title: nameWithoutExt }));
+    if (queueRef.current) {
+      const res = queueRef.current.addFiles(filesArray);
+      if (res.rejected.length > 0) {
+        setRejectedFilesMessages(res.rejected);
+      }
     }
   };
 
-  const handleStartUpload = async () => {
-    if (!selectedFile) {
-      setUploadError("Selecione um arquivo de vídeo.");
-      return;
-    }
-    if (!formData.title.trim()) {
-      setUploadError("O título do vídeo é obrigatório.");
-      return;
-    }
-
-    setUploadStep("CREATING");
-    setUploadProgressPercent(0);
-    setUploadSpeedFormatted("");
-    setUploadEtaSeconds(null);
-    setUploadError(null);
-
-    const abortController = new AbortController();
-    uploadAbortRef.current = abortController;
-
-    try {
-      const sessionRes = await fetch("/api/seller/videos/upload-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title.trim(),
-          description: formData.description.trim() || undefined,
-          fileSize: selectedFile.size,
-          fileSizeBytes: selectedFile.size,
-          contentType: selectedFile.type || "video/mp4",
-          fileName: selectedFile.name,
-        }),
-        signal: abortController.signal,
-      });
-
-      const sessionData = await sessionRes.json();
-      if (!sessionData.success) {
-        throw new Error(sessionData.error || "Falha ao iniciar sessão de upload.");
-      }
-
-      const uploadAuth = sessionData.uploadSession || sessionData.uploadAuth;
-      if (!uploadAuth) {
-        throw new Error("Sessão de upload inválida (parâmetros de autenticação ausentes).");
-      }
-
-      setUploadStep("UPLOADING");
-      const uploader = new TusVideoUploader();
-
-      await uploader.uploadVideo({
-        file: selectedFile,
-        tusUploadUrl: uploadAuth.tusUploadUrl || "https://video.bunnycdn.com/tusupload",
-        headers: uploadAuth.headers,
-        signal: abortController.signal,
-        onProgress: (p) => {
-          setUploadProgressPercent(p.percentage);
-          if (p.formattedSpeed) setUploadSpeedFormatted(p.formattedSpeed);
-          if (p.etaSeconds !== undefined) setUploadEtaSeconds(p.etaSeconds);
-        },
-      });
-
-      setUploadStep("PROCESSING");
-      showFeedback("Upload concluído! O vídeo está sendo processado.");
-      setIsUploadModalOpen(false);
-      resetUploadForm();
-      refreshData();
-    } catch (err: any) {
-      console.error("[VideosClient] Upload error:", err);
-      setUploadStep("FAILED");
-      setUploadError(err.message || "Ocorreu um erro durante o upload.");
+  const handleStartBatchQueue = () => {
+    if (queueRef.current) {
+      setIsQueuePaused(false);
+      queueRef.current.start();
     }
   };
 
-  const resetUploadForm = () => {
-    setSelectedFile(null);
-    setFormData({ title: "", description: "" });
-    setUploadStep("IDLE");
-    setUploadProgressPercent(0);
-    setUploadSpeedFormatted("");
-    setUploadEtaSeconds(null);
-    setUploadError(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const handlePauseBatchQueue = () => {
+    if (queueRef.current) {
+      setIsQueuePaused(true);
+      queueRef.current.pause();
+    }
+  };
+
+  const handleRemoveBatchItem = (id: string) => {
+    if (queueRef.current) {
+      queueRef.current.removeItem(id);
+    }
+  };
+
+  const handleCancelBatchItem = (id: string) => {
+    if (queueRef.current) {
+      queueRef.current.cancelItem(id);
+    }
+  };
+
+  const handleRetryBatchItem = (id: string) => {
+    if (queueRef.current) {
+      queueRef.current.retryItem(id);
+    }
+  };
+
+  const handleItemTitleChange = (id: string, newTitle: string) => {
+    if (queueRef.current) {
+      const item = queueRef.current.getItem(id);
+      if (item && (item.status === "QUEUED" || item.status === "FAILED")) {
+        item.title = newTitle;
+        setBatchItems(queueRef.current.getItems());
+      }
+    }
   };
 
   // --- Handlers: Edit ---
@@ -1027,19 +1007,29 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
     </>
   )}
 
-      {/* UPLOAD MODAL */}
+  {/* BATCH UPLOAD QUEUE MODAL */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#121215] border border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Upload className="w-5 h-5 text-red-500" />
-                Adicionar Vídeo
-              </h3>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#121215] border border-white/10 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/5 pb-3.5 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center">
+                  <CloudUpload className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    Gerenciador de Upload em Lote
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Selecione múltiplos vídeos para envio sequencial automático.
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => {
                   setIsUploadModalOpen(false);
-                  resetUploadForm();
+                  setRejectedFilesMessages([]);
                 }}
                 className="text-zinc-400 hover:text-white"
               >
@@ -1047,123 +1037,259 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
               </button>
             </div>
 
-            {uploadError && (
-              <div className="bg-red-950/80 border border-red-500/30 text-red-200 text-xs p-3 rounded-xl flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{uploadError}</span>
+            {/* Rejection / Warning Alerts */}
+            {rejectedFilesMessages.length > 0 && (
+              <div className="bg-amber-950/80 border border-amber-500/30 text-amber-200 text-xs p-3.5 rounded-xl space-y-1 shrink-0">
+                <div className="flex items-center gap-2 font-bold text-amber-400 mb-1">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Alguns arquivos não puderam ser adicionados à fila:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-zinc-300">
+                  {rejectedFilesMessages.map((msg, idx) => (
+                    <li key={idx}>{msg}</li>
+                  ))}
+                </ul>
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 mb-1">Título do Vídeo *</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Aula 01 — Apresentação do Curso"
-                  value={formData.title}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full bg-[#16161C] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 mb-1">Descrição (opcional)</label>
-                <textarea
-                  rows={2}
-                  placeholder="Resumo ou observações..."
-                  value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full bg-[#16161C] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 mb-1">Arquivo de Vídeo *</label>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border border-dashed border-white/10 hover:border-red-500/50 bg-[#16161C] hover:bg-[#1A1A22] rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-2"
-                >
-                  <Film className="w-7 h-7 text-zinc-500" />
-                  {selectedFile ? (
-                    <div className="text-xs text-red-400 font-mono font-bold">
-                      {selectedFile.name} ({formatFileSize(selectedFile.size)})
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-xs font-bold text-white">Selecionar arquivo de vídeo</div>
-                      <span className="text-[11px] text-zinc-500">Clique ou arraste um arquivo MP4, MOV...</span>
-                    </>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="video/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1">
+              {/* Multi-file Dropzone */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleMultipleFilesSelect(e.dataTransfer.files);
+                }}
+                className="border-2 border-dashed border-white/10 hover:border-violet-500/50 bg-[#16161C] hover:bg-[#1A1A22] rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-2 group"
+              >
+                <CloudUpload className="w-8 h-8 text-zinc-500 group-hover:text-violet-400 transition-colors" />
+                <div className="text-xs font-bold text-white">
+                  Clique ou arraste múltiplos arquivos de vídeo aqui
                 </div>
+                <span className="text-[11px] text-zinc-500">
+                  Formatos suportados: MP4, MOV, MKV, AVI (sem limite por arquivo)
+                </span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  onChange={(e) => handleMultipleFilesSelect(e.target.files)}
+                  className="hidden"
+                />
               </div>
 
-              {/* Progress & Processing State */}
-              {(uploadStep === "CREATING" || uploadStep === "UPLOADING" || uploadStep === "PROCESSING") && (
-                <div className="space-y-2 bg-[#16161C] p-3.5 border border-white/5 rounded-xl">
-                  <div className="flex justify-between items-center text-xs font-mono text-zinc-300">
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-                      {uploadStep === "CREATING" && "Reservando quota..."}
-                      {uploadStep === "UPLOADING" && `Enviando (${uploadProgressPercent}%)`}
-                      {uploadStep === "PROCESSING" && "PROCESSANDO VÍDEO..."}
-                    </span>
-                    <span className="font-bold text-red-400">{uploadProgressPercent}%</span>
-                  </div>
-                  <div className="w-full bg-[#0F0F12] rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-red-600 h-full transition-all duration-300"
-                      style={{ width: `${uploadProgressPercent}%` }}
-                    />
-                  </div>
-                  {uploadStep === "UPLOADING" && uploadSpeedFormatted && (
-                    <div className="flex justify-between items-center text-[11px] font-mono text-zinc-400 pt-1 border-t border-white/5">
-                      <span>Velocidade: <strong className="text-zinc-200">{uploadSpeedFormatted}</strong></span>
-                      {uploadEtaSeconds !== null && uploadEtaSeconds > 0 && (
-                        <span>Restante: <strong className="text-zinc-200">{uploadEtaSeconds > 60 ? `${Math.floor(uploadEtaSeconds / 60)}m ${uploadEtaSeconds % 60}s` : `${uploadEtaSeconds}s`}</strong></span>
-                      )}
+              {/* Queue Summary Bar */}
+              {batchItems.length > 0 && (() => {
+                const totalBytes = batchItems.reduce((acc, it) => acc + it.fileSizeBytes, 0);
+                const uploadedBytes = batchItems.reduce((acc, it) => acc + (it.bytesUploaded || 0), 0);
+                const overallPercent = totalBytes > 0 ? Math.round((uploadedBytes / totalBytes) * 100) : 0;
+                const activeItem = batchItems.find((it) => it.status === "UPLOADING" || it.status === "CREATING_SESSION");
+                const isCompletedAll = batchItems.length > 0 && batchItems.every((it) => it.status === "PROCESSING" || it.status === "READY");
+
+                return (
+                  <div className="bg-[#16161C] border border-white/5 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-bold">
+                          Fila: {batchItems.filter((i) => i.status === "PROCESSING" || i.status === "READY").length} / {batchItems.length} concluídos
+                        </span>
+                        <span className="text-zinc-500">|</span>
+                        <span className="text-zinc-400">
+                          {formatFileSize(uploadedBytes)} / {formatFileSize(totalBytes)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 font-bold text-violet-400">
+                        {overallPercent}%
+                      </div>
                     </div>
-                  )}
+
+                    {/* Overall Progress Bar */}
+                    <div className="w-full bg-[#0F0F12] rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-violet-600 h-full transition-all duration-300"
+                        style={{ width: `${overallPercent}%` }}
+                      />
+                    </div>
+
+                    {/* Active Upload Velocity and ETA */}
+                    {activeItem && activeItem.status === "UPLOADING" && activeItem.speedFormatted && (
+                      <div className="flex justify-between items-center text-[11px] font-mono text-zinc-400 pt-1 border-t border-white/5">
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="w-3 h-3 animate-spin text-violet-400" />
+                          Enviando: <strong className="text-white">{activeItem.title}</strong>
+                        </span>
+                        <span className="text-zinc-300">
+                          {activeItem.speedFormatted}
+                          {activeItem.etaSeconds ? ` (Restante: ${activeItem.etaSeconds}s)` : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Items List */}
+              {batchItems.length > 0 && (
+                <div className="space-y-2.5">
+                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Itens na Fila ({batchItems.length})
+                  </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {batchItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-[#16161C] border border-white/5 rounded-xl p-3 flex flex-col gap-2 transition-all"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <FileVideo className="w-4 h-4 text-violet-400 shrink-0" />
+                            {item.status === "QUEUED" || item.status === "FAILED" ? (
+                              <input
+                                type="text"
+                                value={item.title}
+                                onChange={(e) => handleItemTitleChange(item.id, e.target.value)}
+                                className="bg-[#0F0F12] border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500/50 w-full"
+                              />
+                            ) : (
+                              <span className="text-xs font-bold text-white truncate" title={item.title}>
+                                {item.title}
+                              </span>
+                            )}
+                            <span className="text-[11px] text-zinc-500 font-mono shrink-0">
+                              ({formatFileSize(item.fileSizeBytes)})
+                            </span>
+                          </div>
+
+                          {/* Status Badge */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {item.status === "QUEUED" && (
+                              <span className="text-[10px] font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">
+                                AGUARDANDO
+                              </span>
+                            )}
+                            {item.status === "CREATING_SESSION" && (
+                              <span className="text-[10px] font-bold bg-violet-950/80 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Loader2 className="w-3 h-3 animate-spin" /> SESSÃO...
+                              </span>
+                            )}
+                            {item.status === "UPLOADING" && (
+                              <span className="text-[10px] font-bold bg-violet-900/60 text-violet-200 border border-violet-500/40 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Loader2 className="w-3 h-3 animate-spin" /> ENVIANDO ({item.progressPercent}%)
+                              </span>
+                            )}
+                            {item.status === "PROCESSING" && (
+                              <span className="text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Loader2 className="w-3 h-3 animate-spin" /> PROCESSANDO
+                              </span>
+                            )}
+                            {item.status === "READY" && (
+                              <span className="text-[10px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Check className="w-3 h-3" /> PRONTO
+                              </span>
+                            )}
+                            {item.status === "FAILED" && (
+                              <span className="text-[10px] font-bold bg-red-950/80 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-md">
+                                FALHOU
+                              </span>
+                            )}
+                            {item.status === "CANCELED" && (
+                              <span className="text-[10px] font-bold bg-zinc-900 text-zinc-500 border border-white/5 px-2 py-0.5 rounded-md">
+                                CANCELADO
+                              </span>
+                            )}
+
+                            {/* Item Actions */}
+                            {item.status === "QUEUED" && (
+                              <button
+                                onClick={() => handleRemoveBatchItem(item.id)}
+                                className="text-zinc-500 hover:text-red-400 p-1"
+                                title="Remover da fila"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {(item.status === "UPLOADING" || item.status === "CREATING_SESSION") && (
+                              <button
+                                onClick={() => handleCancelBatchItem(item.id)}
+                                className="text-zinc-400 hover:text-red-400 p-1"
+                                title="Cancelar envio"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {(item.status === "FAILED" || item.status === "CANCELED") && (
+                              <button
+                                onClick={() => handleRetryBatchItem(item.id)}
+                                className="text-violet-400 hover:text-violet-300 p-1"
+                                title="Tentar novamente"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Error Message if Failed */}
+                        {item.error && (
+                          <div className="text-[11px] text-red-400 font-mono bg-red-950/40 border border-red-500/20 rounded-lg p-2 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-400" />
+                            <span>{item.error}</span>
+                          </div>
+                        )}
+
+                        {/* Item Progress Bar */}
+                        {item.status === "UPLOADING" && (
+                          <div className="w-full bg-[#0F0F12] rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-violet-500 h-full transition-all duration-300"
+                              style={{ width: `${item.progressPercent}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-between items-center border-t border-white/5 pt-3">
-              <span className="text-[11px] text-zinc-500 font-mono">
-                Disponível: {usage.freeGB.toFixed(1)} GB
+            {/* Modal Footer Controls */}
+            <div className="flex justify-between items-center border-t border-white/5 pt-4 shrink-0">
+              <span className="text-[11px] text-zinc-400 font-mono">
+                Disponível: <strong className="text-white">{usage.isUnlimited ? "ILIMITADO" : `${usage.freeGB.toFixed(1)} GB`}</strong>
               </span>
-              <div className="flex gap-2">
+
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsUploadModalOpen(false);
-                    resetUploadForm();
-                  }}
-                  disabled={uploadStep === "UPLOADING" || uploadStep === "CREATING"}
+                  onClick={() => setIsUploadModalOpen(false)}
                   className="bg-[#16161C] border-white/10 text-zinc-300 text-xs rounded-xl"
                 >
-                  Cancelar
+                  Fechar
                 </Button>
-                <Button
-                  onClick={handleStartUpload}
-                  disabled={!selectedFile || !formData.title.trim() || uploadStep === "UPLOADING" || uploadStep === "CREATING"}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl"
-                >
-                  {uploadStep === "CREATING" || uploadStep === "UPLOADING" ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    "Iniciar Upload"
-                  )}
-                </Button>
+
+                {batchItems.some((it) => it.status === "UPLOADING" || it.status === "CREATING_SESSION") ? (
+                  <Button
+                    onClick={handlePauseBatchQueue}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl px-4 py-2"
+                  >
+                    <Pause className="w-4 h-4 mr-1.5" />
+                    Pausar Fila
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleStartBatchQueue}
+                    disabled={!batchItems.some((it) => it.status === "QUEUED" || it.status === "FAILED")}
+                    className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-violet-600/20"
+                  >
+                    <Play className="w-4 h-4 mr-1.5 fill-current" />
+                    Iniciar Fila
+                  </Button>
+                )}
               </div>
             </div>
           </div>
