@@ -416,13 +416,14 @@ export class AnalyticsService {
     const channels: ChannelItem[] = [];
 
     botStatsMap.forEach(stats => {
+      const avatarUrl = stats.id ? `/api/telegram/bot-avatar?botId=${stats.id}` : (stats.photoUrl || null);
       channels.push({
         channel: stats.id,
         label: stats.label,
         revenue: Math.round(stats.revenue * 100) / 100,
         salesCount: stats.salesCount,
         percentage: Math.round((stats.revenue / totalBotRev) * 100),
-        photoUrl: stats.photoUrl,
+        photoUrl: avatarUrl,
         username: stats.username
       });
     });

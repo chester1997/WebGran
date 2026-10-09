@@ -33,6 +33,35 @@ interface DashboardClientProps {
   initialData: StoreAnalyticsData;
 }
 
+function ChannelAvatarItem({ chan }: { chan: { channel: string; label: string; photoUrl?: string | null } }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (chan.photoUrl && !hasError) {
+    return (
+      <img
+        src={chan.photoUrl}
+        alt={chan.label || "Avatar do Bot"}
+        onError={() => setHasError(true)}
+        className="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-white/10"
+      />
+    );
+  }
+
+  if (chan.channel !== "web") {
+    return (
+      <div className="w-4.5 h-4.5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+        <Bot className="w-2.5 h-2.5 text-blue-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-4.5 h-4.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+      <Globe className="w-2.5 h-2.5 text-emerald-400" />
+    </div>
+  );
+}
+
 export function DashboardClient({ initialData }: DashboardClientProps) {
   const [data, setData] = useState<StoreAnalyticsData>(initialData);
   const [period, setPeriod] = useState<string>(initialData.period || "30D");
@@ -508,17 +537,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                   <div key={chan.channel} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-white flex items-center gap-2 min-w-0">
-                        {chan.photoUrl ? (
-                          <img src={chan.photoUrl} className="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-white/10" alt="" />
-                        ) : chan.channel !== "web" ? (
-                          <div className="w-4.5 h-4.5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                            <Bot className="w-2.5 h-2.5 text-blue-400" />
-                          </div>
-                        ) : (
-                          <div className="w-4.5 h-4.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                            <Globe className="w-2.5 h-2.5 text-emerald-400" />
-                          </div>
-                        )}
+                        <ChannelAvatarItem chan={chan} />
                         <span className="truncate">{chan.label}</span>
                       </span>
                       <span className="font-mono font-bold text-zinc-300 shrink-0 ml-2 wg-tabular">{chan.percentage}%</span>

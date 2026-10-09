@@ -476,10 +476,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 href="/admin"
                 onClick={() => isMobile && setMobileDrawerOpen(false)}
                 title={!isExpanded ? "Voltar ao Admin" : undefined}
-                className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all group`}
+                className={`
+                  flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium 
+                  text-zinc-300 bg-white/[0.04] hover:bg-white/[0.08] hover:text-white border border-white/[0.08] hover:border-white/20 
+                  transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 group
+                `}
               >
-                <ArrowLeft className="w-3.5 h-3.5 text-rose-400 group-hover:-translate-x-0.5 transition-transform shrink-0" strokeWidth={2} />
-                {isExpanded && <span className="truncate">⚙️ Voltar ao Admin</span>}
+                <ArrowLeft className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all shrink-0" strokeWidth={1.8} />
+                {isExpanded && <span className="truncate">Voltar ao Admin</span>}
               </Link>
             </div>
           )}

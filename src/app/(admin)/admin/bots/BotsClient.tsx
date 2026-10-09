@@ -15,6 +15,25 @@ interface BotItem {
   storeSlug: string | null;
 }
 
+function BotAvatarImage({ bot }: { bot: BotItem }) {
+  const [hasError, setHasError] = useState(false);
+
+  const src = bot.id ? `/api/telegram/bot-avatar?botId=${bot.id}` : (bot.photoUrl || null);
+
+  if (src && !hasError) {
+    return (
+      <img
+        src={src}
+        alt={bot.username || "Bot"}
+        onError={() => setHasError(true)}
+        className="w-full h-full object-cover rounded-full"
+      />
+    );
+  }
+
+  return <Bot className="w-4 h-4" />;
+}
+
 export default function BotsClient({ initialBots }: { initialBots: BotItem[] }) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -115,12 +134,7 @@ export default function BotsClient({ initialBots }: { initialBots: BotItem[] }) 
                   <td className="py-3.5 px-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-xs flex-shrink-0">
-                        {bot.photoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={bot.photoUrl} alt={bot.username} className="w-full h-full object-cover rounded-full" />
-                        ) : (
-                          <Bot className="w-4 h-4" />
-                        )}
+                        <BotAvatarImage bot={bot} />
                       </div>
                       <div>
                         <p className="font-bold text-white text-sm">{bot.displayName || "Bot Telegram"}</p>

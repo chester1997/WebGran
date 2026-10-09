@@ -351,10 +351,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             <Link
               href="/seller"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all group"
+              className="
+                flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium 
+                text-emerald-400 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/35 
+                transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 group
+              "
             >
-              <Store className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-105 transition-transform" />
-              <span className="truncate">🏪 Painel do Vendedor</span>
+              <Store className="w-4 h-4 text-emerald-400 group-hover:scale-105 transition-all shrink-0" strokeWidth={1.8} />
+              <span className="truncate">Painel do Vendedor</span>
             </Link>
           </div>
         </nav>

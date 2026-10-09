@@ -32,8 +32,11 @@ export async function GET(req: NextRequest) {
     const token = decrypt(bot.tokenEncrypted);
     const botService = new TelegramBotService(token);
 
-    // Re-resolve profile photo from Telegram API dynamically
-    const photoUrl = await botService.getProfilePhotoUrl();
+    // Re-resolve profile photo from Telegram API dynamically with fallback to DB stored photoUrl
+    let photoUrl = await botService.getProfilePhotoUrl().catch(() => null);
+    if (!photoUrl && bot.photoUrl) {
+      photoUrl = bot.photoUrl;
+    }
 
     if (!photoUrl) {
       return new NextResponse("Foto do bot indisponível", { status: 404 });
