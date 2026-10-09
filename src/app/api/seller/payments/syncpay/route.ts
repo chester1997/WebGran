@@ -29,12 +29,28 @@ export async function GET() {
       });
     }
 
+    let clientIdMasked = '';
+    if (conn.accessTokenEncrypted) {
+      try {
+        const rawClientId = decrypt(conn.accessTokenEncrypted);
+        if (rawClientId && rawClientId.length > 8) {
+          clientIdMasked = `${rawClientId.slice(0, 4)}...${rawClientId.slice(-4)}`;
+        } else if (rawClientId) {
+          clientIdMasked = `${rawClientId.slice(0, 2)}***`;
+        }
+      } catch {
+        clientIdMasked = 'Configurado';
+      }
+    }
+
     return NextResponse.json({
       success: true,
       isConnected: true,
       connection: {
         id: conn.id,
         status: conn.status,
+        clientIdMasked,
+        hasCredentials: true,
         updatedAt: conn.updatedAt ? new Date(conn.updatedAt).toISOString() : null,
       },
     });
@@ -70,7 +86,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Action: Connect / Update Credentials
-    const { clientId, clientSecret } = body;
+    let { clientId, clientSecret } = body;
+
+    let conn = await db.query.sellerPaymentConnections.findFirst({
+      where: and(
+        eq(sellerPaymentConnections.sellerId, seller.id),
+        eq(sellerPaymentConnections.provider, 'syncpay')
+      ),
+    });
+
+    // If client provided blank fields while connection exists and active, preserve current encrypted credentials
+    if ((!clientId?.trim() || !clientSecret?.trim()) && conn && conn.status === 'active') {
+      clientId = clientId?.trim() || decrypt(conn.accessTokenEncrypted);
+      clientSecret = clientSecret?.trim() || (conn.refreshTokenEncrypted ? decrypt(conn.refreshTokenEncrypted) : '');
+    }
 
     if (!clientId?.trim() || !clientSecret?.trim()) {
       return NextResponse.json({ error: 'Client ID e Client Secret são obrigatórios.' }, { status: 400 });
@@ -84,14 +113,6 @@ export async function POST(req: NextRequest) {
 
     const clientIdEncrypted = encrypt(clientId.trim());
     const clientSecretEncrypted = encrypt(clientSecret.trim());
-
-    // 3. Find existing connection or insert new
-    let conn = await db.query.sellerPaymentConnections.findFirst({
-      where: and(
-        eq(sellerPaymentConnections.sellerId, seller.id),
-        eq(sellerPaymentConnections.provider, 'syncpay')
-      ),
-    });
 
     if (conn) {
       const [updated] = await db.update(sellerPaymentConnections)
@@ -131,12 +152,17 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(sellerPaymentConnections.id, conn.id));
 
+    const rawClientId = clientId.trim();
+    const clientIdMasked = rawClientId.length > 8 ? `${rawClientId.slice(0, 4)}...${rawClientId.slice(-4)}` : `${rawClientId.slice(0, 2)}***`;
+
     return NextResponse.json({
       success: true,
       message: 'SyncPay conectado e configurado com sucesso!',
       connection: {
         id: conn.id,
         status: 'active',
+        clientIdMasked,
+        hasCredentials: true,
         updatedAt: new Date().toISOString(),
       },
     });

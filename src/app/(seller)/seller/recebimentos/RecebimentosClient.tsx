@@ -30,6 +30,8 @@ interface ConnectionInfo {
 interface SyncPayConnectionInfo {
   id: string | null;
   status: string;
+  clientIdMasked?: string | null;
+  hasCredentials?: boolean;
   updatedAt: string | null;
 }
 
@@ -152,8 +154,14 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
   };
 
   const handleConnectSyncPay = async () => {
-    if (!syncPayClientId.trim() || !syncPayClientSecret.trim()) {
-      setFeedbackMsg({ provider: 'syncpay', type: 'error', text: 'Preencha o Client ID e o Client Secret da SyncPay.' });
+    // If connection is already active and seller submits blank fields, keep existing credentials
+    if (isSyncPayActive && !syncPayClientId.trim() && !syncPayClientSecret.trim()) {
+      setIsSyncPayConnectOpen(false);
+      return;
+    }
+
+    if (!syncPayClientId.trim() && !isSyncPayActive) {
+      setFeedbackMsg({ provider: 'syncpay', type: 'error', text: 'Preencha o Client ID da SyncPay.' });
       return;
     }
 
@@ -469,6 +477,12 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                   <span>Status da Integração:</span>
                   <strong className="text-emerald-400 font-medium">Ativo & Autenticado</strong>
                 </div>
+                {syncPayConnection?.clientIdMasked && (
+                  <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
+                    <span>Client ID:</span>
+                    <span className="font-mono text-zinc-300 font-semibold">{syncPayConnection.clientIdMasked}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
                   <span>Última atualização:</span>
                   <span className="text-zinc-300 font-medium">{formatDate(syncPayConnection?.updatedAt || null)}</span>
@@ -548,7 +562,7 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                   type="text"
                   value={syncPayClientId}
                   onChange={(e) => setSyncPayClientId(e.target.value)}
-                  placeholder="Cole seu Client ID da SyncPay..."
+                  placeholder={syncPayConnection?.clientIdMasked || "Cole seu Client ID da SyncPay..."}
                   className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
@@ -561,7 +575,7 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                   type="password"
                   value={syncPayClientSecret}
                   onChange={(e) => setSyncPayClientSecret(e.target.value)}
-                  placeholder="Cole seu Client Secret da SyncPay..."
+                  placeholder={isSyncPayActive ? "•••••••••••••••• (Deixe em branco para manter)" : "Cole seu Client Secret da SyncPay..."}
                   className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
@@ -569,7 +583,9 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs leading-relaxed flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                 <span>
-                  As credenciais são validadas imediatamente nos servidores da SyncPay e armazenadas no banco de dados com criptografia AES-256.
+                  {isSyncPayActive
+                    ? "Suas credenciais estão ativas e protegidas com criptografia AES-256. Para manter as chaves atuais sem alterá-las, você pode fechar este modal."
+                    : "As credenciais são validadas imediatamente nos servidores da SyncPay e armazenadas no banco de dados com criptografia AES-256."}
                 </span>
               </div>
             </div>

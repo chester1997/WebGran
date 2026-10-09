@@ -102,7 +102,7 @@ import { ensurePaymentTables } from '@/db/ensure-payment-tables';
 export function extractSyncPayStatus(resData: any): string {
   if (!resData) return '';
   if (typeof resData === 'string') return resData.toLowerCase().trim();
-  const raw = resData.status || resData.data?.status || resData.data?.transaction?.status || resData.transaction?.status || resData.data?.state || '';
+  const raw = resData.status || resData.data?.status || resData.data?.transaction?.status || resData.transaction?.status || resData.data?.state || resData.state || resData.transaction_status || '';
   return String(raw).toLowerCase().trim();
 }
 
@@ -120,7 +120,18 @@ export function isSyncPayPaymentConfirmed(eventType: string, rawStatusOrData: an
     return false;
   }
 
-  const validConfirmedStatuses = ['completed', 'paid', 'approved', 'sucesso'];
+  const validConfirmedStatuses = [
+    'completed',
+    'paid',
+    'approved',
+    'sucesso',
+    'concluido',
+    'concluida',
+    'pago',
+    'aprovado',
+    'confirmado',
+    'confirmada',
+  ];
   return validConfirmedStatuses.includes(normStatus);
 }
 
@@ -363,7 +374,7 @@ export class SyncPayProvider {
    * Header: X-SyncPay-Signature -> t=TIMESTAMP,v1=SIGNATURE
    * Signed payload: `${timestamp}.${rawBody}`
    */
-  verifyWebhookSignature(rawBody: string, signatureHeader: string | null, webhookSecret: string): { isValid: boolean; error?: string } {
+  verifyWebhookSignature(rawBody: string, signatureHeader: string | null, webhookSecret: string, clientSecret?: string): { isValid: boolean; error?: string } {
     if (!signatureHeader) {
       return { isValid: false, error: 'Header X-SyncPay-Signature ausente.' };
     }
@@ -375,36 +386,60 @@ export class SyncPayProvider {
     for (const part of parts) {
       const [key, val] = part.split('=');
       if (key?.trim() === 't') timestamp = val?.trim() || '';
-      if (key?.trim() === 'v1') signature = val?.trim() || '';
+      if (key?.trim() === 'v1' || key?.trim() === 'sha256' || key?.trim() === 'sig') signature = val?.trim() || '';
     }
 
-    if (!timestamp || !signature) {
+    if (!signature && signatureHeader && !signatureHeader.includes('=')) {
+      signature = signatureHeader.trim();
+    }
+
+    if (!signature) {
       return { isValid: false, error: 'Formato do header X-SyncPay-Signature inválido.' };
     }
 
-    // 1. Replay Protection: 300 seconds window
-    const nowInSec = Math.floor(Date.now() / 1000);
-    const eventTimeSec = parseInt(timestamp, 10);
-
-    if (isNaN(eventTimeSec) || Math.abs(nowInSec - eventTimeSec) > 300) {
-      return { isValid: false, error: 'Timestamp do webhook fora da janela permitida (Replay Attack protection).' };
+    // 1. Replay Protection: 300 seconds window (only if timestamp is provided)
+    if (timestamp) {
+      const nowInSec = Math.floor(Date.now() / 1000);
+      const eventTimeSec = parseInt(timestamp, 10);
+      if (!isNaN(eventTimeSec) && Math.abs(nowInSec - eventTimeSec) > 300) {
+        return { isValid: false, error: 'Timestamp do webhook fora da janela permitida (Replay Attack protection).' };
+      }
     }
 
-    // 2. HMAC-SHA256 Verification over raw body
-    const signedPayload = `${timestamp}.${rawBody}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(signedPayload)
-      .digest('hex');
+    // 2. Try HMAC-SHA256 verification using webhookSecret or clientSecret
+    const secretsToTry = Array.from(new Set([webhookSecret, clientSecret])).filter(Boolean) as string[];
 
-    const sigBuffer = Buffer.from(signature);
-    const expectedBuffer = Buffer.from(expectedSignature);
+    for (const sec of secretsToTry) {
+      let signedPayload = rawBody;
+      if (timestamp) {
+        signedPayload = `${timestamp}.${rawBody}`;
+      }
 
-    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
-      return { isValid: false, error: 'Assinatura HMAC-SHA256 do webhook inválida.' };
+      const expectedSignature = crypto
+        .createHmac('sha256', sec)
+        .update(signedPayload)
+        .digest('hex');
+
+      const sigBuffer = Buffer.from(signature);
+      const expectedBuffer = Buffer.from(expectedSignature);
+
+      if (sigBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+        return { isValid: true };
+      }
+
+      if (timestamp) {
+        const altExpected = crypto
+          .createHmac('sha256', sec)
+          .update(rawBody)
+          .digest('hex');
+        const altExpectedBuffer = Buffer.from(altExpected);
+        if (sigBuffer.length === altExpectedBuffer.length && crypto.timingSafeEqual(sigBuffer, altExpectedBuffer)) {
+          return { isValid: true };
+        }
+      }
     }
 
-    return { isValid: true };
+    return { isValid: false, error: 'Assinatura HMAC-SHA256 do webhook inválida.' };
   }
 
   /**
@@ -424,11 +459,12 @@ export class SyncPayProvider {
     }
 
     // 2. Validate HMAC Signature
-    const signatureHeader = headers.get('X-SyncPay-Signature') || headers.get('x-syncpay-signature');
+    const signatureHeader = headers.get('X-SyncPay-Signature') || headers.get('x-syncpay-signature') || headers.get('x-signature') || headers.get('signature');
     const webhookSecret = conn.webhookSecretEncrypted ? decrypt(conn.webhookSecretEncrypted) : '';
+    const clientSecret = conn.refreshTokenEncrypted ? decrypt(conn.refreshTokenEncrypted) : '';
 
-    if (webhookSecret) {
-      const sigValidation = this.verifyWebhookSignature(rawBody, signatureHeader, webhookSecret);
+    if (webhookSecret || clientSecret) {
+      const sigValidation = this.verifyWebhookSignature(rawBody, signatureHeader, webhookSecret, clientSecret);
       if (!sigValidation.isValid) {
         console.warn(`[SyncPayWebhook] Validation failed for connection ${connectionId}:`, sigValidation.error);
         return { success: false, error: sigValidation.error };
