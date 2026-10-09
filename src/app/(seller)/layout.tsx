@@ -37,7 +37,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  // Sub-items for "Bot Telegram" group
+  // Group items
   const botTelegramSubItems = [
     { name: "Configuração", href: "/seller/store", icon: Settings2 },
     { name: "Boas-vindas", href: "/seller/boas-vindas", icon: Sparkles },
@@ -47,31 +47,39 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },
     { name: "Clips", href: "/seller/bot/clips", icon: Video },
-    { name: "Notificações Flutuantes", href: "/seller/bot/notifications", icon: Bell },
+    { name: "Notificações", href: "/seller/bot/notifications", icon: Bell },
     { name: "Cupons", href: "/seller/coupons", icon: Ticket },
   ];
 
-  // Root level items outside the group
+  const financeSubItems = [
+    { name: "Visão Geral", href: "/seller/financeiro", icon: DollarSign },
+    { name: "Gateways", href: "/seller/recebimentos", icon: CreditCard },
+  ];
+
+  // Root level items outside groups
   const dashboardItem = { name: "Dashboard", href: "/seller", icon: LayoutDashboard };
   const bottomRootItems = [
     { name: "Pedidos", href: "/seller/orders", icon: ShoppingCart },
-    { name: "Financeiro", href: "/seller/financeiro", icon: DollarSign },
-    { name: "Gateways", href: "/seller/recebimentos", icon: CreditCard },
     { name: "Clientes", href: "/seller/customers", icon: Users },
     { name: "Configurações", href: "/seller/settings", icon: Settings },
   ];
 
-  // Check if currently navigating inside any Bot Telegram child route
+  // Active child checks
   const isBotChildActive = botTelegramSubItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+  const isFinanceChildActive = financeSubItems.some(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
 
   // Manual toggle state vs default route state
-  const [userManuallyToggled, setUserManuallyToggled] = useState<boolean | null>(null);
+  const [userManuallyToggledBot, setUserManuallyToggledBot] = useState<boolean | null>(null);
+  const [userManuallyToggledFinance, setUserManuallyToggledFinance] = useState<boolean | null>(null);
 
   // Reset manual toggle override & close mobile drawer when navigating to a new route
   useEffect(() => {
-    setUserManuallyToggled(null);
+    setUserManuallyToggledBot(null);
+    setUserManuallyToggledFinance(null);
     setMobileDrawerOpen(false);
   }, [pathname]);
 
@@ -96,12 +104,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     };
   }, [mobileDrawerOpen]);
 
-  // Group is open if user explicitly toggled it, or (if not manually toggled) if currently on a bot child route
-  const botGroupOpen = userManuallyToggled !== null ? userManuallyToggled : isBotChildActive;
-
-  const handleToggleBotGroup = () => {
-    setUserManuallyToggled(!botGroupOpen);
-  };
+  const botGroupOpen = userManuallyToggledBot !== null ? userManuallyToggledBot : isBotChildActive;
+  const financeGroupOpen = userManuallyToggledFinance !== null ? userManuallyToggledFinance : isFinanceChildActive;
 
   // Real Seller Profile State
   const [sellerProfile, setSellerProfile] = useState<{
@@ -179,36 +183,35 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
     return (
       <>
-        <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar px-2.5 space-y-1">
+        <nav className="flex-1 overflow-y-auto py-3 custom-scrollbar px-2.5 space-y-1">
           {/* 1. Dashboard */}
           <Link 
             href={dashboardItem.href}
             onClick={() => isMobile && setMobileDrawerOpen(false)}
             title={!isExpanded ? dashboardItem.name : undefined}
-            className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 relative ${
+            className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative ${
               pathname === dashboardItem.href 
-                ? "bg-rose-500/10 text-white border border-rose-500/20 shadow-sm" 
+                ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
                 : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
             }`}
           >
             {pathname === dashboardItem.href && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-sm" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
             )}
             <LayoutDashboard className={`w-4 h-4 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
             {isExpanded && <span className="truncate">{dashboardItem.name}</span>}
           </Link>
 
-          {/* 2. Bot Telegram Group (Expandable Parent Menu) */}
+          {/* 2. Bot Telegram Group (Expandable Parent Menu with Tree connections) */}
           <div className="space-y-0.5">
             {isExpanded ? (
               <>
-                {/* Parent Group Header Button */}
                 <button
                   type="button"
-                  onClick={handleToggleBotGroup}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                  onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
                     isBotChildActive
-                      ? "text-white bg-white/[0.04]"
+                      ? "text-white font-bold bg-[#14141A]"
                       : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
@@ -223,37 +226,62 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   )}
                 </button>
 
-                {/* Submenus (Indented with subtle connecting line) */}
+                {/* Submenu Tree with Curved SVG Connection Lines */}
                 {botGroupOpen && (
-                  <div className="ml-4 pl-2.5 border-l border-white/[0.07] space-y-0.5 my-1 transition-all duration-150">
-                    {visibleBotSubItems.map((subItem) => {
+                  <div className="relative pl-6 space-y-1 my-1">
+                    {visibleBotSubItems.map((subItem, index) => {
                       const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                       const SubIcon = subItem.icon;
+                      const isLast = index === visibleBotSubItems.length - 1;
 
                       return (
-                        <Link
-                          key={subItem.href}
-                          href={subItem.href}
-                          onClick={() => isMobile && setMobileDrawerOpen(false)}
-                          className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 relative ${
-                            isSubActive
-                              ? "bg-rose-500/10 text-white border border-rose-500/20 shadow-sm"
-                              : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-                          }`}
-                        >
-                          {isSubActive && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[14px] bg-rose-500 rounded-r-sm" />
-                          )}
-                          <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                          <span className="truncate">{subItem.name}</span>
-                        </Link>
+                        <div key={subItem.href} className="relative flex items-center">
+                          {/* Curved SVG Tree Connection Line matching reference screenshot */}
+                          <svg
+                            className="absolute -left-3.5 top-0 bottom-0 w-4 h-full pointer-events-none"
+                            overflow="visible"
+                          >
+                            {/* Vertical Trunk Line */}
+                            <line
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2={isLast ? "14" : "100%"}
+                              stroke="rgba(255,255,255,0.12)"
+                              strokeWidth="1.25"
+                            />
+                            {/* Curved Arc Branch */}
+                            <path
+                              d="M 0 0 V 8 Q 0 14 6 14 H 12"
+                              fill="none"
+                              stroke="rgba(255,255,255,0.12)"
+                              strokeWidth="1.25"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+
+                          <Link
+                            href={subItem.href}
+                            onClick={() => isMobile && setMobileDrawerOpen(false)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
+                              isSubActive
+                                ? "bg-[#1A1A22] text-white font-bold border border-white/10 shadow-md"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                            }`}
+                          >
+                            {isSubActive && (
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+                            )}
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                            <span className="truncate flex-1">{subItem.name}</span>
+                          </Link>
+                        </div>
                       );
                     })}
                   </div>
                 )}
               </>
             ) : (
-              /* Collapsed mode icons (Desktop only) */
               visibleBotSubItems.map((subItem) => {
                 const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                 const SubIcon = subItem.icon;
@@ -263,14 +291,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     key={subItem.href}
                     href={subItem.href}
                     title={`Bot Telegram - ${subItem.name}`}
-                    className={`flex items-center justify-center p-2 rounded-lg text-xs font-medium transition-all duration-150 relative ${
+                    className={`flex items-center justify-center p-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                       isSubActive
-                        ? "bg-rose-500/10 text-white border border-rose-500/20 shadow-sm"
+                        ? "bg-[#1A1A22] text-white border border-white/10 shadow-md"
                         : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                     }`}
                   >
                     {isSubActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-sm" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-md" />
                     )}
                     <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                   </Link>
@@ -279,8 +307,127 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             )}
           </div>
 
-          {/* 3. Bottom Root Level Items */}
-          {bottomRootItems.map((item) => {
+          {/* 3. Pedidos (Root) */}
+          <Link 
+            href="/seller/orders"
+            onClick={() => isMobile && setMobileDrawerOpen(false)}
+            title={!isExpanded ? "Pedidos" : undefined}
+            className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative ${
+              pathname === "/seller/orders"
+                ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
+                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+            }`}
+          >
+            {pathname === "/seller/orders" && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+            )}
+            <ShoppingCart className={`w-4 h-4 shrink-0 transition-colors ${pathname === "/seller/orders" ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+            {isExpanded && <span className="truncate">Pedidos</span>}
+          </Link>
+
+          {/* 4. Financeiro Group (Expandable Parent Menu) */}
+          <div className="space-y-0.5">
+            {isExpanded ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setUserManuallyToggledFinance(!financeGroupOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
+                    isFinanceChildActive
+                      ? "text-white font-bold bg-[#14141A]"
+                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <DollarSign className={`w-4 h-4 shrink-0 transition-colors ${isFinanceChildActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <span className="truncate">Financeiro</span>
+                  </div>
+                  {financeGroupOpen ? (
+                    <ChevronUp className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-150" strokeWidth={1.8} />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150" strokeWidth={1.8} />
+                  )}
+                </button>
+
+                {financeGroupOpen && (
+                  <div className="relative pl-6 space-y-1 my-1">
+                    {financeSubItems.map((subItem, index) => {
+                      const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                      const SubIcon = subItem.icon;
+                      const isLast = index === financeSubItems.length - 1;
+
+                      return (
+                        <div key={subItem.href} className="relative flex items-center">
+                          <svg
+                            className="absolute -left-3.5 top-0 bottom-0 w-4 h-full pointer-events-none"
+                            overflow="visible"
+                          >
+                            <line
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2={isLast ? "14" : "100%"}
+                              stroke="rgba(255,255,255,0.12)"
+                              strokeWidth="1.25"
+                            />
+                            <path
+                              d="M 0 0 V 8 Q 0 14 6 14 H 12"
+                              fill="none"
+                              stroke="rgba(255,255,255,0.12)"
+                              strokeWidth="1.25"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+
+                          <Link
+                            href={subItem.href}
+                            onClick={() => isMobile && setMobileDrawerOpen(false)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
+                              isSubActive
+                                ? "bg-[#1A1A22] text-white font-bold border border-white/10 shadow-md"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                            }`}
+                          >
+                            {isSubActive && (
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+                            )}
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                            <span className="truncate flex-1">{subItem.name}</span>
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              financeSubItems.map((subItem) => {
+                const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                const SubIcon = subItem.icon;
+
+                return (
+                  <Link
+                    key={subItem.href}
+                    href={subItem.href}
+                    title={`Financeiro - ${subItem.name}`}
+                    className={`flex items-center justify-center p-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
+                      isSubActive
+                        ? "bg-[#1A1A22] text-white border border-white/10 shadow-md"
+                        : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    {isSubActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-md" />
+                    )}
+                    <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                  </Link>
+                );
+              })
+            )}
+          </div>
+
+          {/* 5. Clientes & Configurações */}
+          {bottomRootItems.filter((item) => item.name !== "Pedidos").map((item) => {
             const isActive = pathname === item.href;
             const ItemIcon = item.icon;
 
@@ -290,14 +437,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 href={item.href} 
                 onClick={() => isMobile && setMobileDrawerOpen(false)}
                 title={!isExpanded ? item.name : undefined}
-                className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 relative ${
+                className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                   isActive 
-                    ? "bg-rose-500/10 text-white border border-rose-500/20 shadow-sm" 
+                    ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
                     : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-sm" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
                 )}
 
                 <ItemIcon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
