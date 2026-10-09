@@ -129,21 +129,38 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     return { x, y, data: s };
   });
 
-  // Construct smooth SVG path for Area Chart
+  // Construct smooth non-overshooting SVG path for Area Chart
   let areaD = "";
   let lineD = "";
 
   if (points.length > 0) {
-    lineD = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const cx = (p1.x + p2.x) / 2;
-      lineD += ` C ${cx} ${p1.y}, ${cx} ${p2.y}, ${p2.x} ${p2.y}`;
+    if (points.length === 1) {
+      lineD = `M ${points[0].x - 20} ${points[0].y} L ${points[0].x + 20} ${points[0].y}`;
+      areaD = `M ${points[0].x - 20} ${points[0].y} L ${points[0].x + 20} ${points[0].y} L ${points[0].x + 20} ${svgHeight - paddingY} L ${points[0].x - 20} ${svgHeight - paddingY} Z`;
+    } else {
+      lineD = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i === 0 ? i : i - 1];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+        const dx1 = (p2.x - p0.x) / 6;
+        const dy1 = (p2.y - p0.y) / 6;
+        const dx2 = (p3.x - p1.x) / 6;
+        const dy2 = (p3.y - p1.y) / 6;
+
+        const cp1x = (p1.x + dx1).toFixed(1);
+        const cp1y = Math.min(Math.max(p1.y + dy1, paddingY), svgHeight - paddingY).toFixed(1);
+        const cp2x = (p2.x - dx2).toFixed(1);
+        const cp2y = Math.min(Math.max(p2.y - dy2, paddingY), svgHeight - paddingY).toFixed(1);
+
+        lineD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      const lastP = points[points.length - 1];
+      const firstP = points[0];
+      areaD = `${lineD} L ${lastP.x.toFixed(1)} ${svgHeight - paddingY} L ${firstP.x.toFixed(1)} ${svgHeight - paddingY} Z`;
     }
-    const lastP = points[points.length - 1];
-    const firstP = points[0];
-    areaD = `${lineD} L ${lastP.x} ${svgHeight - paddingY} L ${firstP.x} ${svgHeight - paddingY} Z`;
   }
 
   return (
@@ -434,39 +451,47 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto max-w-full block overflow-visible">
                 <defs>
                   <linearGradient id="chartGradientRose" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.25" />
+                    <stop offset="0%" stopColor="#E11D48" stopOpacity="0.18" />
+                    <stop offset="50%" stopColor="#F43F5E" stopOpacity="0.06" />
                     <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
                 {/* Grid Lines */}
-                <line x1={paddingX} y1={paddingY} x2={svgWidth - paddingX} y2={paddingY} stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
-                <line x1={paddingX} y1={(svgHeight - paddingY * 2) / 2 + paddingY} x2={svgWidth - paddingX} y2={(svgHeight - paddingY * 2) / 2 + paddingY} stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
-                <line x1={paddingX} y1={svgHeight - paddingY} x2={svgWidth - paddingX} y2={svgHeight - paddingY} stroke="rgba(255, 255, 255, 0.08)" />
+                <line x1={paddingX} y1={paddingY} x2={svgWidth - paddingX} y2={paddingY} stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" />
+                <line x1={paddingX} y1={(svgHeight - paddingY * 2) / 2 + paddingY} x2={svgWidth - paddingX} y2={(svgHeight - paddingY * 2) / 2 + paddingY} stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" />
+                <line x1={paddingX} y1={svgHeight - paddingY} x2={svgWidth - paddingX} y2={svgHeight - paddingY} stroke="rgba(255, 255, 255, 0.06)" />
 
                 {/* Area & Line Paths */}
                 {areaD && <path d={areaD} fill="url(#chartGradientRose)" />}
                 {lineD && <path d={lineD} fill="none" stroke="#F43F5E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
 
                 {/* Data Nodes */}
-                {points.map((pt, idx) => (
-                  <g key={idx} className="group cursor-pointer">
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r="4"
-                      className="fill-[#F43F5E] stroke-[#0E0E11] stroke-[2] transition-all group-hover:r-6 group-hover:stroke-white group-hover:fill-rose-400"
-                      onMouseEnter={() => setHoveredPoint({
-                        dateLabel: pt.data.fullDate,
-                        revenue: pt.data.revenue,
-                        salesCount: pt.data.salesCount,
-                        x: pt.x,
-                        y: pt.y
-                      })}
-                      onMouseLeave={() => setHoveredPoint(null)}
-                    />
-                  </g>
-                ))}
+                {points.map((pt, idx) => {
+                  const isHovered = hoveredPoint?.x === pt.x && hoveredPoint?.y === pt.y;
+                  return (
+                    <g key={idx} className="group cursor-pointer">
+                      <circle
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={isHovered ? "5" : "2.5"}
+                        className={`transition-all duration-150 ${
+                          isHovered
+                            ? "fill-[#F43F5E] stroke-white stroke-[2.5]"
+                            : "fill-[#F43F5E] stroke-[#0E0E11] stroke-[1.5] group-hover:r-4 group-hover:fill-rose-400"
+                        }`}
+                        onMouseEnter={() => setHoveredPoint({
+                          dateLabel: pt.data.fullDate,
+                          revenue: pt.data.revenue,
+                          salesCount: pt.data.salesCount,
+                          x: pt.x,
+                          y: pt.y
+                        })}
+                        onMouseLeave={() => setHoveredPoint(null)}
+                      />
+                    </g>
+                  );
+                })}
               </svg>
 
               {/* X Axis Labels */}
@@ -489,21 +514,24 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
                 return (
                   <div
-                    className={`absolute bg-[#141418] border border-white/10 text-white p-2.5 rounded-xl shadow-xl text-xs z-30 pointer-events-none transform ${posXClass} ${posYClass} animate-in fade-in duration-100 space-y-1 min-w-[140px]`}
+                    className={`absolute bg-[#141418] border border-white/10 text-white p-3 rounded-xl shadow-2xl text-xs z-30 pointer-events-none transform ${posXClass} ${posYClass} animate-in fade-in duration-150 space-y-1.5 min-w-[150px]`}
                     style={{
                       left: `${(hoveredPoint.x / svgWidth) * 100}%`,
                       top: `${(hoveredPoint.y / svgHeight) * 100}%`
                     }}
                   >
-                    <p className="font-semibold text-zinc-400 border-b border-white/[0.06] pb-1 mb-1 text-[11px]">
-                      {hoveredPoint.dateLabel}
-                    </p>
-                    <p className="text-emerald-400 font-bold text-xs wg-tabular">
-                      Faturamento: R$ {hoveredPoint.revenue.toFixed(2).replace(".", ",")}
-                    </p>
-                    <p className="text-blue-400 text-[11px] font-medium wg-tabular">
-                      Vendas: {hoveredPoint.salesCount} {hoveredPoint.salesCount === 1 ? "pedido" : "pedidos"}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1.5 mb-1">
+                      <span className="font-semibold text-zinc-300 text-[11px]">{hoveredPoint.dateLabel}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    </div>
+                    <div className="flex items-center justify-between text-xs gap-3">
+                      <span className="text-zinc-400">Faturamento:</span>
+                      <span className="font-bold text-emerald-400 font-mono wg-tabular">R$ {hoveredPoint.revenue.toFixed(2).replace(".", ",")}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs gap-3">
+                      <span className="text-zinc-400">Vendas:</span>
+                      <span className="font-bold text-white font-mono wg-tabular">{hoveredPoint.salesCount} {hoveredPoint.salesCount === 1 ? "pedido" : "pedidos"}</span>
+                    </div>
                   </div>
                 );
               })()}
@@ -603,41 +631,47 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               <p className="text-zinc-400 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
             </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar p-0.5 pr-1">
               {data.topProducts.map((prod, idx) => (
                 <div
                   key={prod.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all group"
+                  className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 group"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Rank Badge */}
-                    <span className="text-sm shrink-0 select-none font-bold w-5 text-center text-zinc-400">
-                      {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}º`}
-                    </span>
+                    {idx === 0 ? (
+                      <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
+                    ) : idx === 1 ? (
+                      <div className="w-6 h-6 rounded-lg bg-zinc-300/15 border border-zinc-300/30 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
+                    ) : idx === 2 ? (
+                      <div className="w-6 h-6 rounded-lg bg-amber-700/15 border border-amber-700/30 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
+                    ) : (
+                      <div className="w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                    )}
 
                     {/* Product Cover */}
-                    {prod.coverUrl ? (
-                      <img
-                        src={prod.coverUrl}
-                        alt=""
-                        className="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0 border border-white/10"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-zinc-800 border border-white/10 flex items-center justify-center shrink-0 text-zinc-500 text-[10px] font-medium">
-                        Sem foto
-                      </div>
-                    )}
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0 flex items-center justify-center text-zinc-500">
+                      {prod.coverUrl ? (
+                        <img
+                          src={prod.coverUrl}
+                          alt={prod.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-4.5 h-4.5 text-zinc-600" />
+                      )}
+                    </div>
 
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{prod.title}</p>
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-zinc-400 font-medium">
                         {prod.salesCount} {prod.salesCount === 1 ? "unidade" : "unidades"}
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0 ml-3">
-                    <p className="text-xs font-bold text-emerald-400 wg-tabular">
+                    <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
                       R$ {prod.revenue.toFixed(2).replace(".", ",")}
                     </p>
                   </div>
@@ -681,36 +715,42 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               <p className="text-zinc-500 text-[11px]">Quando os clientes comprarem via PIX/Cartão, os pedidos aparecerão aqui.</p>
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar p-0.5 pr-1">
               {data.recentOrders.map((ord) => (
                 <Link
                   key={ord.id}
                   href={`/seller/orders`}
-                  className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all group"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 gap-2 sm:gap-3 group"
                 >
-                  <div className="min-w-0 flex-1 pr-3">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{ord.productTitle}</p>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                          ord.status === "paid"
-                            ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30"
-                            : "bg-amber-950/80 text-amber-400 border-amber-500/30"
-                        }`}
-                      >
-                        {ord.status === "paid" ? "Pago" : "Pendente"}
-                      </span>
                     </div>
                     <p className="text-[11px] text-zinc-400 truncate mt-0.5">
                       {ord.customerName} • <span className="text-zinc-500">{ord.timeAgo}</span>
                     </p>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-bold text-emerald-400 wg-tabular">
-                      R$ {ord.total.toFixed(2).replace(".", ",")}
-                    </p>
-                    <p className="text-[10px] text-zinc-500 uppercase font-semibold">{ord.paymentMethod}</p>
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-0 border-white/[0.04]">
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
+                        ord.status === "paid"
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : ord.status === "pending"
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                      }`}
+                    >
+                      {ord.status === "paid" ? "Pago" : ord.status === "pending" ? "Pendente" : ord.status}
+                    </span>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
+                        R$ {ord.total.toFixed(2).replace(".", ",")}
+                      </p>
+                      {ord.paymentMethod && (
+                        <p className="text-[10px] text-zinc-500 uppercase font-semibold">{ord.paymentMethod}</p>
+                      )}
+                    </div>
                   </div>
                 </Link>
               ))}
