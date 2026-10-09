@@ -329,7 +329,7 @@ export class BatchUploadQueue {
           item.bytesUploaded = p.bytesUploaded;
           item.speedFormatted = p.formattedSpeed;
           item.etaSeconds = p.etaSeconds;
-          this.notifyItemUpdate(item);
+          this.notifyItemUpdate(item, true);
         },
       });
 
@@ -356,7 +356,17 @@ export class BatchUploadQueue {
     }
   }
 
-  private notifyItemUpdate(item: BatchUploadItem): void {
+  private lastProgressNotifyTime: number = 0;
+
+  private notifyItemUpdate(item: BatchUploadItem, isProgressEvent = false): void {
+    const now = Date.now();
+    if (isProgressEvent) {
+      if (now - this.lastProgressNotifyTime < 150 && item.progressPercent < 100) {
+        return;
+      }
+      this.lastProgressNotifyTime = now;
+    }
+
     if (this.onItemUpdateCb) {
       this.onItemUpdateCb({ ...item });
     }
