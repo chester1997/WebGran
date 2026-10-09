@@ -201,26 +201,34 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   const [rejectedFilesMessages, setRejectedFilesMessages] = useState<string[]>([]);
   const queueRef = useRef<BatchUploadQueue | null>(null);
 
-  // Initialize Batch Queue
+  // Initialize Batch Queue once
   useEffect(() => {
-    const freeBytes = usage.isUnlimited ? Number.MAX_SAFE_INTEGER : Math.max(0, usage.quotaBytes - usage.usedBytes - usage.reservedBytes);
-    const queue = new BatchUploadQueue({
-      freeQuotaBytes: freeBytes,
-      onQueueUpdate: (items) => {
-        setBatchItems([...items]);
-      },
-      onItemUpdate: (item) => {
-        if (item.status === "PROCESSING" || item.status === "READY") {
-          refreshData(true);
-        }
-      },
-      onComplete: () => {
-        refreshData();
-        showFeedback("Fila de uploads concluída!");
-      },
-    });
+    if (!queueRef.current) {
+      const freeBytes = usage.isUnlimited ? Number.MAX_SAFE_INTEGER : Math.max(0, usage.quotaBytes - usage.usedBytes - usage.reservedBytes);
+      queueRef.current = new BatchUploadQueue({
+        freeQuotaBytes: freeBytes,
+        onQueueUpdate: (items) => {
+          setBatchItems([...items]);
+        },
+        onItemUpdate: (item) => {
+          if (item.status === "PROCESSING" || item.status === "READY") {
+            refreshData(true);
+          }
+        },
+        onComplete: () => {
+          refreshData();
+          showFeedback("Fila de uploads concluída!");
+        },
+      });
+    }
+  }, []);
 
-    queueRef.current = queue;
+  // Update freeQuota on quota changes without destroying existing queue items
+  useEffect(() => {
+    if (queueRef.current) {
+      const freeBytes = usage.isUnlimited ? Number.MAX_SAFE_INTEGER : Math.max(0, usage.quotaBytes - usage.usedBytes - usage.reservedBytes);
+      queueRef.current.updateFreeQuota(freeBytes);
+    }
   }, [usage.quotaBytes, usage.usedBytes, usage.reservedBytes, usage.isUnlimited]);
 
   // Edit Modal State
