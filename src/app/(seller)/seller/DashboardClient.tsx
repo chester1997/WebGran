@@ -26,11 +26,47 @@ import {
   Layers,
   Tag
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer
+} from "recharts";
 import { StoreAnalyticsData } from "@/lib/analytics/analytics-service";
 import { getDashboardAnalyticsAction } from "./actions";
 
 interface DashboardClientProps {
   initialData: StoreAnalyticsData;
+}
+
+function CustomRechartsTooltip({ active, payload, label, chartMetric }: any) {
+  if (active && payload && payload.length) {
+    const item = payload[0].payload;
+    return (
+      <div className="bg-[#141418] border border-white/10 text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[150px]">
+        <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1.5 mb-1">
+          <span className="font-semibold text-zinc-300 text-[11px]">{item.fullDate || item.dateLabel || label}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+        </div>
+        <div className="flex items-center justify-between text-xs gap-3">
+          <span className="text-zinc-400">Faturamento:</span>
+          <span className="font-bold text-emerald-400 font-mono wg-tabular">
+            R$ {(item.revenue || 0).toFixed(2).replace(".", ",")}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs gap-3">
+          <span className="text-zinc-400">Vendas:</span>
+          <span className="font-bold text-white font-mono wg-tabular">
+            {item.salesCount || 0} {(item.salesCount || 0) === 1 ? "pedido" : "pedidos"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
 }
 
 function ChannelAvatarItem({ chan }: { chan: { channel: string; label: string; photoUrl?: string | null } }) {
@@ -431,7 +467,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             </div>
           </div>
 
-          {/* Chart SVG Rendering or Empty State */}
+          {/* Recharts Area Chart */}
           {isPending ? (
             <div className="h-60 bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
               Carregando gráfico...
@@ -447,94 +483,58 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               </p>
             </div>
           ) : (
-            <div className="relative w-full max-w-full overflow-hidden">
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto max-w-full block overflow-visible">
-                <defs>
-                  <linearGradient id="chartGradientRose" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#E11D48" stopOpacity="0.18" />
-                    <stop offset="50%" stopColor="#F43F5E" stopOpacity="0.06" />
-                    <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Grid Lines */}
-                <line x1={paddingX} y1={paddingY} x2={svgWidth - paddingX} y2={paddingY} stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" />
-                <line x1={paddingX} y1={(svgHeight - paddingY * 2) / 2 + paddingY} x2={svgWidth - paddingX} y2={(svgHeight - paddingY * 2) / 2 + paddingY} stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" />
-                <line x1={paddingX} y1={svgHeight - paddingY} x2={svgWidth - paddingX} y2={svgHeight - paddingY} stroke="rgba(255, 255, 255, 0.06)" />
-
-                {/* Area & Line Paths */}
-                {areaD && <path d={areaD} fill="url(#chartGradientRose)" />}
-                {lineD && <path d={lineD} fill="none" stroke="#F43F5E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-
-                {/* Data Nodes */}
-                {points.map((pt, idx) => {
-                  const isHovered = hoveredPoint?.x === pt.x && hoveredPoint?.y === pt.y;
-                  return (
-                    <g key={idx} className="group cursor-pointer">
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r={isHovered ? "5" : "2.5"}
-                        className={`transition-all duration-150 ${
-                          isHovered
-                            ? "fill-[#F43F5E] stroke-white stroke-[2.5]"
-                            : "fill-[#F43F5E] stroke-[#0E0E11] stroke-[1.5] group-hover:r-4 group-hover:fill-rose-400"
-                        }`}
-                        onMouseEnter={() => setHoveredPoint({
-                          dateLabel: pt.data.fullDate,
-                          revenue: pt.data.revenue,
-                          salesCount: pt.data.salesCount,
-                          x: pt.x,
-                          y: pt.y
-                        })}
-                        onMouseLeave={() => setHoveredPoint(null)}
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* X Axis Labels */}
-              <div className="flex justify-between px-4 pt-3 text-[10px] text-zinc-500 font-mono">
-                {series.length <= 8
-                  ? series.map((s, idx) => <span key={idx}>{s.dateLabel}</span>)
-                  : [series[0], series[Math.floor(series.length / 2)], series[series.length - 1]].map((s, idx) => (
-                      <span key={idx}>{s?.dateLabel}</span>
-                    ))}
-              </div>
-
-              {/* Smart Tooltip Overlay */}
-              {hoveredPoint && (() => {
-                const isTop = (hoveredPoint.y / svgHeight) < 0.45;
-                const isRight = (hoveredPoint.x / svgWidth) > 0.8;
-                const isLeft = (hoveredPoint.x / svgWidth) < 0.2;
-
-                const posXClass = isRight ? "-translate-x-[90%]" : isLeft ? "-translate-x-[10%]" : "-translate-x-1/2";
-                const posYClass = isTop ? "translate-y-3 mt-1" : "-translate-y-full mb-3";
-
-                return (
-                  <div
-                    className={`absolute bg-[#141418] border border-white/10 text-white p-3 rounded-xl shadow-2xl text-xs z-30 pointer-events-none transform ${posXClass} ${posYClass} animate-in fade-in duration-150 space-y-1.5 min-w-[150px]`}
-                    style={{
-                      left: `${(hoveredPoint.x / svgWidth) * 100}%`,
-                      top: `${(hoveredPoint.y / svgHeight) * 100}%`
+            <div className="w-full h-64 sm:h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={series}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="chartGradientRose" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="dateLabel"
+                    stroke="#71717A"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    dy={5}
+                  />
+                  <YAxis
+                    stroke="#71717A"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(val) =>
+                      chartMetric === "revenue"
+                        ? val >= 1000
+                          ? `R$ ${(val / 1000).toFixed(1)}k`
+                          : `R$ ${val}`
+                        : String(val)
+                    }
+                  />
+                  <RechartsTooltip content={<CustomRechartsTooltip chartMetric={chartMetric} />} />
+                  <Area
+                    type="monotone"
+                    dataKey={chartMetric === "revenue" ? "revenue" : "salesCount"}
+                    stroke="#F43F5E"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#chartGradientRose)"
+                    dot={false}
+                    activeDot={{
+                      r: 5,
+                      stroke: "#FFFFFF",
+                      strokeWidth: 2,
+                      fill: "#F43F5E"
                     }}
-                  >
-                    <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1.5 mb-1">
-                      <span className="font-semibold text-zinc-300 text-[11px]">{hoveredPoint.dateLabel}</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    </div>
-                    <div className="flex items-center justify-between text-xs gap-3">
-                      <span className="text-zinc-400">Faturamento:</span>
-                      <span className="font-bold text-emerald-400 font-mono wg-tabular">R$ {hoveredPoint.revenue.toFixed(2).replace(".", ",")}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs gap-3">
-                      <span className="text-zinc-400">Vendas:</span>
-                      <span className="font-bold text-white font-mono wg-tabular">{hoveredPoint.salesCount} {hoveredPoint.salesCount === 1 ? "pedido" : "pedidos"}</span>
-                    </div>
-                  </div>
-                );
-              })()}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
