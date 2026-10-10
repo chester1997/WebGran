@@ -52,11 +52,11 @@ export function PixPaymentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
       
       {/* Backdrop overlay click to close */}
       <div 
-        className="absolute inset-0 cursor-pointer" 
+        className="fixed inset-0 cursor-pointer" 
         onClick={onClose} 
         aria-hidden="true" 
       />
@@ -66,7 +66,7 @@ export function PixPaymentModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pix-modal-title"
-        className="relative w-full max-w-md bg-[#141416] dark:bg-[#141416] border border-white/10 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto custom-scrollbar text-white z-10 fade-in"
+        className="relative w-full max-w-md bg-[#141416] dark:bg-[#141416] border border-white/10 dark:border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] overflow-y-auto custom-scrollbar text-white z-10 fade-in flex flex-col justify-between shrink-0"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -104,6 +104,7 @@ export function PixPaymentModal({
             amount={amount}
             orderId={orderId}
             status={status}
+            isEmbedded={true}
             onCopy={onCopy}
             onRetry={onRetry}
             onBack={onClose}
@@ -111,8 +112,8 @@ export function PixPaymentModal({
         </div>
 
         {/* Modal Footer Note */}
-        <div className="text-center pt-1 border-t border-white/5">
-          <p className="text-[11px] text-zinc-400">
+        <div className="text-center pt-1.5 border-t border-white/5">
+          <p className="text-[11px] text-zinc-400 leading-normal">
             Você pode fechar este modal a qualquer momento. O pagamento permanecerá ativo.
           </p>
         </div>
