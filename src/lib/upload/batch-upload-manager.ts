@@ -80,9 +80,9 @@ export class BatchUploadQueue {
     const added: BatchUploadItem[] = [];
     const rejected: string[] = [];
 
-    // Calculate current committed bytes (queued, session creating, uploading, processing, ready)
+    // Calculate current active queue bytes (queued, session creating, uploading)
     const currentQueueBytes = this.items
-      .filter((it) => it.status !== "CANCELED" && it.status !== "FAILED")
+      .filter((it) => it.status === "QUEUED" || it.status === "CREATING_SESSION" || it.status === "UPLOADING")
       .reduce((sum, it) => sum + it.fileSizeBytes, 0);
 
     let runningTotalBytes = currentQueueBytes;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BatchUploadQueue, BatchUploadItem } from "@/lib/upload/batch-upload-manager";
+import { TusVideoUploader } from "@/lib/bunny/client-upload";
 
 describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
   const mockFreeQuotaBytes = 5 * 1024 * 1024 * 1024; // 5 GB
@@ -16,6 +17,19 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
         json: () => Promise.resolve({ success: true, uploadSession: { tusUploadUrl: "http://mock" } }),
       })
     ));
+
+    vi.spyOn(TusVideoUploader.prototype, "uploadVideo").mockImplementation(async ({ onProgress }) => {
+      if (onProgress) {
+        onProgress({
+          percentage: 100,
+          bytesUploaded: 100,
+          totalBytes: 100,
+          formattedSpeed: "10 MB/s",
+          etaSeconds: 0,
+        });
+      }
+      return Promise.resolve();
+    });
   });
 
   it("adds valid video files and keeps them QUEUED without autostarting until start() is explicitly called", () => {
@@ -145,5 +159,72 @@ describe("BatchUploadQueue Sequential Logic & Quota Enforcement", () => {
 
     queue.retryItem(item.id);
     expect(["QUEUED", "CREATING_SESSION", "UPLOADING"]).toContain(queue.getItems()[0].status);
+  });
+
+  it("triggers onComplete when a single video finishes upload (reaches PROCESSING state)", async () => {
+    const onComplete = vi.fn();
+    const queue = new BatchUploadQueue({
+      freeQuotaBytes: mockFreeQuotaBytes,
+      onComplete,
+    });
+
+    const file1 = createMockFile("aula_01.mp4", 100);
+    queue.addFiles([file1]);
+    queue.start();
+
+    // Wait microtask tick for async processing loop to finish upload
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    const item = queue.getItems()[0];
+    expect(item.status).toBe("PROCESSING");
+  });
+
+  it("triggers onComplete only after all multiple videos finish upload to PROCESSING", async () => {
+    const completedStates: string[][] = [];
+    const onComplete = vi.fn(() => {
+      completedStates.push(queue.getItems().map((i) => i.status));
+    });
+
+    const queue = new BatchUploadQueue({
+      freeQuotaBytes: mockFreeQuotaBytes,
+      onComplete,
+    });
+
+    const file1 = createMockFile("v1.mp4", 50);
+    const file2 = createMockFile("v2.mp4", 50);
+    queue.addFiles([file1, file2]);
+    queue.start();
+
+    await new Promise((r) => setTimeout(r, 150));
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(completedStates[0]).toEqual(["PROCESSING", "PROCESSING"]);
+  });
+
+  it("calls onComplete with failed item status if an upload fails, keeping modal available for recovery", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ success: false, error: "Falha na conexao" }),
+      })
+    ));
+
+    const onComplete = vi.fn();
+    const queue = new BatchUploadQueue({
+      freeQuotaBytes: mockFreeQuotaBytes,
+      onComplete,
+    });
+
+    const file1 = createMockFile("v1_falha.mp4", 50);
+    queue.addFiles([file1]);
+    queue.start();
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    const items = queue.getItems();
+    expect(items[0].status).toBe("FAILED");
+    const allSuccessful = items.every((i) => i.status === "PROCESSING" || i.status === "READY");
+    expect(allSuccessful).toBe(false);
   });
 });

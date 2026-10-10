@@ -214,13 +214,38 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
           if (queueRef.current) {
             setBatchItems(queueRef.current.getItems());
           }
-          if (item.status === "PROCESSING" || item.status === "READY") {
+          if (
+            item.status === "CREATING_SESSION" ||
+            item.status === "UPLOADING" ||
+            item.status === "PROCESSING" ||
+            item.status === "READY"
+          ) {
             refreshData(true);
           }
         },
         onComplete: () => {
-          refreshData();
-          showFeedback("Fila de uploads concluída!");
+          const currentItems = queueRef.current ? queueRef.current.getItems() : [];
+          const hasItems = currentItems.length > 0;
+          const hasFailures = currentItems.some(
+            (it) => it.status === "FAILED" || it.status === "CANCELED"
+          );
+          const allSuccessfulUploads =
+            hasItems &&
+            currentItems.every(
+              (it) => it.status === "PROCESSING" || it.status === "READY"
+            );
+
+          refreshData(true);
+
+          if (allSuccessfulUploads) {
+            setIsUploadModalOpen(false);
+            showFeedback("Todos os uploads foram concluídos com sucesso! O processamento continua na biblioteca.");
+          } else if (hasFailures) {
+            showFeedback(
+              "Alguns uploads falharam. Verifique os itens no gerenciador de upload.",
+              true
+            );
+          }
         },
       });
     }
