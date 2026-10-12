@@ -8,33 +8,18 @@ import { eq } from "drizzle-orm";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { deliveryValue, storeId } = body;
+    const { deliveryValue, botId } = body;
 
-    let targetStoreId = storeId;
-
-    if (!targetStoreId) {
-      const currentStore = await getCurrentStore();
-      if (!currentStore) {
-        return NextResponse.json(
-          { success: false, error: "Loja não encontrada ou usuário não autenticado." },
-          { status: 401 }
-        );
-      }
-      targetStoreId = currentStore.id;
-    } else {
-      // Verify store exists
-      const storeRecord = await db.query.stores.findFirst({
-        where: eq(stores.id, targetStoreId)
-      });
-      if (!storeRecord) {
-        return NextResponse.json(
-          { success: false, error: "Loja informada não encontrada." },
-          { status: 404 }
-        );
-      }
+    const currentStore = await getCurrentStore();
+    if (!currentStore) {
+      return NextResponse.json(
+        { success: false, error: "Loja não encontrada ou usuário não autenticado." },
+        { status: 401 }
+      );
     }
+    const targetStoreId = currentStore.id;
 
-    const validation = await validateProductTelegramChat(targetStoreId, deliveryValue);
+    const validation = await validateProductTelegramChat(targetStoreId, deliveryValue, botId || null);
 
     return NextResponse.json(validation);
   } catch (error: any) {

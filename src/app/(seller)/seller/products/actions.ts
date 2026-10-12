@@ -152,6 +152,17 @@ export async function createProductAction(formData: FormData) {
 
   const categoryId = (formData.get("categoryId") as string) || null;
   const botId = (formData.get("botId") as string) || null;
+
+  if (botId) {
+    const { telegramBots } = await import("@/db/schema");
+    const botRecord = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+    if (!botRecord) {
+      throw new Error("O bot selecionado não pertence a esta loja.");
+    }
+  }
+
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
   const badge = (formData.get("badge") as string) || null;
@@ -288,6 +299,17 @@ export async function updateProductAction(productId: string, formData: FormData)
 
   const categoryId = (formData.get("categoryId") as string) || null;
   const botId = (formData.get("botId") as string) || null;
+
+  if (botId) {
+    const { telegramBots } = await import("@/db/schema");
+    const botRecord = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+    if (!botRecord) {
+      throw new Error("O bot selecionado não pertence a esta loja.");
+    }
+  }
+
   const status = (formData.get("status") as string) || "active";
   const duration = (formData.get("duration") as string) || "lifetime";
   const badge = (formData.get("badge") as string) || null;
@@ -400,9 +422,13 @@ export async function testTelegramChatAccessAction(botId: string, telegramChatId
     bot = await db.query.telegramBots.findFirst({
       where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
     });
-  }
-
-  if (!bot) {
+    if (!bot) {
+      return {
+        success: false,
+        error: "O bot selecionado não foi encontrado ou não pertence a esta loja."
+      };
+    }
+  } else {
     bot = await db.query.telegramBots.findFirst({
       where: eq(telegramBots.storeId, store.id)
     });
@@ -459,9 +485,10 @@ export async function getBotChatsAction(botId?: string | null) {
     targetBot = await db.query.telegramBots.findFirst({
       where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
     });
-  }
-
-  if (!targetBot) {
+    if (!targetBot) {
+      return [];
+    }
+  } else {
     targetBot = await db.query.telegramBots.findFirst({
       where: eq(telegramBots.storeId, store.id)
     });
@@ -491,9 +518,10 @@ export async function syncBotChatsAction(botId?: string | null) {
     targetBot = await db.query.telegramBots.findFirst({
       where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
     });
-  }
-
-  if (!targetBot) {
+    if (!targetBot) {
+      throw new Error("O bot selecionado não foi encontrado ou não pertence a esta loja.");
+    }
+  } else {
     targetBot = await db.query.telegramBots.findFirst({
       where: eq(telegramBots.storeId, store.id)
     });

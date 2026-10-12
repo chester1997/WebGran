@@ -45,10 +45,18 @@ export async function validateProductTelegramChat(
     botRecord = await db.query.telegramBots.findFirst({
       where: and(eq(telegramBots.id, targetBotId), eq(telegramBots.storeId, storeId))
     });
-  }
-
-  if (!botRecord) {
+    if (!botRecord) {
+      return {
+        success: false,
+        code: 'BOT_MISSING',
+        error: "❌ O bot selecionado não foi encontrado ou não pertence a esta loja.",
+      };
+    }
+  } else {
+    // Escopo geral (Todos os Bots): busca bot ativo da loja para validar conexão
     botRecord = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.storeId, storeId), eq(telegramBots.status, "active"))
+    }) || await db.query.telegramBots.findFirst({
       where: eq(telegramBots.storeId, storeId)
     });
   }

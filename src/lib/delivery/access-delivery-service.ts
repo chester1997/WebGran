@@ -40,9 +40,9 @@ export class AccessDeliveryService {
       where: eq(stores.id, order.storeId)
     });
 
-    // Multi-tenant check: Get bot strictly bound to this store
-    const bot = await db.query.telegramBots.findFirst({
-      where: eq(telegramBots.storeId, order.storeId)
+    // Multi-tenant check: Get active default bot strictly bound to this store for global products
+    const defaultStoreBot = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.storeId, order.storeId), eq(telegramBots.status, 'active'))
     });
 
     const items = order.items || await db.query.orderItems.findMany({
@@ -99,12 +99,30 @@ export class AccessDeliveryService {
         accessRecord = inserted[0];
       }
 
+      // Resolve bot strictly for this product: if product has botId, use that specific active bot of the store;
+      // if botId is null, use the store's global/default active bot.
+      let itemBot = null;
+      if (product.botId) {
+        itemBot = await db.query.telegramBots.findFirst({
+          where: and(
+            eq(telegramBots.id, product.botId),
+            eq(telegramBots.storeId, order.storeId),
+            eq(telegramBots.status, 'active')
+          )
+        });
+        if (!itemBot) {
+          throw new Error(`Bot vinculado ao produto (${product.botId}) não encontrado ou não está ativo nesta loja.`);
+        }
+      } else {
+        itemBot = defaultStoreBot;
+      }
+
       // Execute Delivery
       const deliveryRes = await AccessDeliveryService.executeSingleDelivery(
         accessRecord,
         product,
         order.customer,
-        bot,
+        itemBot,
         store?.slug
       );
 
@@ -141,15 +159,30 @@ export class AccessDeliveryService {
       where: eq(stores.id, sellerStoreId)
     });
 
-    const bot = await db.query.telegramBots.findFirst({
-      where: eq(telegramBots.storeId, sellerStoreId)
-    });
+    let itemBot = null;
+    const productBotId = accessRecord.product?.botId;
+    if (productBotId) {
+      itemBot = await db.query.telegramBots.findFirst({
+        where: and(
+          eq(telegramBots.id, productBotId),
+          eq(telegramBots.storeId, sellerStoreId),
+          eq(telegramBots.status, 'active')
+        )
+      });
+      if (!itemBot) {
+        throw new Error("Bot vinculado ao produto não encontrado ou não está ativo nesta loja.");
+      }
+    } else {
+      itemBot = await db.query.telegramBots.findFirst({
+        where: and(eq(telegramBots.storeId, sellerStoreId), eq(telegramBots.status, 'active'))
+      });
+    }
 
     return AccessDeliveryService.executeSingleDelivery(
       accessRecord,
       accessRecord.product,
       accessRecord.customer,
-      bot,
+      itemBot,
       store?.slug
     );
   }

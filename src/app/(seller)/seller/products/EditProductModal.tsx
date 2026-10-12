@@ -65,7 +65,10 @@ export function EditProductModal({ categories, bots, product }: { categories: an
       const res = await fetch("/api/seller/products/validate-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryValue: deliveryValue.trim() })
+        body: JSON.stringify({ 
+          deliveryValue: deliveryValue.trim(),
+          botId: selectedBotId || undefined,
+        })
       });
       const data = await res.json();
       setTestResult(data);
@@ -215,25 +218,6 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                   <option value="daily">Diário</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
-                <select name="status" defaultValue={product?.status || "active"} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
-                  <option value="active">Ativo na Loja</option>
-                  <option value="draft">Inativo (Rascunho)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Badge do Produto</label>
-                <select name="badge" defaultValue={product?.badge || ""} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
-                  <option value="">Nenhum Badge</option>
-                  <option value="novo">🟢 Novo (Verde)</option>
-                  <option value="dublado">🔵 Dublado (DUB)</option>
-                  <option value="legendado">🔴 Legendado (LEG)</option>
-                  <option value="br">🇧🇷 BR (Verde e Amarelo)</option>
-                  <option value="em_alta">🟡 Em alta (Amarelo)</option>
-                  <option value="lancamento">🟣 Lançamento (Roxo)</option>
-                </select>
-              </div>
             </div>
 
             {/* Imagem do Produto */}
@@ -379,7 +363,12 @@ export function EditProductModal({ categories, bots, product }: { categories: an
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Vincular Bot</label>
-                <select name="botId" defaultValue={product?.botId || ''} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select 
+                  name="botId" 
+                  value={selectedBotId} 
+                  onChange={(e) => setSelectedBotId(e.target.value)} 
+                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
+                >
                   <option value="">Todos os Bots (Loja Geral)</option>
                   {bots?.map(b => (
                     <option key={b.id} value={b.id}>{b.displayName || `@${b.username}`}</option>

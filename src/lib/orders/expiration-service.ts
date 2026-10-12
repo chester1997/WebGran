@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { accesses, products, stores, telegramBots, telegramCustomers } from "@/db/schema";
-import { eq, and, lte, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, or, lte, inArray, isNotNull } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
@@ -24,7 +24,11 @@ export interface ExpiredProcessResult {
 
 /**
  * Backend Service Job: processExpiredAccesses()
- * Scans all ACTIVE accesses where now >= expiresAt (and duration != LIFETIME), revokes Telegram member access, and marks status = EXPIRED.
+ * Scans all accesses where now >= expiresAt (and duration != LIFETIME):
+ * 1. Sets commercial status = EXPIRED regardless of Telegram connectivity.
+ * 2. Attempts Telegram revocation using strictly isolated bot credentials.
+ * 3. Records revocationStatus = SUCCESS | FAILED | SKIPPED_NOT_MEMBER.
+ * 4. Retries pending/failed Telegram revocations on future runs without restoring commercial status.
  */
 export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
   const now = new Date();
@@ -32,9 +36,15 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
 
   const expiredAccesses = await db.query.accesses.findMany({
     where: and(
-      eq(accesses.status, 'ACTIVE'),
       isNotNull(accesses.expiresAt),
-      lte(accesses.expiresAt, now)
+      lte(accesses.expiresAt, now),
+      or(
+        eq(accesses.status, 'ACTIVE'),
+        and(
+          eq(accesses.status, 'EXPIRED'),
+          inArray(accesses.revocationStatus, ['FAILED', 'PENDING'])
+        )
+      )
     ),
     with: {
       product: true,
@@ -53,21 +63,59 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
   for (const acc of expiredAccesses) {
     let revocationStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'SKIPPED_NOT_MEMBER' = 'PENDING';
     let revocationError: string | undefined = undefined;
+    let botResolutionFailed = false;
 
     try {
-      const storeBot = acc.store?.bots?.[0] || await db.query.telegramBots.findFirst({
-        where: eq(telegramBots.storeId, acc.storeId)
-      });
-
       const telegramChatId = acc.telegramChatId || acc.product?.deliveryValue;
       const telegramUserId = acc.customer?.telegramUserId;
+      const isExternalDelivery = acc.deliveryType === 'external' || acc.product?.deliveryType === 'external';
+      const requiresTelegramRevocation = Boolean(
+        !isExternalDelivery &&
+        telegramChatId &&
+        telegramUserId &&
+        !telegramChatId.startsWith('http://') &&
+        !telegramChatId.startsWith('https://')
+      );
 
-      if (storeBot && storeBot.tokenEncrypted && telegramChatId && telegramUserId && !telegramChatId.startsWith('http://') && !telegramChatId.startsWith('https://')) {
+      if (requiresTelegramRevocation) {
+        let storeBot = null;
+        if (acc.product?.botId) {
+          // 1. Se acc.product.botId estiver preenchido, busque exclusivamente esse bot ativo no escopo da loja
+          storeBot = await db.query.telegramBots.findFirst({
+            where: and(
+              eq(telegramBots.id, acc.product.botId),
+              eq(telegramBots.storeId, acc.storeId),
+              eq(telegramBots.status, 'active')
+            )
+          });
+          if (!storeBot) {
+            botResolutionFailed = true;
+            throw new Error("Bot vinculado ao produto não foi encontrado ou não está ativo nesta loja.");
+          }
+        } else {
+          // 2. Loja Geral: busca diretamente no banco um bot ativo da mesma loja (sem depender de relações em memória)
+          storeBot = await db.query.telegramBots.findFirst({
+            where: and(
+              eq(telegramBots.storeId, acc.storeId),
+              eq(telegramBots.status, 'active')
+            )
+          });
+          if (!storeBot) {
+            botResolutionFailed = true;
+            throw new Error("Nenhum bot ativo foi encontrado para esta loja.");
+          }
+        }
+
+        if (!storeBot.tokenEncrypted) {
+          botResolutionFailed = true;
+          throw new Error("Bot ativo não possui token de autenticação configurado.");
+        }
+
         const botToken = decrypt(storeBot.tokenEncrypted);
         const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
 
         // 1. Check if user is currently in channel
-        const isMember = await TelegramDeliveryService.checkBuyerMembership(botToken, telegramChatId, telegramUserId);
+        const isMember = await TelegramDeliveryService.checkBuyerMembership(botToken, telegramChatId!, telegramUserId!);
 
         if (!isMember) {
           revocationStatus = 'SKIPPED_NOT_MEMBER';
@@ -76,8 +124,8 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
           // 2. User IS in channel: execute ban & unban to revoke access
           const botService = new TelegramBotService(botToken);
           try {
-            await botService.banChatMember(telegramChatId, telegramUserId);
-            await botService.unbanChatMember(telegramChatId, telegramUserId);
+            await botService.banChatMember(telegramChatId!, telegramUserId!);
+            await botService.unbanChatMember(telegramChatId!, telegramUserId!);
             revocationStatus = 'SUCCESS';
             console.log(`[processExpiredAccesses] Successfully revoked Telegram user ${telegramUserId} from chat ${telegramChatId}.`);
           } catch (botErr: any) {
@@ -87,6 +135,7 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
           }
         }
       } else {
+        // Entrega externa ou que não envolve canal do Telegram: revogação não aplicável
         revocationStatus = 'SKIPPED_NOT_MEMBER';
       }
     } catch (err: any) {
@@ -94,14 +143,15 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
       revocationError = err.message || "Erro na remoção do Telegram.";
     }
 
-    // Update Access status to EXPIRED in Neon DB (Idempotent)
+    // 1. Estado comercial do acesso: validade expirou -> marca como EXPIRED no sistema
+    // 2. Revogação no Telegram: reflete SUCCESS, SKIPPED_NOT_MEMBER ou FAILED (permitindo retry seguro)
     await db.update(accesses).set({
       status: 'EXPIRED',
       deliveryStatus: 'EXPIRED',
-      expiredAt: now,
+      expiredAt: acc.expiredAt || now,
       revocationStatus,
       revocationError: revocationError || null,
-      revokedAt: revocationStatus === 'SUCCESS' ? now : null,
+      revokedAt: revocationStatus === 'SUCCESS' ? (acc.revokedAt || now) : (acc.revokedAt || null),
       updatedAt: now,
     }).where(eq(accesses.id, acc.id));
 

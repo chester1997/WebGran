@@ -43,6 +43,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
       setDeliveryValue("");
       setImageUrl("");
       setBannerUrl("");
+      setSelectedBotId("");
 
       // Cleanup pending Bunny videos if modal closed without saving
       if (pendingVideos.length > 0) {
@@ -66,7 +67,10 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
       const res = await fetch("/api/seller/products/validate-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryValue: deliveryValue.trim() })
+        body: JSON.stringify({ 
+          deliveryValue: deliveryValue.trim(),
+          botId: selectedBotId || undefined,
+        })
       });
       const data = await res.json();
       setTestResult(data);
