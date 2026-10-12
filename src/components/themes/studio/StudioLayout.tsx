@@ -10,5 +10,13 @@ export async function StudioLayout({ storeSlug, children }: { storeSlug: string,
     notFound();
   }
 
-  return <StudioLayoutClient storeSlug={storeSlug}>{children}</StudioLayoutClient>;
+  return (
+    <StudioLayoutClient
+      storeSlug={storeSlug}
+      supportType={store.supportType}
+      supportValue={store.supportValue}
+    >
+      {children}
+    </StudioLayoutClient>
+  );
 }

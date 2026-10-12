@@ -7,10 +7,17 @@ import { FloatingPromotionNotification } from "./components/FloatingPromotionNot
 
 interface StudioLayoutClientProps {
   storeSlug: string;
+  supportType?: string | null;
+  supportValue?: string | null;
   children: ReactNode;
 }
 
-export function StudioLayoutClient({ storeSlug, children }: StudioLayoutClientProps) {
+export function StudioLayoutClient({
+  storeSlug,
+  supportType,
+  supportValue,
+  children,
+}: StudioLayoutClientProps) {
   const pathname = usePathname() || "";
   const isVideoPage = pathname.includes("/video/");
 
@@ -41,7 +48,11 @@ export function StudioLayoutClient({ storeSlug, children }: StudioLayoutClientPr
       <FloatingPromotionNotification storeSlug={storeSlug} />
 
       {/* Fixed Bottom Navigation Area */}
-      <StudioBottomNav storeSlug={storeSlug} />
+      <StudioBottomNav
+        storeSlug={storeSlug}
+        supportType={supportType}
+        supportValue={supportValue}
+      />
     </div>
   );
 }
