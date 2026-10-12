@@ -107,6 +107,10 @@ export class BunnyStreamService {
     });
 
     if (!res.ok) {
+      if (res.status === 404) {
+        console.log("[BunnyStream] deleteVideo: Video already deleted (404 Not Found)", { videoId });
+        return true;
+      }
       const errText = await res.text();
       console.error("[BunnyStream] deleteVideo error", { videoId, status: res.status, errText });
       return false;

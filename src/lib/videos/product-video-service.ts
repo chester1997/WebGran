@@ -1288,9 +1288,14 @@ export class ProductVideoService {
   }
 
   /**
-   * Deletes a video from seller library safely, checking for product assignments first.
+   * Deletes a video from seller library safely, checking for active buyer accesses and product assignments first.
    */
-  static async deleteLibraryVideo(storeId: string, videoId: string, force = false) {
+  static async deleteLibraryVideo(
+    storeId: string,
+    videoId: string,
+    force = false,
+    sellerId?: string
+  ) {
     const video = await db.query.productVideos.findFirst({
       where: and(
         eq(productVideos.id, videoId),
@@ -1305,7 +1310,9 @@ export class ProductVideoService {
     });
 
     if (!video) {
-      throw new Error("Vídeo não encontrado ou sem permissão de acesso.");
+      const err: any = new Error("Vídeo não encontrado ou sem permissão de acesso.");
+      err.code = "NOT_FOUND";
+      throw err;
     }
 
     const productMap = new Map<string, { id: string; title: string; slug: string }>();
@@ -1320,40 +1327,251 @@ export class ProductVideoService {
       }
     }
     const assignedProducts = Array.from(productMap.values());
+    const assignedProductIds = assignedProducts.map((p) => p.id);
 
-    if (assignedProducts.length > 0 && !force) {
-      return {
-        success: false,
-        isAssigned: true,
-        assignedCount: assignedProducts.length,
-        products: assignedProducts,
-        message: `Este vídeo está vinculado a ${assignedProducts.length} produto(s).`,
-      };
+    // 1. Mandatory Commercial Protection:
+    // If the video is assigned to any product, check if that product has active buyer accesses (accesses.status = 'ACTIVE').
+    // If active buyer accesses exist, deletion MUST be blocked unconditionally (force=true CANNOT override this!).
+    if (assignedProductIds.length > 0) {
+      const activeAccessRecords = await db
+        .select({ count: count() })
+        .from(accesses)
+        .where(
+          and(
+            inArray(accesses.productId, assignedProductIds),
+            eq(accesses.status, "ACTIVE")
+          )
+        );
+
+      const activeAccessCount = Number(activeAccessRecords[0]?.count || 0);
+
+      if (activeAccessCount > 0) {
+        return {
+          success: false,
+          code: "BLOCKED_ACTIVE_ACCESSES",
+          activeAccessCount,
+          assignedCount: assignedProducts.length,
+          products: assignedProducts,
+          message: `Exclusão bloqueada: este vídeo está associado a produto(s) com ${activeAccessCount} acesso(s) ativo(s) de compradores. A exclusão não é permitida para proteger clientes ativos.`,
+        };
+      }
+
+      // If there are NO active buyer accesses, but the video is assigned to products:
+      // Require force=true to detach/delete.
+      if (!force) {
+        return {
+          success: false,
+          code: "LINKED_TO_PRODUCTS",
+          isAssigned: true,
+          assignedCount: assignedProducts.length,
+          products: assignedProducts,
+          message: `Este vídeo está vinculado a ${assignedProducts.length} produto(s).`,
+        };
+      }
     }
 
     const bunnyVideoId = video.bunnyVideoId;
 
-    await db.delete(productVideoAssignments).where(eq(productVideoAssignments.videoId, videoId));
-    await db.delete(productVideos).where(eq(productVideos.id, videoId));
-
+    // 2. Bunny Stream Deletion:
+    // Remote deletion first. Bunny 404 is idempotent (returns true).
     let bunnySuccess = false;
     try {
       bunnySuccess = await BunnyStreamService.deleteVideo(bunnyVideoId);
     } catch (err: any) {
-      console.warn("[ProductVideoService] Bunny Stream delete API failed, enqueuing pending_deletion:", err.message);
+      console.warn("[ProductVideoService] Bunny Stream delete API failed:", err?.message || err);
+      bunnySuccess = false;
     }
 
     if (!bunnySuccess) {
-      await db.insert(pendingDeletions).values({
-        storeId,
-        provider: "bunny_stream",
-        path: bunnyVideoId,
-        resourceId: bunnyVideoId,
-      });
+      // If Bunny API failed (network error, 5xx), do NOT delete from Neon DB. Keep record intact for safe retry.
+      return {
+        success: false,
+        code: "BUNNY_DELETE_FAILED",
+        message: "Falha ao excluir o arquivo no provedor Bunny Stream. O vídeo foi preservado no sistema para retentativa segura.",
+      };
     }
 
-    await StorageUsageService.releaseReservationByReference("product_video_upload", bunnyVideoId);
+    // 3. Neon DB Deletion:
+    try {
+      await db.delete(productVideoAssignments).where(eq(productVideoAssignments.videoId, videoId));
+      await db.delete(productVideos).where(eq(productVideos.id, videoId));
+    } catch (neonErr: any) {
+      console.error("[ProductVideoService] Neon cleanup failed after Bunny deletion:", neonErr);
+      // Preservar registro recuperável da operação para idempotência e retentativa
+      try {
+        await db.insert(pendingDeletions).values({
+          storeId,
+          provider: "bunny_stream_synced",
+          path: bunnyVideoId,
+          resourceId: videoId,
+          lastError: `Neon DB cleanup failed after Bunny deletion: ${neonErr?.message || String(neonErr)}`,
+        });
+      } catch (insertErr) {
+        console.error("[ProductVideoService] Failed to record pending deletion:", insertErr);
+      }
 
-    return { success: true, deletedVideoId: videoId };
+      return {
+        success: false,
+        code: "NEON_CLEANUP_FAILED",
+        message: "Vídeo removido da CDN, mas houve falha ao atualizar o banco de dados. Um registro de recuperação foi salvo para retentativa.",
+      };
+    }
+
+    // 4. Exact Storage Reservation Release:
+    try {
+      if (sellerId) {
+        const resResult = await StorageUsageService.releaseReservationForVideoUpload(sellerId, storeId, bunnyVideoId);
+        const isSuccess =
+          typeof resResult === "object" && resResult !== null
+            ? resResult.success
+            : resResult !== false;
+
+        if (!isSuccess) {
+          throw new Error(
+            typeof resResult === "object" && resResult?.error
+              ? resResult.error
+              : "Active video reservation release returned false"
+          );
+        }
+      } else {
+        await StorageUsageService.releaseReservationByReference("product_video_upload", bunnyVideoId);
+      }
+    } catch (resErr: any) {
+      console.error("[ProductVideoService] Reservation release failed after video deletion:", resErr);
+      try {
+        await db.insert(pendingDeletions).values({
+          storeId,
+          provider: "bunny_stream_synced",
+          path: bunnyVideoId,
+          resourceId: videoId,
+          lastError: `Reservation release failed after video deletion: ${resErr?.message || String(resErr)}`,
+        });
+      } catch (insertErr) {
+        console.error("[ProductVideoService] Failed to record pending deletion for reservation:", insertErr);
+      }
+
+      return {
+        success: false,
+        code: "RESERVATION_RELEASE_FAILED",
+        message: "Vídeo excluído no Bunny e Neon, mas falhou ao liberar a reserva de armazenamento. Um registro de recuperação foi salvo para retentativa.",
+      };
+    }
+
+    return {
+      success: true,
+      deletedVideoId: videoId,
+      bunnyVideoId,
+    };
+  }
+
+  /**
+   * Bulk deletes videos from seller library safely with concurrency control,
+   * tenant isolation, max 50 items limit, active access protection, and individual results.
+   */
+  static async bulkDeleteLibraryVideos(
+    sellerId: string,
+    storeId: string,
+    videoIds: string[],
+    options: { force?: boolean } = {}
+  ) {
+    if (!Array.isArray(videoIds) || videoIds.length === 0) {
+      throw new Error("Nenhum vídeo selecionado para exclusão.");
+    }
+
+    if (videoIds.length > 50) {
+      throw new Error("Limite máximo de 50 vídeos por requisição excedido.");
+    }
+
+    const results: Array<{
+      id: string;
+      success: boolean;
+      code?: string;
+      message?: string;
+      title?: string;
+      activeAccessCount?: number;
+      assignedCount?: number;
+      products?: Array<{ id: string; title: string }>;
+    }> = [];
+
+    // Track processed IDs to identify duplicates and invalid IDs
+    const seenIds = new Set<string>();
+    const idsToExecute: string[] = [];
+
+    for (const rawId of videoIds) {
+      const vid = typeof rawId === "string" ? rawId.trim() : "";
+      if (!vid) {
+        results.push({
+          id: String(rawId || ""),
+          success: false,
+          code: "INVALID_ID",
+          message: "Identificador de vídeo inválido.",
+        });
+        continue;
+      }
+
+      if (seenIds.has(vid)) {
+        results.push({
+          id: vid,
+          success: false,
+          code: "DUPLICATE_ID",
+          message: "Identificador duplicado na mesma requisição.",
+        });
+        continue;
+      }
+
+      seenIds.add(vid);
+      idsToExecute.push(vid);
+    }
+
+    // Process unique valid IDs in chunks of 5 parallel items
+    const chunkSize = 5;
+    for (let i = 0; i < idsToExecute.length; i += chunkSize) {
+      const chunk = idsToExecute.slice(i, i + chunkSize);
+      const chunkPromises = chunk.map(async (vid) => {
+        try {
+          const res = await this.deleteLibraryVideo(storeId, vid, options.force, sellerId);
+          if (res.success) {
+            return {
+              id: vid,
+              success: true,
+              code: "SUCCESS",
+              message: "Vídeo excluído com sucesso.",
+            };
+          } else {
+            return {
+              id: vid,
+              success: false,
+              code: res.code || "FAILED",
+              message: res.message || "Falha ao excluir vídeo.",
+              activeAccessCount: (res as any).activeAccessCount,
+              assignedCount: (res as any).assignedCount,
+              products: (res as any).products,
+            };
+          }
+        } catch (err: any) {
+          const isNotFound = err?.code === "NOT_FOUND" || err?.message?.includes("não encontrado");
+          return {
+            id: vid,
+            success: false,
+            code: isNotFound ? "NOT_FOUND" : (err?.code || "ERROR"),
+            message: err?.message || "Erro inesperado ao excluir vídeo.",
+          };
+        }
+      });
+
+      const chunkResults = await Promise.all(chunkPromises);
+      results.push(...chunkResults);
+    }
+
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
+
+    return {
+      success: failureCount === 0 && results.length > 0,
+      totalRequested: videoIds.length,
+      successCount,
+      failureCount,
+      results,
+    };
   }
 }

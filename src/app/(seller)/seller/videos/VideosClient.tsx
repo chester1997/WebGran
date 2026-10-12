@@ -268,11 +268,34 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   // Delete Modal State
   const [deletingVideo, setDeletingVideo] = useState<LibraryVideoItem | null>(null);
   const [deleteWarningInfo, setDeleteWarningInfo] = useState<{
-    isAssigned: boolean;
+    isAssigned?: boolean;
+    isBlockedActiveAccesses?: boolean;
+    activeAccessCount?: number;
+    message?: string;
     assignedCount: number;
     products: { id: string; title: string }[];
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Bulk Delete State
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleteSummary, setBulkDeleteSummary] = useState<{
+    totalRequested: number;
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+      id: string;
+      success: boolean;
+      code?: string;
+      message?: string;
+      title?: string;
+      activeAccessCount?: number;
+      assignedCount?: number;
+      products?: Array<{ id: string; title: string }>;
+    }>;
+  } | null>(null);
 
   // Preview Player Modal State
   const [previewVideo, setPreviewVideo] = useState<LibraryVideoItem | null>(null);
@@ -407,14 +430,38 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
   const handleConfirmDelete = async (force = false) => {
     if (!deletingVideo) return;
     setIsDeleting(true);
+
+    // Coordinate queue cancellation for uploading/processing videos
+    if (queueRef.current) {
+      const queueItems = queueRef.current.getItems();
+      const matched = queueItems.find(
+        (it) => it.videoId === deletingVideo.id || it.bunnyVideoId === deletingVideo.bunnyVideoId
+      );
+      if (matched && (matched.status === "UPLOADING" || matched.status === "CREATING_SESSION" || matched.status === "QUEUED")) {
+        queueRef.current.cancelItem(matched.id);
+      }
+    }
+
     try {
       const res = await fetch(`/api/seller/videos/${deletingVideo.id}?force=${force ? "true" : "false"}`, {
         method: "DELETE",
       });
       const data = await res.json();
 
-      if (!data.success) {
-        if (data.isAssigned) {
+      if (!res.ok || !data.success) {
+        if (data.code === "BLOCKED_ACTIVE_ACCESSES") {
+          setDeleteWarningInfo({
+            isBlockedActiveAccesses: true,
+            activeAccessCount: data.activeAccessCount || 1,
+            assignedCount: data.assignedCount || data.products?.length || 0,
+            products: data.products || [],
+            message: data.message,
+          });
+          setIsDeleting(false);
+          return;
+        }
+
+        if (data.isAssigned || data.code === "LINKED_TO_PRODUCTS") {
           setDeleteWarningInfo({
             isAssigned: true,
             assignedCount: data.assignedCount,
@@ -423,10 +470,16 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
           setIsDeleting(false);
           return;
         }
-        throw new Error(data.error || "Erro ao excluir vídeo.");
+        throw new Error(data.error || data.message || "Erro ao excluir vídeo.");
       }
 
       showFeedback("Vídeo excluído da biblioteca!");
+      // If deleted video was selected, remove from selected set
+      setSelectedVideoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(deletingVideo.id);
+        return next;
+      });
       setDeletingVideo(null);
       setDeleteWarningInfo(null);
       refreshData();
@@ -434,6 +487,143 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
       showFeedback(err.message || "Erro ao excluir vídeo.", true);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // --- Handlers: Bulk Selection & Deletion ---
+  const handleToggleSelect = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setSelectedVideoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        if (next.size >= 50) {
+          showFeedback("Limite máximo de 50 vídeos por lote atingido.", true);
+          return next;
+        }
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Filtered List
+  const filteredVideos = videosList.filter((v) => {
+    const matchesSearch = searchQuery
+      ? v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (v.description && v.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      : true;
+    const matchesStatus =
+      statusFilter === "ALL" ? true : v.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const readyCount = videosList.filter((v) => v.status === "READY").length;
+
+  const isAllFilteredSelected =
+    filteredVideos.length > 0 &&
+    filteredVideos.every((v) => selectedVideoIds.has(v.id));
+
+  const handleSelectAllFiltered = () => {
+    if (isAllFilteredSelected) {
+      setSelectedVideoIds((prev) => {
+        const next = new Set(prev);
+        filteredVideos.forEach((v) => next.delete(v.id));
+        return next;
+      });
+    } else {
+      setSelectedVideoIds((prev) => {
+        const next = new Set(prev);
+        for (const v of filteredVideos) {
+          if (next.size >= 50) {
+            showFeedback("Limite máximo de 50 vídeos por lote atingido.", true);
+            break;
+          }
+          next.add(v.id);
+        }
+        return next;
+      });
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedVideoIds(new Set());
+  };
+
+  const handleOpenBulkDelete = () => {
+    if (selectedVideoIds.size === 0) return;
+    setIsBulkDeleteModalOpen(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedVideoIds.size === 0) return;
+    setIsBulkDeleting(true);
+
+    // Requirement 4: Cancel uploads in queue for any selected videos in UPLOADING/PROCESSING
+    if (queueRef.current) {
+      const queueItems = queueRef.current.getItems();
+      for (const vid of selectedVideoIds) {
+        const targetVideo = videosList.find((v) => v.id === vid);
+        const matched = queueItems.find(
+          (it) => it.videoId === vid || (targetVideo && it.bunnyVideoId === targetVideo.bunnyVideoId)
+        );
+        if (matched && (matched.status === "UPLOADING" || matched.status === "CREATING_SESSION" || matched.status === "QUEUED")) {
+          queueRef.current.cancelItem(matched.id);
+        }
+      }
+    }
+
+    try {
+      const videoIdsArray = Array.from(selectedVideoIds).slice(0, 50);
+      const res = await fetch("/api/seller/videos/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoIds: videoIdsArray, force: true }),
+      });
+
+      const data = await res.json();
+      if (!data.results && !data.success && data.error) {
+        throw new Error(data.error);
+      }
+
+      const enrichedResults = (data.results || []).map((r: any) => {
+        const targetVid = videosList.find((v) => v.id === r.id);
+        return {
+          ...r,
+          title: targetVid?.title || r.id,
+        };
+      });
+
+      setBulkDeleteSummary({
+        totalRequested: data.totalRequested || videoIdsArray.length,
+        successCount: data.successCount || 0,
+        failureCount: data.failureCount || 0,
+        results: enrichedResults,
+      });
+
+      // Remove successfully deleted IDs from selected set
+      const nextSelected = new Set(selectedVideoIds);
+      enrichedResults.forEach((r: any) => {
+        if (r.success) {
+          nextSelected.delete(r.id);
+        }
+      });
+      setSelectedVideoIds(nextSelected);
+
+      setIsBulkDeleteModalOpen(false);
+      refreshData();
+
+      if (data.successCount > 0) {
+        showFeedback(`${data.successCount} vídeo(s) excluído(s) com sucesso.`);
+      }
+    } catch (err: any) {
+      showFeedback(err.message || "Erro ao executar exclusão em massa.", true);
+      setIsBulkDeleteModalOpen(false);
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -480,18 +670,7 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
     return `${mb.toFixed(1)} MB`;
   };
 
-  // Filtered List
-  const filteredVideos = videosList.filter((v) => {
-    const matchesSearch = searchQuery
-      ? v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (v.description && v.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      : true;
-    const matchesStatus =
-      statusFilter === "ALL" ? true : v.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
-  const readyCount = videosList.filter((v) => v.status === "READY").length;
 
   return (
     <div className="space-y-6 fade-in w-full max-w-full min-w-0 pb-24">
@@ -737,6 +916,30 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
             <option value="FAILED">Erro</option>
           </select>
 
+          {/* Select All Checkbox */}
+          {filteredVideos.length > 0 && (
+            <div
+              onClick={handleSelectAllFiltered}
+              className="flex items-center gap-2 px-3 py-2 bg-[#16161C] hover:bg-zinc-800/80 rounded-xl border border-white/10 cursor-pointer transition select-none shrink-0"
+              title="Selecionar todos os vídeos exibidos"
+            >
+              <div
+                className={`w-4 h-4 rounded border flex items-center justify-center transition ${
+                  isAllFilteredSelected
+                    ? "bg-red-600 border-red-500 text-white"
+                    : selectedVideoIds.size > 0
+                    ? "bg-red-950 border-red-500/50 text-red-400"
+                    : "bg-zinc-800 border-zinc-600 text-transparent"
+                }`}
+              >
+                <Check className={`w-3 h-3 stroke-[3] ${selectedVideoIds.size > 0 ? "opacity-100" : "opacity-0"}`} />
+              </div>
+              <span className="text-xs text-zinc-300 font-medium hidden lg:inline">
+                Selecionar todos
+              </span>
+            </div>
+          )}
+
           <div className="flex bg-[#16161C] p-1 rounded-xl border border-white/10 shrink-0">
             <button
               onClick={() => setViewMode("grid")}
@@ -755,6 +958,36 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
           </div>
         </div>
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedVideoIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#121216]/95 border border-red-500/40 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-2xl shadow-black/90 flex items-center gap-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div className="flex items-center gap-2.5 text-white font-semibold">
+            <span className="w-6 h-6 rounded-lg bg-red-600/20 border border-red-500/40 text-red-400 font-mono font-bold flex items-center justify-center text-xs">
+              {selectedVideoIds.size}
+            </span>
+            <span>{selectedVideoIds.size === 1 ? "vídeo selecionado" : "vídeos selecionados"}</span>
+          </div>
+
+          <div className="h-4 w-px bg-white/15" />
+
+          <button
+            onClick={handleClearSelection}
+            className="text-zinc-400 hover:text-white transition px-2 py-1 rounded-lg hover:bg-white/5 font-medium"
+          >
+            Desmarcar todos
+          </button>
+
+          <Button
+            size="sm"
+            onClick={handleOpenBulkDelete}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-red-600/30 transition flex items-center gap-1.5"
+          >
+            <Trash2 className="w-4 h-4" />
+            Excluir selecionados
+          </Button>
+        </div>
+      )}
 
       {/* 9 & 10. GRID & LIST VIEWS / COMPACT EMPTY STATE */}
       {filteredVideos.length === 0 ? (
@@ -785,15 +1018,29 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
             return (
               <div
                 key={video.id}
-                className={`bg-[#0F0F12] border border-white/5 rounded-2xl flex flex-col shadow-lg hover:border-white/10 transition-all duration-200 group relative ${
-                  activeMenuId === video.id ? "z-40" : "z-10"
-                }`}
+                className={`border rounded-2xl flex flex-col shadow-lg transition-all duration-200 group relative ${
+                  selectedVideoIds.has(video.id)
+                    ? "bg-red-950/15 border-red-500/50 shadow-red-950/30"
+                    : "bg-[#0F0F12] border-white/5 hover:border-white/10"
+                } ${activeMenuId === video.id ? "z-40" : "z-10"}`}
               >
                 {/* Compact Fixed Height Image Banner (h-36 = 144px) */}
                 <div
                   className="w-full h-36 bg-zinc-900 relative rounded-t-2xl overflow-hidden shrink-0 border-b border-white/5 cursor-pointer"
                   onClick={() => video.status === "READY" && handleOpenPreview(video)}
                 >
+                  {/* Select Checkbox (Top-Right) */}
+                  <div
+                    onClick={(e) => handleToggleSelect(video.id, e)}
+                    className={`absolute top-2.5 right-2.5 z-20 w-6 h-6 rounded-lg backdrop-blur-md border flex items-center justify-center cursor-pointer transition shadow-md ${
+                      selectedVideoIds.has(video.id)
+                        ? "bg-red-600 border-red-500 text-white"
+                        : "bg-black/60 hover:bg-black/80 border-white/20 text-transparent"
+                    }`}
+                    title={selectedVideoIds.has(video.id) ? "Desmarcar vídeo" : "Selecionar vídeo"}
+                  >
+                    <Check className={`w-3.5 h-3.5 stroke-[3] ${selectedVideoIds.has(video.id) ? "opacity-100" : "opacity-0"}`} />
+                  </div>
                   {video.thumbnailUrl ? (
                     <img
                       src={video.thumbnailUrl}
@@ -934,9 +1181,30 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
               return (
                 <div
                   key={video.id}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#16161C]/50 transition group"
+                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition group ${
+                    selectedVideoIds.has(video.id)
+                      ? "bg-red-950/20 hover:bg-red-950/30 border-l-2 border-red-500"
+                      : "hover:bg-[#16161C]/50"
+                  }`}
                 >
                   <div className="flex items-center gap-4 min-w-0 flex-1">
+                    {/* Select Checkbox in List View */}
+                    <div
+                      onClick={(e) => handleToggleSelect(video.id, e)}
+                      className="shrink-0 flex items-center justify-center cursor-pointer p-1"
+                      title={selectedVideoIds.has(video.id) ? "Desmarcar vídeo" : "Selecionar vídeo"}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition ${
+                          selectedVideoIds.has(video.id)
+                            ? "bg-red-600 border-red-500 text-white"
+                            : "bg-[#16161C] hover:bg-zinc-800 border-white/20 text-transparent"
+                        }`}
+                      >
+                        <Check className={`w-3.5 h-3.5 stroke-[3] ${selectedVideoIds.has(video.id) ? "opacity-100" : "opacity-0"}`} />
+                      </div>
+                    </div>
+
                     <div
                       className="w-24 aspect-video bg-zinc-900 rounded-xl overflow-hidden relative shrink-0 border border-white/5 cursor-pointer"
                       onClick={() => video.status === "READY" && handleOpenPreview(video)}
@@ -1408,7 +1676,27 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
               </button>
             </div>
 
-            {deleteWarningInfo?.isAssigned ? (
+            {deleteWarningInfo?.isBlockedActiveAccesses ? (
+              <div className="space-y-3">
+                <div className="bg-red-950/80 border border-red-500/30 text-red-200 text-xs p-3.5 rounded-xl space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-red-400">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Exclusão Bloqueada — Acessos Ativos de Compradores</span>
+                  </div>
+                  <p className="text-zinc-300 text-xs">
+                    {deleteWarningInfo.message ||
+                      `Este vídeo está vinculado a produto(s) com ${deleteWarningInfo.activeAccessCount} acesso(s) ativo(s) de compradores. A exclusão é bloqueada para proteger o acesso comercial dos clientes.`}
+                  </p>
+                  {deleteWarningInfo.products?.length > 0 && (
+                    <ul className="list-disc list-inside font-semibold text-red-300 pt-1 space-y-0.5">
+                      {deleteWarningInfo.products.map((p) => (
+                        <li key={p.id}>{p.title}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : deleteWarningInfo?.isAssigned ? (
               <div className="space-y-3">
                 <div className="bg-amber-950/80 border border-amber-500/30 text-amber-200 text-xs p-3.5 rounded-xl space-y-2">
                   <div className="flex items-center gap-2 font-bold text-amber-400">
@@ -1433,26 +1721,225 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
             )}
 
             <div className="flex justify-end gap-2 border-t border-white/5 pt-3">
+              {deleteWarningInfo?.isBlockedActiveAccesses ? (
+                <Button
+                  onClick={() => {
+                    setDeletingVideo(null);
+                    setDeleteWarningInfo(null);
+                  }}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl"
+                >
+                  Entendido
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDeletingVideo(null);
+                      setDeleteWarningInfo(null);
+                    }}
+                    className="bg-[#16161C] border-white/10 text-zinc-300 text-xs rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => handleConfirmDelete(deleteWarningInfo?.isAssigned ? true : false)}
+                    disabled={isDeleting}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Excluir Vídeo"
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {isBulkDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#121215] border border-white/10 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-red-500" />
+                Exclusão em Massa de Vídeos
+              </h3>
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                disabled={isBulkDeleting}
+                className="text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {(() => {
+              const selectedList = videosList.filter((v) => selectedVideoIds.has(v.id));
+              const assignedCount = selectedList.filter(
+                (v) => (v.assignedProductsCount || v.assignmentCount || v.assignments?.length || 0) > 0
+              ).length;
+              const processingCount = selectedList.filter(
+                (v) => v.status === "PROCESSING" || v.status === "UPLOADING"
+              ).length;
+
+              return (
+                <div className="space-y-3">
+                  <p className="text-xs text-zinc-300">
+                    Você selecionou <strong className="text-white font-mono">{selectedVideoIds.size} vídeo(s)</strong> para exclusão definitiva.
+                    Esta ação é irreversível e os arquivos serão removidos da CDN e do sistema.
+                  </p>
+
+                  {assignedCount > 0 && (
+                    <div className="bg-amber-950/70 border border-amber-500/30 text-amber-200 text-xs p-3 rounded-xl flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">{assignedCount} vídeo(s) vinculado(s) a produtos.</span>
+                        <p className="text-[11px] text-zinc-300 mt-0.5">
+                          Eles serão desvinculados dos produtos caso estes não possuam compradores com acesso ativo.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {processingCount > 0 && (
+                    <div className="bg-blue-950/70 border border-blue-500/30 text-blue-200 text-xs p-3 rounded-xl flex items-start gap-2.5">
+                      <Upload className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">{processingCount} vídeo(s) em envio ou processamento.</span>
+                        <p className="text-[11px] text-zinc-300 mt-0.5">
+                          O upload será cancelado na fila e a reserva de espaço será liberada.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-violet-950/40 border border-violet-500/20 text-zinc-300 text-[11px] p-3 rounded-xl">
+                    <span className="font-bold text-violet-300">Proteção Comercial:</span> Vídeos associados a produtos com compradores com acesso ativo serão preservados automaticamente pelo servidor.
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex justify-end gap-2 border-t border-white/5 pt-3">
               <Button
                 variant="outline"
-                onClick={() => {
-                  setDeletingVideo(null);
-                  setDeleteWarningInfo(null);
-                }}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                disabled={isBulkDeleting}
                 className="bg-[#16161C] border-white/10 text-zinc-300 text-xs rounded-xl"
               >
                 Cancelar
               </Button>
               <Button
-                onClick={() => handleConfirmDelete(deleteWarningInfo?.isAssigned ? true : false)}
-                disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl"
+                onClick={handleConfirmBulkDelete}
+                disabled={isBulkDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-4 py-2 flex items-center gap-1.5"
               >
-                {isDeleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                {isBulkDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
                 ) : (
-                  "Excluir Vídeo"
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Excluir {selectedVideoIds.size} Vídeos
+                  </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK DELETE SUMMARY / RESULTS MODAL */}
+      {bulkDeleteSummary && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#121215] border border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3 shrink-0">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Resultado da Exclusão em Massa
+              </h3>
+              <button
+                onClick={() => setBulkDeleteSummary(null)}
+                className="text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
+              {/* Stat Counters */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-3 text-center">
+                  <span className="text-xl font-bold font-mono text-emerald-400">
+                    {bulkDeleteSummary.successCount}
+                  </span>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">Excluídos com sucesso</p>
+                </div>
+                <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-3 text-center">
+                  <span className="text-xl font-bold font-mono text-red-400">
+                    {bulkDeleteSummary.failureCount}
+                  </span>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">Falhas / Bloqueios</p>
+                </div>
+              </div>
+
+              {/* Failures List */}
+              {bulkDeleteSummary.failureCount > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-zinc-300 font-bold text-xs flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                    Itens que não puderam ser excluídos:
+                  </h4>
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {bulkDeleteSummary.results
+                      .filter((r) => !r.success)
+                      .map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-[#16161C] border border-white/5 rounded-xl p-3 space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-white truncate">
+                              {item.title || item.id}
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/30 shrink-0">
+                              {item.code || "ERRO"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-400">
+                            {item.code === "BLOCKED_ACTIVE_ACCESSES"
+                              ? "Bloqueado por proteção comercial: o produto associado possui clientes com acesso ativo."
+                              : item.code === "BUNNY_DELETE_FAILED"
+                              ? "Falha temporária de comunicação com a CDN Bunny Stream. Tente novamente mais tarde."
+                              : item.message || "Erro desconhecido ao processar item."}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {bulkDeleteSummary.failureCount === 0 && (
+                <div className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 p-3.5 rounded-xl text-center">
+                  Todos os vídeos selecionados foram excluídos com sucesso e a quota foi atualizada.
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-white/5 pt-3 shrink-0">
+              <Button
+                onClick={() => setBulkDeleteSummary(null)}
+                className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl px-4 py-2"
+              >
+                Concluir
               </Button>
             </div>
           </div>

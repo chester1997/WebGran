@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { products, categories, banners, stores, clips, pendingDeletions } from "@/db/schema";
+import { products, categories, banners, stores, clips, pendingDeletions, productVideos, productVideoAssignments, storageReservations } from "@/db/schema";
 import { eq, and, ne, sql, isNull, lt } from "drizzle-orm";
 import { getStorageProvider } from "@/lib/storage/provider";
 import { BunnyStreamService } from "@/lib/bunny/stream";
@@ -252,6 +252,87 @@ export class GarbageCollectionService {
           success = await provider.delete(item.path);
         } else if (item.provider === "bunny_stream") {
           success = await BunnyStreamService.deleteVideo(item.path);
+        } else if (item.provider === "bunny_stream_synced") {
+          // BunnyStreamService.deleteVideo returns true on 2xx or 404 (already deleted), false on 5xx, and throws on network/timeout.
+          const bunnyDeleted = await BunnyStreamService.deleteVideo(item.path);
+
+          if (!bunnyDeleted) {
+            success = false;
+          } else {
+            // Complete Neon DB cleanup only when Bunny confirmed deletion (or 404)
+            if (item.resourceId) {
+              await db.delete(productVideoAssignments).where(eq(productVideoAssignments.videoId, item.resourceId));
+              await db.delete(productVideos).where(eq(productVideos.id, item.resourceId));
+            }
+            await db.delete(productVideos).where(eq(productVideos.bunnyVideoId, item.path));
+
+            // Release storage reservation strictly scoped to store owner (never release another seller's reservation)
+            if (item.storeId) {
+              const store = await db.query.stores.findFirst({
+                where: eq(stores.id, item.storeId),
+              });
+
+              if (store) {
+                // Store exists: release using verified store owner
+                const resResult = await StorageUsageService.releaseReservationForVideoUpload(
+                  store.ownerId,
+                  store.id,
+                  item.path
+                );
+
+                const isSuccess =
+                  typeof resResult === "object" && resResult !== null
+                    ? resResult.success
+                    : resResult !== false;
+
+                if (!isSuccess) {
+                  const errorMsg =
+                    typeof resResult === "object" && resResult?.error
+                      ? resResult.error
+                      : "Operational failure releasing active video storage reservation";
+                  throw new Error(errorMsg);
+                }
+              } else {
+                // Store does not exist: check for potential orphaned active reservation matching this storeId & video path
+                const orphanReservation = await db.query.storageReservations.findFirst({
+                  where: and(
+                    eq(storageReservations.storeId, item.storeId),
+                    eq(storageReservations.referenceType, "product_video_upload"),
+                    eq(storageReservations.referenceId, item.path),
+                    eq(storageReservations.status, "ACTIVE")
+                  ),
+                });
+
+                if (orphanReservation) {
+                  if (!orphanReservation.sellerId) {
+                    throw new Error("Active orphaned storage reservation found but missing owner identity");
+                  }
+
+                  const resResult = await StorageUsageService.releaseReservationForVideoUpload(
+                    orphanReservation.sellerId,
+                    item.storeId,
+                    item.path
+                  );
+
+                  const isSuccess =
+                    typeof resResult === "object" && resResult !== null
+                      ? resResult.success
+                      : resResult !== false;
+
+                  if (!isSuccess) {
+                    const errorMsg =
+                      typeof resResult === "object" && resResult?.error
+                        ? resResult.error
+                        : "Operational failure releasing orphaned active video storage reservation";
+                    throw new Error(errorMsg);
+                  }
+                }
+                // If no active reservation exists (already released, confirmed or never created), proceed idempotently
+              }
+            }
+
+            success = true;
+          }
         }
 
         // Idempotency: Treat deletion as completed if successful or if file is gone

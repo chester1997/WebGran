@@ -53,7 +53,7 @@ export async function DELETE(
     const { searchParams } = new URL(req.url);
     const force = searchParams.get("force") === "true";
 
-    const result = await ProductVideoService.deleteLibraryVideo(store.id, videoId, force);
+    const result = await ProductVideoService.deleteLibraryVideo(store.id, videoId, force, store.ownerId);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 409 });

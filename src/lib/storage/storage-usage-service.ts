@@ -38,6 +38,13 @@ export interface ReservationResult {
   reason?: string;
 }
 
+export interface VideoReservationReleaseResult {
+  success: boolean;
+  released: boolean;
+  status: "RELEASED" | "ALREADY_RELEASED_OR_NOT_FOUND" | "FAILED";
+  error?: string;
+}
+
 export class StorageUsageService {
   /**
    * Resolves effective storage quota in bytes from EntitlementService
@@ -392,6 +399,50 @@ export class StorageUsageService {
 
     if (!reservation) return false;
     return this.releaseReservation(reservation.id);
+  }
+
+  /**
+   * Releases reservation specifically belonging to a video upload by sellerId, storeId and bunnyVideoId.
+   * Differentiates safe idempotent states (already released/not found) from active reservation release failures.
+   */
+  static async releaseReservationForVideoUpload(
+    sellerId: string,
+    storeId: string,
+    bunnyVideoId: string
+  ): Promise<VideoReservationReleaseResult> {
+    const reservation = await db.query.storageReservations.findFirst({
+      where: and(
+        eq(storageReservations.sellerId, sellerId),
+        eq(storageReservations.storeId, storeId),
+        eq(storageReservations.referenceType, "product_video_upload"),
+        eq(storageReservations.referenceId, bunnyVideoId),
+        eq(storageReservations.status, "ACTIVE")
+      ),
+    });
+
+    if (!reservation) {
+      return {
+        success: true,
+        released: false,
+        status: "ALREADY_RELEASED_OR_NOT_FOUND",
+      };
+    }
+
+    const released = await this.releaseReservation(reservation.id);
+    if (!released) {
+      return {
+        success: false,
+        released: false,
+        status: "FAILED",
+        error: "Active video storage reservation could not be released",
+      };
+    }
+
+    return {
+      success: true,
+      released: true,
+      status: "RELEASED",
+    };
   }
 
   /**
