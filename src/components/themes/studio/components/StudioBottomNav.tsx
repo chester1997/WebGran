@@ -51,7 +51,7 @@ export function StudioBottomNav({
   return (
     <nav
       aria-label="Navegação inferior"
-      className="fixed bottom-0 left-0 right-0 z-50 w-full bg-[#0d0e12]/95 dark:bg-[#090a0d]/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-8px_24px_rgba(0,0,0,0.6)] rounded-t-2xl pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto select-none"
+      className="fixed bottom-0 left-0 right-0 z-50 w-full bg-[#111215]/95 dark:bg-[#0c0d10]/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] rounded-t-2xl pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto select-none"
     >
       <div
         className={`mx-auto grid ${
@@ -66,19 +66,13 @@ export function StudioBottomNav({
           prefetch={true}
           onClick={(e) => handleNavClick(e, basePath)}
           aria-label="Início"
-          className="relative flex flex-col items-center justify-center py-1 h-full transition-transform duration-200 active:scale-95 group"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeHome && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1 inset-y-1 rounded-xl bg-gradient-to-b from-red-500/15 via-red-500/5 to-transparent border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.15)] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <Home
               className={`w-5 h-5 transition-all duration-200 ${
                 activeHome
-                  ? "text-red-500 stroke-[2.2] drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  ? "text-red-500 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -86,7 +80,7 @@ export function StudioBottomNav({
           <span
             className={`text-[9.5px] sm:text-[10px] font-medium mt-1 leading-tight tracking-tight truncate max-w-full px-0.5 text-center transition-colors duration-200 ${
               activeHome
-                ? "text-red-500 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]"
+                ? "text-red-500 font-bold"
                 : "text-zinc-400 group-hover:text-zinc-200"
             }`}
           >
@@ -100,19 +94,13 @@ export function StudioBottomNav({
           prefetch={true}
           onClick={(e) => handleNavClick(e, `${basePath}/favorites`)}
           aria-label="Favoritos"
-          className="relative flex flex-col items-center justify-center py-1 h-full transition-transform duration-200 active:scale-95 group"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeFavorites && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1 inset-y-1 rounded-xl bg-gradient-to-b from-red-500/15 via-red-500/5 to-transparent border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.15)] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <Heart
               className={`w-5 h-5 transition-all duration-200 ${
                 activeFavorites
-                  ? "text-red-500 fill-red-500/20 stroke-[2.2] drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  ? "text-red-500 fill-red-500/20 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -120,7 +108,7 @@ export function StudioBottomNav({
           <span
             className={`text-[9.5px] sm:text-[10px] font-medium mt-1 leading-tight tracking-tight truncate max-w-full px-0.5 text-center transition-colors duration-200 ${
               activeFavorites
-                ? "text-red-500 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]"
+                ? "text-red-500 font-bold"
                 : "text-zinc-400 group-hover:text-zinc-200"
             }`}
           >
@@ -134,19 +122,13 @@ export function StudioBottomNav({
           prefetch={true}
           onClick={(e) => handleNavClick(e, `${basePath}/accesses`)}
           aria-label="Acessos"
-          className="relative flex flex-col items-center justify-center py-1 h-full transition-transform duration-200 active:scale-95 group"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeAccesses && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1 inset-y-1 rounded-xl bg-gradient-to-b from-red-500/15 via-red-500/5 to-transparent border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.15)] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <LibraryBig
               className={`w-5 h-5 transition-all duration-200 ${
                 activeAccesses
-                  ? "text-red-500 fill-red-500/20 stroke-[2.2] drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  ? "text-red-500 fill-red-500/20 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -154,7 +136,7 @@ export function StudioBottomNav({
           <span
             className={`text-[9.5px] sm:text-[10px] font-medium mt-1 leading-tight tracking-tight truncate max-w-full px-0.5 text-center transition-colors duration-200 ${
               activeAccesses
-                ? "text-red-500 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]"
+                ? "text-red-500 font-bold"
                 : "text-zinc-400 group-hover:text-zinc-200"
             }`}
           >
@@ -168,19 +150,13 @@ export function StudioBottomNav({
           prefetch={true}
           onClick={(e) => handleNavClick(e, `${basePath}/search`)}
           aria-label="Busca"
-          className="relative flex flex-col items-center justify-center py-1 h-full transition-transform duration-200 active:scale-95 group"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeSearch && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1 inset-y-1 rounded-xl bg-gradient-to-b from-red-500/15 via-red-500/5 to-transparent border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.15)] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <Search
               className={`w-5 h-5 transition-all duration-200 ${
                 activeSearch
-                  ? "text-red-500 stroke-[2.2] drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  ? "text-red-500 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -188,7 +164,7 @@ export function StudioBottomNav({
           <span
             className={`text-[9.5px] sm:text-[10px] font-medium mt-1 leading-tight tracking-tight truncate max-w-full px-0.5 text-center transition-colors duration-200 ${
               activeSearch
-                ? "text-red-500 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]"
+                ? "text-red-500 font-bold"
                 : "text-zinc-400 group-hover:text-zinc-200"
             }`}
           >
@@ -202,19 +178,13 @@ export function StudioBottomNav({
           prefetch={true}
           onClick={(e) => handleNavClick(e, `${basePath}/cart`)}
           aria-label="Carrinho"
-          className="relative flex flex-col items-center justify-center py-1 h-full transition-transform duration-200 active:scale-95 group"
+          className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group relative"
         >
-          {activeCart && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1 inset-y-1 rounded-xl bg-gradient-to-b from-red-500/15 via-red-500/5 to-transparent border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.15)] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <ShoppingCart
               className={`w-5 h-5 transition-all duration-200 ${
                 activeCart
-                  ? "text-red-500 stroke-[2.2] drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  ? "text-red-500 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -223,7 +193,7 @@ export function StudioBottomNav({
           <span
             className={`text-[9.5px] sm:text-[10px] font-medium mt-1 leading-tight tracking-tight truncate max-w-full px-0.5 text-center transition-colors duration-200 ${
               activeCart
-                ? "text-red-500 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]"
+                ? "text-red-500 font-bold"
                 : "text-zinc-400 group-hover:text-zinc-200"
             }`}
           >
@@ -240,7 +210,7 @@ export function StudioBottomNav({
               openSupportLink(supportConfig);
             }}
             aria-label="Suporte"
-            className="relative flex flex-col items-center justify-center py-1 h-full transition-transform duration-200 active:scale-95 group focus:outline-none"
+            className="flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group focus:outline-none"
           >
             <div className="relative flex items-center justify-center">
               <Headphones

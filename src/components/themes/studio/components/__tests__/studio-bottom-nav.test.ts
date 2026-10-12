@@ -78,27 +78,27 @@ describe("WebGran Mini App — Bottom Navigation Reorganization & Support Suite"
   });
 
   // 2. Estado ativo e estado inativo do menu
-  it("2. Estado ativo e inativo: destaque visual inspirado na referência com vermelho WebGran", () => {
+  it("2. Estado ativo e inativo: destaque visual discreto e elegante com vermelho WebGran sem moldura", () => {
     const visualSpecs = {
       container: {
-        bg: "bg-[#0d0e12]/95 dark:bg-[#090a0d]/95",
+        bg: "bg-[#111215]/95 dark:bg-[#0c0d10]/95",
         backdrop: "backdrop-blur-xl",
         border: "border-t border-white/10",
       },
       activeState: {
-        highlightPill: "bg-gradient-to-b from-red-500/15 via-red-500/5 to-transparent border border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.15)]",
-        iconColor: "text-red-500 stroke-[2.2] drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]",
-        labelColor: "text-red-500 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]",
+        hasNoCardFrame: true,
+        iconColor: "text-red-500 stroke-[2.2]",
+        labelColor: "text-red-500 font-bold",
       },
       inactiveState: {
         iconColor: "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]",
-        labelColor: "text-zinc-400 group-hover:text-zinc-200 font-medium",
+        labelColor: "text-zinc-400 group-hover:text-zinc-200",
       },
     };
 
     expect(visualSpecs.activeState.iconColor).toContain("text-red-500");
     expect(visualSpecs.activeState.labelColor).toContain("text-red-500");
-    expect(visualSpecs.activeState.highlightPill).toContain("from-red-500/15");
+    expect(visualSpecs.activeState.hasNoCardFrame).toBe(true);
     expect(visualSpecs.inactiveState.iconColor).toContain("text-zinc-400");
     expect(visualSpecs.inactiveState.labelColor).toContain("text-zinc-400");
   });
