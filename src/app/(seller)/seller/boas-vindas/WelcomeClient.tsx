@@ -23,6 +23,9 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
   const [banners, setBanners] = useState<string[]>(
     initialSettings.welcomeBanners.length > 0 ? initialSettings.welcomeBanners : [""]
   );
+  const [savedBanners, setSavedBanners] = useState<string[]>(
+    initialSettings.welcomeBanners || []
+  );
   const [supportType, setSupportType] = useState(initialSettings.supportType || "telegram");
   const [supportValue, setSupportValue] = useState(initialSettings.supportValue || "");
 
@@ -42,7 +45,17 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
     }
   };
 
-  const removeBannerField = (index: number) => {
+  const handleRemoveBanner = (index: number) => {
+    const bannerUrl = (banners[index] || "").trim();
+    const isSaved = bannerUrl !== "" && savedBanners.includes(bannerUrl);
+
+    if (isSaved && typeof window !== "undefined") {
+      const confirmed = window.confirm("Deseja remover este banner?");
+      if (!confirmed) {
+        return;
+      }
+    }
+
     if (banners.length === 1) {
       setBanners([""]);
     } else {
@@ -61,6 +74,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
           supportType,
           supportValue,
         });
+        setSavedBanners(cleanBanners);
         setSavedSuccess(true);
         setTimeout(() => setSavedSuccess(false), 3000);
       } catch (err: unknown) {
@@ -108,11 +122,16 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
       {/* Card 1: Banner de boas-vindas */}
       <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
-        <div>
-          <h2 className="text-base font-semibold text-white">Banner de boas-vindas</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Imagem enviada junto com a mensagem de boas-vindas do seu bot no Telegram.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-white">Banner de boas-vindas</h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Imagem enviada junto com a mensagem de boas-vindas do seu bot no Telegram.
+            </p>
+          </div>
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400 w-fit">
+            {banners.filter(b => b.trim()).length} de 5 configurados
+          </span>
         </div>
 
         <div className="bg-blue-600/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 flex items-center gap-2">
@@ -125,9 +144,12 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
             <div key={index} className="space-y-2">
               <label className="text-xs text-zinc-400 font-medium flex items-center justify-between">
                 <span>Banner {index + 1} {index === 0 && "(Principal)"}</span>
-                {banners.length > 1 && (
+                {(banners.length > 1 || banner.trim() !== "") && (
                   <button
-                    onClick={() => removeBannerField(index)}
+                    type="button"
+                    onClick={() => handleRemoveBanner(index)}
+                    title="Remover banner"
+                    aria-label="Remover banner"
                     className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -180,7 +202,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
               </div>
 
               {banner && (
-                <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden border border-white/10 bg-black/40 group">
                   <img
                     src={banner}
                     alt={`Preview Banner ${index + 1}`}
@@ -189,6 +211,16 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBanner(index)}
+                    title="Remover banner"
+                    aria-label="Remover banner"
+                    className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-red-600 text-zinc-200 hover:text-white border border-white/10 hover:border-red-500/50 text-xs font-medium transition-all shadow-lg backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-white transition-colors" />
+                    <span>Remover banner</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -196,11 +228,12 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
           {banners.length < 5 && (
             <button
+              type="button"
               onClick={addBannerField}
               className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1.5 py-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Adicionar outro banner (máximo 5)</span>
+              <span>Adicionar outro banner ({5 - banners.length} restante{5 - banners.length === 1 ? "" : "s"})</span>
             </button>
           )}
 
