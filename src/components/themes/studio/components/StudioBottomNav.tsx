@@ -80,12 +80,6 @@ export function StudioBottomNav({
           aria-label="Início"
           className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeHome && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1.5 inset-y-1 rounded-xl bg-red-500/[0.08] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <Home
               className={`w-5 h-5 transition-all duration-200 ${
@@ -114,17 +108,11 @@ export function StudioBottomNav({
           aria-label="Favoritos"
           className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeFavorites && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1.5 inset-y-1 rounded-xl bg-red-500/[0.08] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <Heart
               className={`w-5 h-5 transition-all duration-200 ${
                 activeFavorites
-                  ? "text-red-500 fill-red-500/20 stroke-[2.2]"
+                  ? "text-red-500 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -148,17 +136,11 @@ export function StudioBottomNav({
           aria-label="Acessos"
           className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeAccesses && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1.5 inset-y-1 rounded-xl bg-red-500/[0.08] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <LibraryBig
               className={`w-5 h-5 transition-all duration-200 ${
                 activeAccesses
-                  ? "text-red-500 fill-red-500/20 stroke-[2.2]"
+                  ? "text-red-500 stroke-[2.2]"
                   : "text-zinc-400 group-hover:text-zinc-200 stroke-[1.8]"
               }`}
             />
@@ -182,12 +164,6 @@ export function StudioBottomNav({
           aria-label="Busca"
           className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeSearch && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1.5 inset-y-1 rounded-xl bg-red-500/[0.08] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <Search
               className={`w-5 h-5 transition-all duration-200 ${
@@ -216,12 +192,6 @@ export function StudioBottomNav({
           aria-label="Carrinho"
           className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 active:scale-95 group"
         >
-          {activeCart && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-1.5 inset-y-1 rounded-xl bg-red-500/[0.08] pointer-events-none transition-all duration-300"
-            />
-          )}
           <div className="relative flex items-center justify-center">
             <ShoppingCart
               className={`w-5 h-5 transition-all duration-200 ${
