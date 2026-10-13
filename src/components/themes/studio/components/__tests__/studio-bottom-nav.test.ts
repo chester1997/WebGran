@@ -77,13 +77,14 @@ describe("WebGran Mini App — Bottom Navigation Reorganization & Support Suite"
     expect(nav.items[0].isFirst).toBe(true);
   });
 
-  // 2. Estado ativo e estado inativo do menu
-  it("2. Estado ativo e inativo: destaque visual discreto e elegante com vermelho WebGran sem moldura", () => {
+  // 2. Estado ativo e estado inativo do menu Liquid Glass
+  it("2. Estado ativo e inativo: superfície Liquid Glass com destaque elegante em vermelho WebGran sem moldura", () => {
     const visualSpecs = {
       container: {
-        bg: "bg-[#111215]/95 dark:bg-[#0c0d10]/95",
-        backdrop: "backdrop-blur-xl",
-        border: "border-t border-white/10",
+        bg: "bg-[#0a0b0e]/75 dark:bg-[#07080a]/75",
+        backdrop: "backdrop-blur-2xl backdrop-saturate-[180%]",
+        border: "border-t border-white/[0.12]",
+        sheenReflection: true,
       },
       activeState: {
         hasNoCardFrame: true,
@@ -96,6 +97,9 @@ describe("WebGran Mini App — Bottom Navigation Reorganization & Support Suite"
       },
     };
 
+    expect(visualSpecs.container.backdrop).toContain("backdrop-blur-2xl");
+    expect(visualSpecs.container.border).toContain("border-white/[0.12]");
+    expect(visualSpecs.container.sheenReflection).toBe(true);
     expect(visualSpecs.activeState.iconColor).toContain("text-red-500");
     expect(visualSpecs.activeState.labelColor).toContain("text-red-500");
     expect(visualSpecs.activeState.hasNoCardFrame).toBe(true);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Upload, Plus, Trash2, Loader2, Sparkles, MessageSquare, Send } from "lucide-react";
+import { Check, Upload, Trash2, Loader2, Sparkles, MessageSquare, Send } from "lucide-react";
 import { updateWelcomeSettingsAction } from "./actions";
 import { parseSupportConfig } from "@/lib/support/support-helper";
 
@@ -21,7 +21,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
   const [welcomeMessage, setWelcomeMessage] = useState(initialSettings.welcomeMessage || "");
   const [banners, setBanners] = useState<string[]>(
-    initialSettings.welcomeBanners.length > 0 ? initialSettings.welcomeBanners : [""]
+    initialSettings.welcomeBanners.length > 0 ? [initialSettings.welcomeBanners[0]] : [""]
   );
   const [savedBanners, setSavedBanners] = useState<string[]>(
     initialSettings.welcomeBanners || []
@@ -33,20 +33,12 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
   const supportParsed = parseSupportConfig(supportType, supportValue);
 
-  const handleBannerChange = (index: number, val: string) => {
-    const updated = [...banners];
-    updated[index] = val;
-    setBanners(updated);
+  const handleBannerChange = (val: string) => {
+    setBanners([val]);
   };
 
-  const addBannerField = () => {
-    if (banners.length < 5) {
-      setBanners([...banners, ""]);
-    }
-  };
-
-  const handleRemoveBanner = (index: number) => {
-    const bannerUrl = (banners[index] || "").trim();
+  const handleRemoveBanner = () => {
+    const bannerUrl = (banners[0] || "").trim();
     const isSaved = bannerUrl !== "" && savedBanners.includes(bannerUrl);
 
     if (isSaved && typeof window !== "undefined") {
@@ -56,11 +48,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
       }
     }
 
-    if (banners.length === 1) {
-      setBanners([""]);
-    } else {
-      setBanners(banners.filter((_, i) => i !== index));
-    }
+    setBanners([""]);
   };
 
   const handleSave = () => {
@@ -84,6 +72,8 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
     });
   };
 
+  const currentBanner = banners[0] || "";
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       {/* Page Title Header */}
@@ -93,7 +83,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
             Boas-vindas
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Mensagem e banners exibidos no Mini App e no bot
+            Mensagem e banner exibidos no Mini App e no bot
           </p>
         </div>
 
@@ -122,16 +112,11 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
       {/* Card 1: Banner de boas-vindas */}
       <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h2 className="text-base font-semibold text-white">Banner de boas-vindas</h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Imagem enviada junto com a mensagem de boas-vindas do seu bot no Telegram.
-            </p>
-          </div>
-          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400 w-fit">
-            {banners.filter(b => b.trim()).length} de 5 configurados
-          </span>
+        <div>
+          <h2 className="text-base font-semibold text-white">Banner de boas-vindas</h2>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Imagem enviada junto com a mensagem de boas-vindas do seu bot no Telegram.
+          </p>
         </div>
 
         <div className="bg-blue-600/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 flex items-center gap-2">
@@ -140,102 +125,89 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
         </div>
 
         <div className="space-y-4">
-          {banners.map((banner, index) => (
-            <div key={index} className="space-y-2">
-              <label className="text-xs text-zinc-400 font-medium flex items-center justify-between">
-                <span>Banner {index + 1} {index === 0 && "(Principal)"}</span>
-                {(banners.length > 1 || banner.trim() !== "") && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBanner(index)}
-                    title="Remover banner"
-                    aria-label="Remover banner"
-                    className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Remover</span>
-                  </button>
-                )}
-              </label>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={banner}
-                  onChange={(e) => handleBannerChange(index, e.target.value)}
-                  placeholder="https://exemplo.com/imagem.jpg"
-                  className="flex-1 bg-[#16161A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/60 transition-all font-mono"
-                />
-
-                <label className="cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-medium flex items-center gap-2 transition-all shrink-0">
-                  <Upload className="w-4 h-4" />
-                  <span>Upload</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      setIsUploading(true);
-                      const formData = new FormData();
-                      formData.append("file", file);
-
-                      try {
-                        const res = await fetch("/api/upload", {
-                          method: "POST",
-                          body: formData,
-                        });
-                        const data = await res.json();
-                        if (data.url) {
-                          handleBannerChange(index, data.url);
-                        }
-                      } catch (err) {
-                        console.error("Upload error:", err);
-                      } finally {
-                        setIsUploading(false);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-
-              {banner && (
-                <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden border border-white/10 bg-black/40 group">
-                  <img
-                    src={banner}
-                    alt={`Preview Banner ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBanner(index)}
-                    title="Remover banner"
-                    aria-label="Remover banner"
-                    className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-red-600 text-zinc-200 hover:text-white border border-white/10 hover:border-red-500/50 text-xs font-medium transition-all shadow-lg backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-white transition-colors" />
-                    <span>Remover banner</span>
-                  </button>
-                </div>
+          <div className="space-y-2">
+            <label className="text-xs text-zinc-400 font-medium flex items-center justify-between">
+              <span>Banner de boas-vindas</span>
+              {currentBanner.trim() !== "" && (
+                <button
+                  type="button"
+                  onClick={handleRemoveBanner}
+                  title="Remover banner"
+                  aria-label="Remover banner"
+                  className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remover</span>
+                </button>
               )}
-            </div>
-          ))}
+            </label>
 
-          {banners.length < 5 && (
-            <button
-              type="button"
-              onClick={addBannerField}
-              className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1.5 py-1 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Adicionar outro banner ({5 - banners.length} restante{5 - banners.length === 1 ? "" : "s"})</span>
-            </button>
-          )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentBanner}
+                onChange={(e) => handleBannerChange(e.target.value)}
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="flex-1 bg-[#16161A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/60 transition-all font-mono"
+              />
+
+              <label className="cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-medium flex items-center gap-2 transition-all shrink-0">
+                <Upload className="w-4 h-4" />
+                <span>Upload</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    setIsUploading(true);
+                    const formData = new FormData();
+                    formData.append("file", file);
+
+                    try {
+                      const res = await fetch("/api/upload", {
+                        method: "POST",
+                        body: formData,
+                      });
+                      const data = await res.json();
+                      if (data.url) {
+                        handleBannerChange(data.url);
+                      }
+                    } catch (err) {
+                      console.error("Upload error:", err);
+                    } finally {
+                      setIsUploading(false);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            {currentBanner && (
+              <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden border border-white/10 bg-black/40 group">
+                <img
+                  src={currentBanner}
+                  alt="Preview Banner de boas-vindas"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveBanner}
+                  title="Remover banner"
+                  aria-label="Remover banner"
+                  className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-red-600 text-zinc-200 hover:text-white border border-white/10 hover:border-red-500/50 text-xs font-medium transition-all shadow-lg backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-white transition-colors" />
+                  <span>Remover banner</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="pt-2 flex items-center gap-2 text-xs text-zinc-500 bg-white/[0.02] p-3 rounded-xl border border-white/5">
             <span>💡</span>
