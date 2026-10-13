@@ -52,7 +52,7 @@ export function PixPaymentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3.5 sm:p-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-[calc(80px+env(safe-area-inset-bottom,0px))] bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
       
       {/* Backdrop overlay click to close */}
       <div 
@@ -66,7 +66,7 @@ export function PixPaymentModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pix-modal-title"
-        className="relative w-full max-w-md bg-[#141416] dark:bg-[#141416] border border-white/10 dark:border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] overflow-y-auto custom-scrollbar text-white z-10 fade-in flex flex-col justify-between shrink-0"
+        className="relative w-full max-w-md bg-[#141416] dark:bg-[#141416] border border-white/10 dark:border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[calc(100dvh-96px-env(safe-area-inset-bottom,0px))] sm:max-h-[calc(100dvh-104px-env(safe-area-inset-bottom,0px))] overflow-y-auto custom-scrollbar text-white z-10 fade-in flex flex-col justify-between shrink-0"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
