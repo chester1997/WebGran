@@ -28,15 +28,21 @@ interface CommercialMetricsCardsProps {
 }
 
 /**
- * Minimalist Semicircular Gauge for Conversion Rate.
- * Built with pure SVG, styled with WebGran's signature RED gradient.
+ * Semicircular Velocímetro for Pix Conversion Rate.
+ * Built with pure SVG, dark theme, gray track (#27272A), and purple gradient progress.
  */
 function SemicircleGauge({ 
   percentage, 
-  isAvailable 
+  isAvailable = true,
+  hasError = false,
+  totalPaid = 0,
+  totalGenerated = 0,
 }: { 
   percentage: number | null; 
-  isAvailable: boolean 
+  isAvailable?: boolean;
+  hasError?: boolean;
+  totalPaid?: number;
+  totalGenerated?: number;
 }) {
   const radius = 42;
   const strokeWidth = 8;
@@ -44,56 +50,76 @@ function SemicircleGauge({
   const cy = 50;
   const arcLength = Math.PI * radius; // ~131.95px
 
-  const validPct = isAvailable && percentage !== null ? Math.min(Math.max(percentage, 0), 100) : 0;
+  const hasValidData = isAvailable && !hasError && percentage !== null;
+  const validPct = hasValidData ? Math.min(Math.max(percentage, 0), 100) : 0;
   const strokeDashoffset = arcLength * (1 - validPct / 100);
 
+  const formattedPct = hasValidData 
+    ? (validPct % 1 === 0 ? `${validPct}%` : `${validPct.toFixed(1).replace(".", ",")}%`)
+    : (hasError ? "—" : "Sem dados");
+
+  const subText = hasError
+    ? "Falha na consulta"
+    : hasValidData
+    ? `${totalPaid} pagos de ${totalGenerated} Pix`
+    : (totalGenerated > 0 ? `0 pagos de ${totalGenerated} Pix` : "0 pagos de 0 Pix");
+
   return (
-    <div className="relative flex flex-col items-center justify-center shrink-0 w-[110px] h-[65px] select-none">
-      <svg 
-        viewBox="0 0 110 60" 
-        className="w-full h-full overflow-visible"
-        aria-label={`Medidor de conversão: ${isAvailable && percentage !== null ? `${percentage}%` : "indisponível"}`}
-      >
-        <defs>
-          <linearGradient id="roseGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#E11D48" />
-            <stop offset="100%" stopColor="#FB7185" />
-          </linearGradient>
-        </defs>
+    <div className="relative flex flex-col items-center justify-center shrink-0 select-none py-1">
+      <div className="relative flex flex-col items-center justify-center w-[120px] h-[65px]">
+        <svg 
+          viewBox="0 0 110 58" 
+          className="w-full h-full overflow-visible"
+          role="img"
+          aria-label={`Medidor de conversão: ${hasValidData ? formattedPct : (hasError ? "erro na consulta" : "sem dados")}`}
+        >
+          <defs>
+            <linearGradient id="purpleGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#8B5CF6" />
+              <stop offset="100%" stopColor="#A855F7" />
+            </linearGradient>
+            <filter id="purpleGaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#A855F7" floodOpacity="0.4" />
+            </filter>
+          </defs>
 
-        {/* Background Track */}
-        <path
-          d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-          fill="none"
-          stroke="#27272A"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-        />
-
-        {/* Foreground Progress in WebGran Red */}
-        {isAvailable && (
+          {/* Background Track (Gray) */}
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
             fill="none"
-            stroke="url(#roseGaugeGrad)"
+            stroke="#27272A"
             strokeWidth={strokeWidth}
-            strokeDasharray={`${arcLength} ${arcLength}`}
-            strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
-            className="transition-all duration-700 ease-out"
           />
-        )}
-      </svg>
 
-      {/* Center Label */}
-      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center text-center">
-        <span className="text-base font-bold font-mono text-white leading-none wg-tabular">
-          {isAvailable && percentage !== null ? `${percentage.toFixed(1).replace(".", ",")}%` : "—"}
-        </span>
-        <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-medium mt-0.5">
-          {isAvailable ? "Taxa" : "Sem dados"}
-        </span>
+          {/* Foreground Progress (Purple) */}
+          {hasValidData && validPct > 0 && (
+            <path
+              d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+              fill="none"
+              stroke="url(#purpleGaugeGrad)"
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${arcLength} ${arcLength}`}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              filter="url(#purpleGaugeGlow)"
+              className="transition-all duration-700 ease-out"
+            />
+          )}
+        </svg>
+
+        {/* Center Percentage / Status Label */}
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center text-center">
+          <span className={`font-mono font-extrabold text-white tracking-tight leading-none wg-tabular ${hasValidData ? "text-lg sm:text-xl" : "text-xs text-zinc-400 font-semibold"}`}>
+            {formattedPct}
+          </span>
+        </div>
       </div>
+
+      {/* Subtitle below speedometer: "X pagos de Y Pix" */}
+      <span className="text-[11px] sm:text-xs font-medium text-zinc-400 mt-2 text-center tracking-tight">
+        {subText}
+      </span>
     </div>
   );
 }
@@ -233,9 +259,9 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 2: TAXA DE CONVERSÃO */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-rose-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[175px]"
               style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0.02) 50%, transparent 80%), #0E0E11`
+                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
@@ -246,47 +272,44 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="space-y-0.5">
                       <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                         Taxa de Conversão
                       </span>
                       <p className="text-[11px] text-zinc-500">
-                        Sessões elegíveis vs compras aprovadas
+                        Cobranças Pix vs pagamentos aprovados
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 text-rose-500">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-400">
                       <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 my-1">
-                    <div>
-                      <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
-                        {conversionRate?.ratePercent !== null && conversionRate?.ratePercent !== undefined
-                          ? conversionRate.formatted
-                          : "Sem dados"}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        {conversionRate?.isTelemetryAvailable 
-                          ? (conversionRate.totalVisits && conversionRate.totalVisits > 0
-                              ? `${conversionRate.convertedOrders} convertidas de ${conversionRate.totalVisits} sessões`
-                              : "Nenhuma sessão registrada")
-                          : "Dados de tráfego ausentes"}
-                      </p>
-                    </div>
-
+                  <div className="my-auto py-1 flex flex-col items-center justify-center">
                     <SemicircleGauge 
                       percentage={conversionRate?.ratePercent ?? null} 
-                      isAvailable={Boolean(conversionRate?.isTelemetryAvailable && conversionRate?.ratePercent !== null)} 
+                      isAvailable={Boolean(conversionRate?.isTelemetryAvailable && !conversionRate?.hasError)}
+                      hasError={Boolean(conversionRate?.hasError)}
+                      totalPaid={conversionRate?.totalPixPagos ?? conversionRate?.convertedOrders ?? 0}
+                      totalGenerated={conversionRate?.totalPixGerados ?? conversionRate?.totalVisits ?? 0}
                     />
                   </div>
 
                   <div className="pt-2 mt-auto border-t border-white/[0.04] flex items-center justify-between text-[11px] text-zinc-500">
                     <span className="truncate">
-                      {conversionRate?.statusMessage || "Rastreamento de visitas não disponível"}
+                      {conversionRate?.hasError 
+                        ? "Falha ao consultar banco de dados" 
+                        : (conversionRate?.totalPixGerados ?? 0) === 0 && conversionRate?.ratePercent === null
+                        ? "Nenhuma cobrança gerada no período"
+                        : "Conversão de cobranças Pix"}
                     </span>
-                    {conversionRate?.isTelemetryAvailable ? (
+                    {conversionRate?.hasError ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 ml-1">
+                        <AlertCircle className="w-3 h-3 text-rose-400" />
+                        Falha
+                      </span>
+                    ) : conversionRate?.ratePercent !== null && conversionRate?.ratePercent !== undefined ? (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 ml-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                         Operacional
@@ -294,7 +317,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 shrink-0 ml-1">
                         <AlertCircle className="w-3 h-3 text-amber-500" />
-                        Sem telemetria
+                        Sem dados
                       </span>
                     )}
                   </div>

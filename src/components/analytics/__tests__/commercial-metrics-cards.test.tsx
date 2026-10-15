@@ -27,6 +27,8 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         isTelemetryAvailable: false,
         totalVisits: null,
         convertedOrders: 5,
+        totalPixGerados: 6,
+        totalPixPagos: 4,
         statusMessage: "Rastreamento de visitas não disponível",
       },
       botStarts: {
@@ -105,6 +107,8 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         isTelemetryAvailable: true,
         totalVisits: 60,
         convertedOrders: 3,
+        totalPixGerados: 3,
+        totalPixPagos: 3,
         statusMessage: "3 vendas em 60 sessões",
       },
       botStarts: {
@@ -156,6 +160,8 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         isTelemetryAvailable: false,
         totalVisits: null,
         convertedOrders: 4,
+        totalPixGerados: 4,
+        totalPixPagos: 4,
         statusMessage: "Rastreamento de visitas não disponível",
       },
       botStarts: {
@@ -207,6 +213,8 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         isTelemetryAvailable: false,
         totalVisits: null,
         convertedOrders: 0,
+        totalPixGerados: 0,
+        totalPixPagos: 0,
         statusMessage: "Rastreamento de visitas não disponível",
       },
       botStarts: {
@@ -229,5 +237,85 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
 
     const rendered = CommercialMetricsCards({ metrics: emptyMetrics, isPending: false });
     expect(rendered).toBeDefined();
+  });
+
+  it("8. Renderiza card de Taxa de Conversão Pix com 72% ('18 pagos de 25 Pix')", () => {
+    const pixMetrics: CommercialMetrics = {
+      period: "30D",
+      storeId: "store-pix-72",
+      approvedSales: { total: 1000, formatted: "R$ 1.000,00", count: 18, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
+      conversionRate: {
+        ratePercent: 72,
+        formatted: "72%",
+        isTelemetryAvailable: true,
+        totalVisits: 25,
+        convertedOrders: 18,
+        totalPixGerados: 25,
+        totalPixPagos: 18,
+        statusMessage: "18 pagos de 25 Pix",
+        hasError: false,
+      },
+      botStarts: { totalStarts: 10, formatted: "10", isTelemetryAvailable: true, uniqueUsers: 8, statusMessage: "10 inícios" },
+      averageTicket: { averageTicket: 55.55, formatted: "R$ 55,55", consideredSalesCount: 18, approvedPixCount: 18, generatedPixCount: 25, pixConversionRatePercent: 72 },
+      last7DaysPerformance: [],
+    };
+
+    const rendered = CommercialMetricsCards({ metrics: pixMetrics, isPending: false });
+    expect(rendered).toBeDefined();
+    expect(pixMetrics.conversionRate.ratePercent).toBe(72);
+    expect(pixMetrics.conversionRate.statusMessage).toBe("18 pagos de 25 Pix");
+  });
+
+  it("9. Renderiza card no estado 'Sem dados' quando totalPixGerados === 0", () => {
+    const noPixMetrics: CommercialMetrics = {
+      period: "30D",
+      storeId: "store-no-pix",
+      approvedSales: { total: 0, formatted: "R$ 0,00", count: 0, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
+      conversionRate: {
+        ratePercent: null,
+        formatted: "Sem dados",
+        isTelemetryAvailable: false,
+        totalVisits: 0,
+        convertedOrders: 0,
+        totalPixGerados: 0,
+        totalPixPagos: 0,
+        statusMessage: "0 pagos de 0 Pix",
+        hasError: false,
+      },
+      botStarts: { totalStarts: 0, formatted: "0", isTelemetryAvailable: false, uniqueUsers: 0, statusMessage: "Sem eventos" },
+      averageTicket: { averageTicket: 0, formatted: "R$ 0,00", consideredSalesCount: 0, approvedPixCount: 0, generatedPixCount: 0, pixConversionRatePercent: null },
+      last7DaysPerformance: [],
+    };
+
+    const rendered = CommercialMetricsCards({ metrics: noPixMetrics, isPending: false });
+    expect(rendered).toBeDefined();
+    expect(noPixMetrics.conversionRate.ratePercent).toBeNull();
+    expect(noPixMetrics.conversionRate.formatted).toBe("Sem dados");
+  });
+
+  it("10. Diferencia erro de consulta no card de Taxa de Conversão Pix", () => {
+    const errorMetrics: CommercialMetrics = {
+      period: "30D",
+      storeId: "store-err",
+      approvedSales: { total: 0, formatted: "R$ 0,00", count: 0, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
+      conversionRate: {
+        ratePercent: null,
+        formatted: "—",
+        isTelemetryAvailable: false,
+        totalVisits: null,
+        convertedOrders: 0,
+        totalPixGerados: 0,
+        totalPixPagos: 0,
+        statusMessage: "Falha ao consultar banco de dados",
+        hasError: true,
+      },
+      botStarts: { totalStarts: 0, formatted: "0", isTelemetryAvailable: false, uniqueUsers: 0, statusMessage: "Falha" },
+      averageTicket: { averageTicket: 0, formatted: "R$ 0,00", consideredSalesCount: 0, approvedPixCount: 0, generatedPixCount: 0, pixConversionRatePercent: null },
+      last7DaysPerformance: [],
+    };
+
+    const rendered = CommercialMetricsCards({ metrics: errorMetrics, isPending: false });
+    expect(rendered).toBeDefined();
+    expect(errorMetrics.conversionRate.hasError).toBe(true);
   });
 });

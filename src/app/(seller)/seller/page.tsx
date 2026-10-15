@@ -40,7 +40,7 @@ export default async function SellerDashboardPage() {
         period: "30D",
         storeId: store.id,
         approvedSales: { total: 0, formatted: "R$ 0,00", count: 0, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
-        conversionRate: { ratePercent: null, formatted: "Sem dados", isTelemetryAvailable: true, totalVisits: 0, convertedOrders: 0, statusMessage: "Carregando dados..." },
+        conversionRate: { ratePercent: null, formatted: "Sem dados", isTelemetryAvailable: true, totalVisits: 0, convertedOrders: 0, totalPixGerados: 0, totalPixPagos: 0, statusMessage: "Carregando dados..." },
         botStarts: { totalStarts: 0, formatted: "0", isTelemetryAvailable: true, uniqueUsers: 0, statusMessage: "Carregando dados..." },
         averageTicket: { averageTicket: 0, formatted: "R$ 0,00", consideredSalesCount: 0, approvedPixCount: 0, generatedPixCount: 0, pixConversionRatePercent: null },
         last7DaysPerformance: [],

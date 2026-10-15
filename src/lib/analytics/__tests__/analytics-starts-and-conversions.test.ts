@@ -363,20 +363,6 @@ describe("WEBGRAN — Starts e Taxa de Conversão Test Suite (Fases 1 a 7)", () 
         }),
       });
 
-      // Mock StoreTrackingService counts (100 eligible, 10 converted)
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ totalEligible: 100 }]),
-        }),
-      });
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ totalConverted: 10 }]),
-          }),
-        }),
-      });
-
       const result = await CommercialMetricsService.getCommercialMetrics("store-alpha", "7D");
 
       expect(result.period).toBe("7D");
@@ -385,9 +371,9 @@ describe("WEBGRAN — Starts e Taxa de Conversão Test Suite (Fases 1 a 7)", () 
       expect(result.botStarts.totalStarts).toBe(50);
       expect(result.botStarts.uniqueUsers).toBe(40);
       expect(result.botStarts.isTelemetryAvailable).toBe(true);
-      expect(result.conversionRate.ratePercent).toBe(10.0);
-      expect(result.conversionRate.totalVisits).toBe(100);
-      expect(result.conversionRate.convertedOrders).toBe(10);
+      expect(result.conversionRate.ratePercent).toBe(100.0);
+      expect(result.conversionRate.totalPixGerados).toBe(1);
+      expect(result.conversionRate.totalPixPagos).toBe(1);
       expect(result.conversionRate.isTelemetryAvailable).toBe(true);
     });
   });

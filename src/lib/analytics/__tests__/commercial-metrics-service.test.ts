@@ -241,8 +241,7 @@ describe("CommercialMetricsService Suite", () => {
 
       expect(metrics.conversionRate.isTelemetryAvailable).toBe(false);
       expect(metrics.conversionRate.ratePercent).toBeNull();
-      expect(metrics.conversionRate.formatted).toBe("—");
-      expect(metrics.conversionRate.statusMessage).toBe("Rastreamento de visitas não disponível");
+      expect(metrics.conversionRate.formatted).toBe("Sem dados");
     });
 
     it("calcula taxa de conversão correta quando sessões de visitantes estão disponíveis", () => {
@@ -425,7 +424,7 @@ describe("CommercialMetricsService Suite", () => {
       expect(metrics.approvedSales.formatted).toContain("0,00");
 
       expect(metrics.conversionRate.isTelemetryAvailable).toBe(false);
-      expect(metrics.conversionRate.formatted).toBe("—");
+      expect(metrics.conversionRate.formatted).toBe("Sem dados");
 
       expect(metrics.botStarts.totalStarts).toBe(0);
       expect(metrics.botStarts.formatted).toBe("0");
@@ -506,6 +505,188 @@ describe("CommercialMetricsService Suite", () => {
       // Total of all 7 days in chart equals sum of approved orders in the 7 days (200 + 300 = 500)
       const totalChartRevenue = points.reduce((sum, p) => sum + p.revenue, 0);
       expect(totalChartRevenue).toBe(500.00);
+    });
+  });
+
+  describe("10. Taxa de Conversão Pix (Regras de Negócio e Fórmula Específica)", () => {
+    it("calcula exatamente 72% quando há 18 Pix pagos de 25 Pix gerados (exemplo do prompt)", () => {
+      const orders: any[] = [];
+      const ref = new Date("2026-10-15T10:00:00.000Z");
+
+      // 18 paid Pix orders
+      for (let i = 1; i <= 18; i++) {
+        orders.push({
+          id: `ord-paid-${i}`,
+          storeId: "store-pix-1",
+          status: "paid",
+          total: "50.00",
+          paymentMethod: "syncpay",
+          paymentId: `PAY-PAID-${i}`,
+          pixQrCode: `qr-${i}`,
+          createdAt: new Date("2026-10-10T10:00:00.000Z"),
+          paidAt: new Date("2026-10-10T10:05:00.000Z"),
+        });
+      }
+
+      // 7 pending Pix orders (total 25 generated)
+      for (let i = 19; i <= 25; i++) {
+        orders.push({
+          id: `ord-pending-${i}`,
+          storeId: "store-pix-1",
+          status: "pending",
+          total: "50.00",
+          paymentMethod: "syncpay",
+          paymentId: `PAY-PENDING-${i}`,
+          pixQrCode: `qr-${i}`,
+          createdAt: new Date("2026-10-11T10:00:00.000Z"),
+        });
+      }
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, {
+        period: "30D",
+        referenceDate: ref,
+      });
+
+      expect(metrics.conversionRate.totalPixGerados).toBe(25);
+      expect(metrics.conversionRate.totalPixPagos).toBe(18);
+      expect(metrics.conversionRate.ratePercent).toBe(72);
+      expect(metrics.conversionRate.formatted).toBe("72%");
+      expect(metrics.conversionRate.statusMessage).toBe("18 pagos de 25 Pix");
+    });
+
+    it("quando nenhum Pix tiver sido gerado, retorna ratePercent null ('Sem dados') e não divide por zero", () => {
+      const orders = [
+        {
+          id: "ord-cart-abandoned",
+          storeId: "store-pix-1",
+          status: "pending",
+          total: "100.00",
+          paymentMethod: null,
+          pixQrCode: null,
+          createdAt: new Date("2026-10-10T10:00:00.000Z"),
+        },
+      ];
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, { period: "30D" });
+
+      expect(metrics.conversionRate.totalPixGerados).toBe(0);
+      expect(metrics.conversionRate.totalPixPagos).toBe(0);
+      expect(metrics.conversionRate.ratePercent).toBeNull();
+      expect(metrics.conversionRate.formatted).toBe("Sem dados");
+      expect(metrics.conversionRate.statusMessage).toBe("0 pagos de 0 Pix");
+    });
+
+    it("quando houver Pix gerados e nenhum pagamento aprovado, retorna 0%", () => {
+      const orders = [
+        {
+          id: "ord-1",
+          storeId: "store-pix-1",
+          status: "pending",
+          total: "100.00",
+          paymentMethod: "pix",
+          paymentId: "PAY-1",
+          pixQrCode: "qr-1",
+          createdAt: new Date("2026-10-10T10:00:00.000Z"),
+        },
+        {
+          id: "ord-2",
+          storeId: "store-pix-1",
+          status: "cancelled",
+          total: "100.00",
+          paymentMethod: "mercadopago",
+          paymentId: "PAY-2",
+          pixQrCode: "qr-2",
+          createdAt: new Date("2026-10-11T10:00:00.000Z"),
+        },
+      ];
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, { period: "30D" });
+
+      expect(metrics.conversionRate.totalPixGerados).toBe(2);
+      expect(metrics.conversionRate.totalPixPagos).toBe(0);
+      expect(metrics.conversionRate.ratePercent).toBe(0);
+      expect(metrics.conversionRate.formatted).toBe("0%");
+      expect(metrics.conversionRate.statusMessage).toBe("0 pagos de 2 Pix");
+    });
+
+    it("quando todos os Pix gerados tiverem sido pagos, retorna 100%", () => {
+      const orders = [
+        {
+          id: "ord-1",
+          storeId: "store-pix-1",
+          status: "paid",
+          total: "100.00",
+          paymentMethod: "pix",
+          paymentId: "PAY-1",
+          pixQrCode: "qr-1",
+          createdAt: new Date("2026-10-10T10:00:00.000Z"),
+          paidAt: new Date("2026-10-10T10:05:00.000Z"),
+        },
+        {
+          id: "ord-2",
+          storeId: "store-pix-1",
+          status: "paid",
+          total: "200.00",
+          paymentMethod: "syncpay",
+          paymentId: "PAY-2",
+          pixQrCode: "qr-2",
+          createdAt: new Date("2026-10-11T10:00:00.000Z"),
+          paidAt: new Date("2026-10-11T10:05:00.000Z"),
+        },
+      ];
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, { period: "30D" });
+
+      expect(metrics.conversionRate.totalPixGerados).toBe(2);
+      expect(metrics.conversionRate.totalPixPagos).toBe(2);
+      expect(metrics.conversionRate.ratePercent).toBe(100);
+      expect(metrics.conversionRate.formatted).toBe("100%");
+      expect(metrics.conversionRate.statusMessage).toBe("2 pagos de 2 Pix");
+    });
+
+    it("não conta tentativas duplicadas com o mesmo paymentId como cobranças distintas", () => {
+      const orders = [
+        {
+          id: "ord-attempt-1",
+          storeId: "store-pix-1",
+          status: "pending",
+          total: "100.00",
+          paymentMethod: "syncpay",
+          paymentId: "SYNC-DUPLICATE-ID",
+          pixQrCode: "qr-1",
+          createdAt: new Date("2026-10-10T10:00:00.000Z"),
+        },
+        {
+          id: "ord-attempt-2",
+          storeId: "store-pix-1",
+          status: "paid",
+          total: "100.00",
+          paymentMethod: "syncpay",
+          paymentId: "SYNC-DUPLICATE-ID", // Same paymentId as attempt 1
+          pixQrCode: "qr-1",
+          createdAt: new Date("2026-10-10T10:01:00.000Z"),
+          paidAt: new Date("2026-10-10T10:05:00.000Z"),
+        },
+      ];
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, { period: "30D" });
+
+      // Should count only 1 unique Pix charge, and it should be marked paid (1 of 1 = 100%)
+      expect(metrics.conversionRate.totalPixGerados).toBe(1);
+      expect(metrics.conversionRate.totalPixPagos).toBe(1);
+      expect(metrics.conversionRate.ratePercent).toBe(100);
+    });
+
+    it("diferencia ausência de dados de falha na consulta (getCommercialMetrics)", async () => {
+      const { db } = await import("@/db");
+      vi.mocked(db.query.orders.findMany).mockRejectedValueOnce(new Error("Database connection dropped"));
+
+      const result = await CommercialMetricsService.getCommercialMetrics("store-err", "30D");
+
+      expect(result.conversionRate.hasError).toBe(true);
+      expect(result.conversionRate.isTelemetryAvailable).toBe(false);
+      expect(result.conversionRate.statusMessage).toContain("Falha ao consultar banco");
+      expect(result.conversionRate.formatted).toBe("—");
     });
   });
 });

@@ -18,6 +18,9 @@ export interface CommercialConversionRate {
   totalVisits: number | null;
   convertedOrders: number;
   statusMessage: string;
+  totalPixGerados: number;
+  totalPixPagos: number;
+  hasError?: boolean;
 }
 
 export interface CommercialBotStarts {
@@ -166,6 +169,7 @@ export class CommercialMetricsService {
       paidAt?: Date | string | null;
       createdAt: Date | string;
       paymentMethod?: string | null;
+      paymentId?: string | null;
       pixQrCode?: string | null;
     }>,
     options: CommercialMetricsCalculationOptions = {}
@@ -220,9 +224,50 @@ export class CommercialMetricsService {
       hasTargetGoal,
     };
 
-    // 3. Metric: Conversion Rate
-    // Rule: Identify whether visit, checkout start, or sessions are recorded in DB.
-    // If telemetry is not tracked, do not invent numbers or calculate rate based only on Pix.
+    // 3. Metric: Conversion Rate (Pix Charges Conversion)
+    // Business rule: taxaConversao = (totalPixPagos / totalPixGerados) * 100
+    // Measures conversion of generated Pix charges into approved/paid Pix payments.
+    const allOrdersInPeriod = ordersList.filter((o) => {
+      const d = new Date(o.createdAt);
+      return d >= startDate && d <= endDate;
+    });
+
+    const isPixCharge = (o: typeof ordersList[0]) => {
+      const method = (o.paymentMethod || "").toLowerCase().trim();
+      return Boolean(
+        o.pixQrCode ||
+        method.includes("pix") ||
+        method === "mercadopago" ||
+        method === "syncpay"
+      );
+    };
+
+    const pixOrdersInPeriod = allOrdersInPeriod.filter(isPixCharge);
+
+    // De-duplicate unique Pix charges by paymentId (or id fallback) to measure unique charges
+    const uniquePixChargesMap = new Map<string, typeof ordersList[0]>();
+    for (const o of pixOrdersInPeriod) {
+      const key = o.paymentId?.trim() || o.id;
+      if (!uniquePixChargesMap.has(key)) {
+        uniquePixChargesMap.set(key, o);
+      } else {
+        const existing = uniquePixChargesMap.get(key)!;
+        if (existing.status !== "paid" && (o.status === "paid" || o.status === "fulfilled")) {
+          uniquePixChargesMap.set(key, o);
+        }
+      }
+    }
+
+    const uniquePixCharges = Array.from(uniquePixChargesMap.values());
+    const totalPixGerados = uniquePixCharges.length;
+
+    // Count effectively paid and confirmed Pix charges (status strictly 'paid' or 'fulfilled')
+    // Pending, cancelled, or refunded must NEVER be counted as paid.
+    const paidPixCharges = uniquePixCharges.filter(
+      (o) => o.status === "paid" || o.status === "fulfilled"
+    );
+    const totalPixPagos = paidPixCharges.length;
+
     let conversionRate: CommercialConversionRate;
     if (simulatedVisits !== null && typeof simulatedVisits === "number" && simulatedVisits >= 0) {
       const rate = simulatedVisits > 0 ? (approvedCount / simulatedVisits) * 100 : 0;
@@ -234,16 +279,39 @@ export class CommercialMetricsService {
         totalVisits: simulatedVisits,
         convertedOrders: approvedCount,
         statusMessage: `${approvedCount} vendas em ${simulatedVisits} sessões`,
+        totalPixGerados,
+        totalPixPagos,
+        hasError: false,
       };
     } else {
-      conversionRate = {
-        ratePercent: null,
-        formatted: "—",
-        isTelemetryAvailable: false,
-        totalVisits: null,
-        convertedOrders: approvedCount,
-        statusMessage: "Rastreamento de visitas não disponível",
-      };
+      if (totalPixGerados === 0) {
+        conversionRate = {
+          ratePercent: null,
+          formatted: "Sem dados",
+          isTelemetryAvailable: false,
+          totalVisits: 0,
+          convertedOrders: 0,
+          totalPixGerados: 0,
+          totalPixPagos: 0,
+          statusMessage: "0 pagos de 0 Pix",
+          hasError: false,
+        };
+      } else {
+        const rate = (totalPixPagos / totalPixGerados) * 100;
+        const roundedRate = Math.round(rate * 10) / 10;
+        const formattedPct = roundedRate % 1 === 0 ? `${roundedRate}%` : `${roundedRate.toFixed(1).replace(".", ",")}%`;
+        conversionRate = {
+          ratePercent: roundedRate,
+          formatted: formattedPct,
+          isTelemetryAvailable: true,
+          totalVisits: totalPixGerados,
+          convertedOrders: totalPixPagos,
+          totalPixGerados,
+          totalPixPagos,
+          statusMessage: `${totalPixPagos} pagos de ${totalPixGerados} Pix`,
+          hasError: false,
+        };
+      }
     }
 
     // 4. Metric: Total Bot Starts
@@ -281,21 +349,10 @@ export class CommercialMetricsService {
     const rawAverageTicket = consideredSalesCount > 0 ? approvedSalesTotal / consideredSalesCount : 0;
     const averageTicketValue = Math.round(rawAverageTicket * 100) / 100;
 
-    // Filter Pix orders in the period
-    const allOrdersInPeriod = ordersList.filter((o) => {
-      const d = new Date(o.createdAt);
-      return d >= startDate && d <= endDate;
-    });
-
-    const isPixOrder = (o: typeof ordersList[0]) => {
-      const method = (o.paymentMethod || "").toLowerCase();
-      return Boolean(o.pixQrCode || method.includes("pix") || method === "mercadopago" || method === "syncpay");
-    };
-
-    const approvedPixCount = uniquePaidOrders.filter(isPixOrder).length;
-    const generatedPixCount = allOrdersInPeriod.filter(isPixOrder).length;
+    const approvedPixCount = totalPixPagos;
+    const generatedPixCount = totalPixGerados;
     const pixConversionRatePercent =
-      generatedPixCount > 0 ? Math.round((approvedPixCount / generatedPixCount) * 100) : null;
+      conversionRate.ratePercent !== null ? Math.round(conversionRate.ratePercent) : null;
 
     const averageTicket: CommercialAverageTicket = {
       averageTicket: averageTicketValue,
@@ -329,78 +386,101 @@ export class CommercialMetricsService {
   ): Promise<CommercialMetrics> {
     const { startDate, endDate } = resolvePeriodDateRange(period, options.referenceDate);
 
-    // Fetch orders belonging strictly to the requested store
-    const storeOrders = await db.query.orders.findMany({
-      where: and(
-        eq(orders.storeId, storeId),
-        gte(orders.createdAt, startDate)
-      ),
-      columns: {
-        id: true,
-        storeId: true,
-        status: true,
-        total: true,
-        paidAt: true,
-        createdAt: true,
-        paymentMethod: true,
-        pixQrCode: true,
-      },
-      orderBy: [desc(orders.createdAt)],
-    });
+    try {
+      // Fetch orders belonging strictly to the requested store
+      const storeOrders = await db.query.orders.findMany({
+        where: and(
+          eq(orders.storeId, storeId),
+          gte(orders.createdAt, startDate),
+          lte(orders.createdAt, endDate)
+        ),
+        columns: {
+          id: true,
+          storeId: true,
+          status: true,
+          total: true,
+          paidAt: true,
+          createdAt: true,
+          paymentMethod: true,
+          paymentId: true,
+          pixQrCode: true,
+        },
+        orderBy: [desc(orders.createdAt)],
+      });
 
-    const calculated = this.calculateMetrics(storeOrders, {
-      period,
-      referenceDate: options.referenceDate,
-      customTargetGoal: options.customTargetGoal,
-      simulatedVisits: options.simulatedVisits,
-      simulatedBotStarts: options.simulatedBotStarts,
-    });
+      const calculated = this.calculateMetrics(storeOrders, {
+        period,
+        referenceDate: options.referenceDate,
+        customTargetGoal: options.customTargetGoal,
+        simulatedVisits: options.simulatedVisits,
+        simulatedBotStarts: options.simulatedBotStarts,
+      });
 
-    // 1. Fetch real starts metrics from database if not simulated
-    let realStarts: CommercialBotStarts | null = null;
-    if (options.simulatedBotStarts === undefined || options.simulatedBotStarts === null) {
-      try {
-        const { BotStartEventService } = await import("@/lib/analytics/bot-start-service");
-        const startsResult = await BotStartEventService.getStartsMetrics(storeId, startDate, endDate);
-        realStarts = {
-          totalStarts: startsResult.totalStarts,
-          formatted: String(startsResult.totalStarts),
-          isTelemetryAvailable: startsResult.isTelemetryAvailable,
-          uniqueUsers: startsResult.uniqueUsers,
-          statusMessage: startsResult.statusMessage || `${startsResult.totalStarts} início(s) no período`,
-        };
-      } catch (err: any) {
-        console.warn("[CommercialMetricsService] Warning loading real bot starts:", err?.message);
+      // 1. Fetch real starts metrics from database if not simulated
+      let realStarts: CommercialBotStarts | null = null;
+      if (options.simulatedBotStarts === undefined || options.simulatedBotStarts === null) {
+        try {
+          const { BotStartEventService } = await import("@/lib/analytics/bot-start-service");
+          const startsResult = await BotStartEventService.getStartsMetrics(storeId, startDate, endDate);
+          realStarts = {
+            totalStarts: startsResult.totalStarts,
+            formatted: String(startsResult.totalStarts),
+            isTelemetryAvailable: startsResult.isTelemetryAvailable,
+            uniqueUsers: startsResult.uniqueUsers,
+            statusMessage: startsResult.statusMessage || `${startsResult.totalStarts} início(s) no período`,
+          };
+        } catch (err: any) {
+          console.warn("[CommercialMetricsService] Warning loading real bot starts:", err?.message);
+        }
       }
-    }
 
-    // 2. Fetch real conversion metrics from database if not simulated
-    let realConversion: CommercialConversionRate | null = null;
-    if (options.simulatedVisits === undefined || options.simulatedVisits === null) {
-      try {
-        const { StoreTrackingService } = await import("@/lib/analytics/store-tracking-service");
-        const conversionResult = await StoreTrackingService.getConversionRateMetrics(storeId, startDate, endDate);
-        realConversion = {
-          ratePercent: conversionResult.ratePercent,
-          formatted: conversionResult.ratePercent !== null 
-            ? `${conversionResult.ratePercent.toFixed(1).replace(".", ",")}%` 
-            : "Sem dados",
-          isTelemetryAvailable: conversionResult.isTelemetryAvailable,
-          totalVisits: conversionResult.eligibleSessions,
-          convertedOrders: conversionResult.convertedSessions,
-          statusMessage: conversionResult.statusMessage,
-        };
-      } catch (err: any) {
-        console.warn("[CommercialMetricsService] Warning loading real conversion rate:", err?.message);
-      }
+      return {
+        period,
+        storeId,
+        ...calculated,
+        ...(realStarts ? { botStarts: realStarts } : {}),
+      };
+    } catch (err: any) {
+      console.error("[CommercialMetricsService] Error loading commercial metrics for store:", storeId, err?.message);
+      return {
+        period,
+        storeId,
+        approvedSales: {
+          total: 0,
+          formatted: formatBRLCurrency(0),
+          count: 0,
+          targetGoal: null,
+          targetProgressPercent: null,
+          hasTargetGoal: false,
+        },
+        conversionRate: {
+          ratePercent: null,
+          formatted: "—",
+          isTelemetryAvailable: false,
+          totalVisits: null,
+          convertedOrders: 0,
+          totalPixGerados: 0,
+          totalPixPagos: 0,
+          statusMessage: "Falha ao consultar banco de dados",
+          hasError: true,
+        },
+        botStarts: {
+          totalStarts: 0,
+          formatted: "0",
+          isTelemetryAvailable: false,
+          uniqueUsers: 0,
+          statusMessage: "Falha ao carregar eventos",
+        },
+        averageTicket: {
+          averageTicket: 0,
+          formatted: formatBRLCurrency(0),
+          consideredSalesCount: 0,
+          approvedPixCount: 0,
+          generatedPixCount: 0,
+          pixConversionRatePercent: null,
+        },
+        last7DaysPerformance: [],
+      };
     }
-
-    return {
-      period,
-      storeId,
-      ...calculated,
-      ...(realConversion ? { conversionRate: realConversion } : {}),
-      ...(realStarts ? { botStarts: realStarts } : {}),
-    };
   }
 }
