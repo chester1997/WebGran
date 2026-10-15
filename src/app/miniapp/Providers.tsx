@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, Suspense } from "react";
 import { CartProvider } from "@/components/miniapp/CartProvider";
 import { StartAppResolver } from "@/components/miniapp/StartAppResolver";
 import { StoreVisitTracker } from "@/components/analytics/StoreVisitTracker";
@@ -330,7 +330,9 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
       ) : (
         <CartProvider storeSlug={storeSlug}>
           <StartAppResolver storeSlug={storeSlug} />
-          <StoreVisitTracker storeSlug={storeSlug} />
+          <Suspense fallback={null}>
+            <StoreVisitTracker storeSlug={storeSlug} />
+          </Suspense>
           {children}
         </CartProvider>
       )}
