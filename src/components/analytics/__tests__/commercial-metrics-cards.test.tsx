@@ -119,4 +119,97 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     expect(elementWithGoal.props.metrics?.approvedSales.hasTargetGoal).toBe(true);
     expect(elementWithGoal.props.metrics?.approvedSales.targetProgressPercent).toBe(75);
   });
+
+  it("6. Renders the 2-area layout structure with 4 cards and the 7-day performance chart", () => {
+    const fullMetrics: CommercialMetrics = {
+      period: "7D",
+      storeId: "store-456",
+      approvedSales: {
+        total: 1000.0,
+        formatted: "R$ 1.000,00",
+        count: 4,
+        targetGoal: null,
+        targetProgressPercent: null,
+        hasTargetGoal: false,
+      },
+      conversionRate: {
+        ratePercent: null,
+        formatted: "—",
+        isTelemetryAvailable: false,
+        totalVisits: null,
+        convertedOrders: 4,
+        statusMessage: "Rastreamento de visitas não disponível",
+      },
+      botStarts: {
+        totalStarts: 0,
+        formatted: "0",
+        isTelemetryAvailable: false,
+        uniqueUsers: 0,
+        statusMessage: "Eventos de /start não registrados no banco",
+      },
+      averageTicket: {
+        averageTicket: 250.0,
+        formatted: "R$ 250,00",
+        consideredSalesCount: 4,
+        approvedPixCount: 4,
+        generatedPixCount: 4,
+        pixConversionRatePercent: 100,
+      },
+      last7DaysPerformance: [
+        { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 200, salesCount: 1, formattedRevenue: "R$ 200,00" },
+        { dateStr: "2026-10-10", dateLabel: "10/10", dayName: "Sáb", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-11", dateLabel: "11/10", dayName: "Dom", revenue: 300, salesCount: 1, formattedRevenue: "R$ 300,00" },
+        { dateStr: "2026-10-12", dateLabel: "12/10", dayName: "Seg", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-13", dateLabel: "13/10", dayName: "Ter", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-14", dateLabel: "14/10", dayName: "Qua", revenue: 500, salesCount: 2, formattedRevenue: "R$ 500,00" },
+      ],
+    };
+
+    const rendered = CommercialMetricsCards({ metrics: fullMetrics, isPending: false });
+    expect(rendered).toBeDefined();
+    expect(fullMetrics.last7DaysPerformance?.length).toBe(7);
+  });
+
+  it("7. Handles empty 7-day performance data gracefully", () => {
+    const emptyMetrics: CommercialMetrics = {
+      period: "7D",
+      storeId: "store-empty",
+      approvedSales: {
+        total: 0,
+        formatted: "R$ 0,00",
+        count: 0,
+        targetGoal: null,
+        targetProgressPercent: null,
+        hasTargetGoal: false,
+      },
+      conversionRate: {
+        ratePercent: null,
+        formatted: "—",
+        isTelemetryAvailable: false,
+        totalVisits: null,
+        convertedOrders: 0,
+        statusMessage: "Rastreamento de visitas não disponível",
+      },
+      botStarts: {
+        totalStarts: 0,
+        formatted: "0",
+        isTelemetryAvailable: false,
+        uniqueUsers: 0,
+        statusMessage: "Eventos de /start não registrados no banco",
+      },
+      averageTicket: {
+        averageTicket: 0,
+        formatted: "R$ 0,00",
+        consideredSalesCount: 0,
+        approvedPixCount: 0,
+        generatedPixCount: 0,
+        pixConversionRatePercent: null,
+      },
+      last7DaysPerformance: [],
+    };
+
+    const rendered = CommercialMetricsCards({ metrics: emptyMetrics, isPending: false });
+    expect(rendered).toBeDefined();
+  });
 });

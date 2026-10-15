@@ -436,4 +436,76 @@ describe("CommercialMetricsService Suite", () => {
       expect(metrics.averageTicket.generatedPixCount).toBe(0);
     });
   });
+
+  describe("9. Gráfico Seu Desempenho — Últimos 7 Dias", () => {
+    it("gera exatamente 7 pontos sequenciais com dias em português", () => {
+      const metrics = CommercialMetricsService.calculateMetrics([], { period: "7D" });
+
+      expect(metrics.last7DaysPerformance).toBeDefined();
+      expect(metrics.last7DaysPerformance.length).toBe(7);
+
+      const validDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+      metrics.last7DaysPerformance.forEach((point) => {
+        expect(validDays).toContain(point.dayName);
+        expect(point.dateLabel).toMatch(/^\d{2}\/\d{2}$/);
+        expect(point.revenue).toBe(0);
+        expect(point.salesCount).toBe(0);
+        expect(point.formattedRevenue).toContain("0,00");
+      });
+    });
+
+    it("agrega corretamente as receitas aprovadas nos dias respectivos e mantém 0 nos dias sem venda", () => {
+      // Use fixed reference date
+      const ref = new Date("2026-10-14T20:00:00.000Z"); // Wed Oct 14 2026
+      
+      const orders = [
+        {
+          id: "order-today",
+          storeId: "store-a",
+          status: "paid",
+          total: "150.00",
+          paidAt: new Date("2026-10-14T10:00:00.000Z"),
+          createdAt: new Date("2026-10-14T09:00:00.000Z"),
+        },
+        {
+          id: "order-today-2",
+          storeId: "store-a",
+          status: "paid",
+          total: "50.00",
+          paidAt: new Date("2026-10-14T15:00:00.000Z"),
+          createdAt: new Date("2026-10-14T14:00:00.000Z"),
+        },
+        {
+          id: "order-3d-ago",
+          storeId: "store-a",
+          status: "paid",
+          total: "300.00",
+          paidAt: new Date("2026-10-11T12:00:00.000Z"),
+          createdAt: new Date("2026-10-11T11:00:00.000Z"),
+        },
+        {
+          id: "order-pending-not-counted",
+          storeId: "store-a",
+          status: "pending", // Pending should NOT count
+          total: "900.00",
+          createdAt: new Date("2026-10-14T12:00:00.000Z"),
+        },
+      ];
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, { period: "7D", referenceDate: ref });
+      const points = metrics.last7DaysPerformance;
+
+      expect(points.length).toBe(7);
+
+      // Last point is today (Oct 14)
+      const todayPoint = points[points.length - 1];
+      expect(todayPoint.revenue).toBe(200.00);
+      expect(todayPoint.salesCount).toBe(2);
+      expect(todayPoint.formattedRevenue).toContain("200,00");
+
+      // Total of all 7 days in chart equals sum of approved orders in the 7 days (200 + 300 = 500)
+      const totalChartRevenue = points.reduce((sum, p) => sum + p.revenue, 0);
+      expect(totalChartRevenue).toBe(500.00);
+    });
+  });
 });

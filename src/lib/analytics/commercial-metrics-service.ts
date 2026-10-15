@@ -37,6 +37,17 @@ export interface CommercialAverageTicket {
   pixConversionRatePercent: number | null;
 }
 
+export interface PerformancePoint {
+  dateStr?: string;
+  dateKey?: string;
+  dateLabel: string;
+  dayName: string;
+  fullDate?: string;
+  revenue: number;
+  formattedRevenue: string;
+  salesCount: number;
+}
+
 export interface CommercialMetrics {
   period: string;
   storeId: string;
@@ -44,10 +55,12 @@ export interface CommercialMetrics {
   conversionRate: CommercialConversionRate;
   botStarts: CommercialBotStarts;
   averageTicket: CommercialAverageTicket;
+  last7DaysPerformance: PerformancePoint[];
 }
 
 export interface CommercialMetricsCalculationOptions {
   period?: string;
+  referenceDate?: Date;
   customTargetGoal?: number | null;
   simulatedVisits?: number | null;
   simulatedBotStarts?: Array<{ id: string; userId: string; botId: string; timestamp: Date }> | null;
@@ -85,6 +98,60 @@ export function resolvePeriodDateRange(period: string = "30D", referenceDate: Da
   return { startDate, endDate };
 }
 
+export function generateLast7DaysPerformance(
+  ordersList: Array<{
+    status: string;
+    total: string | number | null;
+    paidAt?: Date | string | null;
+    createdAt: Date | string;
+  }>,
+  referenceDate: Date = new Date()
+): PerformancePoint[] {
+  const points: PerformancePoint[] = [];
+  const weekdayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  // Last 7 days: referenceDate - 6 days up to referenceDate
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(referenceDate);
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(d);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const dateKey = d.toISOString().split("T")[0];
+    const weekday = weekdayNames[d.getDay()];
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const dateLabel = `${day}/${month}`;
+    const dayMonth = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+
+    // Filter paid orders on this calendar day
+    const dayOrders = ordersList.filter((o) => {
+      if (o.status !== "paid") return false;
+      const orderDate = new Date(o.paidAt || o.createdAt);
+      return orderDate >= d && orderDate <= endOfDay;
+    });
+
+    const dayRevenue = dayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const daySalesCount = dayOrders.length;
+    const roundedRevenue = Math.round(dayRevenue * 100) / 100;
+
+    points.push({
+      dateStr: dateKey,
+      dateKey,
+      dateLabel,
+      dayName: weekday,
+      fullDate: `${weekday}, ${dateLabel}`,
+      revenue: roundedRevenue,
+      formattedRevenue: formatBRLCurrency(roundedRevenue),
+      salesCount: daySalesCount,
+    });
+  }
+
+  return points;
+}
+
 export class CommercialMetricsService {
   /**
    * Pure calculation helper for in-memory order lists and telemetry inputs.
@@ -107,9 +174,16 @@ export class CommercialMetricsService {
     conversionRate: CommercialConversionRate;
     botStarts: CommercialBotStarts;
     averageTicket: CommercialAverageTicket;
+    last7DaysPerformance: PerformancePoint[];
   } {
-    const { period = "30D", customTargetGoal = null, simulatedVisits = null, simulatedBotStarts = null } = options;
-    const { startDate, endDate } = resolvePeriodDateRange(period);
+    const { 
+      period = "30D", 
+      referenceDate = new Date(), 
+      customTargetGoal = null, 
+      simulatedVisits = null, 
+      simulatedBotStarts = null 
+    } = options;
+    const { startDate, endDate } = resolvePeriodDateRange(period, referenceDate);
 
     // 1. Exclude pending, cancelled, refunded or expired orders. Consider exclusively paid orders.
     // Date boundary uses paidAt, with fallback to createdAt if paidAt was not recorded.
@@ -232,11 +306,15 @@ export class CommercialMetricsService {
       pixConversionRatePercent,
     };
 
+    // 6. Metric: Last 7 Days Daily Performance
+    const last7DaysPerformance = generateLast7DaysPerformance(ordersList, referenceDate);
+
     return {
       approvedSales,
       conversionRate,
       botStarts,
       averageTicket,
+      last7DaysPerformance,
     };
   }
 

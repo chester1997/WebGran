@@ -144,62 +144,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     { key: "ALL", label: "Tudo" },
   ];
 
-  // SVG Area Chart calculations
-  const series = data.chartSeries || [];
-  const maxVal = Math.max(
-    ...series.map((s) => (chartMetric === "revenue" ? s.revenue : s.salesCount)),
-    1
-  );
-
-  const svgWidth = 750;
-  const svgHeight = 230;
-  const paddingX = 45;
-  const paddingY = 35;
-
-  const points = series.map((s, idx) => {
-    const x =
-      series.length <= 1
-        ? svgWidth / 2
-        : paddingX + (idx / (series.length - 1)) * (svgWidth - paddingX * 2);
-    const val = chartMetric === "revenue" ? s.revenue : s.salesCount;
-    const y = svgHeight - paddingY - (val / maxVal) * (svgHeight - paddingY * 2);
-    return { x, y, data: s };
-  });
-
-  // Construct smooth non-overshooting SVG path for Area Chart
-  let areaD = "";
-  let lineD = "";
-
-  if (points.length > 0) {
-    if (points.length === 1) {
-      lineD = `M ${points[0].x - 20} ${points[0].y} L ${points[0].x + 20} ${points[0].y}`;
-      areaD = `M ${points[0].x - 20} ${points[0].y} L ${points[0].x + 20} ${points[0].y} L ${points[0].x + 20} ${svgHeight - paddingY} L ${points[0].x - 20} ${svgHeight - paddingY} Z`;
-    } else {
-      lineD = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
-      for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[i === 0 ? i : i - 1];
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
-
-        const dx1 = (p2.x - p0.x) / 6;
-        const dy1 = (p2.y - p0.y) / 6;
-        const dx2 = (p3.x - p1.x) / 6;
-        const dy2 = (p3.y - p1.y) / 6;
-
-        const cp1x = (p1.x + dx1).toFixed(1);
-        const cp1y = Math.min(Math.max(p1.y + dy1, paddingY), svgHeight - paddingY).toFixed(1);
-        const cp2x = (p2.x - dx2).toFixed(1);
-        const cp2y = Math.min(Math.max(p2.y - dy2, paddingY), svgHeight - paddingY).toFixed(1);
-
-        lineD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-      }
-      const lastP = points[points.length - 1];
-      const firstP = points[0];
-      areaD = `${lineD} L ${lastP.x.toFixed(1)} ${svgHeight - paddingY} L ${firstP.x.toFixed(1)} ${svgHeight - paddingY} Z`;
-    }
-  }
-
   return (
     <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-20">
       
@@ -274,127 +218,15 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         isPending={isPending} 
       />
 
-      {/* 3. Main Chart & Channels Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* 3. Vendas por Canal & Atividade da Loja (2 Cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
-        {/* Sales Evolution SVG Area Chart (2 Cols) */}
-        <div className="lg:col-span-2 bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-                <BarChart3 className="w-4.5 h-4.5 text-rose-500" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Evolução de Vendas</h3>
-                <p className="text-xs text-zinc-400">Curva de receita e pedidos no período</p>
-              </div>
-            </div>
-
-            {/* Metric Switcher */}
-            <div className="bg-[#141418] p-1 rounded-lg border border-white/[0.06] flex items-center gap-1 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setChartMetric("revenue")}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  chartMetric === "revenue"
-                    ? "bg-rose-600 text-white font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                Faturamento (R$)
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartMetric("sales")}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  chartMetric === "sales"
-                    ? "bg-rose-600 text-white font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                Qtd Vendas
-              </button>
-            </div>
-          </div>
-
-          {/* Recharts Area Chart */}
-          {isPending ? (
-            <div className="h-60 bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
-              Carregando gráfico...
-            </div>
-          ) : !data.hasSales && series.every((s) => s.revenue === 0 && s.salesCount === 0) ? (
-            <div className="h-60 flex flex-col items-center justify-center p-6 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-zinc-800/60 border border-white/10 flex items-center justify-center text-zinc-500">
-                <BarChart3 className="w-5 h-5 opacity-60" />
-              </div>
-              <p className="text-zinc-300 text-xs font-semibold">Nenhuma venda registrada no período selecionado</p>
-              <p className="text-zinc-500 text-[11px] max-w-xs leading-relaxed">
-                Quando sua loja receber novos pedidos, a curva de evolução aparecerá aqui em tempo real.
-              </p>
-            </div>
-          ) : (
-            <div className="w-full h-64 sm:h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={series}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="chartGradientRose" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                  <XAxis
-                    dataKey="dateLabel"
-                    stroke="#71717A"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    dy={5}
-                  />
-                  <YAxis
-                    stroke="#71717A"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(val) =>
-                      chartMetric === "revenue"
-                        ? val >= 1000
-                          ? `R$ ${(val / 1000).toFixed(1)}k`
-                          : `R$ ${val}`
-                        : String(val)
-                    }
-                  />
-                  <RechartsTooltip content={<CustomRechartsTooltip chartMetric={chartMetric} />} />
-                  <Area
-                    type="monotone"
-                    dataKey={chartMetric === "revenue" ? "revenue" : "salesCount"}
-                    stroke="#F43F5E"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#chartGradientRose)"
-                    dot={false}
-                    activeDot={{
-                      r: 5,
-                      stroke: "#FFFFFF",
-                      strokeWidth: 2,
-                      fill: "#F43F5E"
-                    }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-
-        {/* Channels Breakdown Card (1 Col) */}
+        {/* Channels Breakdown Card */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                <Bot className="w-4.5 h-4.5 text-indigo-400" />
+              <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                <Bot className="w-4.5 h-4.5 text-rose-500" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Vendas por Canal</h3>
@@ -421,13 +253,13 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                       <span className="font-mono font-bold text-zinc-300 shrink-0 ml-2 wg-tabular">{chan.percentage}%</span>
                     </div>
 
-                    {/* Progress Bar */}
+                    {/* Progress Bar in WebGran Red / Rose */}
                     <div className="h-2 bg-[#141418] rounded-full overflow-hidden border border-white/[0.04]">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           chan.channel === "web" 
                             ? "bg-emerald-500" 
-                            : "bg-blue-500"
+                            : "bg-rose-500"
                         }`}
                         style={{ width: `${Math.max(chan.percentage, 5)}%` }}
                       />
@@ -447,6 +279,62 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             <span>Canal principal:</span>
             <span className="font-bold text-white uppercase tracking-wider">
               {data.channels[0]?.label || "Nenhum"}
+            </span>
+          </div>
+        </div>
+
+        {/* Atividade da Loja */}
+        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                <Activity className="w-4.5 h-4.5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Atividade da Loja</h3>
+                <p className="text-xs text-zinc-400">Indicadores de movimentação operacional</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Vendas hoje</span>
+                </div>
+                <span className="font-bold text-sm text-white wg-tabular">{data.activity.salesToday}</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Novos clientes</span>
+                </div>
+                <span className="font-bold text-sm text-white wg-tabular">{data.activity.newCustomersPeriod}</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span>Acessos liberados</span>
+                </div>
+                <span className="font-bold text-sm text-white wg-tabular">{data.activity.activeAccesses}</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>PIX pendentes</span>
+                </div>
+                <span className="font-bold text-sm text-amber-400 wg-tabular">{data.activity.pendingPayments}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+            <span>Operação:</span>
+            <span className="font-bold text-emerald-400 uppercase tracking-wider">
+              {data.activity.pendingPayments > 0 ? `${data.activity.pendingPayments} pendentes` : "Normal"}
             </span>
           </div>
         </div>
@@ -610,56 +498,9 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
       </div>
 
-      {/* 5. Store Activity & Catalog Overview (2 Cols) */}
+      {/* 5. Catalog Overview & Hourly Sales Distribution (2 Cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
-        {/* Atividade da Loja */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-              <Activity className="w-4.5 h-4.5 text-emerald-400" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white tracking-tight">Atividade da Loja</h3>
-              <p className="text-xs text-zinc-400">Indicadores de movimentação operacional</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Vendas hoje</span>
-              </div>
-              <span className="font-bold text-sm text-white wg-tabular">{data.activity.salesToday}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Novos clientes</span>
-              </div>
-              <span className="font-bold text-sm text-white wg-tabular">{data.activity.newCustomersPeriod}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>Acessos liberados</span>
-              </div>
-              <span className="font-bold text-sm text-white wg-tabular">{data.activity.activeAccesses}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>PIX pendentes</span>
-              </div>
-              <span className="font-bold text-sm text-amber-400 wg-tabular">{data.activity.pendingPayments}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Visão do Catálogo */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
@@ -702,66 +543,66 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </div>
         </div>
 
-      </div>
-
-      {/* 6. Hourly Sales Distribution Bar Chart (00h - 23h) */}
-      <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-            <Clock className="w-4.5 h-4.5 text-amber-400" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-white tracking-tight">Horários de Maior Venda</h3>
-            <p className="text-xs text-zinc-400">Distribuição de vendas por hora do dia (00:00 às 23:00)</p>
-          </div>
-        </div>
-
-        {/* 24-Hour Bar Chart */}
-        <div className="relative pt-3">
-          <div className="h-36 flex items-end gap-1 sm:gap-1.5 w-full">
-            {data.hourlySales.map((hItem) => {
-              const maxHourSales = Math.max(...data.hourlySales.map((h) => h.salesCount), 1);
-              const heightPercent = Math.max((hItem.salesCount / maxHourSales) * 100, 5);
-
-              return (
-                <div
-                  key={hItem.hour}
-                  className="flex-1 flex flex-col items-center group relative h-full justify-end"
-                  onMouseEnter={() => setHoveredHour(hItem)}
-                  onMouseLeave={() => setHoveredHour(null)}
-                >
-                  {/* Bar */}
-                  <div
-                    className={`w-full rounded-t transition-all duration-200 ${
-                      hItem.salesCount > 0
-                        ? "bg-amber-500 group-hover:bg-amber-400"
-                        : "bg-white/[0.04] group-hover:bg-white/[0.08]"
-                    }`}
-                    style={{ height: `${heightPercent}%` }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Hour Labels */}
-          <div className="flex justify-between pt-3 text-[10px] text-zinc-500 font-mono">
-            <span>00:00</span>
-            <span>06:00</span>
-            <span>12:00</span>
-            <span>18:00</span>
-            <span>23:00</span>
-          </div>
-
-          {/* Tooltip for Hourly Bar Hover */}
-          {hoveredHour && (
-            <div className="absolute top-0 right-4 bg-[#141418] border border-white/10 text-white p-2.5 rounded-xl text-xs z-20 shadow-xl space-y-0.5">
-              <p className="font-bold text-amber-400">{hoveredHour.hourLabel}</p>
-              <p className="text-zinc-200 font-medium">{hoveredHour.salesCount} {hoveredHour.salesCount === 1 ? "venda" : "vendas"}</p>
-              <p className="text-emerald-400 font-bold text-[11px] wg-tabular">R$ {hoveredHour.revenue.toFixed(2).replace(".", ",")}</p>
+        {/* Horários de Maior Venda (00h - 23h) */}
+        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <Clock className="w-4.5 h-4.5 text-amber-400" />
             </div>
-          )}
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight">Horários de Maior Venda</h3>
+              <p className="text-xs text-zinc-400">Distribuição de vendas por hora do dia (00:00 às 23:00)</p>
+            </div>
+          </div>
+
+          {/* 24-Hour Bar Chart */}
+          <div className="relative pt-3">
+            <div className="h-36 flex items-end gap-1 sm:gap-1.5 w-full">
+              {data.hourlySales.map((hItem) => {
+                const maxHourSales = Math.max(...data.hourlySales.map((h) => h.salesCount), 1);
+                const heightPercent = Math.max((hItem.salesCount / maxHourSales) * 100, 5);
+
+                return (
+                  <div
+                    key={hItem.hour}
+                    className="flex-1 flex flex-col items-center group relative h-full justify-end"
+                    onMouseEnter={() => setHoveredHour(hItem)}
+                    onMouseLeave={() => setHoveredHour(null)}
+                  >
+                    {/* Bar */}
+                    <div
+                      className={`w-full rounded-t transition-all duration-200 ${
+                        hItem.salesCount > 0
+                          ? "bg-amber-500 group-hover:bg-amber-400"
+                          : "bg-white/[0.04] group-hover:bg-white/[0.08]"
+                      }`}
+                      style={{ height: `${heightPercent}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Hour Labels */}
+            <div className="flex justify-between pt-3 text-[10px] text-zinc-500 font-mono">
+              <span>00:00</span>
+              <span>06:00</span>
+              <span>12:00</span>
+              <span>18:00</span>
+              <span>23:00</span>
+            </div>
+
+            {/* Tooltip for Hourly Bar Hover */}
+            {hoveredHour && (
+              <div className="absolute top-0 right-4 bg-[#141418] border border-white/10 text-white p-2.5 rounded-xl text-xs z-20 shadow-xl space-y-0.5">
+                <p className="font-bold text-amber-400">{hoveredHour.hourLabel}</p>
+                <p className="text-zinc-200 font-medium">{hoveredHour.salesCount} {hoveredHour.salesCount === 1 ? "venda" : "vendas"}</p>
+                <p className="text-emerald-400 font-bold text-[11px] wg-tabular">R$ {hoveredHour.revenue.toFixed(2).replace(".", ",")}</p>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
 
     </div>
