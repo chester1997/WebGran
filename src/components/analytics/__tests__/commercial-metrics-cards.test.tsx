@@ -44,6 +44,15 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         generatedPixCount: 6,
         pixConversionRatePercent: 67,
       },
+      last7DaysPerformance: [
+        { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+        { dateStr: "2026-10-10", dateLabel: "10/10", dayName: "Sáb", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-11", dateLabel: "11/10", dayName: "Dom", revenue: 500, salesCount: 2, formattedRevenue: "R$ 500,00" },
+        { dateStr: "2026-10-12", dateLabel: "12/10", dayName: "Seg", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-13", dateLabel: "13/10", dayName: "Ter", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+        { dateStr: "2026-10-14", dateLabel: "14/10", dayName: "Qua", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+      ],
     };
 
     const element = React.createElement(CommercialMetricsCards, { metrics: sampleMetrics });
@@ -113,6 +122,15 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         generatedPixCount: 3,
         pixConversionRatePercent: 100,
       },
+      last7DaysPerformance: [
+        { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+        { dateStr: "2026-10-10", dateLabel: "10/10", dayName: "Sáb", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-11", dateLabel: "11/10", dayName: "Dom", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+        { dateStr: "2026-10-12", dateLabel: "12/10", dayName: "Seg", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-13", dateLabel: "13/10", dayName: "Ter", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-14", dateLabel: "14/10", dayName: "Qua", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+      ],
     };
 
     const elementWithGoal = React.createElement(CommercialMetricsCards, { metrics: withGoal });
