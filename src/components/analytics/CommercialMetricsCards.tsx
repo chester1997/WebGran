@@ -74,12 +74,12 @@ function SemicircleGauge({
           aria-label={`Medidor de conversão: ${hasValidData ? formattedPct : (hasError ? "erro na consulta" : "sem dados")}`}
         >
           <defs>
-            <linearGradient id="purpleGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#8B5CF6" />
-              <stop offset="100%" stopColor="#A855F7" />
+            <linearGradient id="emeraldGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#059669" />
+              <stop offset="100%" stopColor="#10B981" />
             </linearGradient>
-            <filter id="purpleGaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#A855F7" floodOpacity="0.4" />
+            <filter id="emeraldGaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#10B981" floodOpacity="0.4" />
             </filter>
           </defs>
 
@@ -92,17 +92,17 @@ function SemicircleGauge({
             strokeLinecap="round"
           />
 
-          {/* Foreground Progress (Purple) */}
+          {/* Foreground Progress (Emerald) */}
           {hasValidData && validPct > 0 && (
             <path
               d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
               fill="none"
-              stroke="url(#purpleGaugeGrad)"
+              stroke="url(#emeraldGaugeGrad)"
               strokeWidth={strokeWidth}
               strokeDasharray={`${arcLength} ${arcLength}`}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              filter="url(#purpleGaugeGlow)"
+              filter="url(#emeraldGaugeGlow)"
               className="transition-all duration-700 ease-out"
             />
           )}
@@ -259,9 +259,9 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 2: TAXA DE CONVERSÃO */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[175px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[175px]"
               style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #0E0E11`
+                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
@@ -281,7 +281,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         Cobranças Pix vs pagamentos aprovados
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-400">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
                       <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
