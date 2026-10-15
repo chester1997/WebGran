@@ -186,11 +186,13 @@ export const orders = pgTable('orders', {
   sellerNotificationSentAt: timestamp('seller_notification_sent_at'),
   sellerNotificationClaimedAt: timestamp('seller_notification_claimed_at'),
   sellerNotificationClaimToken: text('seller_notification_claim_token'),
+  sessionId: text('session_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
   storeStatusCreatedIdx: index('orders_store_status_created_idx').on(t.storeId, t.status, t.createdAt),
-  customerIdx: index('orders_customer_idx').on(t.customerId)
+  customerIdx: index('orders_customer_idx').on(t.customerId),
+  sessionIdx: index('orders_session_idx').on(t.sessionId)
 }));
 
 export const orderItems = pgTable('order_items', {
@@ -337,6 +339,8 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   botChats: many(telegramBotChats),
   productVideos: many(productVideos),
   videoProgresses: many(videoProgress),
+  botStartEvents: many(botStartEvents),
+  sessions: many(storeSessions),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -423,6 +427,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   }),
   items: many(orderItems),
   accesses: many(accesses),
+  session: one(storeSessions, {
+    fields: [orders.sessionId],
+    references: [storeSessions.id],
+  }),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -976,6 +984,73 @@ export const paymentWebhookEvents = pgTable('payment_webhook_events', {
 }, (t) => ({
   providerEventUnique: unique().on(t.provider, t.eventId),
   providerEventIdx: index('payment_webhook_events_idx').on(t.provider, t.eventId),
+}));
+
+export const botStartEvents = pgTable('bot_start_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').references(() => telegramBots.id, { onDelete: 'set null' }),
+  telegramUserId: text('telegram_user_id').notNull(),
+  telegramUsername: text('telegram_username'),
+  telegramFirstName: text('telegram_first_name'),
+  telegramUpdateId: text('telegram_update_id').notNull(),
+  startPayload: text('start_payload'),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  storeUpdateUnique: unique().on(t.storeId, t.telegramUpdateId),
+  storeCreatedIdx: index('bot_start_events_store_created_idx').on(t.storeId, t.createdAt),
+  storeUserIdx: index('bot_start_events_store_user_idx').on(t.storeId, t.telegramUserId),
+  botIdIdx: index('bot_start_events_bot_id_idx').on(t.botId),
+}));
+
+export const storeSessions = pgTable('store_sessions', {
+  id: text('id').primaryKey(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').references(() => telegramCustomers.id, { onDelete: 'set null' }),
+  telegramUserId: text('telegram_user_id'),
+  entryPath: text('entry_path'),
+  referrer: text('referrer'),
+  utmSource: text('utm_source'),
+  utmMedium: text('utm_medium'),
+  utmCampaign: text('utm_campaign'),
+  utmContent: text('utm_content'),
+  utmTerm: text('utm_term'),
+  startParam: text('start_param'),
+  deviceType: text('device_type'),
+  isEligible: boolean('is_eligible').default(true).notNull(),
+  firstVisitedAt: timestamp('first_visited_at').defaultNow().notNull(),
+  lastActiveAt: timestamp('last_active_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeCreatedIdx: index('store_sessions_store_created_idx').on(t.storeId, t.createdAt),
+  storeEligibleCreatedIdx: index('store_sessions_store_eligible_created_idx').on(t.storeId, t.isEligible, t.createdAt),
+  storeCustomerIdx: index('store_sessions_store_customer_idx').on(t.storeId, t.customerId),
+  storeTelegramUserIdx: index('store_sessions_store_telegram_user_idx').on(t.storeId, t.telegramUserId),
+}));
+
+export const botStartEventsRelations = relations(botStartEvents, ({ one }) => ({
+  store: one(stores, {
+    fields: [botStartEvents.storeId],
+    references: [stores.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [botStartEvents.botId],
+    references: [telegramBots.id],
+  }),
+}));
+
+export const storeSessionsRelations = relations(storeSessions, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [storeSessions.storeId],
+    references: [stores.id],
+  }),
+  customer: one(telegramCustomers, {
+    fields: [storeSessions.customerId],
+    references: [telegramCustomers.id],
+  }),
+  orders: many(orders),
 }));
 
 

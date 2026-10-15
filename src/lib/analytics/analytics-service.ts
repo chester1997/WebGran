@@ -533,12 +533,7 @@ export class AnalyticsService {
     };
 
     // 8. Commercial Metrics (4 Reference KPI Cards)
-    const calculatedCommercial = CommercialMetricsService.calculateMetrics(allOrders, { period });
-    const commercialMetrics: CommercialMetrics = {
-      period,
-      storeId,
-      ...calculatedCommercial,
-    };
+    const commercialMetrics = await CommercialMetricsService.getCommercialMetrics(storeId, period);
 
     return {
       period,

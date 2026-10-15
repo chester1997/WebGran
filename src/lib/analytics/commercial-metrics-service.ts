@@ -327,7 +327,7 @@ export class CommercialMetricsService {
     period: string = "30D",
     options: CommercialMetricsCalculationOptions = {}
   ): Promise<CommercialMetrics> {
-    const { startDate } = resolvePeriodDateRange(period);
+    const { startDate, endDate } = resolvePeriodDateRange(period, options.referenceDate);
 
     // Fetch orders belonging strictly to the requested store
     const storeOrders = await db.query.orders.findMany({
@@ -350,15 +350,57 @@ export class CommercialMetricsService {
 
     const calculated = this.calculateMetrics(storeOrders, {
       period,
+      referenceDate: options.referenceDate,
       customTargetGoal: options.customTargetGoal,
       simulatedVisits: options.simulatedVisits,
       simulatedBotStarts: options.simulatedBotStarts,
     });
 
+    // 1. Fetch real starts metrics from database if not simulated
+    let realStarts: CommercialBotStarts | null = null;
+    if (options.simulatedBotStarts === undefined || options.simulatedBotStarts === null) {
+      try {
+        const { BotStartEventService } = await import("@/lib/analytics/bot-start-service");
+        const startsResult = await BotStartEventService.getStartsMetrics(storeId, startDate, endDate);
+        realStarts = {
+          totalStarts: startsResult.totalStarts,
+          formatted: String(startsResult.totalStarts),
+          isTelemetryAvailable: startsResult.isTelemetryAvailable,
+          uniqueUsers: startsResult.uniqueUsers,
+          statusMessage: startsResult.statusMessage || `${startsResult.totalStarts} início(s) no período`,
+        };
+      } catch (err: any) {
+        console.warn("[CommercialMetricsService] Warning loading real bot starts:", err?.message);
+      }
+    }
+
+    // 2. Fetch real conversion metrics from database if not simulated
+    let realConversion: CommercialConversionRate | null = null;
+    if (options.simulatedVisits === undefined || options.simulatedVisits === null) {
+      try {
+        const { StoreTrackingService } = await import("@/lib/analytics/store-tracking-service");
+        const conversionResult = await StoreTrackingService.getConversionRateMetrics(storeId, startDate, endDate);
+        realConversion = {
+          ratePercent: conversionResult.ratePercent,
+          formatted: conversionResult.ratePercent !== null 
+            ? `${conversionResult.ratePercent.toFixed(1).replace(".", ",")}%` 
+            : "Sem dados",
+          isTelemetryAvailable: conversionResult.isTelemetryAvailable,
+          totalVisits: conversionResult.eligibleSessions,
+          convertedOrders: conversionResult.convertedSessions,
+          statusMessage: conversionResult.statusMessage,
+        };
+      } catch (err: any) {
+        console.warn("[CommercialMetricsService] Warning loading real conversion rate:", err?.message);
+      }
+    }
+
     return {
       period,
       storeId,
       ...calculated,
+      ...(realConversion ? { conversionRate: realConversion } : {}),
+      ...(realStarts ? { botStarts: realStarts } : {}),
     };
   }
 }

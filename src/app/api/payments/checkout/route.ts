@@ -82,6 +82,11 @@ export async function POST(req: NextRequest) {
 
     // 5. Create Pending Order
     const productPrice = Number(product.price);
+    const sessionId =
+      body.sessionId ||
+      req.cookies.get("wg_session_id")?.value ||
+      req.cookies.get(`wg_sid_${store.slug}`)?.value ||
+      null;
 
     const [order] = await db.insert(orders).values({
       storeId,
@@ -91,6 +96,7 @@ export async function POST(req: NextRequest) {
       discount: '0',
       total: String(productPrice),
       currency: 'BRL',
+      sessionId: sessionId || null,
     }).returning();
 
     await db.insert(orderItems).values({

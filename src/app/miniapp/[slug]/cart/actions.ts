@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import { products, orders, orderItems, stores, coupons } from "@/db/schema";
 import { eq, inArray, and, sql } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { getMiniAppSession } from "@/lib/telegram/session";
 import { AccessService } from "@/lib/orders/access-service";
 import { paymentService } from "@/lib/payments/payment-service";
@@ -128,6 +129,12 @@ export async function createCheckoutSession(
 
     const finalTotal = Math.max(0, subtotal - discountAmount);
 
+    const cookieStore = await cookies();
+    const sessionId =
+      cookieStore.get(`wg_sid_${storeSlug}`)?.value ||
+      cookieStore.get("wg_session_id")?.value ||
+      null;
+
     // CREATE ORDER
     const newOrderArr = await db.insert(orders).values({
       storeId,
@@ -137,7 +144,8 @@ export async function createCheckoutSession(
       discount: discountAmount.toString(),
       couponCode: appliedCouponCode,
       total: finalTotal.toString(),
-      currency: 'BRL'
+      currency: 'BRL',
+      sessionId: sessionId || null,
     }).returning();
 
     const newOrder = newOrderArr[0];

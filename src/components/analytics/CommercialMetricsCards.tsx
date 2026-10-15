@@ -263,18 +263,22 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                   <div className="flex items-center justify-between gap-4 my-1">
                     <div>
                       <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
-                        {conversionRate?.formatted || "—"}
+                        {conversionRate?.ratePercent !== null && conversionRate?.ratePercent !== undefined
+                          ? conversionRate.formatted
+                          : "Sem dados"}
                       </div>
                       <p className="text-[11px] text-zinc-400 mt-0.5">
                         {conversionRate?.isTelemetryAvailable 
-                          ? `${conversionRate.convertedOrders} vendas realizadas`
+                          ? (conversionRate.totalVisits && conversionRate.totalVisits > 0
+                              ? `${conversionRate.convertedOrders} convertidas de ${conversionRate.totalVisits} sessões`
+                              : "Nenhuma sessão registrada")
                           : "Dados de tráfego ausentes"}
                       </p>
                     </div>
 
                     <SemicircleGauge 
                       percentage={conversionRate?.ratePercent ?? null} 
-                      isAvailable={Boolean(conversionRate?.isTelemetryAvailable)} 
+                      isAvailable={Boolean(conversionRate?.isTelemetryAvailable && conversionRate?.ratePercent !== null)} 
                     />
                   </div>
 
@@ -282,7 +286,12 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                     <span className="truncate">
                       {conversionRate?.statusMessage || "Rastreamento de visitas não disponível"}
                     </span>
-                    {!conversionRate?.isTelemetryAvailable && (
+                    {conversionRate?.isTelemetryAvailable ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 ml-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        Operacional
+                      </span>
+                    ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 shrink-0 ml-1">
                         <AlertCircle className="w-3 h-3 text-amber-500" />
                         Sem telemetria
@@ -328,7 +337,9 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                     </div>
                     <p className="text-[11px] text-zinc-400 mt-0.5">
                       {botStarts?.isTelemetryAvailable 
-                        ? `${botStarts.uniqueUsers} usuários únicos`
+                        ? ((botStarts.totalStarts || 0) === 0 
+                            ? "Nenhum start registrado" 
+                            : `${botStarts.uniqueUsers} ${botStarts.uniqueUsers === 1 ? 'usuário único' : 'usuários únicos'}`)
                         : "Webhook sem persistência de eventos"}
                     </p>
                   </div>
@@ -337,7 +348,12 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                     <span className="truncate">
                       {botStarts?.statusMessage || "Eventos de /start não registrados no banco"}
                     </span>
-                    {!botStarts?.isTelemetryAvailable && (
+                    {botStarts?.isTelemetryAvailable ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 ml-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        Operacional
+                      </span>
+                    ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 shrink-0 ml-1">
                         <HelpCircle className="w-3 h-3 text-rose-400" />
                         Pendente no webhook

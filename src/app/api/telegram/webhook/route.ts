@@ -94,6 +94,31 @@ export async function POST(req: NextRequest) {
       const appUrl = rawAppUrl.replace(/\/+$/, "");
       const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
       
+      const isStartCommand = text.startsWith("/start");
+      if (isStartCommand && update.update_id) {
+        try {
+          const { BotStartEventService } = await import("@/lib/analytics/bot-start-service");
+          const payloadMatch = text.replace(/^\/start/i, "").trim();
+          await BotStartEventService.recordStartEvent({
+            storeId: store.id,
+            botId: resolved.bot?.id,
+            telegramUserId: update.message.from?.id || chatId,
+            telegramUsername: update.message.from?.username || null,
+            telegramFirstName: update.message.from?.first_name || null,
+            telegramLastName: update.message.from?.last_name || null,
+            telegramUpdateId: update.update_id,
+            startPayload: payloadMatch || null,
+            metadata: {
+              chatId,
+              chatType: update.message.chat?.type,
+              messageDate: update.message.date,
+            },
+          });
+        } catch (startErr: any) {
+          console.error("[TELEGRAM WEBHOOK] Error recording start event:", startErr?.message);
+        }
+      }
+
       // Check if message is a video trigger deep link (/start v_...)
       const startParam = text.replace(/^\/start\s*/i, "").trim();
       if (startParam.startsWith("v_")) {
