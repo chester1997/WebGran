@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
+import { CommercialMetricsService, CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 
 export interface KpiMetric {
   value: number;
@@ -96,6 +97,7 @@ export interface StoreAnalyticsData {
   activity: ActivityStats;
   catalog: CatalogOverview;
   hasSales: boolean;
+  commercialMetrics: CommercialMetrics;
 }
 
 function calcChange(curr: number, prev: number): { changePercent: number | null; trend: 'up' | 'down' | 'neutral' | 'none' } {
@@ -530,6 +532,14 @@ export class AnalyticsService {
       categoriesCount: allStoreCategories.length
     };
 
+    // 8. Commercial Metrics (4 Reference KPI Cards)
+    const calculatedCommercial = CommercialMetricsService.calculateMetrics(allOrders, { period });
+    const commercialMetrics: CommercialMetrics = {
+      period,
+      storeId,
+      ...calculatedCommercial,
+    };
+
     return {
       period,
       storeName,
@@ -571,7 +581,8 @@ export class AnalyticsService {
       hourlySales: hourlyMap,
       activity,
       catalog,
-      hasSales: paidOrders.length > 0
+      hasSales: paidOrders.length > 0,
+      commercialMetrics,
     };
   }
 }

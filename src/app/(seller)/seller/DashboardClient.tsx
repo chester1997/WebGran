@@ -36,6 +36,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { StoreAnalyticsData } from "@/lib/analytics/analytics-service";
+import { CommercialMetricsCards } from "@/components/analytics/CommercialMetricsCards";
 import { getDashboardAnalyticsAction } from "./actions";
 
 interface DashboardClientProps {
@@ -267,162 +268,11 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
       )}
 
-      {/* 2. Main KPI Grid (4 High-Impact Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 w-full max-w-full">
-        
-        {/* KPI 1: Faturamento */}
-        <div 
-          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
-          style={{
-            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.12) 25%, rgba(16, 185, 129, 0.05) 50%, rgba(16, 185, 129, 0.01) 70%, transparent 85%), #0E0E11`
-          }}
-        >
-          {isPending ? (
-            <SkeletonKpi />
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-zinc-400 text-[11px] font-semibold uppercase tracking-wider truncate">
-                  Faturamento
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <Wallet className="w-4 h-4 text-emerald-400" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate wg-tabular">
-                  {data.kpis.revenue.formatted}
-                </h3>
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <TrendBadge 
-                    percent={data.kpis.revenue.changePercent} 
-                    trend={data.kpis.revenue.trend} 
-                  />
-                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
-                    {data.kpis.revenue.subtitle}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* KPI 2: Total Vendas */}
-        <div 
-          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
-          style={{
-            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(59, 130, 246, 0.22) 0%, rgba(59, 130, 246, 0.12) 25%, rgba(59, 130, 246, 0.05) 50%, rgba(59, 130, 246, 0.01) 70%, transparent 85%), #0E0E11`
-          }}
-        >
-          {isPending ? (
-            <SkeletonKpi />
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-zinc-400 text-[11px] font-semibold uppercase tracking-wider truncate">
-                  Total Vendas
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                  <ShoppingBag className="w-4 h-4 text-blue-400" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate wg-tabular">
-                  {data.kpis.salesCount.value} <span className="text-xs font-normal text-zinc-400">{data.kpis.salesCount.value === 1 ? "venda" : "vendas"}</span>
-                </h3>
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <TrendBadge 
-                    percent={data.kpis.salesCount.changePercent} 
-                    trend={data.kpis.salesCount.trend} 
-                  />
-                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
-                    {data.kpis.salesCount.subtitle}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* KPI 3: Clientes */}
-        <div 
-          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
-          style={{
-            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(168, 85, 247, 0.22) 0%, rgba(168, 85, 247, 0.12) 25%, rgba(168, 85, 247, 0.05) 50%, rgba(168, 85, 247, 0.01) 70%, transparent 85%), #0E0E11`
-          }}
-        >
-          {isPending ? (
-            <SkeletonKpi />
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-zinc-400 text-[11px] font-semibold uppercase tracking-wider truncate">
-                  Clientes
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 text-purple-400" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate wg-tabular">
-                  {data.kpis.customersCount.value}
-                </h3>
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <TrendBadge 
-                    percent={data.kpis.customersCount.changePercent} 
-                    trend={data.kpis.customersCount.trend} 
-                  />
-                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
-                    {data.kpis.customersCount.subtitle}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* KPI 4: Ticket Médio */}
-        <div 
-          className="border border-white/[0.06] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-white/[0.12] transition-all flex flex-col justify-between min-h-[120px] sm:min-h-[135px]"
-          style={{
-            background: `radial-gradient(ellipse 80% 80% at 92% 8%, rgba(245, 158, 11, 0.22) 0%, rgba(245, 158, 11, 0.12) 25%, rgba(245, 158, 11, 0.05) 50%, rgba(245, 158, 11, 0.01) 70%, transparent 85%), #0E0E11`
-          }}
-        >
-          {isPending ? (
-            <SkeletonKpi />
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-zinc-400 text-[11px] font-semibold uppercase tracking-wider truncate">
-                  Ticket Médio
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                  <Activity className="w-4 h-4 text-amber-400" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate wg-tabular">
-                  {data.kpis.averageTicket.formatted}
-                </h3>
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <TrendBadge 
-                    percent={data.kpis.averageTicket.changePercent} 
-                    trend={data.kpis.averageTicket.trend} 
-                  />
-                  <span className="hidden sm:inline text-[11px] text-zinc-500 truncate">
-                    {data.kpis.averageTicket.subtitle}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-      </div>
+      {/* 2. Commercial Metrics Cards (Reference Grid) */}
+      <CommercialMetricsCards 
+        metrics={data.commercialMetrics} 
+        isPending={isPending} 
+      />
 
       {/* 3. Main Chart & Channels Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
