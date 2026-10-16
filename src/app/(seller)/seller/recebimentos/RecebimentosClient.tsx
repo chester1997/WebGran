@@ -15,7 +15,9 @@ import {
   Plus,
   KeyRound,
   Info,
-  QrCode
+  QrCode,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -35,9 +37,20 @@ interface SyncPayConnectionInfo {
   updatedAt: string | null;
 }
 
+interface PushinPayConnectionInfo {
+  id: string | null;
+  status: string;
+  tokenMasked?: string | null;
+  hasCredentials?: boolean;
+  webhookUrl?: string | null;
+  webhookSecretMasked?: string | null;
+  updatedAt: string | null;
+}
+
 interface Props {
   connection: ConnectionInfo | null;
   syncPayConnection?: SyncPayConnectionInfo | null;
+  pushinPayConnection?: PushinPayConnectionInfo | null;
 }
 
 /* =========================================================
@@ -69,29 +82,49 @@ function SyncPayLogo({ className = "w-7 h-7" }: { className?: string }) {
   );
 }
 
-export default function RecebimentosClient({ connection, syncPayConnection }: Props) {
+function PushinPayLogo({ className = "w-7 h-7" }: { className?: string }) {
+  return (
+    <div className={`rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center p-1.5 shadow-md shadow-emerald-500/20 ${className}`}>
+      <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-white" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    </div>
+  );
+}
+
+
+export default function RecebimentosClient({ connection, syncPayConnection, pushinPayConnection }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Modals state
-  const [disconnectModalGateway, setDisconnectModalGateway] = useState<'mercado_pago' | 'syncpay' | null>(null);
-  const [manageModalGateway, setManageModalGateway] = useState<'mercado_pago' | 'syncpay' | null>(null);
+  const [disconnectModalGateway, setDisconnectModalGateway] = useState<'mercado_pago' | 'syncpay' | 'pushinpay' | null>(null);
+  const [manageModalGateway, setManageModalGateway] = useState<'mercado_pago' | 'syncpay' | 'pushinpay' | null>(null);
   const [isSyncPayConnectOpen, setIsSyncPayConnectOpen] = useState(false);
+  const [isPushinPayConnectOpen, setIsPushinPayConnectOpen] = useState(false);
 
   // Connection & Action States
   const [loadingDisconnect, setLoadingDisconnect] = useState(false);
   const [loadingConnectMp, setLoadingConnectMp] = useState(false);
   const [syncPayLoading, setSyncPayLoading] = useState(false);
-  const [testingGateway, setTestingGateway] = useState<'mercado_pago' | 'syncpay' | null>(null);
+  const [pushinPayLoading, setPushinPayLoading] = useState(false);
+  const [testingGateway, setTestingGateway] = useState<'mercado_pago' | 'syncpay' | 'pushinpay' | null>(null);
 
   // SyncPay Inputs
   const [syncPayClientId, setSyncPayClientId] = useState('');
   const [syncPayClientSecret, setSyncPayClientSecret] = useState('');
 
-  const [feedbackMsg, setFeedbackMsg] = useState<{ provider: 'mercado_pago' | 'syncpay'; type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  // PushinPay Inputs & Data
+  const [pushinPayToken, setPushinPayToken] = useState('');
+  const [pushinPayWebhookSecret, setPushinPayWebhookSecret] = useState('');
+  const [pushinPayData, setPushinPayData] = useState<PushinPayConnectionInfo | null>(pushinPayConnection || null);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+
+  const [feedbackMsg, setFeedbackMsg] = useState<{ provider: 'mercado_pago' | 'syncpay' | 'pushinpay'; type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   const isMpActive = connection?.status === 'active';
   const isSyncPayActive = syncPayConnection?.status === 'active';
+  const isPushinPayActive = pushinPayData?.status === 'active' || pushinPayConnection?.status === 'active';
 
   const successParam = searchParams.get('success');
   const errorParam = searchParams.get('error');
@@ -213,7 +246,91 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
     }
   };
 
-  const handleTestConnection = async (provider: 'mercado_pago' | 'syncpay') => {
+  const handleOpenPushinPayModal = async () => {
+    setPushinPayToken('');
+    setPushinPayWebhookSecret('');
+    setIsPushinPayConnectOpen(true);
+    try {
+      const res = await fetch('/api/seller/payments/pushinpay');
+      if (res.ok) {
+        const data = await res.json();
+        setPushinPayData({
+          id: data.connectionId,
+          status: data.status,
+          tokenMasked: data.tokenMasked,
+          hasCredentials: data.hasCredentials,
+          webhookUrl: data.webhookUrl,
+          webhookSecretMasked: data.webhookSecretMasked,
+          updatedAt: data.updatedAt,
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleConnectPushinPay = async () => {
+    if (!pushinPayToken.trim() && !pushinPayData?.hasCredentials && !pushinPayConnection?.id) {
+      setFeedbackMsg({ provider: 'pushinpay', type: 'error', text: 'Informe seu Token da PushinPay.' });
+      return;
+    }
+
+    setPushinPayLoading(true);
+    try {
+      const res = await fetch('/api/seller/payments/pushinpay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: pushinPayToken.trim() || undefined,
+          webhookSecret: pushinPayWebhookSecret.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao conectar PushinPay.');
+      }
+
+      setFeedbackMsg({
+        provider: 'pushinpay',
+        type: 'success',
+        text: 'PushinPay conectada e ativada com sucesso!',
+      });
+      setIsPushinPayConnectOpen(false);
+      setPushinPayToken('');
+      setPushinPayWebhookSecret('');
+      router.refresh();
+    } catch (err: any) {
+      setFeedbackMsg({ provider: 'pushinpay', type: 'error', text: err.message });
+    } finally {
+      setPushinPayLoading(false);
+    }
+  };
+
+  const handleDisconnectPushinPay = async () => {
+    setLoadingDisconnect(true);
+    try {
+      const res = await fetch('/api/seller/payments/pushinpay', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao desativar PushinPay.');
+      setFeedbackMsg({ provider: 'pushinpay', type: 'info', text: 'Integração PushinPay desativada para a loja.' });
+      setDisconnectModalGateway(null);
+      router.refresh();
+    } catch (err: any) {
+      setFeedbackMsg({ provider: 'pushinpay', type: 'error', text: err.message });
+    } finally {
+      setLoadingDisconnect(false);
+    }
+  };
+
+  const handleCopyWebhookUrl = (url: string) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setCopiedWebhook(true);
+    setTimeout(() => setCopiedWebhook(false), 2000);
+  };
+
+  const handleTestConnection = async (provider: 'mercado_pago' | 'syncpay' | 'pushinpay') => {
     setTestingGateway(provider);
     try {
       if (provider === 'mercado_pago') {
@@ -230,6 +347,15 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.message || 'Falha na validação com a SyncPay.');
         setFeedbackMsg({ provider: 'syncpay', type: 'success', text: `SyncPay: ${data.message || 'Conexão funcionando perfeitamente!'}` });
+      } else if (provider === 'pushinpay') {
+        const res = await fetch('/api/seller/payments/pushinpay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'test' }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Falha na validação com a PushinPay.');
+        setFeedbackMsg({ provider: 'pushinpay', type: 'success', text: `PushinPay: ${data.message || 'Token válido e conexão ativa!'}` });
       }
     } catch (err: any) {
       setFeedbackMsg({ provider, type: 'error', text: err.message });
@@ -237,6 +363,7 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
       setTestingGateway(null);
     }
   };
+
 
   const formatDate = (iso: string | null) => {
     if (!iso) return '—';
@@ -533,6 +660,145 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
           </div>
         </div>
 
+        {/* ========================================================= */}
+        {/* 3. PUSHINPAY CARD */}
+        {/* ========================================================= */}
+        <div className="bg-[#141416]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 relative overflow-hidden shadow-2xl flex flex-col justify-between space-y-6 transition-all hover:border-white/20">
+          
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <PushinPayLogo className="w-11 h-11" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-white tracking-tight">PushinPay</h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      Pix Direto
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/5 text-zinc-300 border border-white/10">
+                      PIX Cash-In
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isPushinPayActive ? (
+                <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Conectado
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-zinc-800 border border-zinc-700/60 text-zinc-400 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-zinc-500" />
+                  Não configurado
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              {isPushinPayActive
+                ? "Integração PushinPay ativa para sua loja com token Bearer autenticado e Webhooks dedicados."
+                : "Conecte sua conta PushinPay informando seu Token de Acesso da API."
+              }
+            </p>
+
+            {feedbackMsg?.provider === 'pushinpay' && (
+              <div className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 transition-all ${
+                feedbackMsg.type === 'success'
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                  : feedbackMsg.type === 'error'
+                  ? 'bg-red-500/10 border border-red-500/20 text-red-300'
+                  : 'bg-blue-500/10 border border-blue-500/20 text-blue-300'
+              }`}>
+                {feedbackMsg.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />}
+                {feedbackMsg.type === 'error' && <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />}
+                {feedbackMsg.type === 'info' && <Info className="w-4 h-4 shrink-0 text-blue-400" />}
+                <span>{feedbackMsg.text}</span>
+              </div>
+            )}
+
+            {isPushinPayActive && (
+              <div className="bg-[#18181C]/90 p-3.5 rounded-xl border border-white/5 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span>Status da Integração:</span>
+                  <strong className="text-emerald-400 font-medium">Ativo & Autenticado</strong>
+                </div>
+                {(pushinPayData?.tokenMasked || pushinPayConnection?.id) && (
+                  <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
+                    <span>Token:</span>
+                    <span className="font-mono text-zinc-300 font-semibold">{pushinPayData?.tokenMasked || '••••••••'}</span>
+                  </div>
+                )}
+                {pushinPayData?.webhookUrl && (
+                  <div className="flex flex-col gap-1 border-t border-white/5 pt-2">
+                    <span className="text-zinc-400">Webhook URL:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] text-zinc-300 truncate max-w-[200px] bg-black/40 px-2 py-1 rounded">
+                        {pushinPayData.webhookUrl}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyWebhookUrl(pushinPayData.webhookUrl!)}
+                        className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        title="Copiar URL do Webhook"
+                      >
+                        {copiedWebhook ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
+                  <span>Última atualização:</span>
+                  <span className="text-zinc-300 font-medium">{formatDate(pushinPayData?.updatedAt || pushinPayConnection?.updatedAt || null)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-white/5">
+            {isPushinPayActive ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  onClick={() => handleTestConnection('pushinpay')}
+                  disabled={testingGateway === 'pushinpay'}
+                  variant="outline"
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-zinc-200 border-white/10 rounded-xl text-xs h-10 font-semibold cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${testingGateway === 'pushinpay' ? 'animate-spin' : ''}`} />
+                  {testingGateway === 'pushinpay' ? 'Testando...' : 'Testar Conexão'}
+                </Button>
+
+                <Button
+                  onClick={handleOpenPushinPayModal}
+                  variant="outline"
+                  className="bg-white/5 hover:bg-white/10 text-zinc-200 border-white/10 rounded-xl text-xs h-10 px-3 font-semibold cursor-pointer"
+                >
+                  <Settings className="w-3.5 h-3.5 text-zinc-300" />
+                </Button>
+
+                <Button
+                  onClick={() => setDisconnectModalGateway('pushinpay')}
+                  variant="outline"
+                  className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20 rounded-xl text-xs h-10 px-3 font-semibold cursor-pointer"
+                >
+                  <Unlink className="w-3.5 h-3.5 text-red-400" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleOpenPushinPayModal}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                Conectar PushinPay
+              </Button>
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* SYNCPAY CREDENTIALS MODAL */}
@@ -625,6 +891,103 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
         </div>
       )}
 
+      {/* PUSHINPAY CREDENTIALS MODAL */}
+      {isPushinPayConnectOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#141416] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative animate-in fade-in zoom-in-95">
+            
+            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex items-center gap-3">
+                <PushinPayLogo className="w-8 h-8" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Configurar PushinPay</h3>
+                  <p className="text-xs text-zinc-400">Insira seu Token de Acesso da API PushinPay</p>
+                </div>
+              </div>
+              <button onClick={() => setIsPushinPayConnectOpen(false)} className="text-zinc-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleConnectPushinPay(); }} autoComplete="off" className="space-y-4">
+              
+              {/* Info Badge for Existing Saved Credential */}
+              {pushinPayData?.tokenMasked && (
+                <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs flex items-center justify-between">
+                  <span className="text-zinc-400">Token atualmente salvo:</span>
+                  <span className="font-mono font-semibold text-emerald-400">{pushinPayData.tokenMasked}</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  Token de Acesso (Bearer Token)
+                </label>
+                <input
+                  type="password"
+                  name="pushinpay_api_token"
+                  autoComplete="new-password"
+                  value={pushinPayToken}
+                  onChange={(e) => setPushinPayToken(e.target.value)}
+                  placeholder={pushinPayData?.hasCredentials ? "•••••••••••••••• (Deixe em branco para manter o atual)" : "Cole seu token de API da PushinPay..."}
+                  className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition-all font-mono"
+                />
+              </div>
+
+              {pushinPayData?.webhookUrl && (
+                <div className="space-y-1.5 p-3 rounded-xl bg-black/40 border border-white/5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-300">URL do Webhook:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyWebhookUrl(pushinPayData.webhookUrl!)}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedWebhook ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedWebhook ? 'Copiado!' : 'Copiar URL'}
+                    </button>
+                  </div>
+                  <p className="font-mono text-[11px] text-zinc-400 break-all select-all">
+                    {pushinPayData.webhookUrl}
+                  </p>
+                  <p className="text-[11px] text-zinc-500">
+                    Cadastre esta URL no painel da PushinPay para receber aprovação imediata via Pix.
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs leading-relaxed flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  {pushinPayData?.hasCredentials
+                    ? "Suas credenciais salvas estão protegidas com criptografia AES-256. Se deixar o campo em branco ao salvar, o sistema preservará o token atual."
+                    : "O token é validado consultando a API da PushinPay e armazenado com criptografia AES-256."}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPushinPayConnectOpen(false)}
+                  className="bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10 rounded-xl text-xs h-10 px-4 font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={pushinPayLoading || (!pushinPayData?.hasCredentials && !pushinPayToken.trim())}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-10 px-5 shadow-lg shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
+                >
+                  {pushinPayLoading ? 'Validando...' : 'Salvar e Ativar PushinPay'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* DISCONNECT MODAL */}
       {disconnectModalGateway && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -636,7 +999,7 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                   <Unlink className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-white">
-                  Desconectar {disconnectModalGateway === 'mercado_pago' ? 'Mercado Pago' : 'SyncPay'}?
+                  Desconectar {disconnectModalGateway === 'mercado_pago' ? 'Mercado Pago' : disconnectModalGateway === 'syncpay' ? 'SyncPay' : 'PushinPay'}?
                 </h3>
               </div>
               <button onClick={() => setDisconnectModalGateway(null)} className="text-zinc-400 hover:text-white cursor-pointer">
@@ -666,8 +1029,10 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
                 onClick={() => {
                   if (disconnectModalGateway === 'mercado_pago') {
                     handleDisconnectMp();
-                  } else {
+                  } else if (disconnectModalGateway === 'syncpay') {
                     handleDisconnectSyncPay();
+                  } else {
+                    handleDisconnectPushinPay();
                   }
                 }}
                 disabled={loadingDisconnect}
@@ -683,3 +1048,4 @@ export default function RecebimentosClient({ connection, syncPayConnection }: Pr
     </div>
   );
 }
+

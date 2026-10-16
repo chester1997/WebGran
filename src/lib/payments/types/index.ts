@@ -43,6 +43,7 @@ export interface CheckoutResponse {
 
 export interface CreatePaymentParams {
   sellerId: string;
+  storeId?: string;
   amount: number;
   paymentMethod?: string;
   description?: string;
@@ -55,6 +56,7 @@ export interface CreatePaymentParams {
     lastName?: string;
   };
 }
+
 
 export interface PixPaymentResponse {
   paymentId: string;

@@ -19,6 +19,7 @@ export default async function RecebimentosPage() {
 
   let connection = null;
   let syncPayConn = null;
+  let pushinPayConn = null;
 
   try {
     // Fetch Mercado Pago Connection
@@ -44,6 +45,18 @@ export default async function RecebimentosPage() {
     console.error('[RecebimentosPage] Error fetching SyncPay connection:', err);
   }
 
+  try {
+    // Fetch PushinPay Connection
+    pushinPayConn = await db.query.sellerPaymentConnections.findFirst({
+      where: and(
+        eq(sellerPaymentConnections.sellerId, seller.id),
+        eq(sellerPaymentConnections.provider, 'pushinpay')
+      ),
+    });
+  } catch (err) {
+    console.error('[RecebimentosPage] Error fetching PushinPay connection:', err);
+  }
+
   return (
     <RecebimentosClient 
       connection={connection ? {
@@ -58,6 +71,12 @@ export default async function RecebimentosPage() {
         status: syncPayConn?.status || 'inactive',
         updatedAt: syncPayConn?.updatedAt ? new Date(syncPayConn.updatedAt).toISOString() : null,
       }}
+      pushinPayConnection={{
+        id: pushinPayConn?.id || null,
+        status: pushinPayConn?.status || 'inactive',
+        updatedAt: pushinPayConn?.updatedAt ? new Date(pushinPayConn.updatedAt).toISOString() : null,
+      }}
     />
   );
 }
+

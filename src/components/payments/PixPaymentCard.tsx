@@ -11,6 +11,7 @@ export interface PixPaymentCardProps {
   orderId?: string | null;
   status?: "pending" | "paid" | "expired" | "failed";
   expiresAt?: string | null;
+  paymentMethod?: string | null;
   isEmbedded?: boolean;
   onCopy?: () => void;
   onRetry?: () => void;
@@ -33,6 +34,7 @@ export function PixPaymentCard({
   qrCodeBase64,
   amount,
   status = "pending",
+  paymentMethod,
   isEmbedded = false,
   onCopy,
   onRetry,
@@ -204,6 +206,13 @@ export function PixPaymentCard({
           </button>
         </div>
       </div>
+
+      {/* PushinPay Legal Terms Disclaimer */}
+      {paymentMethod === "pushinpay" && (
+        <div className="pt-2 text-[10px] text-zinc-500 dark:text-zinc-500 text-center leading-relaxed border-t border-zinc-200 dark:border-white/5">
+          A PUSHIN PAY atua exclusivamente como processadora de pagamentos e não possui qualquer responsabilidade pela entrega, suporte, conteúdo, qualidade ou cumprimento das obrigações relacionadas aos produtos ou serviços oferecidos pelo vendedor.
+        </div>
+      )}
 
       {/* Back link (Only if not embedded in modal) */}
       {!isEmbedded && onBack && (

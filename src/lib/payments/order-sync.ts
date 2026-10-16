@@ -20,6 +20,40 @@ export async function syncOrderWithMercadoPago(orderId: string) {
     return { success: true, status: 'paid', alreadyPaid: true, accesses: accessList };
   }
 
+  // Support PushinPay orders
+  if (order.paymentMethod === 'pushinpay') {
+    const { pushinPayProvider } = await import('./providers/pushinpay');
+    const pushinConn = await pushinPayProvider.getPushinPayConnection(undefined, order.storeId);
+    if (pushinConn && order.paymentId) {
+      const txData = await pushinPayProvider.getPixPaymentStatus(order.paymentId, pushinConn.token);
+      const expectedCents = Math.round(Number(order.total) * 100);
+      const isPaid = txData && String(txData.status || '').toLowerCase().trim() === 'paid';
+      const idMatches = txData && String(txData.id).trim() === String(order.paymentId).trim();
+      const valueMatches = txData && (txData.value === undefined || txData.value === null || Number(txData.value) === expectedCents);
+
+      if (isPaid && idMatches && valueMatches) {
+        const updatedRows = await db.update(orders)
+          .set({
+            status: 'paid',
+            paidAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')))
+          .returning({ id: orders.id });
+
+        if (updatedRows && updatedRows.length > 0) {
+          const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
+          const accessList = await db.query.accesses.findMany({
+            where: eq(accesses.orderId, order.id),
+          });
+          return { success: true, status: 'paid', paymentId: order.paymentId, accesses: accessList, deliveries: deliveryResults };
+        }
+      }
+    }
+    return { success: true, status: order.status };
+  }
+
+
   // Support SyncPay orders
   if (order.paymentMethod === 'syncpay') {
     const { syncPayProvider, extractSyncPayStatus } = await import('./providers/syncpay');

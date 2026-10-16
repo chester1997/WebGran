@@ -14,6 +14,7 @@ export interface PixPaymentModalProps {
   productTitle?: string | null;
   status?: "pending" | "paid" | "expired" | "failed";
   expiresAt?: string | null;
+  paymentMethod?: string | null;
   onCopy?: () => void;
   onRetry?: () => void;
 }
@@ -27,6 +28,7 @@ export function PixPaymentModal({
   orderId,
   productTitle,
   status = "pending",
+  paymentMethod,
   onCopy,
   onRetry,
 }: PixPaymentModalProps) {
@@ -104,6 +106,7 @@ export function PixPaymentModal({
             amount={amount}
             orderId={orderId}
             status={status}
+            paymentMethod={paymentMethod}
             isEmbedded={true}
             onCopy={onCopy}
             onRetry={onRetry}

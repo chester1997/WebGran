@@ -171,20 +171,65 @@ export async function createCheckoutSession(
       : null;
     const isSyncPayActive = Boolean(syncPayConn);
 
-    // Determine target gateway
-    let targetGateway: 'mercadopago' | 'syncpay' | null = null;
+    const pushinPayConn = sellerId
+      ? await paymentService['pushinPayProvider'].getPushinPayConnection(sellerId, storeId)
+      : null;
+    const isPushinPayActive = Boolean(pushinPayConn);
 
-    if (paymentGateway === 'syncpay' && isSyncPayActive) {
+    // Determine target gateway
+    let targetGateway: 'mercadopago' | 'syncpay' | 'pushinpay' | null = null;
+
+    if (paymentGateway === 'pushinpay' && isPushinPayActive) {
+      targetGateway = 'pushinpay';
+    } else if (paymentGateway === 'syncpay' && isSyncPayActive) {
       targetGateway = 'syncpay';
     } else if (paymentGateway === 'mercadopago' && isMpActive) {
       targetGateway = 'mercadopago';
+    } else if (isPushinPayActive) {
+      targetGateway = 'pushinpay';
     } else if (isSyncPayActive) {
       targetGateway = 'syncpay';
     } else if (isMpActive) {
       targetGateway = 'mercadopago';
     }
 
-    // 1. Process SyncPay PIX
+    // 1. Process PushinPay PIX
+    if (targetGateway === 'pushinpay') {
+      const pixPayment = await paymentService.createPushinPayPix({
+        sellerId: sellerId!,
+        orderId: newOrder.id,
+        amount: finalTotal,
+        description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || 'WebGran'}`,
+        customer: {
+          name: 'Cliente Telegram',
+          email: 'cliente@webgran.app'
+        }
+      });
+
+      await db.update(orders)
+        .set({
+          paymentId: pixPayment.paymentId,
+          paymentMethod: 'pushinpay',
+          pixQrCode: pixPayment.qrCode,
+          pixQrCodeBase64: pixPayment.qrCodeBase64 || '',
+          pixExpiresAt: pixPayment.expiresAt,
+          status: 'pending',
+        })
+        .where(eq(orders.id, newOrder.id));
+
+      return {
+        success: true,
+        orderId: newOrder.id,
+        paymentGateway: 'pushinpay',
+        pix: {
+          qrCode: pixPayment.qrCode,
+          qrCodeBase64: pixPayment.qrCodeBase64 || '',
+          expiresAt: pixPayment.expiresAt.toISOString(),
+        }
+      };
+    }
+
+    // 2. Process SyncPay PIX
     if (targetGateway === 'syncpay') {
       const pixPayment = await paymentService.createSyncPayPix({
         sellerId: sellerId!,
