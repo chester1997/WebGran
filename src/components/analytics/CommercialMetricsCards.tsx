@@ -389,9 +389,9 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 4: TICKET MÉDIO */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-rose-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
               style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0.02) 50%, transparent 80%), #0E0E11`
+                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
@@ -411,7 +411,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         Receita aprovada / pedidos pagos
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 text-rose-500">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400">
                       <CreditCard className="w-5 h-5" />
                     </div>
                   </div>
@@ -432,11 +432,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
                     <div className="flex items-center justify-between text-zinc-400">
                       <span className="flex items-center gap-1">
-                        <QrCode className="w-3 h-3 text-rose-400" />
+                        <QrCode className="w-3 h-3 text-amber-400" />
                         Pix: {averageTicket?.approvedPixCount || 0} pagos / {averageTicket?.generatedPixCount || 0} gerados
                       </span>
                       {averageTicket?.pixConversionRatePercent !== null ? (
-                        <span className="font-bold text-rose-400 font-mono wg-tabular">
+                        <span className="font-bold text-amber-400 font-mono wg-tabular">
                           {averageTicket?.pixConversionRatePercent}%
                         </span>
                       ) : (
