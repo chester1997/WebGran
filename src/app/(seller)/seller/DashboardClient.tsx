@@ -150,18 +150,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       {/* 1. Header & Period Selector (WebGran Executive Header) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-              Painel Comercial
-            </span>
-            {isPending && (
+          {isPending && (
+            <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400 font-mono">
                 <RefreshCw className="w-3 h-3 animate-spin text-rose-500" />
                 Atualizando...
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Olá, {data.userName || data.storeName}
@@ -224,15 +220,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         {/* Channels Breakdown Card */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-                <Bot className="w-4.5 h-4.5 text-rose-500" />
-              </div>
+            <div className="flex items-center gap-2.5 mb-5">
+              <Bot className="w-5 h-5 text-rose-500 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Vendas por Canal</h3>
                 <p className="text-xs text-zinc-400">Origem dos pedidos efetuados</p>
               </div>
             </div>
+
 
             {isPending ? (
               <div className="space-y-3 py-3">
@@ -286,15 +281,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         {/* Atividade da Loja */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                <Activity className="w-4.5 h-4.5 text-emerald-400" />
-              </div>
+            <div className="flex items-center gap-2.5 mb-5">
+              <Activity className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Atividade da Loja</h3>
                 <p className="text-xs text-zinc-400">Indicadores de movimentação operacional</p>
               </div>
             </div>
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
@@ -347,16 +341,15 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         {/* Top Selling Products */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4.5 h-4.5 text-amber-400" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
                 <p className="text-xs text-zinc-400">Ranking por receita no período</p>
               </div>
             </div>
           </div>
+
 
           {isPending ? (
             <div className="space-y-3 py-3">
@@ -422,15 +415,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         {/* Recent Sales History */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                <Clock className="w-4.5 h-4.5 text-emerald-400" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <Clock className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Últimas Vendas</h3>
                 <p className="text-xs text-zinc-400">Pedidos recentes recebidos</p>
               </div>
             </div>
+
 
             <Link
               href="/seller/orders"
@@ -504,10 +496,8 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         {/* Visão do Catálogo */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                <Package className="w-4.5 h-4.5 text-blue-400" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <Package className="w-5 h-5 text-blue-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Visão do Catálogo</h3>
                 <p className="text-xs text-zinc-400">Resumo dos produtos e estrutura</p>
@@ -545,15 +535,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
         {/* Horários de Maior Venda (00h - 23h) */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Clock className="w-4.5 h-4.5 text-amber-400" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <Clock className="w-5 h-5 text-amber-400 shrink-0" />
             <div>
               <h3 className="text-sm font-bold text-white tracking-tight">Horários de Maior Venda</h3>
               <p className="text-xs text-zinc-400">Distribuição de vendas por hora do dia (00:00 às 23:00)</p>
             </div>
           </div>
+
 
           {/* 24-Hour Bar Chart */}
           <div className="relative pt-3">

@@ -261,10 +261,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         Exclusivamente pagamentos confirmados
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
+                    <div className="shrink-0 text-emerald-400">
                       <CheckCircle2 className="w-5 h-5" />
                     </div>
                   </div>
+
 
                   <div className="my-1">
                     <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
@@ -325,10 +326,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         Cobranças Pix vs pagamentos aprovados
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0 text-sky-400">
+                    <div className="shrink-0 text-sky-400">
                       <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
+
 
                   <div className="my-auto py-1 flex flex-col items-center justify-center">
                     <SemicircleGauge 
@@ -393,10 +395,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         Inícios de conversa nos bots da loja
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-400">
+                    <div className="shrink-0 text-purple-400">
                       <Bot className="w-5 h-5" />
                     </div>
                   </div>
+
 
                   <div className="my-1">
                     <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
@@ -455,10 +458,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         Receita aprovada / pedidos pagos
                       </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400">
+                    <div className="shrink-0 text-amber-400">
                       <CreditCard className="w-5 h-5" />
                     </div>
                   </div>
+
 
                   <div className="my-1">
                     <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
@@ -507,15 +511,14 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
           >
             {/* Header: Title + Subtitle + Total Badge */}
             <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 text-rose-500">
-                  <BarChart3 className="w-5 h-5" />
-                </div>
+              <div className="flex items-center gap-2.5">
+                <BarChart3 className="w-5 h-5 text-rose-500 shrink-0" />
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-tight">Seu Desempenho</h3>
                   <p className="text-xs text-zinc-400">{periodConfig.subtitle}</p>
                 </div>
               </div>
+
 
               <div className="text-right">
                 <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider">
