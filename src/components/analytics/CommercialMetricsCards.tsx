@@ -6,9 +6,6 @@ import {
   TrendingUp, 
   Bot, 
   CreditCard, 
-  HelpCircle,
-  AlertCircle,
-  QrCode,
   BarChart3
 } from "lucide-react";
 import {
@@ -248,7 +245,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
                   <div className="h-8 bg-white/5 rounded w-2/3" />
-                  <div className="h-3 bg-white/5 rounded w-1/2" />
                 </div>
               ) : (
                 <>
@@ -273,38 +269,29 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                     </div>
                   </div>
 
-                  <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1.5">
-                    {approvedSales?.hasTargetGoal && approvedSales.targetGoal ? (
-                      <>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-zinc-400 font-medium">Meta comercial</span>
-                          <span className="text-emerald-400 font-bold font-mono">
-                            {approvedSales.targetProgressPercent}%
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
-                            style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                        <span>
-                          {approvedSales?.count || 0} {approvedSales?.count === 1 ? "pedido confirmado" : "pedidos confirmados"}
+                  {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
+                    <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400 font-medium">Meta comercial</span>
+                        <span className="text-emerald-400 font-bold font-mono">
+                          {approvedSales.targetProgressPercent}%
                         </span>
-                        <span className="italic text-zinc-600">Sem meta configurada</span>
                       </div>
-                    )}
-                  </div>
+                      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
+                          style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
 
             {/* CARD 2: TAXA DE CONVERSÃO */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[175px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 80%), #0E0E11`
               }}
@@ -313,7 +300,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
                   <div className="h-8 bg-white/5 rounded w-2/3" />
-                  <div className="h-3 bg-white/5 rounded w-1/2" />
                 </div>
               ) : (
                 <>
@@ -341,32 +327,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                       totalGenerated={conversionRate?.totalPixGerados ?? conversionRate?.totalVisits ?? 0}
                     />
                   </div>
-
-                  <div className="pt-2 mt-auto border-t border-white/[0.04] flex items-center justify-between text-[11px] text-zinc-500">
-                    <span className="truncate">
-                      {conversionRate?.hasError 
-                        ? "Falha ao consultar banco de dados" 
-                        : (conversionRate?.totalPixGerados ?? 0) === 0 && conversionRate?.ratePercent === null
-                        ? "Nenhuma cobrança gerada no período"
-                        : "Conversão de cobranças Pix"}
-                    </span>
-                    {conversionRate?.hasError ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 ml-1">
-                        <AlertCircle className="w-3 h-3 text-rose-400" />
-                        Falha
-                      </span>
-                    ) : conversionRate?.ratePercent !== null && conversionRate?.ratePercent !== undefined ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 ml-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        Operacional
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 shrink-0 ml-1">
-                        <AlertCircle className="w-3 h-3 text-amber-500" />
-                        Sem dados
-                      </span>
-                    )}
-                  </div>
                 </>
               )}
             </div>
@@ -382,7 +342,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
                   <div className="h-8 bg-white/5 rounded w-2/3" />
-                  <div className="h-3 bg-white/5 rounded w-1/2" />
                 </div>
               ) : (
                 <>
@@ -413,23 +372,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         : "Webhook sem persistência de eventos"}
                     </p>
                   </div>
-
-                  <div className="pt-2 mt-auto border-t border-white/[0.04] flex items-center justify-between text-[11px] text-zinc-500">
-                    <span className="truncate">
-                      {botStarts?.statusMessage || "Eventos de /start não registrados no banco"}
-                    </span>
-                    {botStarts?.isTelemetryAvailable ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 ml-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        Operacional
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 shrink-0 ml-1">
-                        <HelpCircle className="w-3 h-3 text-purple-400" />
-                        Pendente no webhook
-                      </span>
-                    )}
-                  </div>
                 </>
               )}
             </div>
@@ -445,7 +387,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
                   <div className="h-8 bg-white/5 rounded w-2/3" />
-                  <div className="h-3 bg-white/5 rounded w-1/2" />
                 </div>
               ) : (
                 <>
@@ -467,29 +408,6 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                   <div className="my-1">
                     <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
                       {averageTicket?.formatted || "R$ 0,00"}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1 text-[11px]">
-                    <div className="flex items-center justify-between text-zinc-400">
-                      <span>Vendas consideradas:</span>
-                      <span className="font-semibold text-white font-mono wg-tabular">
-                        {averageTicket?.consideredSalesCount || 0}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-zinc-400">
-                      <span className="flex items-center gap-1">
-                        <QrCode className="w-3 h-3 text-amber-400" />
-                        Pix: {averageTicket?.approvedPixCount || 0} pagos / {averageTicket?.generatedPixCount || 0} gerados
-                      </span>
-                      {averageTicket?.pixConversionRatePercent !== null ? (
-                        <span className="font-bold text-amber-400 font-mono wg-tabular">
-                          {averageTicket?.pixConversionRatePercent}%
-                        </span>
-                      ) : (
-                        <span className="text-zinc-500">0%</span>
-                      )}
                     </div>
                   </div>
                 </>
