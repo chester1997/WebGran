@@ -46,11 +46,19 @@ export function TelegramNotificationForm({ initialTelegramId }: TelegramNotifica
         <Bell className="w-5 h-5 text-zinc-400" />
         <h3 className="font-bold text-white text-sm">Notificações de venda</h3>
       </div>
-      <p className="text-xs text-zinc-500">
-        Receba uma mensagem no Telegram cada vez que um cliente efetuar uma compra. Para descobrir seu ID, envie{" "}
-        <span className="text-blue-400 font-mono bg-blue-500/10 px-1.5 py-0.5 rounded">/start</span> para{" "}
-        <span className="text-white font-medium">@userinfobot</span>.
-      </p>
+      <div className="space-y-2 text-xs text-zinc-400 bg-white/[0.02] border border-white/5 rounded-xl p-3.5">
+        <p className="leading-relaxed">
+          Receba uma notificação automática no Telegram a cada venda confirmada na sua loja.
+        </p>
+        <div className="space-y-1.5 pt-1 text-[11px] text-zinc-400">
+          <p>
+            1️⃣ <strong className="text-zinc-200">ID Pessoal de Usuário:</strong> Envie <span className="text-blue-400 font-mono bg-blue-500/10 px-1.5 py-0.5 rounded">/start</span> para <span className="text-white font-medium">@userinfobot</span> no Telegram e copie o seu <span className="font-mono text-zinc-300">Id</span> numérico. <span className="text-amber-400 font-medium">Não utilize o ID ou token do bot.</span>
+          </p>
+          <p>
+            2️⃣ <strong className="text-zinc-200">Autorização no Telegram:</strong> Abra o bot da sua loja e envie <span className="text-blue-400 font-mono bg-blue-500/10 px-1.5 py-0.5 rounded">/start</span> (ou clique em <em>Iniciar</em>). O Telegram exige que você inicie uma conversa com o bot antes de receber mensagens privadas dele.
+          </p>
+        </div>
+      </div>
 
       {errorMsg && (
         <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-lg">

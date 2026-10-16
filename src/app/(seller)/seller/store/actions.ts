@@ -170,8 +170,27 @@ export async function saveTelegramNotificationIdAction(telegramNotificationId: s
 
   const cleanId = (telegramNotificationId || "").trim();
 
-  if (cleanId && !/^-?\d+$/.test(cleanId)) {
-    throw new Error("O Telegram ID deve conter apenas números (ex: 123456789).");
+  if (cleanId) {
+    if (!/^-?\d+$/.test(cleanId)) {
+      throw new Error("O Telegram ID deve conter apenas números (ex: 123456789).");
+    }
+
+    // Validação de segurança: o Telegram ID não pode ser o ID de um bot
+    const storeBots = db.query.telegramBots?.findMany
+      ? await db.query.telegramBots.findMany({
+          where: eq(telegramBots.storeId, store.id),
+        })
+      : [];
+
+    const isBotId = (storeBots || []).some(
+      (b: any) => String(b.botId).trim() === cleanId || String(b.id).trim() === cleanId
+    );
+
+    if (isBotId) {
+      throw new Error(
+        `O ID informado (${cleanId}) pertence ao bot da sua loja. O Telegram proíbe bots de enviarem mensagens para bots. Você deve informar o seu ID pessoal de usuário (obtido enviando /start para @userinfobot).`
+      );
+    }
   }
 
   await db

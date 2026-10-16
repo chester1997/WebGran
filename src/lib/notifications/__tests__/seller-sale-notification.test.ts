@@ -219,4 +219,55 @@ describe("SellerSaleNotificationService & Tokenized Concurrent Idempotency Suite
     expect(sentChatId).toBe("123456789");
     expect(sentChatId).not.toBe("seller_b_telegram_id");
   });
+
+  it("skips notification if order is pending or cancelled", async () => {
+    dbOrdersStore["order-123"].status = "pending";
+
+    const resPending = await SellerSaleNotificationService.notifySellerOfSale("order-123");
+    expect(resPending.success).toBe(true);
+    expect(resPending.skipped).toBe(true);
+    expect(resPending.reason).toContain("not paid");
+    expect(mockSendMessage).not.toHaveBeenCalled();
+
+    dbOrdersStore["order-123"].status = "cancelled";
+    const resCancelled = await SellerSaleNotificationService.notifySellerOfSale("order-123");
+    expect(resCancelled.success).toBe(true);
+    expect(resCancelled.skipped).toBe(true);
+    expect(resCancelled.reason).toContain("not paid");
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("skips safely when store has no bot with valid encrypted token", async () => {
+    vi.mocked(db.query.telegramBots.findFirst).mockResolvedValue(null as any);
+
+    const result = await SellerSaleNotificationService.notifySellerOfSale("order-123");
+
+    expect(result.success).toBe(true);
+    expect(result.skipped).toBe(true);
+    expect(result.reason).toContain("No active bot found");
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("detects and prevents notification when telegramNotificationId matches the botId itself", async () => {
+    // Simula a lojista cadastrando o ID do próprio bot (como 8668276097)
+    vi.mocked(db.query.stores.findFirst).mockResolvedValueOnce({
+      id: "store-seller-a",
+      ownerId: "user-seller-a",
+      telegramNotificationId: "8668276097",
+    } as any);
+
+    vi.mocked(db.query.telegramBots.findFirst).mockResolvedValueOnce({
+      id: "bot-1",
+      botId: "8668276097",
+      displayName: "Nossaseriessbot",
+      tokenEncrypted: "encrypted_token_123",
+      status: "active",
+    } as any);
+
+    const result = await SellerSaleNotificationService.notifySellerOfSale("order-123");
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("O Telegram ID configurado para a loja é o ID do bot");
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
 });

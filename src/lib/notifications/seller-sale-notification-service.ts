@@ -163,7 +163,11 @@ export class SellerSaleNotificationService {
       let botRecord = null;
       if (targetBotId) {
         botRecord = await db.query.telegramBots.findFirst({
-          where: and(eq(telegramBots.id, targetBotId), eq(telegramBots.storeId, order.storeId)),
+          where: and(
+            eq(telegramBots.id, targetBotId),
+            eq(telegramBots.storeId, order.storeId),
+            eq(telegramBots.status, "active")
+          ),
         });
       }
 
@@ -178,6 +182,18 @@ export class SellerSaleNotificationService {
         await this.releaseClaimLock(orderId, claimToken);
         console.warn(`[SellerSaleNotificationService] No active bot found for store ${order.storeId}. Cannot send notification.`);
         return { success: true, skipped: true, reason: "No active bot found for store." };
+      }
+
+      const recipientId = store.telegramNotificationId.trim();
+
+      // Check if recipient is the bot itself (prevents Telegram API 403 Forbidden: the bot can't send messages to the bot)
+      if (String(botRecord.botId).trim() === recipientId) {
+        await this.releaseClaimLock(orderId, claimToken);
+        console.warn(`[SellerSaleNotificationService] telegramNotificationId (${recipientId}) matches store botId. Bots cannot send messages to bots.`);
+        return {
+          success: false,
+          error: "O Telegram ID configurado para a loja é o ID do bot. É necessário cadastrar o ID pessoal da lojista.",
+        };
       }
 
       const botToken = decrypt(botRecord.tokenEncrypted);
@@ -208,7 +224,7 @@ export class SellerSaleNotificationService {
 
       // 10. Send Telegram Message
       const botService = new TelegramBotService(botToken);
-      await botService.sendMessage(store.telegramNotificationId.trim(), messageText);
+      await botService.sendMessage(recipientId, messageText);
 
       // 11. Confirm Permanent Success ONLY IF current claimToken still matches (prevents stale overwrites if thread hung)
       await db.execute(sql`
@@ -224,12 +240,14 @@ export class SellerSaleNotificationService {
 
       return { success: true, notified: true };
     } catch (err: any) {
-      console.error("[SellerSaleNotificationService] Error sending seller notification:", err?.message || err);
+      const errorMsg = err?.message || "Failed to send notification";
+      const sanitizedError = errorMsg.replace(/bot[0-9]+:[A-Za-z0-9_-]+/g, "bot<REDACTED>");
+      console.error("[SellerSaleNotificationService] Error sending seller notification:", sanitizedError);
       if (claimAcquired) {
         // Release claim lock safely if this process still holds the token
         await this.releaseClaimLock(orderId, claimToken);
       }
-      return { success: false, error: err?.message || "Failed to send notification" };
+      return { success: false, error: sanitizedError };
     }
   }
 

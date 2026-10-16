@@ -13,6 +13,13 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/db", () => ({
   db: {
+    query: {
+      telegramBots: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "bot-1", botId: "987654321", storeId: "store-123" }
+        ])
+      }
+    },
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockImplementation(async () => {
@@ -53,6 +60,12 @@ describe("saveTelegramNotificationIdAction Unit Suite", () => {
   it("rejects non-numeric Telegram ID", async () => {
     await expect(saveTelegramNotificationIdAction("abc12345")).rejects.toThrow(
       "O Telegram ID deve conter apenas números"
+    );
+  });
+
+  it("rejects Telegram ID when it matches a bot ID from the store", async () => {
+    await expect(saveTelegramNotificationIdAction("987654321")).rejects.toThrow(
+      "pertence ao bot da sua loja"
     );
   });
 
