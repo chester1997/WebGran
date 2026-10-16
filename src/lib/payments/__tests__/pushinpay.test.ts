@@ -902,4 +902,105 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('11. Production Real-World Edge Cases: Case-Insensitive UUIDs & Domain Normalization', () => {
+    it('matches order and verifies payment when PushinPay sends uppercase UUID while DB has lowercase', async () => {
+      const dbModule = await import('@/db');
+      const deliveryModule = await import('@/lib/delivery/access-delivery-service');
+
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-1',
+        provider: 'pushinpay',
+        storeId: 'store-1',
+        sellerId: 'seller-1',
+        accessTokenEncrypted: encrypt(validToken),
+      } as any);
+
+      vi.mocked(dbModule.db.query.paymentWebhookEvents.findFirst).mockResolvedValueOnce(undefined);
+
+      // DB has lowercase UUID
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-case-test',
+        paymentId: 'a2fdf381-5fcc-4c13-a1fb-d466afe39f91',
+        storeId: 'store-1',
+        total: 1.0,
+        status: 'pending',
+      } as any);
+
+      vi.mocked(dbModule.db.query.stores.findFirst).mockResolvedValueOnce({
+        id: 'store-1',
+        ownerId: 'seller-1',
+      } as any);
+
+      // PushinPay returns uppercase UUID
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'A2FDF381-5FCC-4C13-A1FB-D466AFE39F91',
+          status: 'paid',
+          value: '100',
+        }),
+      } as Response);
+
+      // Webhook payload with uppercase UUID
+      const res = await provider.handleWebhook(
+        'conn-1',
+        JSON.stringify({
+          id: 'A2FDF381-5FCC-4C13-A1FB-D466AFE39F91',
+          status: 'paid',
+          value: 100,
+        }),
+        {}
+      );
+
+      expect(res.success).toBe(true);
+      expect(dbModule.db.update).toHaveBeenCalled();
+      expect(deliveryModule.AccessDeliveryService.processOrderDelivery).toHaveBeenCalledWith('order-case-test');
+    });
+
+    it('normalizes apex webgran.online domain to www.webgran.online in webhookUrl to prevent 308 redirect', async () => {
+      const dbModule = await import('@/db');
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce(null as any);
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-pushin-apex',
+        sellerId: 'seller-1',
+        storeId: 'store-1',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(validToken),
+      } as any);
+
+      // Simulate NEXT_PUBLIC_APP_URL pointing to apex domain
+      const originalEnv = process.env.NEXT_PUBLIC_APP_URL;
+      process.env.NEXT_PUBLIC_APP_URL = 'https://webgran.online';
+
+      try {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            id: 'tx-domain-test',
+            qr_code: '000201...',
+            status: 'created',
+            value: 100,
+          }),
+        } as Response);
+
+        await provider.createPixPayment({
+          sellerId: 'seller-1',
+          storeId: 'store-1',
+          orderId: 'order-apex-test',
+          amount: 1.0,
+        });
+
+        expect(fetchSpy).toHaveBeenCalledWith(
+          'https://api.pushinpay.com.br/api/pix/cashIn',
+          expect.objectContaining({
+            body: expect.stringContaining('https://www.webgran.online/api/webhooks/pushinpay/conn-pushin-apex'),
+          })
+        );
+      } finally {
+        process.env.NEXT_PUBLIC_APP_URL = originalEnv;
+      }
+    });
+  });
 });

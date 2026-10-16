@@ -47,9 +47,9 @@ export async function GET(
 
     return NextResponse.json({
       id: order.id,
-      status: order.status,
+      status: orderStatus,
       total: order.total,
-      paidAt: order.paidAt,
+      paidAt: orderStatus === 'paid' ? (order.paidAt || new Date()) : null,
       pixQrCode: order.pixQrCode,
       pixQrCodeBase64: order.pixQrCodeBase64,
       pixExpiresAt: order.pixExpiresAt,

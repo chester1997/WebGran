@@ -210,7 +210,10 @@ export class PushinPayProvider {
 
     // Build dedicated webhook URL for this connection with order_id query parameter
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.webgran.online');
-    const cleanAppUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`;
+    let cleanAppUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`;
+    if (cleanAppUrl.includes('webgran.online') && !cleanAppUrl.includes('www.webgran.online')) {
+      cleanAppUrl = cleanAppUrl.replace('webgran.online', 'www.webgran.online');
+    }
     const webhookUrl = `${cleanAppUrl.replace(/\/+$/, '')}/api/webhooks/pushinpay/${conn.id}?order_id=${params.orderId}`;
 
     const cashInUrl = `${this.getBaseUrl()}/pix/cashIn`;
@@ -429,8 +432,8 @@ export class PushinPayProvider {
       // Ignore unique constraint race
     }
 
-    // 5. Find Order strictly by paymentId (Charge created for that order)
-    const order = await db.query.orders.findFirst({
+    // 5. Find Order strictly by paymentId (Charge created for that order) - Case-Insensitive for UUID safety
+    let order = await db.query.orders.findFirst({
       where: and(
         eq(orders.paymentId, transactionId),
         eq(orders.paymentMethod, 'pushinpay')
@@ -438,18 +441,36 @@ export class PushinPayProvider {
     });
 
     if (!order) {
+      order = await db.query.orders.findFirst({
+        where: and(
+          eq(orders.paymentId, transactionId.toLowerCase()),
+          eq(orders.paymentMethod, 'pushinpay')
+        ),
+      });
+    }
+
+    if (!order) {
+      order = await db.query.orders.findFirst({
+        where: and(
+          eq(orders.paymentId, transactionId.toUpperCase()),
+          eq(orders.paymentMethod, 'pushinpay')
+        ),
+      });
+    }
+
+    if (!order) {
       console.warn(`[PushinPayWebhook] Nenhum pedido encontrado vinculado à transação ${transactionId}`);
       return { success: true };
     }
 
-    // Guard against order_id URL manipulation
-    if (orderIdHint && order.id !== orderIdHint) {
+    // Guard against order_id URL manipulation (case-insensitive)
+    if (orderIdHint && order.id.toLowerCase() !== orderIdHint.toLowerCase()) {
       console.error(`[PushinPayWebhook] Alerta de segurança: parâmetro order_id da URL (${orderIdHint}) diverge do pedido associado à transação (${order.id})`);
       return { success: false, error: 'Parâmetro order_id inconsistente com a transação.' };
     }
 
-    // Assert paymentId explicitly matches transactionId
-    if (!order.paymentId || order.paymentId !== transactionId) {
+    // Assert paymentId explicitly matches transactionId (case-insensitive)
+    if (!order.paymentId || order.paymentId.toLowerCase() !== transactionId.toLowerCase()) {
       console.error(`[PushinPayWebhook] Alerta de segurança: paymentId do pedido (${order.paymentId}) não confere com transactionId (${transactionId})`);
       return { success: false, error: 'Identificador da transação diverge do pedido.' };
     }
@@ -513,8 +534,11 @@ export class PushinPayProvider {
         return { success: false, error: 'Transação não confirmada na API oficial.' };
       }
 
-      // Validate official API returned transaction identifier matches persisted order.paymentId & transactionId
-      if (String(officialTx.id).trim() !== transactionId || String(officialTx.id).trim() !== String(order.paymentId).trim()) {
+      // Validate official API returned transaction identifier matches persisted order.paymentId & transactionId (case-insensitive)
+      if (
+        String(officialTx.id).trim().toLowerCase() !== transactionId.toLowerCase() ||
+        String(officialTx.id).trim().toLowerCase() !== String(order.paymentId).trim().toLowerCase()
+      ) {
         console.error(`[PushinPayWebhook] ID retornado pela API oficial (${officialTx.id}) diverge do pedido (${order.paymentId})`);
         return { success: false, error: 'Identificador retornado pela API oficial não confere com o pedido.' };
       }

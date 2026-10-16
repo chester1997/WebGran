@@ -28,7 +28,7 @@ export async function syncOrderWithMercadoPago(orderId: string) {
       const txData = await pushinPayProvider.getPixPaymentStatus(order.paymentId, pushinConn.token);
       const expectedCents = Math.round(Number(order.total) * 100);
       const isPaid = txData && String(txData.status || '').toLowerCase().trim() === 'paid';
-      const idMatches = txData && String(txData.id).trim() === String(order.paymentId).trim();
+      const idMatches = txData && String(txData.id).trim().toLowerCase() === String(order.paymentId).trim().toLowerCase();
       const valueMatches = txData && (txData.value === undefined || txData.value === null || Number(txData.value) === expectedCents);
 
       if (isPaid && idMatches && valueMatches) {
