@@ -97,7 +97,7 @@ export class TelegramDeliveryService {
     productTitle: string,
     orderId?: string,
     expireDateTimestamp?: number
-  ): Promise<{ inviteLink: string }> {
+  ): Promise<{ inviteLink: string; expireDate?: number | null }> {
     const botService = new TelegramBotService(botToken);
     
     const linkName = orderId ? `WebGran-${orderId.slice(0, 8)}` : `Acesso - ${productTitle.slice(0, 15)}`;
@@ -113,7 +113,10 @@ export class TelegramDeliveryService {
       throw new Error(`Falha ao gerar link de convite único para o grupo ${telegramChatId}.`);
     }
 
-    return { inviteLink: linkObj.invite_link };
+    return { 
+      inviteLink: linkObj.invite_link,
+      expireDate: linkObj.expire_date || expireDateTimestamp || null
+    };
   }
 
   /**

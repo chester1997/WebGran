@@ -113,7 +113,7 @@ export class AccessLifecycleService {
 
     const product = accessRecord.product;
     const customer = accessRecord.customer;
-    const telegramChatId = product?.deliveryValue ? String(product.deliveryValue).trim() : null;
+    const telegramChatId = (product?.deliveryValue ? String(product.deliveryValue).trim() : null) || (accessRecord.telegramChatId ? String(accessRecord.telegramChatId).trim() : null);
 
     if (product?.deliveryType === 'product_video') {
       let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
@@ -193,9 +193,61 @@ export class AccessLifecycleService {
       };
     }
 
-    const bot = store.bots?.[0] || await db.query.telegramBots.findFirst({
-      where: eq(telegramBots.storeId, store.id)
-    });
+    // 1. Resolve Bot strictly isolated by store and product association
+    let bot = null;
+
+    if (product?.botId) {
+      // Regra 1: Se product.botId estiver definido, resolver EXCLUSIVAMENTE esse bot validando id e storeId
+      bot = await db.query.telegramBots.findFirst({
+        where: and(
+          eq(telegramBots.id, product.botId),
+          eq(telegramBots.storeId, store.id)
+        )
+      });
+
+      if (!bot) {
+        return {
+          success: false,
+          status: 'FAILED',
+          destinationType: 'ERROR',
+          destinationUrl: null,
+          expiresAt: accessRecord.expiresAt,
+          error: "Bot vinculado ao produto não foi encontrado ou não pertence a esta loja."
+        };
+      }
+
+      if (bot.status !== 'active') {
+        return {
+          success: false,
+          status: 'FAILED',
+          destinationType: 'ERROR',
+          destinationUrl: null,
+          expiresAt: accessRecord.expiresAt,
+          error: "Bot vinculado ao produto não está ativo nesta loja."
+        };
+      }
+    } else {
+      // Regra 2: Somente se product.botId for nulo, selecionar bot ativo da mesma loja
+      bot = store.bots?.find((b: any) => b.status === 'active') || await db.query.telegramBots.findFirst({
+        where: and(
+          eq(telegramBots.storeId, store.id),
+          eq(telegramBots.status, 'active')
+        )
+      }) || store.bots?.[0] || await db.query.telegramBots.findFirst({
+        where: eq(telegramBots.storeId, store.id)
+      });
+
+      if (!bot) {
+        return {
+          success: false,
+          status: 'FAILED',
+          destinationType: 'ERROR',
+          destinationUrl: null,
+          expiresAt: accessRecord.expiresAt,
+          error: "Nenhum bot do Telegram está configurado para esta loja."
+        };
+      }
+    }
 
     if (!bot || !bot.tokenEncrypted) {
       return {
@@ -204,7 +256,7 @@ export class AccessLifecycleService {
         destinationType: 'ERROR',
         destinationUrl: null,
         expiresAt: accessRecord.expiresAt,
-        error: "Bot da loja não encontrado."
+        error: "Token do bot não configurado."
       };
     }
 
@@ -244,17 +296,26 @@ export class AccessLifecycleService {
       };
     }
 
-    // 3. Buyer is NOT a member: Check if existing invite link is valid
-    const hasValidInvite = accessRecord.inviteLink && 
+    // 3. Buyer is NOT a member: Check if existing invite link is valid and commercial access authorized
+    const hasExplicitlyValidInvite = Boolean(
+      accessRecord.inviteLink && 
       accessRecord.inviteExpiresAt && 
-      accessRecord.inviteExpiresAt.getTime() > now.getTime();
+      accessRecord.inviteExpiresAt.getTime() > now.getTime()
+    );
 
-    if (hasValidInvite && accessRecord.inviteLink) {
+    // Se não houver validade registrada para o convite, preserva o link existente se o acesso comercial estiver autorizado
+    const hasUnexpiredAccessWithoutInviteDate = Boolean(
+      accessRecord.inviteLink &&
+      !accessRecord.inviteExpiresAt &&
+      (isLifetime || (accessRecord.expiresAt && accessRecord.expiresAt.getTime() > now.getTime()))
+    );
+
+    if (hasExplicitlyValidInvite || hasUnexpiredAccessWithoutInviteDate) {
       return {
         success: true,
         status: 'ACTIVE',
         destinationType: 'INVITE',
-        destinationUrl: accessRecord.inviteLink,
+        destinationUrl: accessRecord.inviteLink!,
         expiresAt: accessRecord.expiresAt,
         membershipStatus: memberStatusStr,
         telegramUserId: customer?.telegramUserId || undefined,
@@ -262,24 +323,38 @@ export class AccessLifecycleService {
     }
 
     // 4. Invite is missing or expired, but Access IS VALID (now < Access.expiresAt or LIFETIME): Generate FRESH single-use invite
-    const expireDateTimestamp = accessRecord.expiresAt ? Math.floor(accessRecord.expiresAt.getTime() / 1000) : undefined;
-    
-    const inviteObj = await TelegramDeliveryService.createTelegramInvite(
-      botToken,
-      telegramChatId,
-      product?.title || "Acesso",
-      accessRecord.orderId || undefined,
-      expireDateTimestamp
-    );
+    let freshInviteLink: string;
+    let freshInviteExpiresAt: Date | null = null;
 
-    const freshInviteLink = inviteObj.inviteLink;
-
-    // Default invite expiration: access.expiresAt or 7 days from now if lifetime
-    const inviteExpirationDate = accessRecord.expiresAt || new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    try {
+      const expireDateTimestamp = accessRecord.expiresAt ? Math.floor(accessRecord.expiresAt.getTime() / 1000) : undefined;
+      const inviteObj = await TelegramDeliveryService.createTelegramInvite(
+        botToken,
+        telegramChatId,
+        product?.title || "Acesso",
+        accessRecord.orderId || undefined,
+        expireDateTimestamp
+      );
+      freshInviteLink = inviteObj.inviteLink;
+      if (inviteObj.expireDate) {
+        freshInviteExpiresAt = new Date(inviteObj.expireDate * 1000);
+      }
+    } catch (inviteErr: any) {
+      const errMsg = inviteErr.message || "Erro desconhecido ao gerar convite no Telegram.";
+      console.error(`[AccessLifecycleService] Failed to generate Telegram invite for access ${accessRecord.id}:`, errMsg);
+      return {
+        success: false,
+        status: 'FAILED',
+        destinationType: 'ERROR',
+        destinationUrl: null,
+        expiresAt: accessRecord.expiresAt,
+        error: `Não foi possível gerar o link de acesso ao grupo: ${errMsg}`
+      };
+    }
 
     await db.update(accesses).set({
       inviteLink: freshInviteLink,
-      inviteExpiresAt: inviteExpirationDate,
+      inviteExpiresAt: freshInviteExpiresAt,
       status: 'ACTIVE',
       deliveryStatus: 'DELIVERED',
       deliveryError: null,

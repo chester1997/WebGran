@@ -105,14 +105,14 @@ export class TelegramBotService {
     }
   }
 
-  async createChatInviteLink(chatId: string | number, name?: string, memberLimit: number = 1, expireDate?: number): Promise<{ invite_link: string }> {
+  async createChatInviteLink(chatId: string | number, name?: string, memberLimit: number = 1, expireDate?: number): Promise<{ invite_link: string; expire_date?: number }> {
     const payload: any = {
       chat_id: chatId,
       name: name || 'Acesso WebGran',
       member_limit: memberLimit,
     };
     if (expireDate) payload.expire_date = expireDate;
-    return telegramFetch<{ invite_link: string }>(this.token, 'createChatInviteLink', payload);
+    return telegramFetch<{ invite_link: string; expire_date?: number }>(this.token, 'createChatInviteLink', payload);
   }
 
   async getChat(chatId: string | number): Promise<any> {

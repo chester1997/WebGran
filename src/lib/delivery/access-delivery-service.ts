@@ -215,6 +215,7 @@ export class AccessDeliveryService {
 
       const botToken = bot?.tokenEncrypted ? decrypt(bot.tokenEncrypted) : null;
       let deliveryUrl = accessRecord.inviteLink || '';
+      let inviteExpiresAtDate: Date | null = accessRecord.inviteExpiresAt || null;
       let isAlreadyMember = false;
 
       if (product.deliveryType === 'product_video') {
@@ -259,6 +260,9 @@ export class AccessDeliveryService {
               expireTimestamp
             );
             deliveryUrl = invite.inviteLink;
+            if (invite.expireDate) {
+              inviteExpiresAtDate = new Date(invite.expireDate * 1000);
+            }
           }
         }
       } else {
@@ -313,6 +317,7 @@ export class AccessDeliveryService {
         status: 'ACTIVE',
         deliveryStatus: 'DELIVERED',
         inviteLink: deliveryUrl,
+        inviteExpiresAt: inviteExpiresAtDate || accessRecord.inviteExpiresAt || null,
         deliveryError: null,
         grantedAt: accessRecord.grantedAt || paidAtDate,
         expiresAt: accessExpiresAt,
