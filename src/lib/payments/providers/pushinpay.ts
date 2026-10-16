@@ -96,6 +96,7 @@ export class PushinPayProvider {
 
   /**
    * Tests PushinPay credentials server-side via the official balance endpoint.
+   * Uses GET /api/balance (PushinPay balance route supports GET/HEAD).
    * Does not create real charges or modify balances.
    */
   async testConnection(token: string): Promise<{ success: boolean; message: string; balance?: any }> {
@@ -108,11 +109,10 @@ export class PushinPayProvider {
 
     try {
       const res = await fetch(testUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${cleanToken}`,
           Accept: 'application/json',
-          'Content-Type': 'application/json',
         },
       });
 
@@ -129,14 +129,17 @@ export class PushinPayProvider {
         return { success: false, message: 'Falha de autenticação: Token de API da PushinPay inválido ou não autorizado.' };
       }
 
-      // If /balance returned method not allowed (e.g. mock or alternative route), fallback to checking endpoint health
+      if (res.status === 405) {
+        return { success: false, message: 'Método não permitido na API da PushinPay (HTTP 405). Verifique a rota da API.' };
+      }
+
       return {
         success: false,
         message: `Falha ao validar credenciais da PushinPay (HTTP ${res.status}). Verifique o token informado.`,
       };
     } catch (err: any) {
       console.error('[PushinPayProvider] testConnection error:', err?.message);
-      return { success: false, message: err.message || 'Falha ao conectar com o servidor da PushinPay.' };
+      return { success: false, message: 'Falha ao conectar com o servidor da PushinPay. Verifique sua conexão e tente novamente.' };
     }
   }
 

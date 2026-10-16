@@ -306,7 +306,7 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       expect(fetchSpy).toHaveBeenCalledWith(
         'https://api.pushinpay.com.br/api/balance',
         expect.objectContaining({
-          method: 'POST',
+          method: 'GET',
           headers: expect.objectContaining({
             Authorization: `Bearer ${validToken}`,
           }),
@@ -819,6 +819,87 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       expect(res.success).toBe(false);
       expect(res.error).toContain('Token de autenticação da conexão não disponível');
       expect(deliveryModule.AccessDeliveryService.processOrderDelivery).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('10. Credentials Test Connection & HTTP Status Differentiation', () => {
+    it('validates credentials successfully via GET /api/balance with Bearer token', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balance: 15000 }),
+      } as Response);
+
+      const res = await provider.testConnection('pushin_token_valid');
+
+      expect(res.success).toBe(true);
+      expect(res.message).toContain('autenticada e validada');
+      expect(res.balance).toEqual({ balance: 15000 });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.pushinpay.com.br/api/balance',
+        expect.objectContaining({
+          method: 'GET',
+          headers: {
+            Authorization: 'Bearer pushin_token_valid',
+            Accept: 'application/json',
+          },
+        })
+      );
+    });
+
+    it('handles 401 Unauthorized correctly with descriptive message', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      } as Response);
+
+      const res = await provider.testConnection('invalid_token');
+
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('Token de API da PushinPay inválido ou não autorizado');
+    });
+
+    it('handles 403 Forbidden correctly with descriptive message', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+      } as Response);
+
+      const res = await provider.testConnection('unauthorized_token');
+
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('Token de API da PushinPay inválido ou não autorizado');
+    });
+
+    it('handles 405 Method Not Allowed with route error message', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 405,
+      } as Response);
+
+      const res = await provider.testConnection('token_tested');
+
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('Método não permitido na API da PushinPay (HTTP 405)');
+    });
+
+    it('handles network / connection failures gracefully without leaking token', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+      const res = await provider.testConnection('sensitive_token_123');
+
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('Falha ao conectar com o servidor da PushinPay');
+      expect(res.message).not.toContain('sensitive_token_123');
+    });
+
+    it('validates empty or blank token without making external request', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+      const res = await provider.testConnection('   ');
+
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('O token da API PushinPay é obrigatório');
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
 });
