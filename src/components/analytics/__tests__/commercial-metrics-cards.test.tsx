@@ -46,6 +46,15 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         generatedPixCount: 6,
         pixConversionRatePercent: 67,
       },
+      performanceSeries: [
+        { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+        { dateStr: "2026-10-10", dateLabel: "10/10", dayName: "Sáb", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-11", dateLabel: "11/10", dayName: "Dom", revenue: 500, salesCount: 2, formattedRevenue: "R$ 500,00" },
+        { dateStr: "2026-10-12", dateLabel: "12/10", dayName: "Seg", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-13", dateLabel: "13/10", dayName: "Ter", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+        { dateStr: "2026-10-14", dateLabel: "14/10", dayName: "Qua", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
+      ],
       last7DaysPerformance: [
         { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
         { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
@@ -126,6 +135,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         generatedPixCount: 3,
         pixConversionRatePercent: 100,
       },
+      performanceSeries: [],
       last7DaysPerformance: [
         { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
         { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 250, salesCount: 1, formattedRevenue: "R$ 250,00" },
@@ -142,7 +152,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     expect(elementWithGoal.props.metrics?.approvedSales.targetProgressPercent).toBe(75);
   });
 
-  it("6. Renders the 2-area layout structure with 4 cards and the 7-day performance chart", () => {
+  it("6. Renders the 2-area layout structure with 4 cards and the performance chart", () => {
     const fullMetrics: CommercialMetrics = {
       period: "7D",
       storeId: "store-456",
@@ -179,6 +189,15 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         generatedPixCount: 4,
         pixConversionRatePercent: 100,
       },
+      performanceSeries: [
+        { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 200, salesCount: 1, formattedRevenue: "R$ 200,00" },
+        { dateStr: "2026-10-10", dateLabel: "10/10", dayName: "Sáb", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-11", dateLabel: "11/10", dayName: "Dom", revenue: 300, salesCount: 1, formattedRevenue: "R$ 300,00" },
+        { dateStr: "2026-10-12", dateLabel: "12/10", dayName: "Seg", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-13", dateLabel: "13/10", dayName: "Ter", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
+        { dateStr: "2026-10-14", dateLabel: "14/10", dayName: "Qua", revenue: 500, salesCount: 2, formattedRevenue: "R$ 500,00" },
+      ],
       last7DaysPerformance: [
         { dateStr: "2026-10-08", dateLabel: "08/10", dayName: "Qui", revenue: 0, salesCount: 0, formattedRevenue: "R$ 0,00" },
         { dateStr: "2026-10-09", dateLabel: "09/10", dayName: "Sex", revenue: 200, salesCount: 1, formattedRevenue: "R$ 200,00" },
@@ -195,7 +214,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     expect(fullMetrics.last7DaysPerformance?.length).toBe(7);
   });
 
-  it("7. Handles empty 7-day performance data gracefully", () => {
+  it("7. Handles empty performance data gracefully", () => {
     const emptyMetrics: CommercialMetrics = {
       period: "7D",
       storeId: "store-empty",
@@ -232,6 +251,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
         generatedPixCount: 0,
         pixConversionRatePercent: null,
       },
+      performanceSeries: [],
       last7DaysPerformance: [],
     };
 
@@ -257,6 +277,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
       },
       botStarts: { totalStarts: 10, formatted: "10", isTelemetryAvailable: true, uniqueUsers: 8, statusMessage: "10 inícios" },
       averageTicket: { averageTicket: 55.55, formatted: "R$ 55,55", consideredSalesCount: 18, approvedPixCount: 18, generatedPixCount: 25, pixConversionRatePercent: 72 },
+      performanceSeries: [],
       last7DaysPerformance: [],
     };
 
@@ -284,6 +305,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
       },
       botStarts: { totalStarts: 0, formatted: "0", isTelemetryAvailable: false, uniqueUsers: 0, statusMessage: "Sem eventos" },
       averageTicket: { averageTicket: 0, formatted: "R$ 0,00", consideredSalesCount: 0, approvedPixCount: 0, generatedPixCount: 0, pixConversionRatePercent: null },
+      performanceSeries: [],
       last7DaysPerformance: [],
     };
 
@@ -311,11 +333,34 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
       },
       botStarts: { totalStarts: 0, formatted: "0", isTelemetryAvailable: false, uniqueUsers: 0, statusMessage: "Falha" },
       averageTicket: { averageTicket: 0, formatted: "R$ 0,00", consideredSalesCount: 0, approvedPixCount: 0, generatedPixCount: 0, pixConversionRatePercent: null },
+      performanceSeries: [],
       last7DaysPerformance: [],
     };
 
     const rendered = CommercialMetricsCards({ metrics: errorMetrics, isPending: false });
     expect(rendered).toBeDefined();
     expect(errorMetrics.conversionRate.hasError).toBe(true);
+  });
+
+  it("11. Suporta dinamicamente períodos como 30D, 90D e TODAY", () => {
+    const metrics30D: CommercialMetrics = {
+      period: "30D",
+      storeId: "store-30d",
+      approvedSales: { total: 500, formatted: "R$ 500,00", count: 2, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
+      conversionRate: { ratePercent: null, formatted: "—", isTelemetryAvailable: false, totalVisits: null, convertedOrders: 0, totalPixGerados: 0, totalPixPagos: 0, statusMessage: "" },
+      botStarts: { totalStarts: 0, formatted: "0", isTelemetryAvailable: false, uniqueUsers: 0, statusMessage: "" },
+      averageTicket: { averageTicket: 250, formatted: "R$ 250,00", consideredSalesCount: 2, approvedPixCount: 2, generatedPixCount: 2, pixConversionRatePercent: null },
+      performanceSeries: Array.from({ length: 30 }, (_, i) => ({
+        dateLabel: `${i + 1}/10`,
+        dayName: "Dia",
+        revenue: i === 14 ? 500 : 0,
+        formattedRevenue: "R$ 0,00",
+        salesCount: i === 14 ? 2 : 0,
+      })),
+      last7DaysPerformance: [],
+    };
+
+    const rendered = CommercialMetricsCards({ metrics: metrics30D, isPending: false });
+    expect(rendered).toBeDefined();
   });
 });

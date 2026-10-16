@@ -1,6 +1,17 @@
 import { db } from "@/db";
 import { orders, stores, telegramBots } from "@/db/schema";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, or } from "drizzle-orm";
+import {
+  BUSINESS_TIMEZONE,
+  getSaoPauloParts,
+  getSaoPauloDateKey,
+  getSaoPauloDateLabel,
+  getSaoPauloMonthKey,
+  getSaoPauloMonthLabel,
+  getSaoPauloStartOfDay,
+  getSaoPauloEndOfDay,
+  getSaoPauloWeekdayShort,
+} from "@/lib/analytics/timezone-utils";
 
 export interface CommercialApprovedSales {
   total: number;
@@ -58,6 +69,7 @@ export interface CommercialMetrics {
   conversionRate: CommercialConversionRate;
   botStarts: CommercialBotStarts;
   averageTicket: CommercialAverageTicket;
+  performanceSeries: PerformancePoint[];
   last7DaysPerformance: PerformancePoint[];
 }
 
@@ -73,32 +85,183 @@ export function formatBRLCurrency(val: number): string {
   return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function resolvePeriodDateRange(period: string = "30D", referenceDate: Date = new Date()): { startDate: Date; endDate: Date } {
-  const endDate = new Date(referenceDate);
-  const startDate = new Date(referenceDate);
+export function resolvePeriodDateRange(
+  period: string = "30D",
+  referenceDate: Date = new Date()
+): { startDate: Date; endDate: Date } {
+  const normalizedPeriod = (period || "30D").toUpperCase();
+  const endOfToday = getSaoPauloEndOfDay(referenceDate);
+  const startOfToday = getSaoPauloStartOfDay(referenceDate);
 
-  switch (period) {
+  switch (normalizedPeriod) {
     case "TODAY":
-      startDate.setHours(0, 0, 0, 0);
-      break;
+      return { startDate: startOfToday, endDate: endOfToday };
     case "7D":
-      startDate.setDate(startDate.getDate() - 7);
-      break;
+      // 7 calendar days ending today in America/Sao_Paulo (6 days prior + today)
+      return {
+        startDate: new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000),
+        endDate: endOfToday,
+      };
     case "90D":
-      startDate.setDate(startDate.getDate() - 90);
-      break;
-    case "12M":
-      startDate.setFullYear(startDate.getFullYear() - 1);
-      break;
+      // 90 calendar days ending today (89 days prior + today)
+      return {
+        startDate: new Date(startOfToday.getTime() - 89 * 24 * 60 * 60 * 1000),
+        endDate: endOfToday,
+      };
+    case "12M": {
+      // 12 calendar months: start of 11 months ago in America/Sao_Paulo
+      const { year, month } = getSaoPauloParts(referenceDate);
+      let startYear = year;
+      let startMonth = month - 11;
+      while (startMonth <= 0) {
+        startMonth += 12;
+        startYear -= 1;
+      }
+      const startOf12M = new Date(Date.UTC(startYear, startMonth - 1, 1, 3, 0, 0, 0));
+      return { startDate: startOf12M, endDate: endOfToday };
+    }
     case "ALL":
-      return { startDate: new Date(0), endDate };
+      return { startDate: new Date(0), endDate: endOfToday };
     case "30D":
     default:
-      startDate.setDate(startDate.getDate() - 30);
-      break;
+      // 30 calendar days ending today (29 days prior + today)
+      return {
+        startDate: new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000),
+        endDate: endOfToday,
+      };
+  }
+}
+
+/**
+ * Generates dynamic performance data series grouped by time according to the selected period.
+ * Strictly respects America/Sao_Paulo timezone so orders late in the evening (e.g. 23:06 BRT)
+ * are NEVER shifted to the next day due to UTC offset.
+ */
+export function generatePerformanceSeries(
+  ordersList: Array<{
+    status: string;
+    total: string | number | null;
+    paidAt?: Date | string | null;
+    createdAt: Date | string;
+  }>,
+  period: string = "30D",
+  referenceDate: Date = new Date()
+): PerformancePoint[] {
+  const normalizedPeriod = (period || "30D").toUpperCase();
+  const points: PerformancePoint[] = [];
+
+  // Exclusively consider paid orders for financial performance curves
+  const paidOrders = ordersList.filter((o) => o.status === "paid");
+
+  if (normalizedPeriod === "TODAY") {
+    // Group into 2-hour intervals for today (00:00 to 22:00 BRT)
+    const { year, month, day } = getSaoPauloParts(referenceDate);
+    for (let h = 0; h < 24; h += 2) {
+      const intervalLabel = `${String(h).padStart(2, "0")}:00`;
+      // In America/Sao_Paulo (UTC-3), hour h corresponds to UTC hour (3 + h)
+      const startHourUTC = new Date(Date.UTC(year, month - 1, day, 3 + h, 0, 0, 0));
+      const endHourUTC = new Date(startHourUTC.getTime() + 2 * 60 * 60 * 1000);
+
+      const matchingOrders = paidOrders.filter((o) => {
+        const orderDate = new Date(o.paidAt || o.createdAt);
+        return orderDate >= startHourUTC && orderDate < endHourUTC;
+      });
+
+      const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+      const roundedRev = Math.round(revenue * 100) / 100;
+      points.push({
+        dateStr: intervalLabel,
+        dateKey: intervalLabel,
+        dateLabel: intervalLabel,
+        dayName: "Hoje",
+        fullDate: `Hoje às ${intervalLabel}`,
+        revenue: roundedRev,
+        formattedRevenue: formatBRLCurrency(roundedRev),
+        salesCount: matchingOrders.length,
+      });
+    }
+    return points;
   }
 
-  return { startDate, endDate };
+  if (normalizedPeriod === "12M" || normalizedPeriod === "ALL") {
+    // Group by month (12 months ending in current month in America/Sao_Paulo)
+    const { year, month } = getSaoPauloParts(referenceDate);
+    for (let i = 11; i >= 0; i--) {
+      let targetYear = year;
+      let targetMonth = month - i;
+      while (targetMonth <= 0) {
+        targetMonth += 12;
+        targetYear -= 1;
+      }
+
+      const startOfMonthUTC = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 3, 0, 0, 0));
+      let nextYear = targetYear;
+      let nextMonth = targetMonth + 1;
+      if (nextMonth > 12) {
+        nextMonth = 1;
+        nextYear += 1;
+      }
+      const endOfMonthUTC = new Date(Date.UTC(nextYear, nextMonth - 1, 1, 3, 0, 0, 0));
+
+      const monthKey = `${targetYear}-${String(targetMonth).padStart(2, "0")}`;
+      const rawMonthLabel = getSaoPauloMonthLabel(startOfMonthUTC).replace(".", "");
+      const monthLabel = rawMonthLabel.charAt(0).toUpperCase() + rawMonthLabel.slice(1);
+
+      const matchingOrders = paidOrders.filter((o) => {
+        const orderDate = new Date(o.paidAt || o.createdAt);
+        return orderDate >= startOfMonthUTC && orderDate < endOfMonthUTC;
+      });
+
+      const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+      const roundedRev = Math.round(revenue * 100) / 100;
+
+      points.push({
+        dateStr: monthKey,
+        dateKey: monthKey,
+        dateLabel: monthLabel,
+        dayName: monthLabel,
+        fullDate: `${monthLabel} de ${targetYear}`,
+        revenue: roundedRev,
+        formattedRevenue: formatBRLCurrency(roundedRev),
+        salesCount: matchingOrders.length,
+      });
+    }
+    return points;
+  }
+
+  // Daily grouping for 7D, 30D, 90D
+  const daysCount = normalizedPeriod === "7D" ? 7 : normalizedPeriod === "90D" ? 90 : 30;
+  const startOfToday = getSaoPauloStartOfDay(referenceDate);
+
+  for (let i = daysCount - 1; i >= 0; i--) {
+    const dayStart = new Date(startOfToday.getTime() - i * 24 * 60 * 60 * 1000);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const dateKey = getSaoPauloDateKey(dayStart);
+    const dateLabel = getSaoPauloDateLabel(dayStart);
+    const weekday = getSaoPauloWeekdayShort(dayStart);
+
+    const matchingOrders = paidOrders.filter((o) => {
+      const orderDate = new Date(o.paidAt || o.createdAt);
+      return orderDate >= dayStart && orderDate < dayEnd;
+    });
+
+    const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const roundedRev = Math.round(revenue * 100) / 100;
+
+    points.push({
+      dateStr: dateKey,
+      dateKey,
+      dateLabel,
+      dayName: weekday,
+      fullDate: `${weekday}, ${dateLabel}`,
+      revenue: roundedRev,
+      formattedRevenue: formatBRLCurrency(roundedRev),
+      salesCount: matchingOrders.length,
+    });
+  }
+
+  return points;
 }
 
 export function generateLast7DaysPerformance(
@@ -110,50 +273,9 @@ export function generateLast7DaysPerformance(
   }>,
   referenceDate: Date = new Date()
 ): PerformancePoint[] {
-  const points: PerformancePoint[] = [];
-  const weekdayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-  // Last 7 days: referenceDate - 6 days up to referenceDate
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(referenceDate);
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(d);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const dateKey = d.toISOString().split("T")[0];
-    const weekday = weekdayNames[d.getDay()];
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const dateLabel = `${day}/${month}`;
-    const dayMonth = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-
-    // Filter paid orders on this calendar day
-    const dayOrders = ordersList.filter((o) => {
-      if (o.status !== "paid") return false;
-      const orderDate = new Date(o.paidAt || o.createdAt);
-      return orderDate >= d && orderDate <= endOfDay;
-    });
-
-    const dayRevenue = dayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-    const daySalesCount = dayOrders.length;
-    const roundedRevenue = Math.round(dayRevenue * 100) / 100;
-
-    points.push({
-      dateStr: dateKey,
-      dateKey,
-      dateLabel,
-      dayName: weekday,
-      fullDate: `${weekday}, ${dateLabel}`,
-      revenue: roundedRevenue,
-      formattedRevenue: formatBRLCurrency(roundedRevenue),
-      salesCount: daySalesCount,
-    });
-  }
-
-  return points;
+  return generatePerformanceSeries(ordersList, "7D", referenceDate);
 }
+
 
 export class CommercialMetricsService {
   /**
@@ -178,8 +300,10 @@ export class CommercialMetricsService {
     conversionRate: CommercialConversionRate;
     botStarts: CommercialBotStarts;
     averageTicket: CommercialAverageTicket;
+    performanceSeries: PerformancePoint[];
     last7DaysPerformance: PerformancePoint[];
   } {
+
     const { 
       period = "30D", 
       referenceDate = new Date(), 
@@ -363,7 +487,8 @@ export class CommercialMetricsService {
       pixConversionRatePercent,
     };
 
-    // 6. Metric: Last 7 Days Daily Performance
+    // 6. Metric: Dynamic Performance Series for Period + Backward Compatibility 7D
+    const performanceSeries = generatePerformanceSeries(ordersList, period, referenceDate);
     const last7DaysPerformance = generateLast7DaysPerformance(ordersList, referenceDate);
 
     return {
@@ -371,6 +496,7 @@ export class CommercialMetricsService {
       conversionRate,
       botStarts,
       averageTicket,
+      performanceSeries,
       last7DaysPerformance,
     };
   }
@@ -385,15 +511,21 @@ export class CommercialMetricsService {
     options: CommercialMetricsCalculationOptions = {}
   ): Promise<CommercialMetrics> {
     const { startDate, endDate } = resolvePeriodDateRange(period, options.referenceDate);
+    const normalizedPeriod = (period || "30D").toUpperCase();
 
     try {
       // Fetch orders belonging strictly to the requested store
+      // Respect both createdAt and paidAt to ensure payments completed across midnight/period boundaries are captured
       const storeOrders = await db.query.orders.findMany({
-        where: and(
-          eq(orders.storeId, storeId),
-          gte(orders.createdAt, startDate),
-          lte(orders.createdAt, endDate)
-        ),
+        where: normalizedPeriod === "ALL"
+          ? eq(orders.storeId, storeId)
+          : and(
+              eq(orders.storeId, storeId),
+              or(
+                and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate)),
+                and(gte(orders.paidAt, startDate), lte(orders.paidAt, endDate))
+              )
+            ),
         columns: {
           id: true,
           storeId: true,
@@ -479,6 +611,7 @@ export class CommercialMetricsService {
           generatedPixCount: 0,
           pixConversionRatePercent: null,
         },
+        performanceSeries: [],
         last7DaysPerformance: [],
       };
     }

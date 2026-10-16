@@ -162,10 +162,54 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
   const conversionRate = metrics?.conversionRate;
   const botStarts = metrics?.botStarts;
   const averageTicket = metrics?.averageTicket;
-  const last7Days = metrics?.last7DaysPerformance || [];
 
-  const total7DRevenue = last7Days.reduce((sum, p) => sum + (p.revenue || 0), 0);
-  const has7DSales = total7DRevenue > 0 || last7Days.some((p) => (p.salesCount || 0) > 0);
+  const period = (metrics?.period || "30D").toUpperCase();
+  const performanceSeries = metrics?.performanceSeries || metrics?.last7DaysPerformance || [];
+
+  const totalPeriodRevenue = performanceSeries.reduce((sum, p) => sum + (p.revenue || 0), 0);
+  const hasSeriesSales = totalPeriodRevenue > 0 || performanceSeries.some((p) => (p.salesCount || 0) > 0);
+
+  const periodConfigMap: Record<string, { subtitle: string; badge: string; footer: string; emptyText: string }> = {
+    TODAY: {
+      subtitle: "Hoje",
+      badge: "Total Hoje",
+      footer: "Hoje (por horário)",
+      emptyText: "Sem vendas hoje",
+    },
+    "7D": {
+      subtitle: "Últimos 7 dias",
+      badge: "Total 7D",
+      footer: "7 dias corridos",
+      emptyText: "Sem vendas nos últimos 7 dias",
+    },
+    "30D": {
+      subtitle: "Últimos 30 dias",
+      badge: "Total 30D",
+      footer: "30 dias corridos",
+      emptyText: "Sem vendas nos últimos 30 dias",
+    },
+    "90D": {
+      subtitle: "Últimos 90 dias",
+      badge: "Total 90D",
+      footer: "90 dias corridos",
+      emptyText: "Sem vendas nos últimos 90 dias",
+    },
+    "12M": {
+      subtitle: "Últimos 12 meses",
+      badge: "Total 12M",
+      footer: "12 meses",
+      emptyText: "Sem vendas nos últimos 12 meses",
+    },
+    ALL: {
+      subtitle: "Todo o histórico",
+      badge: "Total Geral",
+      footer: "Todo o histórico",
+      emptyText: "Sem vendas registradas no histórico",
+    },
+  };
+
+  const periodConfig = periodConfigMap[period] || periodConfigMap["30D"];
+
 
   return (
     <div className="w-full max-w-full space-y-3">
@@ -452,7 +496,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
         </div>
 
         {/* =========================================================================
-            COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (Últimos 7 Dias)
+            COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (Dinâmico por Período)
            ========================================================================= */}
         <div className="lg:col-span-5 flex flex-col h-full">
           <div 
@@ -469,16 +513,16 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-tight">Seu Desempenho</h3>
-                  <p className="text-xs text-zinc-400">Últimos 7 dias</p>
+                  <p className="text-xs text-zinc-400">{periodConfig.subtitle}</p>
                 </div>
               </div>
 
               <div className="text-right">
                 <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider">
-                  Total 7D
+                  {periodConfig.badge}
                 </span>
                 <span className="text-xs sm:text-sm font-bold text-rose-400 font-mono wg-tabular">
-                  R$ {total7DRevenue.toFixed(2).replace(".", ",")}
+                  R$ {totalPeriodRevenue.toFixed(2).replace(".", ",")}
                 </span>
               </div>
             </div>
@@ -489,21 +533,21 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <div className="h-full w-full bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
                   Carregando desempenho...
                 </div>
-              ) : !has7DSales ? (
+              ) : !hasSeriesSales ? (
                 <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#141418]/40 rounded-xl border border-white/[0.04] space-y-1.5 my-auto">
                   <div className="w-8 h-8 rounded-lg bg-zinc-800/60 border border-white/10 flex items-center justify-center text-zinc-500">
                     <BarChart3 className="w-4 h-4 opacity-50" />
                   </div>
-                  <p className="text-zinc-300 text-xs font-semibold">Sem vendas nos últimos 7 dias</p>
+                  <p className="text-zinc-300 text-xs font-semibold">{periodConfig.emptyText}</p>
                   <p className="text-zinc-500 text-[11px] max-w-xs leading-relaxed">
-                    Quando novos pedidos forem aprovados, a curva de receita diária aparecerá aqui.
+                    Quando novos pedidos forem aprovados, a curva de receita aparecerá aqui.
                   </p>
                 </div>
               ) : (
                 <div className="w-full h-48 sm:h-52">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={last7Days}
+                      data={performanceSeries}
                       margin={{ top: 10, right: 10, left: -22, bottom: 0 }}
                     >
                       <defs>
@@ -556,10 +600,10 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             <div className="pt-2.5 mt-auto border-t border-white/[0.04] flex items-center justify-between text-[11px] text-zinc-500">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                Receita diária confirmada
+                Receita confirmada
               </span>
               <span className="font-mono text-zinc-400">
-                7 dias corridos
+                {periodConfig.footer}
               </span>
             </div>
 

@@ -12,6 +12,13 @@ import {
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
 import { CommercialMetricsService, CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
+import {
+  getSaoPauloDateKey,
+  getSaoPauloDateLabel,
+  getSaoPauloStartOfDay,
+  getSaoPauloParts,
+} from "@/lib/analytics/timezone-utils";
+
 
 export interface KpiMetric {
   value: number;
@@ -311,21 +318,21 @@ export class AnalyticsService {
         }
       });
     } else {
-      // Group by Day (7D, 30D, 90D)
+      // Group by Day (7D, 30D, 90D) in America/Sao_Paulo timezone
       const days = period === "7D" ? 7 : period === "90D" ? 90 : 30;
       const step = period === "90D" ? 3 : 1; // Group every 3 days for 90D to keep SVG chart clean
+      const startOfToday = getSaoPauloStartOfDay(now);
       
       for (let i = days - 1; i >= 0; i -= step) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const dateKey = d.toISOString().split("T")[0];
-        const dateLabel = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+        const d = new Date(startOfToday.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateKey = getSaoPauloDateKey(d);
+        const dateLabel = getSaoPauloDateLabel(d);
         chartMap.set(dateKey, { fullDate: dateLabel, revenue: 0, salesCount: 0 });
       }
 
       currentPaidOrders.forEach(o => {
         const d = new Date(o.paidAt || o.createdAt);
-        const dateKey = d.toISOString().split("T")[0];
+        const dateKey = getSaoPauloDateKey(d);
         // Find closest date key if stepped
         let targetKey = dateKey;
         if (!chartMap.has(targetKey)) {
