@@ -115,6 +115,13 @@ export class TelegramBotService {
     return telegramFetch<{ invite_link: string; expire_date?: number }>(this.token, 'createChatInviteLink', payload);
   }
 
+  async revokeChatInviteLink(chatId: string | number, inviteLink: string): Promise<any> {
+    return telegramFetch<any>(this.token, 'revokeChatInviteLink', {
+      chat_id: chatId,
+      invite_link: inviteLink,
+    });
+  }
+
   async getChat(chatId: string | number): Promise<any> {
     return telegramFetch<any>(this.token, 'getChat', {
       chat_id: chatId,

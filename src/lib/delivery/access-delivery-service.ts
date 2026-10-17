@@ -36,6 +36,12 @@ export class AccessDeliveryService {
       return [];
     }
 
+    // Strict server-side security gate: Never deliver access without verified paymentMethod and paymentId
+    if (!order.paymentMethod || !order.paymentId) {
+      console.error(`[AccessDeliveryService] BLOCKED unauthorized delivery attempt for order ${orderId}: order is missing paymentMethod or paymentId.`);
+      return [];
+    }
+
     const store = await db.query.stores.findFirst({
       where: eq(stores.id, order.storeId)
     });

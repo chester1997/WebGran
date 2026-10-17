@@ -300,15 +300,16 @@ export async function createCheckoutSession(
       };
     }
 
-    // Fallback mode if seller hasn't connected any gateway yet (Simulator / Demo Mode)
+    // REGRA DE SEGURANÇA: Se nenhum gateway estiver ativo ou disponível, o pedido NUNCA pode ser aprovado automaticamente!
+    // NENHUM produto pode ser liberado antes da confirmação legítima do gateway.
     await db.update(orders)
-      .set({ status: 'paid' })
+      .set({ status: 'failed' })
       .where(eq(orders.id, newOrder.id));
 
-    const { AccessDeliveryService } = await import('@/lib/delivery/access-delivery-service');
-    await AccessDeliveryService.processOrderDelivery(newOrder.id);
-
-    return { success: true, orderId: newOrder.id, isDemoPaid: true };
+    return {
+      success: false,
+      error: "Esta loja não possui nenhum meio de pagamento ativo configurado no momento. Entre em contato com o suporte da loja."
+    };
   } catch (error: any) {
     console.error("Checkout error:", error);
     return { success: false, error: error.message || "Erro interno ao processar pedido" };

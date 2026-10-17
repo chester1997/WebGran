@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { accesses, products, stores, telegramBots, telegramCustomers, productVideoAssignments, productVideos } from "@/db/schema";
+import { accesses, products, stores, telegramBots, telegramCustomers, productVideoAssignments, productVideos, orders } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramDeliveryService } from "@/lib/delivery/telegram-delivery-service";
@@ -81,6 +81,24 @@ export class AccessLifecycleService {
           destinationUrl: null,
           expiresAt: accessRecord.expiresAt,
           error: "Acesso não autorizado para este usuário."
+        };
+      }
+    }
+
+    // Strict server-side verification: if this access was created from an order, verify the order is legitimately paid
+    if (accessRecord.orderId) {
+      const order = await db.query.orders.findFirst({
+        where: eq(orders.id, accessRecord.orderId),
+      });
+
+      if (!order || order.status !== 'paid' || !order.paymentMethod || !order.paymentId) {
+        return {
+          success: false,
+          status: 'FAILED',
+          destinationType: 'ERROR',
+          destinationUrl: null,
+          expiresAt: accessRecord.expiresAt,
+          error: "Acesso bloqueado: o pagamento deste pedido não foi aprovado pelo gateway de pagamento.",
         };
       }
     }

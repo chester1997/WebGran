@@ -40,9 +40,16 @@ export async function GET(
         accessList = syncRes.accesses || [];
       }
     } else {
-      accessList = await db.query.accesses.findMany({
-        where: eq(accesses.orderId, order.id),
-      });
+      // Server-side strict security check: a paid order MUST have paymentMethod and paymentId verified
+      const isLegitPaid = Boolean(order.paymentMethod) && Boolean(order.paymentId);
+      if (!isLegitPaid) {
+        orderStatus = 'failed';
+        accessList = [];
+      } else {
+        accessList = await db.query.accesses.findMany({
+          where: eq(accesses.orderId, order.id),
+        });
+      }
     }
 
     return NextResponse.json({

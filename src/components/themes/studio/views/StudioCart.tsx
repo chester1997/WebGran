@@ -109,22 +109,16 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         appliedCoupon?.code
       );
 
-      if (result.success) {
+      if (result.success && result.pix) {
         clearCart();
-        if (result.pix) {
-          setPixState({
-            orderId: result.orderId,
-            qrCode: result.pix.qrCode,
-            qrCodeBase64: result.pix.qrCodeBase64,
-            expiresAt: result.pix.expiresAt,
-            amount: checkoutAmount,
-          });
-          setIsPixModalOpen(true);
-        } else if (result.isDemoPaid) {
-          setIsPaid(true);
-        } else {
-          router.push(`/miniapp/${storeSlug}/accesses`);
-        }
+        setPixState({
+          orderId: result.orderId,
+          qrCode: result.pix.qrCode,
+          qrCodeBase64: result.pix.qrCodeBase64,
+          expiresAt: result.pix.expiresAt,
+          amount: checkoutAmount,
+        });
+        setIsPixModalOpen(true);
       } else {
         setErrorMessage(result.error || "Não foi possível gerar o pagamento no momento.");
       }

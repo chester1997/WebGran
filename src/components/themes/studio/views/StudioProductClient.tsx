@@ -224,22 +224,15 @@ export function StudioProductClient({
         [{ id: product.id, quantity: 1 }]
       );
 
-      if (result.success) {
-        if (result.pix) {
-          setPixState({
-            orderId: result.orderId,
-            qrCode: result.pix.qrCode,
-            qrCodeBase64: result.pix.qrCodeBase64,
-            expiresAt: result.pix.expiresAt,
-            amount: Number(product.price),
-          });
-          setIsPixModalOpen(true);
-        } else if (result.isDemoPaid) {
-          setClientHasAccess(true);
-          setIsPaid(true);
-        } else {
-          router.push(`/miniapp/${storeSlug}/accesses`);
-        }
+      if (result.success && result.pix) {
+        setPixState({
+          orderId: result.orderId,
+          qrCode: result.pix.qrCode,
+          qrCodeBase64: result.pix.qrCodeBase64,
+          expiresAt: result.pix.expiresAt,
+          amount: Number(product.price),
+        });
+        setIsPixModalOpen(true);
       } else {
         setErrorMessage(result.error || "Não foi possível gerar o pagamento no momento.");
       }

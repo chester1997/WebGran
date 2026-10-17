@@ -54,7 +54,7 @@ export class AccessService {
   }
 
   static async getCustomerAccesses(storeId: string, customerId: string) {
-    return db.query.accesses.findMany({
+    const list = await db.query.accesses.findMany({
       where: and(
         eq(accesses.storeId, storeId),
         eq(accesses.customerId, customerId),
@@ -65,6 +65,14 @@ export class AccessService {
         order: true,
       },
       orderBy: (accesses, { desc }) => [desc(accesses.createdAt)]
+    });
+
+    // Ensure only accesses from confirmed paid orders (or direct admin grants) are visible to the buyer
+    return list.filter((acc) => {
+      if (!acc.orderId) return true;
+      const order = acc.order;
+      if (!order) return false;
+      return order.status === 'paid' && Boolean(order.paymentMethod) && Boolean(order.paymentId);
     });
   }
 }
