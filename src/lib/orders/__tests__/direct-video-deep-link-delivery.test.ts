@@ -89,6 +89,8 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
       storeId: "store-1",
       customerId: "cust-1",
       status: "paid",
+      paymentMethod: "pushinpay",
+      paymentId: "tx-sc1",
       customer: { id: "cust-1", telegramUserId: "111" },
       items: [{ productId: "prod-sc1" }],
     };
@@ -269,6 +271,8 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
       storeId: "store-1",
       customerId: "cust-1",
       status: "paid",
+      paymentMethod: "pushinpay",
+      paymentId: "tx-dup",
       customer: { id: "cust-1", telegramUserId: "111" },
       items: [{ productId: "prod-1" }],
     });
@@ -355,6 +359,8 @@ describe("Direct Video Deep Link Delivery & Authorization Suite (All 10 Scenario
       storeId: "store-1",
       customerId: "cust-1",
       status: "paid",
+      paymentMethod: "pushinpay",
+      paymentId: "tx-deep-1",
       customer: { id: "cust-1", telegramUserId: "111" },
       items: [{ productId: "prod-deep-1" }],
     };

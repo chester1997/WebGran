@@ -392,10 +392,10 @@ describe("CommercialMetricsService Suite", () => {
         },
       ];
 
-      const metrics7D = CommercialMetricsService.calculateMetrics(orders, { period: "7D" });
+      const metrics7D = CommercialMetricsService.calculateMetrics(orders, { period: "7D", referenceDate: baseDate });
       expect(metrics7D.approvedSales.total).toBe(100.00);
 
-      const metrics30D = CommercialMetricsService.calculateMetrics(orders, { period: "30D" });
+      const metrics30D = CommercialMetricsService.calculateMetrics(orders, { period: "30D", referenceDate: baseDate });
       expect(metrics30D.approvedSales.total).toBe(600.00);
     });
 

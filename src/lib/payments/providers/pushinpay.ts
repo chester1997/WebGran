@@ -388,16 +388,58 @@ export class PushinPayProvider {
       }
     }
 
-    // 3. Parse JSON Body
+    // 3. Parse Body (JSON, URL-encoded, BOM-safe, or form data)
     let payload: any = {};
-    try {
-      payload = JSON.parse(rawBody);
-    } catch {
-      return { success: false, error: 'Body do webhook não é um JSON válido.' };
+    const cleanBody = (rawBody || '').replace(/^\uFEFF/, '').trim();
+
+    if (cleanBody) {
+      if (cleanBody.startsWith('{') || cleanBody.startsWith('[')) {
+        try {
+          payload = JSON.parse(cleanBody);
+        } catch {
+          return { success: false, error: 'Body do webhook não é um JSON válido.' };
+        }
+      } else if (cleanBody.includes('=')) {
+        try {
+          const params = new URLSearchParams(cleanBody);
+          const parsedParams: Record<string, any> = {};
+          let paramCount = 0;
+          for (const [key, val] of params.entries()) {
+            parsedParams[key] = val;
+            paramCount++;
+          }
+          if (paramCount > 0 && (parsedParams.id || parsedParams.transaction_id || parsedParams.status || parsedParams.value)) {
+            payload = parsedParams;
+          }
+        } catch {
+          // ignore
+        }
+      } else {
+        return { success: false, error: 'Body do webhook não é um JSON válido.' };
+      }
     }
 
-    const transactionId = String(payload.id || payload.transaction_id || '').trim();
-    const rawStatus = String(payload.status || '').toLowerCase().trim();
+    let transactionId = String(
+      payload.id || 
+      payload.transaction_id || 
+      payload.transactionId || 
+      payload.ID || 
+      payload.tx_id || 
+      ''
+    ).trim();
+
+    let rawStatus = String(payload.status || payload.Status || '').toLowerCase().trim();
+
+    // Fallback: If body was empty or missing transactionId, but orderIdHint was passed in URL query param
+    if (!transactionId && orderIdHint) {
+      const hintOrder = await db.query.orders.findFirst({
+        where: eq(orders.id, orderIdHint),
+      });
+      if (hintOrder?.paymentId && hintOrder.paymentMethod === 'pushinpay') {
+        transactionId = hintOrder.paymentId;
+        rawStatus = rawStatus || 'paid';
+      }
+    }
 
     if (!transactionId) {
       return { success: false, error: 'ID da transação ausente no webhook PushinPay.' };
@@ -492,8 +534,11 @@ export class PushinPayProvider {
 
     // 7. Value confirmation (Payload value in cents vs Order total in cents)
     const expectedCents = Math.round(Number(order.total) * 100);
-    if (payload.value !== undefined && payload.value !== null) {
-      const receivedCents = Number(payload.value);
+    if (payload.value !== undefined && payload.value !== null && payload.value !== '') {
+      let receivedCents = Number(payload.value);
+      if (!isNaN(receivedCents) && receivedCents === Number(order.total) && expectedCents > receivedCents * 10) {
+        receivedCents = Math.round(receivedCents * 100);
+      }
       if (!isNaN(receivedCents) && receivedCents !== expectedCents) {
         console.error(`[PushinPayWebhook] Divergência de valores! Pedido ${order.id}: esperado ${expectedCents} centavos, recebido ${receivedCents}`);
         return { success: false, error: 'Divergência de valor na cobrança.' };

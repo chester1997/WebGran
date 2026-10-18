@@ -300,9 +300,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               </div>
 
               <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Novos clientes</span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span>Novos clientes</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 pl-4">({data.activity.customersToday ?? 0} hoje)</span>
                 </div>
                 <span className="font-bold text-sm text-white wg-tabular">{data.activity.newCustomersPeriod}</span>
               </div>

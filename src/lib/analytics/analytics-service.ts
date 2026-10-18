@@ -74,6 +74,7 @@ export interface HourlySalesPoint {
 export interface ActivityStats {
   salesToday: number;
   newCustomersPeriod: number;
+  customersToday: number;
   activeAccesses: number;
   pendingPayments: number;
   pendingDeliveries: number;
@@ -220,7 +221,7 @@ export class AnalyticsService {
       }),
       db.query.accesses.findMany({
         where: eq(accesses.storeId, storeId),
-        columns: { id: true, status: true, deliveryStatus: true }
+        columns: { id: true, status: true, deliveryStatus: true, orderId: true }
       }),
       db.query.products.findMany({
         where: eq(products.storeId, storeId),
@@ -513,19 +514,49 @@ export class AnalyticsService {
       hourlyMap[h].revenue += Number(o.total || 0);
     });
 
-    // 6. Activity & Health Indicators
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    // 6. Activity & Health Indicators (Fuso Oficial America/Sao_Paulo)
+    const spStartOfToday = getSaoPauloStartOfDay(now);
+    const spEndOfToday = new Date(spStartOfToday.getTime() + 24 * 60 * 60 * 1000);
 
-    const salesToday = paidOrders.filter(o => new Date(o.paidAt || o.createdAt) >= startOfToday).length;
+    // Vendas hoje: pedidos estritamente confirmados como 'paid' dentro do dia oficial de Brasília
+    const salesToday = paidOrders.filter(o => {
+      if (o.status !== 'paid') return false;
+      const d = new Date(o.paidAt || o.createdAt);
+      return d >= spStartOfToday && d < spEndOfToday;
+    }).length;
 
-    const activeAccesses = allStoreAccesses.filter(a => a.status === 'ACTIVE').length;
+    // Clientes cadastrados hoje no fuso oficial
+    const customersToday = allCustomers.filter(c => {
+      const d = new Date(c.createdAt);
+      return d >= spStartOfToday && d < spEndOfToday;
+    }).length;
+
+    // Acessos liberados: apenas acessos ACTIVE vinculados a pedidos legítimos com pagamento confirmado
+    const paidOrderIdsSet = new Set(paidOrders.map(o => o.id));
+    const activeAccesses = allStoreAccesses.filter(a => {
+      if (a.status !== 'ACTIVE') return false;
+      // Se possui orderId associado, o pedido precisa obrigatoriamente estar pago
+      if (a.orderId && !paidOrderIdsSet.has(a.orderId)) return false;
+      return true;
+    }).length;
+
     const pendingDeliveries = allStoreAccesses.filter(a => a.deliveryStatus === 'PENDING' || a.deliveryStatus === 'FAILED').length;
-    const pendingPayments = pendingOrders.length;
+
+    // Pix pendentes: apenas pedidos que estejam REALMENTE aguardando pagamento (não expirados)
+    const pendingPayments = pendingOrders.filter(o => {
+      if (o.status !== 'pending') return false;
+      if (o.pixExpiresAt) {
+        return new Date(o.pixExpiresAt) > now;
+      }
+      // Se não possui expiração explícita, considerar pendente apenas se criado há menos de 1 hora
+      const ageMs = now.getTime() - new Date(o.createdAt).getTime();
+      return ageMs < 60 * 60 * 1000;
+    }).length;
 
     const activity: ActivityStats = {
       salesToday,
       newCustomersPeriod: currCustCount,
+      customersToday,
       activeAccesses,
       pendingPayments,
       pendingDeliveries

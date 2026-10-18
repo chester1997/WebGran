@@ -62,6 +62,8 @@ describe("Product Video as Delivery Type Architecture Suite", () => {
       storeId: "store-1",
       customerId: "cust-1",
       status: "paid",
+      paymentMethod: "pushinpay",
+      paymentId: "tx-mock-1",
       customer: { telegramUserId: "12345" },
       items: [
         {
@@ -97,6 +99,8 @@ describe("Product Video as Delivery Type Architecture Suite", () => {
       storeId: "store-1",
       customerId: "cust-1",
       status: "paid",
+      paymentMethod: "pushinpay",
+      paymentId: "tx-mock-2",
       customer: { telegramUserId: "12345" },
       items: [
         {
@@ -132,6 +136,8 @@ describe("Product Video as Delivery Type Architecture Suite", () => {
       storeId: "store-1",
       customerId: "cust-1",
       status: "paid",
+      paymentMethod: "pushinpay",
+      paymentId: "tx-mock-3",
       customer: { telegramUserId: "12345" },
       items: [
         {
