@@ -120,6 +120,59 @@ export class TelegramDeliveryService {
   }
 
   /**
+   * Sanitizes and validates a support contact URL for Telegram inline button.
+   * Only allows valid HTTPS links (https://t.me/..., https://wa.me/..., https://...)
+   * or normalizes Telegram @usernames / usernames to https://t.me/...
+   * Rejects http:, javascript:, data:, and malformed inputs.
+   */
+  static sanitizeSupportUrl(url?: string | null): string | null {
+    if (!url) return null;
+    const trimmed = String(url).trim();
+    if (!trimmed) return null;
+
+    // Reject dangerous protocols
+    const lower = trimmed.toLowerCase();
+    if (
+      lower.startsWith("javascript:") ||
+      lower.startsWith("data:") ||
+      lower.startsWith("vbscript:") ||
+      lower.startsWith("file:")
+    ) {
+      return null;
+    }
+
+    // Support Telegram username or t.me shortcuts
+    if (
+      trimmed.startsWith("@") ||
+      trimmed.startsWith("t.me/") ||
+      (!trimmed.includes("://") && /^[a-zA-Z0-9_]{5,32}$/.test(trimmed))
+    ) {
+      const clean = trimmed
+        .replace(/^https?:\/\/t\.me\//i, "")
+        .replace(/^t\.me\//i, "")
+        .replace(/^@+/, "")
+        .replace(/\/+$/, "")
+        .trim();
+      if (/^[a-zA-Z0-9_]{5,32}$/.test(clean)) {
+        return `https://t.me/${clean}`;
+      }
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== "https:") {
+        return null;
+      }
+      if (!parsed.hostname || parsed.hostname.length < 3) {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Sends the automated payment confirmation message directly to the buyer's private bot chat using telegramUserId.
    */
   static async sendPaymentConfirmationMessage(
@@ -129,7 +182,8 @@ export class TelegramDeliveryService {
     inviteLink: string,
     isAlreadyMember: boolean = false,
     deliveryFailed: boolean = false,
-    storeSlug?: string
+    storeSlug?: string,
+    supportContactUrl?: string | null
   ): Promise<boolean> {
     const botService = new TelegramBotService(botToken);
     
@@ -169,6 +223,14 @@ export class TelegramDeliveryService {
       ]);
     }
 
+    // Botão adicional 🆘 SUPORTE (se configurado pelo lojista e seguro)
+    const validSupportUrl = this.sanitizeSupportUrl(supportContactUrl);
+    if (validSupportUrl) {
+      inlineKeyboard.push([
+        { text: "🆘 SUPORTE", url: validSupportUrl }
+      ]);
+    }
+
     await botService.sendMessage(telegramUserId, msgText, { inline_keyboard: inlineKeyboard }, "Markdown");
     return true;
   }
@@ -181,7 +243,8 @@ export class TelegramDeliveryService {
     telegramUserId: string,
     productTitle: string,
     deliveryUrl: string,
-    storeSlug?: string
+    storeSlug?: string,
+    supportContactUrl?: string | null
   ): Promise<boolean> {
     return this.sendPaymentConfirmationMessage(
       botToken,
@@ -190,7 +253,9 @@ export class TelegramDeliveryService {
       deliveryUrl,
       false,
       false,
-      storeSlug
+      storeSlug,
+      supportContactUrl
     );
   }
 }
+

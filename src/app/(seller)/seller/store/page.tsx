@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BotSettingsModal } from "./BotSettingsModal";
 import { BotCard } from "./BotCard";
 import { TelegramNotificationForm } from "./TelegramNotificationForm";
+import { SupportContactForm } from "./SupportContactForm";
 
 import SetupStoreClient from "../SetupStoreClient";
 
@@ -54,6 +55,9 @@ export default async function SellerStorePage() {
 
         {/* Notificações de Venda */}
         <TelegramNotificationForm initialTelegramId={store.telegramNotificationId || ""} />
+
+        {/* Contato de Suporte ao Cliente */}
+        <SupportContactForm initialSupportContactUrl={store.supportValue || ""} />
 
         {/* Instructions */}
         <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl">

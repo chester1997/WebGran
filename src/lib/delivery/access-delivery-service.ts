@@ -301,15 +301,46 @@ export class AccessDeliveryService {
             redirectUrl = accessRecord?.id ? `${appUrl}/api/telegram/access/redirect?accessId=${accessRecord.id}${storeSlug ? `&storeSlug=${storeSlug}` : ''}` : deliveryUrl;
           }
 
-          await TelegramDeliveryService.sendPaymentConfirmationMessage(
-            botToken,
-            customer.telegramUserId,
-            product.title,
-            redirectUrl,
-            isAlreadyMember,
-            false,
-            storeSlug
-          );
+          // Resolve store support contact URL strictly on server side (multi-tenant isolated)
+          let supportContactUrl: string | null = null;
+          const targetStoreId = accessRecord.storeId || product?.storeId;
+          if (targetStoreId) {
+            try {
+              const storeRecord = await db.query.stores.findFirst({
+                where: eq(stores.id, targetStoreId),
+                columns: { supportValue: true }
+              });
+              if (storeRecord?.supportValue) {
+                supportContactUrl = storeRecord.supportValue;
+              }
+            } catch {
+              // Non-blocking fallback
+            }
+          }
+
+          if (supportContactUrl) {
+            await TelegramDeliveryService.sendPaymentConfirmationMessage(
+              botToken,
+              customer.telegramUserId,
+              product.title,
+              redirectUrl,
+              isAlreadyMember,
+              false,
+              storeSlug,
+              supportContactUrl
+            );
+          } else {
+            await TelegramDeliveryService.sendPaymentConfirmationMessage(
+              botToken,
+              customer.telegramUserId,
+              product.title,
+              redirectUrl,
+              isAlreadyMember,
+              false,
+              storeSlug
+            );
+          }
+
           confirmationSent = true;
         } catch (msgErr: any) {
           console.error(`[AccessDeliveryService] Erro ao enviar mensagem no bot para ${customer.telegramUserId}:`, msgErr.message);
@@ -363,20 +394,52 @@ export class AccessDeliveryService {
       if (!confirmationSent && customer && customer.telegramUserId && bot) {
         try {
           const botToken = decrypt(bot.tokenEncrypted);
-          await TelegramDeliveryService.sendPaymentConfirmationMessage(
-            botToken,
-            customer.telegramUserId,
-            product.title,
-            "",
-            false,
-            true,
-            storeSlug
-          );
+
+          let supportContactUrl: string | null = null;
+          const targetStoreId = accessRecord.storeId || product?.storeId;
+          if (targetStoreId) {
+            try {
+              const storeRecord = await db.query.stores.findFirst({
+                where: eq(stores.id, targetStoreId),
+                columns: { supportValue: true }
+              });
+              if (storeRecord?.supportValue) {
+                supportContactUrl = storeRecord.supportValue;
+              }
+            } catch {
+              // Non-blocking fallback
+            }
+          }
+
+          if (supportContactUrl) {
+            await TelegramDeliveryService.sendPaymentConfirmationMessage(
+              botToken,
+              customer.telegramUserId,
+              product.title,
+              "",
+              false,
+              true,
+              storeSlug,
+              supportContactUrl
+            );
+          } else {
+            await TelegramDeliveryService.sendPaymentConfirmationMessage(
+              botToken,
+              customer.telegramUserId,
+              product.title,
+              "",
+              false,
+              true,
+              storeSlug
+            );
+          }
+
           confirmationSent = true;
         } catch {
           // Non-blocking fallback
         }
       }
+
 
       const now = new Date();
 

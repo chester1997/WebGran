@@ -201,3 +201,85 @@ export async function saveTelegramNotificationIdAction(telegramNotificationId: s
   revalidatePath("/seller/store");
   return { success: true, telegramNotificationId: cleanId };
 }
+
+export async function saveSupportContactAction(supportContactUrl: string) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  const cleanInput = (supportContactUrl || "").trim();
+
+  // Se vazio, remove o contato de suporte da loja
+  if (!cleanInput) {
+    await db
+      .update(stores)
+      .set({ supportValue: null, updatedAt: new Date() })
+      .where(and(eq(stores.id, store.id), eq(stores.ownerId, seller.id)));
+
+    revalidatePath("/seller/store");
+    return { success: true, supportContactUrl: null };
+  }
+
+  // Verificação de protocolos proibidos
+  const lower = cleanInput.toLowerCase();
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:") ||
+    lower.startsWith("file:")
+  ) {
+    throw new Error("Protocolo de link não permitido por motivos de segurança.");
+  }
+
+  let resolvedUrl: string | null = null;
+  let supportType: string = "telegram";
+
+  // Se for username do Telegram (@usuario ou usuario) ou link t.me
+  if (
+    cleanInput.startsWith("@") ||
+    cleanInput.includes("t.me/") ||
+    (!cleanInput.includes("://") && /^[a-zA-Z0-9_]{5,32}$/.test(cleanInput))
+  ) {
+    const cleanUsername = cleanInput
+      .replace(/^https?:\/\/t\.me\//i, "")
+      .replace(/^t\.me\//i, "")
+      .replace(/^@+/, "")
+      .replace(/\/+$/, "")
+      .trim();
+
+    if (!/^[a-zA-Z0-9_]{5,32}$/.test(cleanUsername)) {
+      throw new Error("Username do Telegram inválido. Deve conter entre 5 e 32 caracteres (apenas letras, números e _).");
+    }
+
+    resolvedUrl = `https://t.me/${cleanUsername}`;
+    supportType = "telegram";
+  } else {
+    // Link externo ou WhatsApp
+    let parsed: URL;
+    try {
+      parsed = new URL(cleanInput);
+    } catch {
+      throw new Error("URL inválida. Informe um link completo iniciando com https:// (ex: https://t.me/seu_contato).");
+    }
+
+    if (parsed.protocol !== "https:") {
+      throw new Error("Por motivos de segurança, o link de suporte deve obrigatoriamente utilizar protocolo HTTPS (https://...).");
+    }
+
+    if (!parsed.hostname || parsed.hostname.length < 3) {
+      throw new Error("URL inválida (domínio incompleto).");
+    }
+
+    resolvedUrl = parsed.toString();
+    supportType = parsed.hostname.includes("wa.me") || parsed.hostname.includes("whatsapp.com") ? "whatsapp" : "link";
+  }
+
+  await db
+    .update(stores)
+    .set({ supportValue: resolvedUrl, supportType, updatedAt: new Date() })
+    .where(and(eq(stores.id, store.id), eq(stores.ownerId, seller.id)));
+
+  revalidatePath("/seller/store");
+  return { success: true, supportContactUrl: resolvedUrl };
+}
+
