@@ -13,6 +13,7 @@ export const PRODUCT_BADGE_OPTIONS: BadgeOption[] = [
   { value: "br", label: "BR", colorName: "Verde e Amarelo", colorHex: "#10B981" },
   { value: "em_alta", label: "Em alta", colorName: "Amarelo", colorHex: "#FBBF24" },
   { value: "lancamento", label: "Lançamento", colorName: "Roxo", colorHex: "#9333EA" },
+  { value: "1_temporada", label: "1 Temporada", colorName: "Azul Celeste", colorHex: "#0284C7" },
 ];
 
 export interface BadgeConfig {
@@ -69,6 +70,15 @@ export function getProductBadge(badgeValue?: string | null): BadgeConfig | null 
         label: "Lançamento",
         className: "bg-purple-600 text-white font-extrabold text-[8px] px-1.25 py-[1px] rounded-[2px] shadow-sm border border-purple-400/30 tracking-wider uppercase leading-none",
         sellerBadgeClass: "bg-purple-500/20 text-purple-400 border-purple-500/30"
+      };
+    case "1_temporada":
+    case "1temporada":
+    case "temporada_1":
+      return {
+        value: "1_temporada",
+        label: "1 Temporada",
+        className: "bg-sky-600 text-white font-extrabold text-[8px] px-1.25 py-[1px] rounded-[2px] shadow-sm border border-sky-400/30 tracking-wider uppercase leading-none",
+        sellerBadgeClass: "bg-sky-500/20 text-sky-400 border-sky-500/30"
       };
     default:
       return null;

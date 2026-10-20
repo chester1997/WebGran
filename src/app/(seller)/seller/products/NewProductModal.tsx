@@ -468,6 +468,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                   <option value="br">🇧🇷 BR (Verde e Amarelo)</option>
                   <option value="em_alta">🟡 Em alta (Amarelo)</option>
                   <option value="lancamento">🟣 Lançamento (Roxo)</option>
+                  <option value="1_temporada">1 Temporada</option>
                 </select>
               </div>
             </div>

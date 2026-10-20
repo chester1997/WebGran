@@ -131,7 +131,7 @@ export const products = pgTable('products', {
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
   compareAtPrice: decimal('compare_at_price', { precision: 10, scale: 2 }),
   duration: text('duration').default('lifetime'), // 'daily', 'weekly', 'monthly', 'quarterly', 'semiannual', 'annual', 'lifetime'
-  badge: text('badge'), // 'novo' | 'dublado' | 'legendado' | 'em_alta' | 'lancamento' | null
+  badge: text('badge'), // 'novo' | 'dublado' | 'legendado' | 'br' | 'em_alta' | 'lancamento' | '1_temporada' | null
   status: text('status').notNull().default('active'), // 'active' | 'draft' | 'archived'
   position: integer('position').notNull().default(0),
   deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
