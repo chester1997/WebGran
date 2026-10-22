@@ -32,6 +32,16 @@ export async function ensurePaymentTables() {
       );
     `;
 
+    // 3. Ensure split audit columns exist on orders table
+    await sql`
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS split_status TEXT DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS split_amount_cents INTEGER DEFAULT 50,
+      ADD COLUMN IF NOT EXISTS split_confirmed_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS split_error TEXT,
+      ADD COLUMN IF NOT EXISTS split_details JSONB;
+    `;
+
     ensured = true;
   } catch (err) {
     console.error('[ensurePaymentTables] Error ensuring payment columns/tables:', err);

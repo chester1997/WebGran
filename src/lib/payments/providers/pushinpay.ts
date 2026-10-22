@@ -217,10 +217,35 @@ export class PushinPayProvider {
     const webhookUrl = `${cleanAppUrl.replace(/\/+$/, '')}/api/webhooks/pushinpay/${conn.id}?order_id=${params.orderId}`;
 
     const cashInUrl = `${this.getBaseUrl()}/pix/cashIn`;
-    const payload = {
+    const payload: any = {
       value: amountInCents,
       webhook_url: webhookUrl,
     };
+
+    // Split configuration: R$ 0,50 (50 centavos) fixed commission
+    const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() || 
+                              process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
+    let splitStatus: 'REQUESTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
+    let splitError: string | null = null;
+
+    if (amountInCents <= 50) {
+      // Order amount is too low to split 50 cents leaving merchant balance
+      splitStatus = 'SKIPPED';
+      splitError = 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
+    } else if (platformAccountId) {
+      // Platform account configured: attach official split_rules
+      payload.split_rules = [
+        {
+          value: 50,
+          account_id: platformAccountId,
+        }
+      ];
+      splitStatus = 'REQUESTED';
+    } else {
+      // Platform account not configured: do NOT send invalid split rule to prevent gateway rejection
+      splitStatus = 'FAILED';
+      splitError = 'CONTA_PLATAFORMA_NAO_CONFIGURADA';
+    }
 
     let res: Response;
     try {
@@ -242,6 +267,20 @@ export class PushinPayProvider {
       const errorText = await res.text().catch(() => '');
       console.error(`[PushinPayProvider] Pix CashIn error HTTP ${res.status}:`, errorText);
 
+      // Record split failure if order exists
+      try {
+        await db.update(orders)
+          .set({
+            splitStatus: 'FAILED',
+            splitAmountCents: 50,
+            splitError: `PUSHINPAY_API_ERROR_HTTP_${res.status}: ${errorText.slice(0, 255)}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(orders.id, params.orderId));
+      } catch {
+        // Non-blocking error persistence
+      }
+
       if (res.status === 401 || res.status === 403) {
         throw new Error('Falha de autenticação na PushinPay. Verifique o token no painel de recebimentos.');
       }
@@ -262,14 +301,18 @@ export class PushinPayProvider {
     const qrCodeBase64 = data.qr_code_base64 || '';
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
-    // Persist PushinPay charge in database
+    // Persist PushinPay charge and split audit state in database
     await db.update(orders)
       .set({
         paymentId,
         paymentMethod: 'pushinpay',
         pixQrCode: pixCode,
         pixQrCodeBase64: qrCodeBase64,
-        pixExpiresAt: expiresAt,
+        platformFee: '0.00', // Only recognized as revenue upon payment confirmation
+        splitStatus,
+        splitAmountCents: 50,
+        splitError,
+        splitDetails: data.split_rules ? data.split_rules : (payload.split_rules || null),
         updatedAt: new Date(),
       })
       .where(eq(orders.id, params.orderId));
@@ -602,11 +645,53 @@ export class PushinPayProvider {
         }
       }
 
+      // Split Confirmation Logic
+      // Check if order was SKIPPED, FAILED, or REQUESTED
+      let resolvedSplitStatus: 'CONFIRMED' | 'REQUESTED' | 'FAILED' | 'SKIPPED' = (order.splitStatus as any) || 'REQUESTED';
+      let splitConfirmedAt: Date | null = null;
+      let platformFeeStr = '0.00';
+      let netAmountStr = order.total;
+
+      if (order.splitStatus === 'SKIPPED') {
+        resolvedSplitStatus = 'SKIPPED';
+        platformFeeStr = '0.00';
+        netAmountStr = order.total;
+      } else if (order.splitStatus === 'FAILED') {
+        resolvedSplitStatus = 'FAILED';
+        platformFeeStr = '0.00';
+        netAmountStr = order.total;
+      } else {
+        // Order had split requested: verify official split evidence in officialTx
+        const hasSplitEvidence = Boolean(
+          (officialTx.split_rules && Array.isArray(officialTx.split_rules) && officialTx.split_rules.length > 0) ||
+          (officialTx.splits && Array.isArray(officialTx.splits) && officialTx.splits.length > 0) ||
+          (officialTx.split_status === 'processed' || officialTx.split_status === 'confirmed')
+        );
+
+        if (hasSplitEvidence) {
+          resolvedSplitStatus = 'CONFIRMED';
+          splitConfirmedAt = new Date();
+          platformFeeStr = '0.50';
+          netAmountStr = Math.max(0, Number(order.total) - 0.50).toFixed(2);
+        } else {
+          // If official API response does not contain definitive split breakdown,
+          // keep as REQUESTED (pending reconciliation) rather than assuming confirmation without proof
+          resolvedSplitStatus = 'REQUESTED';
+          platformFeeStr = '0.00'; // Do NOT book as recognized revenue until confirmed
+          netAmountStr = order.total;
+        }
+      }
+
       const updatedRows = await db.update(orders)
         .set({
           status: 'paid',
           paymentMethod: 'pushinpay',
           paymentId: transactionId,
+          platformFee: platformFeeStr,
+          netAmount: netAmountStr,
+          splitStatus: resolvedSplitStatus,
+          splitConfirmedAt,
+          splitDetails: officialTx.split_rules || officialTx.splits || null,
           paidAt: new Date(),
           updatedAt: new Date(),
         })
@@ -617,15 +702,23 @@ export class PushinPayProvider {
         .returning();
 
       if (updatedRows.length > 0) {
-        console.log(`[PushinPayWebhook] Pedido ${order.id} confirmado via PushinPay! Processando entrega...`);
+        console.log(`[PushinPayWebhook] Pedido ${order.id} confirmado via PushinPay! Split: ${resolvedSplitStatus}. Processando entrega...`);
         await AccessDeliveryService.processOrderDelivery(order.id);
       }
 
       return { success: true };
     } else if (isCanceled) {
+      let resolvedCancelSplit = order.splitStatus;
+      if (order.splitStatus === 'REQUESTED') {
+        resolvedCancelSplit = 'FAILED';
+      }
+
       await db.update(orders)
         .set({
           status: 'cancelled',
+          splitStatus: resolvedCancelSplit,
+          splitError: 'TRANSACAO_CANCELADA_OU_EXPIRADA',
+          platformFee: '0.00',
           updatedAt: new Date(),
         })
         .where(and(

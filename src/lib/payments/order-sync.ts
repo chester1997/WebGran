@@ -32,9 +32,41 @@ export async function syncOrderWithMercadoPago(orderId: string) {
       const valueMatches = txData && (txData.value === undefined || txData.value === null || Number(txData.value) === expectedCents);
 
       if (isPaid && idMatches && valueMatches) {
+        let resolvedSplitStatus: 'CONFIRMED' | 'REQUESTED' | 'FAILED' | 'SKIPPED' = (order.splitStatus as any) || 'REQUESTED';
+        let splitConfirmedAt: Date | null = null;
+        let platformFeeStr = '0.00';
+        let netAmountStr = order.total;
+
+        if (order.splitStatus === 'SKIPPED' || order.splitStatus === 'FAILED') {
+          resolvedSplitStatus = order.splitStatus as any;
+          platformFeeStr = '0.00';
+          netAmountStr = order.total;
+        } else {
+          const hasSplitEvidence = Boolean(
+            (txData.split_rules && Array.isArray(txData.split_rules) && txData.split_rules.length > 0) ||
+            (txData.splits && Array.isArray(txData.splits) && txData.splits.length > 0) ||
+            (txData.split_status === 'processed' || txData.split_status === 'confirmed')
+          );
+          if (hasSplitEvidence) {
+            resolvedSplitStatus = 'CONFIRMED';
+            splitConfirmedAt = new Date();
+            platformFeeStr = '0.50';
+            netAmountStr = Math.max(0, Number(order.total) - 0.50).toFixed(2);
+          } else {
+            resolvedSplitStatus = 'REQUESTED';
+            platformFeeStr = '0.00';
+            netAmountStr = order.total;
+          }
+        }
+
         const updatedRows = await db.update(orders)
           .set({
             status: 'paid',
+            platformFee: platformFeeStr,
+            netAmount: netAmountStr,
+            splitStatus: resolvedSplitStatus,
+            splitConfirmedAt,
+            splitDetails: txData.split_rules || txData.splits || null,
             paidAt: new Date(),
             updatedAt: new Date(),
           })
@@ -167,8 +199,34 @@ export async function syncOrderWithMercadoPago(orderId: string) {
 
   if (approvedPayment) {
     const totalNum = Number(order.total);
-    const platformFeeNum = Number(approvedPayment.marketplace_fee || (totalNum * 0.1));
-    const netAmountNum = totalNum - platformFeeNum;
+    let platformFeeNum = 0;
+    let splitStatus: 'CONFIRMED' | 'REQUESTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
+    let splitConfirmedAt: Date | null = null;
+
+    if (totalNum < 0.50 || order.splitStatus === 'SKIPPED') {
+      splitStatus = 'SKIPPED';
+      platformFeeNum = 0;
+    } else {
+      // Check official fee evidence in approvedPayment (charges_details, fee_details or marketplace_fee)
+      const officialMpFee = Number(approvedPayment.marketplace_fee || 0);
+      const hasFeeEvidence = officialMpFee > 0 || (
+        approvedPayment.charges_details && 
+        Array.isArray(approvedPayment.charges_details) &&
+        approvedPayment.charges_details.some((c: any) => c.type === 'marketplace_fee' || c.type === 'application_fee')
+      );
+
+      if (hasFeeEvidence || officialMpFee >= 0.50) {
+        platformFeeNum = 0.50;
+        splitStatus = 'CONFIRMED';
+        splitConfirmedAt = new Date();
+      } else {
+        // If marketplace_fee evidence is not yet confirmed by API, keep as REQUESTED without premature revenue recognition
+        platformFeeNum = 0;
+        splitStatus = 'REQUESTED';
+      }
+    }
+
+    const netAmountNum = Math.max(0, totalNum - platformFeeNum);
 
     await db.update(orders)
       .set({
@@ -177,6 +235,9 @@ export async function syncOrderWithMercadoPago(orderId: string) {
         paymentMethod: approvedPayment.payment_method_id || approvedPayment.payment_type_id || 'pix',
         platformFee: platformFeeNum.toFixed(2),
         netAmount: netAmountNum.toFixed(2),
+        splitStatus,
+        splitConfirmedAt,
+        splitDetails: approvedPayment.charges_details || approvedPayment.fee_details || null,
         paidAt: new Date(),
         updatedAt: new Date(),
       })

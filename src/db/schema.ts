@@ -187,6 +187,11 @@ export const orders = pgTable('orders', {
   sellerNotificationClaimedAt: timestamp('seller_notification_claimed_at'),
   sellerNotificationClaimToken: text('seller_notification_claim_token'),
   sessionId: text('session_id'),
+  splitStatus: text('split_status').notNull().default('PENDING'), // 'PENDING' | 'REQUESTED' | 'CONFIRMED' | 'FAILED' | 'SKIPPED'
+  splitAmountCents: integer('split_amount_cents').notNull().default(50),
+  splitConfirmedAt: timestamp('split_confirmed_at'),
+  splitError: text('split_error'),
+  splitDetails: jsonb('split_details'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({

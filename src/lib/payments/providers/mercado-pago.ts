@@ -211,11 +211,21 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
   }
 
   /**
+   * Fixed platform commission in BRL (50 centavos)
+   */
+  public static readonly PLATFORM_FIXED_FEE_BRL = 0.50;
+  public static readonly PLATFORM_FIXED_FEE_CENTS = 50;
+
+  /**
    * Calculate platform fee (WebGran split)
+   * Fixed R$ 0.50 per transaction. If order amount < 0.50, split is skipped
+   * to avoid gateway rejection, while keeping audit trail.
    */
   calculatePlatformFee(amount: number): number {
-    const percentage = Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE || 10);
-    return Number(((amount * percentage) / 100).toFixed(2));
+    if (typeof amount !== 'number' || isNaN(amount) || amount < MercadoPagoProvider.PLATFORM_FIXED_FEE_BRL) {
+      return 0;
+    }
+    return MercadoPagoProvider.PLATFORM_FIXED_FEE_BRL;
   }
 
   /**
@@ -229,7 +239,7 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
-    const prefPayload = {
+    const prefPayload: any = {
       items: params.items.map(i => ({
         id: i.id,
         title: i.title,
@@ -248,9 +258,12 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
       },
       auto_return: 'approved',
       external_reference: params.metadata?.orderId,
-      marketplace_fee: platformFee,
       notification_url: `${appUrl}/api/webhooks/mercadopago`,
     };
+
+    if (platformFee > 0) {
+      prefPayload.marketplace_fee = platformFee;
+    }
 
     const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
@@ -290,13 +303,12 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
     const platformFee = this.calculatePlatformFee(params.amount);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
-    const orderPayload = {
+    const orderPayload: any = {
       type: "online",
       total_amount: params.amount.toFixed(2),
       external_reference: params.orderId,
       processing_mode: "automatic",
       description: params.description || `Pedido #${params.orderId.slice(0, 8)}`,
-      marketplace_fee: platformFee.toFixed(2),
       payer: {
         email: params.customer?.email || 'cliente@webgran.app',
         first_name: params.customer?.name?.split(' ')[0] || params.customer?.firstName || 'Cliente',
@@ -315,6 +327,10 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
       }
     };
 
+    if (platformFee > 0) {
+      orderPayload.marketplace_fee = platformFee.toFixed(2);
+    }
+
     const idempotencyKey = `order_pix_${params.orderId}`;
 
     const res = await fetch('https://api.mercadopago.com/v1/orders', {
@@ -331,6 +347,20 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
 
     if (!res.ok) {
       console.error('[MP Orders API createPixPayment error]', data);
+      // Register split failure if order exists
+      try {
+        await db.update(orders)
+          .set({
+            splitStatus: 'FAILED',
+            splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
+            splitError: `MP_ORDER_ERROR: ${data.message || JSON.stringify(data)}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(orders.id, params.orderId));
+      } catch {
+        // Non-blocking error persistence
+      }
+
       throw new Error(`Mercado Pago Orders API PIX creation failed: ${data.message || JSON.stringify(data)}`);
     }
 
@@ -343,6 +373,23 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
 
     if (!qrCode) {
       console.warn('[MP Orders API] missing qr_code in response:', data);
+    }
+
+    // Persist split requested state on order without booking premature revenue before approval
+    const splitStatus = platformFee > 0 ? 'REQUESTED' : 'SKIPPED';
+    const splitError = platformFee > 0 ? null : 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
+    try {
+      await db.update(orders)
+        .set({
+          platformFee: '0.00', // Only recognized as revenue upon payment confirmation
+          splitStatus,
+          splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
+          splitError,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, params.orderId));
+    } catch {
+      // Non-blocking persistence
     }
 
     return {
