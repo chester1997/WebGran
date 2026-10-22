@@ -33,7 +33,7 @@ vi.mock("@/db", () => ({
   },
 }));
 
-vi.mock("@/lib/telegram/delivery", () => ({
+vi.mock("@/lib/delivery/telegram-delivery-service", () => ({
   TelegramDeliveryService: {
     validateBotAndChatPermission: vi.fn().mockResolvedValue({ success: true }),
     checkBuyerMembership: vi.fn().mockResolvedValue(false),

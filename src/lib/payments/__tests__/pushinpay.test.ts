@@ -3,8 +3,8 @@ import { PushinPayProvider } from '../providers/pushinpay';
 import { encrypt } from '@/lib/encryption';
 
 // Mock DB
-vi.mock('@/db', () => ({
-  db: {
+const { dbMock } = vi.hoisted(() => {
+  const mock: any = {
     query: {
       sellerPaymentConnections: {
         findFirst: vi.fn(),
@@ -19,6 +19,9 @@ vi.mock('@/db', () => ({
       paymentWebhookEvents: {
         findFirst: vi.fn(),
       },
+      platformCommissionSettings: {
+        findFirst: vi.fn().mockResolvedValue({ feeCents: 50, updatedAt: new Date() }),
+      },
     },
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue([{ id: 'event-1' }]),
@@ -30,7 +33,13 @@ vi.mock('@/db', () => ({
         }),
       }),
     }),
-  },
+  };
+  mock.transaction = vi.fn(async (cb: any) => cb(mock));
+  return { dbMock: mock };
+});
+
+vi.mock('@/db', () => ({
+  db: dbMock,
 }));
 
 // Mock Delivery Service

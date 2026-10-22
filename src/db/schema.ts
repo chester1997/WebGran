@@ -187,8 +187,8 @@ export const orders = pgTable('orders', {
   sellerNotificationClaimedAt: timestamp('seller_notification_claimed_at'),
   sellerNotificationClaimToken: text('seller_notification_claim_token'),
   sessionId: text('session_id'),
-  splitStatus: text('split_status').notNull().default('PENDING'), // 'PENDING' | 'REQUESTED' | 'CONFIRMED' | 'FAILED' | 'SKIPPED'
-  splitAmountCents: integer('split_amount_cents').notNull().default(50),
+  splitStatus: text('split_status').default('PENDING'), // 'PENDING' | 'REQUESTED' | 'GATEWAY_ACCEPTED' | 'PROCESSED' | 'SETTLED' | 'FAILED' | 'SKIPPED' | 'CONFIRMED'
+  splitAmountCents: integer('split_amount_cents').default(50),
   splitConfirmedAt: timestamp('split_confirmed_at'),
   splitError: text('split_error'),
   splitDetails: jsonb('split_details'),
@@ -988,7 +988,6 @@ export const paymentWebhookEvents = pgTable('payment_webhook_events', {
   payload: jsonb('payload'),
 }, (t) => ({
   providerEventUnique: unique().on(t.provider, t.eventId),
-  providerEventIdx: index('payment_webhook_events_idx').on(t.provider, t.eventId),
 }));
 
 export const botStartEvents = pgTable('bot_start_events', {
@@ -1080,8 +1079,20 @@ export const platformCommissionAuditLogs = pgTable('platform_commission_audit_lo
   commissionAuditCreatedIdx: index('commission_audit_created_idx').on(t.createdAt),
 }));
 
-
-
-
-
-
+export const platformSplitAuditLogs = pgTable('platform_split_audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'restrict' }),
+  previousStatus: text('previous_status'),
+  newStatus: text('new_status').notNull(), // 'REQUESTED' | 'GATEWAY_ACCEPTED' | 'PROCESSED' | 'SETTLED' | 'FAILED' | 'SKIPPED'
+  action: text('action').notNull(), // 'PROCESSED_BY_GATEWAY' | 'MANUAL_RECONCILIATION' | 'GATEWAY_ACCEPTED' | 'FAILED' | 'DIVERGENCE_FLAGGED'
+  splitAmountCents: integer('split_amount_cents').notNull(),
+  platformAccountId: text('platform_account_id'),
+  evidenceDetails: jsonb('evidence_details'),
+  reconciledById: uuid('reconciled_by_id').references(() => users.id, { onDelete: 'set null' }),
+  reconciledByName: text('reconciled_by_name'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  splitAuditOrderIdx: index('split_audit_order_idx').on(t.orderId),
+  splitAuditCreatedIdx: index('split_audit_created_idx').on(t.createdAt),
+}));

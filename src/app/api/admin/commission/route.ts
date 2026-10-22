@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { PlatformCommissionService } from '@/lib/commission/platform-commission-service';
+import { PlatformCommissionService, PlatformCommissionUnavailableError } from '@/lib/commission/platform-commission-service';
 import { z } from 'zod';
 
 const updateCommissionSchema = z.object({
@@ -26,6 +26,9 @@ export async function GET() {
       },
     });
   } catch (err: any) {
+    if (err instanceof PlatformCommissionUnavailableError || err?.name === 'PlatformCommissionUnavailableError') {
+      return NextResponse.json({ success: false, error: 'Configuração da comissão da plataforma temporariamente indisponível no banco de dados.' }, { status: 503 });
+    }
     const status = err.message?.includes('Admin') ? 403 : 500;
     return NextResponse.json({ success: false, error: err.message || 'Erro ao carregar comissão da plataforma.' }, { status });
   }
@@ -66,6 +69,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (err: any) {
+    if (err instanceof PlatformCommissionUnavailableError || err?.name === 'PlatformCommissionUnavailableError') {
+      return NextResponse.json({ success: false, error: 'Banco de dados indisponível para atualização da comissão.' }, { status: 503 });
+    }
     const status = err.message?.includes('Admin') ? 403 : 500;
     return NextResponse.json({ success: false, error: err.message || 'Erro ao atualizar comissão da plataforma.' }, { status });
   }

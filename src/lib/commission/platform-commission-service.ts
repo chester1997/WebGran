@@ -24,27 +24,84 @@ export interface CommissionAuditLogItem {
   createdAt: Date;
 }
 
+export class PlatformCommissionUnavailableError extends Error {
+  constructor(message = 'Configuração da comissão da plataforma temporariamente indisponível no banco de dados.') {
+    super(message);
+    this.name = 'PlatformCommissionUnavailableError';
+  }
+}
+
 export class PlatformCommissionService {
   public static readonly DEFAULT_FEE_CENTS = 50;
+  public static readonly CACHE_TTL_MS = 60 * 1000; // 60 segundos de TTL normal
+  public static readonly MAX_STALE_TTL_MS = 15 * 60 * 1000; // Tolerância máxima de 15 minutos em falha do Neon
+
+  // Cache em memória da configuração administrativa (Single Source of Truth)
+  private static cachedConfig: CommissionSettingsResponse | null = null;
+  private static cacheExpiresAt: number = 0; // instante de expiração do TTL normal de 60s
+  private static lastSuccessfulValidationAt: number = 0; // instante da última validação bem-sucedida no Neon
+
+  /**
+   * Helper para limpar o cache em memória durante testes unitários automatizados.
+   */
+  static _resetCacheForTesting(): void {
+    this.cachedConfig = null;
+    this.cacheExpiresAt = 0;
+    this.lastSuccessfulValidationAt = 0;
+  }
+
+  /**
+   * Helper para inspecionar metadados de cache em testes e diagnósticos.
+   */
+  static _getCacheMetadataForTesting(): {
+    hasCachedConfig: boolean;
+    cacheExpiresAt: number;
+    lastSuccessfulValidationAt: number;
+  } {
+    return {
+      hasCachedConfig: this.cachedConfig !== null,
+      cacheExpiresAt: this.cacheExpiresAt,
+      lastSuccessfulValidationAt: this.lastSuccessfulValidationAt,
+    };
+  }
+
+  /**
+   * Helper para configurar estado de cache e timestamps para testes unitários de tempo/expiração.
+   */
+  static _setCacheForTesting(
+    config: CommissionSettingsResponse | null,
+    cacheExpiresAt: number,
+    lastSuccessfulValidationAt: number
+  ): void {
+    this.cachedConfig = config;
+    this.cacheExpiresAt = cacheExpiresAt;
+    this.lastSuccessfulValidationAt = lastSuccessfulValidationAt;
+  }
 
   /**
    * Retrieves the current platform commission setting safely.
-   * Falls back to DEFAULT_FEE_CENTS (50 cents / R$ 0,50) if table or database is unavailable.
+   * Uses an in-memory cache with 60-second normal TTL.
+   * If Neon is temporarily unreachable but a valid configuration was previously loaded,
+   * allows using the cached administrative configuration for at most 15 minutes from last successful validation.
+   * If 15 minutes elapse without successful validation, invalidates cache and throws PlatformCommissionUnavailableError.
+   * If Neon fails and no cached configuration exists, throws PlatformCommissionUnavailableError.
+   * NEVER silently falls back to 50 cents when that could diverge from administrative configuration.
    */
   static async getCurrentCommission(): Promise<CommissionSettingsResponse> {
+    const now = Date.now();
+
+    // 1. Retorna cache fresco se ainda dentro do TTL normal de 60 segundos
+    if (this.cachedConfig && now < this.cacheExpiresAt) {
+      return this.cachedConfig;
+    }
+
     try {
       await ensureCommissionSettings();
 
       if (!db?.query?.platformCommissionSettings?.findFirst) {
-        const defaultReais = PlatformCommissionService.DEFAULT_FEE_CENTS / 100;
-        return {
-          feeCents: PlatformCommissionService.DEFAULT_FEE_CENTS,
-          feeReais: defaultReais,
-          formattedFee: `R$ ${defaultReais.toFixed(2).replace('.', ',')}`,
-          updatedAt: new Date(),
-          updatedByName: 'PADRÃO_SISTEMA',
-          updatedByEmail: null,
-        };
+        throw new PlatformCommissionUnavailableError(
+          'Tabela de configuração de comissão não inicializada ou indisponível.'
+        );
       }
 
       const setting = await db.query.platformCommissionSettings.findFirst({
@@ -53,8 +110,14 @@ export class PlatformCommissionService {
 
       if (setting && typeof setting.feeCents === 'number' && !isNaN(setting.feeCents)) {
         const feeCents = Math.round(setting.feeCents);
+
+        // Validação rigorosa dos limites administrativos
+        if (!Number.isInteger(feeCents) || feeCents < 0 || feeCents > 100000) {
+          throw new Error(`Valor de comissão inválido ou fora dos limites permitidos: ${setting.feeCents}`);
+        }
+
         const feeReais = feeCents / 100;
-        return {
+        const config: CommissionSettingsResponse = {
           feeCents,
           feeReais,
           formattedFee: `R$ ${feeReais.toFixed(2).replace('.', ',')}`,
@@ -62,20 +125,56 @@ export class PlatformCommissionService {
           updatedByName: setting.updatedByName || null,
           updatedByEmail: setting.updatedByEmail || null,
         };
-      }
-    } catch (err) {
-      console.warn('[PlatformCommissionService] Error fetching commission settings, using default:', err);
-    }
 
-    const defaultReais = PlatformCommissionService.DEFAULT_FEE_CENTS / 100;
-    return {
-      feeCents: PlatformCommissionService.DEFAULT_FEE_CENTS,
-      feeReais: defaultReais,
-      formattedFee: `R$ ${defaultReais.toFixed(2).replace('.', ',')}`,
-      updatedAt: new Date(),
-      updatedByName: 'PADRÃO_SISTEMA',
-      updatedByEmail: null,
-    };
+        // Consulta bem-sucedida ao Neon:
+        // Atualiza cache em memória com TTL de 60s e registra o instante da validação bem-sucedida
+        this.cachedConfig = config;
+        this.cacheExpiresAt = now + this.CACHE_TTL_MS;
+        this.lastSuccessfulValidationAt = now;
+        return config;
+      }
+
+      // Se a tabela existe mas ainda não possui linhas
+      throw new PlatformCommissionUnavailableError(
+        'Nenhum registro de configuração de comissão encontrado no banco de dados.'
+      );
+    } catch (err: any) {
+      console.error('[PlatformCommissionService] Erro ao consultar comissão no Neon:', err?.message || err);
+
+      // 2. Se houver falha no Neon e existir cache previamente confirmado:
+      // Permitir o uso da última configuração confirmada por, no máximo, 15 minutos contados
+      // a partir da ÚLTIMA consulta bem-sucedida ao banco.
+      // IMPORTANTE: NÃO reiniciar a janela de 15 minutos quando o cache for lido ou utilizado!
+      if (this.cachedConfig) {
+        const elapsedSinceValidationMs = now - this.lastSuccessfulValidationAt;
+
+        if (elapsedSinceValidationMs <= this.MAX_STALE_TTL_MS) {
+          const elapsedSeconds = Math.round(elapsedSinceValidationMs / 1000);
+          console.warn(
+            `[PlatformCommissionService] Neon indisponível. Utilizando comissão confirmada pelo administrador (${this.cachedConfig.feeCents} centavos) validada há ${elapsedSeconds}s (dentro do limite máximo de 15 min).`
+          );
+          // Retorna a configuração em cache SEM alterar lastSuccessfulValidationAt nem cacheExpiresAt
+          return this.cachedConfig;
+        }
+
+        // 3. Após 15 minutos sem conseguir revalidar a configuração, invalidar o cache
+        const elapsedMinutes = Math.round(elapsedSinceValidationMs / 60000);
+        console.error(
+          `[PlatformCommissionService] Limite máximo de cache expirado (${elapsedMinutes} minutos desde a última validação no Neon). Invalidando cache para evitar operações com regras obsoletas.`
+        );
+        this.cachedConfig = null;
+        this.cacheExpiresAt = 0;
+        this.lastSuccessfulValidationAt = 0;
+      }
+
+      // 4. SEM FALLBACK SILENCIOSO: Se não houver configuração nem cache dentro da tolerância, lançar erro explícito
+      if (err instanceof PlatformCommissionUnavailableError) {
+        throw err;
+      }
+      throw new PlatformCommissionUnavailableError(
+        `Configuração da comissão da plataforma indisponível: ${err?.message || 'Falha de conexão com o banco'}`
+      );
+    }
   }
 
   /**
@@ -158,7 +257,7 @@ export class PlatformCommissionService {
     }
 
     const feeReais = newFeeCents / 100;
-    return {
+    const updatedResponse: CommissionSettingsResponse = {
       feeCents: newFeeCents,
       feeReais,
       formattedFee: `R$ ${feeReais.toFixed(2).replace('.', ',')}`,
@@ -166,6 +265,15 @@ export class PlatformCommissionService {
       updatedByName: adminUser.name || 'Administrador',
       updatedByEmail: adminUser.email || null,
     };
+
+    // Atualiza imediatamente o cache em memória com a nova configuração do administrador
+    // e atualiza os metadados de validade (TTL normal e última validação com o banco)
+    const currentTimestamp = Date.now();
+    this.cachedConfig = updatedResponse;
+    this.cacheExpiresAt = currentTimestamp + this.CACHE_TTL_MS;
+    this.lastSuccessfulValidationAt = currentTimestamp;
+
+    return updatedResponse;
   }
 
   /**

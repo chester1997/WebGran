@@ -32,53 +32,63 @@ export async function syncOrderWithMercadoPago(orderId: string) {
       const valueMatches = txData && (txData.value === undefined || txData.value === null || Number(txData.value) === expectedCents);
 
       if (isPaid && idMatches && valueMatches) {
-        let resolvedSplitStatus: 'CONFIRMED' | 'REQUESTED' | 'FAILED' | 'SKIPPED' = (order.splitStatus as any) || 'REQUESTED';
-        let splitConfirmedAt: Date | null = null;
-        let platformFeeStr = '0.00';
-        let netAmountStr = order.total;
+        const { SplitReconciliationService } = await import('./split-reconciliation-service');
+        const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() ||
+                                  process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
 
-        if (order.splitStatus === 'SKIPPED' || order.splitStatus === 'FAILED') {
-          resolvedSplitStatus = order.splitStatus as any;
-          platformFeeStr = '0.00';
-          netAmountStr = order.total;
-        } else {
-          const hasSplitEvidence = Boolean(
-            (txData.split_rules && Array.isArray(txData.split_rules) && txData.split_rules.length > 0) ||
-            (txData.splits && Array.isArray(txData.splits) && txData.splits.length > 0) ||
-            (txData.split_status === 'processed' || txData.split_status === 'confirmed')
-          );
-          const orderSplitCents = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
-            ? order.splitAmountCents
-            : 50;
-          const orderSplitReais = (orderSplitCents / 100).toFixed(2);
+        const evalResult = SplitReconciliationService.evaluatePushinPaySplit({
+          order,
+          officialTx: txData,
+          platformAccountId,
+        });
 
-          if (hasSplitEvidence) {
-            resolvedSplitStatus = 'CONFIRMED';
-            splitConfirmedAt = new Date();
-            platformFeeStr = orderSplitReais;
-            netAmountStr = Math.max(0, Number(order.total) - Number(orderSplitReais)).toFixed(2);
-          } else {
-            resolvedSplitStatus = 'REQUESTED';
-            platformFeeStr = '0.00';
-            netAmountStr = order.total;
-          }
-        }
+        let orderWasUpdated = false;
 
-        const updatedRows = await db.update(orders)
-          .set({
+        const runSyncTx = async (tx: any) => {
+          const updatePayload: Record<string, any> = {
             status: 'paid',
-            platformFee: platformFeeStr,
-            netAmount: netAmountStr,
-            splitStatus: resolvedSplitStatus,
-            splitConfirmedAt,
-            splitDetails: txData.split_rules || txData.splits || null,
+            splitStatus: evalResult.status,
+            splitError: evalResult.splitError,
+            splitDetails: evalResult.splitDetails,
             paidAt: new Date(),
             updatedAt: new Date(),
-          })
-          .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')))
-          .returning({ id: orders.id });
+          };
 
-        if (updatedRows && updatedRows.length > 0) {
+          if (evalResult.platformFeeStr !== null) {
+            updatePayload.platformFee = evalResult.platformFeeStr;
+          }
+          if (evalResult.netAmountStr !== null) {
+            updatePayload.netAmount = evalResult.netAmountStr;
+          }
+          if (evalResult.splitConfirmedAt !== null) {
+            updatePayload.splitConfirmedAt = evalResult.splitConfirmedAt;
+          }
+
+          const updatedRows = await tx.update(orders)
+            .set(updatePayload)
+            .where(and(eq(orders.id, order.id), eq(orders.status, 'pending')))
+            .returning({ id: orders.id });
+
+          if (updatedRows && updatedRows.length > 0) {
+            orderWasUpdated = true;
+            if (evalResult.auditAction !== 'NONE') {
+              await SplitReconciliationService.recordAuditLog({
+                orderId: order.id,
+                previousStatus: order.splitStatus,
+                newStatus: evalResult.status,
+                action: evalResult.auditAction,
+                splitAmountCents: typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50,
+                platformAccountId,
+                evidenceDetails: evalResult.splitDetails,
+                notes: evalResult.divergenceReason || 'Reconciliação automática via polling order-sync',
+              }, tx);
+            }
+          }
+        };
+
+        await (db as any).transaction(runSyncTx);
+
+        if (orderWasUpdated) {
           const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
           const accessList = await db.query.accesses.findMany({
             where: eq(accesses.orderId, order.id),

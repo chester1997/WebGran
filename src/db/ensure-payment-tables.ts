@@ -1,49 +1,11 @@
-import { neon } from '@neondatabase/serverless';
-
-let ensured = false;
-
-export async function ensurePaymentTables() {
-  if (ensured) return;
-
-  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED;
-  if (!dbUrl) return;
-
-  try {
-    const sql = neon(dbUrl);
-
-    // 1. Ensure webhook columns exist on seller_payment_connections
-    await sql`
-      ALTER TABLE seller_payment_connections 
-      ADD COLUMN IF NOT EXISTS webhook_id TEXT,
-      ADD COLUMN IF NOT EXISTS webhook_secret_encrypted TEXT;
-    `;
-
-    // 2. Ensure payment_webhook_events table exists
-    await sql`
-      CREATE TABLE IF NOT EXISTS payment_webhook_events (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        provider TEXT NOT NULL,
-        event_id TEXT NOT NULL,
-        event_type TEXT,
-        connection_id TEXT,
-        processed_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        payload JSONB,
-        CONSTRAINT payment_webhook_events_provider_event_unique UNIQUE (provider, event_id)
-      );
-    `;
-
-    // 3. Ensure split audit columns exist on orders table
-    await sql`
-      ALTER TABLE orders
-      ADD COLUMN IF NOT EXISTS split_status TEXT DEFAULT 'PENDING',
-      ADD COLUMN IF NOT EXISTS split_amount_cents INTEGER DEFAULT 50,
-      ADD COLUMN IF NOT EXISTS split_confirmed_at TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS split_error TEXT,
-      ADD COLUMN IF NOT EXISTS split_details JSONB;
-    `;
-
-    ensured = true;
-  } catch (err) {
-    console.error('[ensurePaymentTables] Error ensuring payment columns/tables:', err);
-  }
+/**
+ * As estruturas de tabelas e colunas de pagamentos e split (seller_payment_connections,
+ * payment_webhook_events, orders e platform_split_audit_logs) são gerenciadas
+ * exclusivamente pela migração formal (drizzle/0007_platform_commission_and_split_audit.sql).
+ *
+ * A execução dinâmica de DDL em runtime via HTTP foi descontinuada para eliminar
+ * riscos de concorrência, contenção de locks de catálogo e descompasso entre sessões stateless.
+ */
+export async function ensurePaymentTables(): Promise<void> {
+  // No-op em runtime. Estruturas garantidas formalmente via migração SQL pré-deploy.
 }

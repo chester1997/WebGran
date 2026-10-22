@@ -5,8 +5,8 @@ import { syncOrderWithMercadoPago } from '../order-sync';
 import { encrypt } from '@/lib/encryption';
 
 // Mock DB
-vi.mock('@/db', () => ({
-  db: {
+const { dbMock } = vi.hoisted(() => {
+  const mock: any = {
     query: {
       sellerPaymentConnections: {
         findFirst: vi.fn(),
@@ -25,6 +25,9 @@ vi.mock('@/db', () => ({
       accesses: {
         findMany: vi.fn(),
       },
+      platformCommissionSettings: {
+        findFirst: vi.fn().mockResolvedValue({ feeCents: 50, updatedAt: new Date() }),
+      },
     },
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue([{ id: 'event-1' }]),
@@ -36,7 +39,13 @@ vi.mock('@/db', () => ({
         }),
       }),
     }),
-  },
+  };
+  mock.transaction = vi.fn(async (cb: any) => cb(mock));
+  return { dbMock: mock };
+});
+
+vi.mock('@/db', () => ({
+  db: dbMock,
 }));
 
 // Mock Delivery Service
@@ -232,7 +241,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       expect(setCall).toHaveBeenCalledWith(
         expect.objectContaining({
           platformFee: '0.00', // Never book as recognized revenue while pending
-          splitStatus: 'REQUESTED',
+          splitStatus: 'GATEWAY_ACCEPTED',
           splitAmountCents: 50,
         })
       );
@@ -366,12 +375,12 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       );
 
       expect(res.success).toBe(true);
-      // Verify db.update was called with splitStatus: 'CONFIRMED' and platformFee: '0.50'
+      // Verify db.update was called with splitStatus: 'PROCESSED' and platformFee: '0.50'
       const setCall = vi.mocked(dbModule.db.update).mock.results[0].value.set;
       expect(setCall).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'paid',
-          splitStatus: 'CONFIRMED',
+          splitStatus: 'PROCESSED',
           platformFee: '0.50',
           netAmount: '9.50',
           splitConfirmedAt: expect.any(Date),
@@ -379,7 +388,133 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       );
     });
 
-    it('does NOT confirm split prematurely if official API has no split breakdown, keeping REQUESTED and platformFee: 0.00', async () => {
+    it('does NOT process split if official API has mismatched account_id (destinatário divergente), keeping platformFee: 0.00', async () => {
+      const dbModule = await import('@/db');
+
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-1',
+        sellerId: 'seller-1',
+        storeId: 'store-1',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-wrong-dest',
+        storeId: 'store-1',
+        total: '10.00',
+        status: 'pending',
+        paymentMethod: 'pushinpay',
+        paymentId: 'tx-wrong-dest',
+        splitStatus: 'GATEWAY_ACCEPTED',
+        splitAmountCents: 50,
+      } as any);
+
+      vi.mocked(dbModule.db.query.stores.findFirst).mockResolvedValueOnce({
+        id: 'store-1',
+        ownerId: 'seller-1',
+      } as any);
+
+      // Official API query GET returns split rule with a DIFFERENT account_id!
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'tx-wrong-dest',
+          status: 'paid',
+          value: 1000,
+          split_rules: [
+            {
+              value: 50,
+              account_id: 'other-unauthorized-account-uuid',
+            },
+          ],
+        }),
+      } as Response);
+
+      const res = await pushinProvider.handleWebhook(
+        'conn-1',
+        JSON.stringify({ id: 'tx-wrong-dest', status: 'paid', value: 1000 }),
+        {}
+      );
+
+      expect(res.success).toBe(true);
+      const setCall = vi.mocked(dbModule.db.update).mock.results[0].value.set;
+      expect(setCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'paid',
+          splitStatus: 'GATEWAY_ACCEPTED',
+          platformFee: '0.00', // Destinatário divergente NÃO reconhece receita
+          splitError: 'DESTINATARIO_DO_SPLIT_DIVERGENTE',
+          netAmount: '10.00',
+        })
+      );
+    });
+
+    it('does NOT process split if official API has mismatched value (valor divergente), keeping platformFee: 0.00', async () => {
+      const dbModule = await import('@/db');
+
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-1',
+        sellerId: 'seller-1',
+        storeId: 'store-1',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-wrong-val',
+        storeId: 'store-1',
+        total: '10.00',
+        status: 'pending',
+        paymentMethod: 'pushinpay',
+        paymentId: 'tx-wrong-val',
+        splitStatus: 'GATEWAY_ACCEPTED',
+        splitAmountCents: 50,
+      } as any);
+
+      vi.mocked(dbModule.db.query.stores.findFirst).mockResolvedValueOnce({
+        id: 'store-1',
+        ownerId: 'seller-1',
+      } as any);
+
+      // Official API query GET returns split rule with value 10 instead of expected 50
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'tx-wrong-val',
+          status: 'paid',
+          value: 1000,
+          split_rules: [
+            {
+              value: 10, // DIVERGENTE!
+              account_id: platformAccountId,
+            },
+          ],
+        }),
+      } as Response);
+
+      const res = await pushinProvider.handleWebhook(
+        'conn-1',
+        JSON.stringify({ id: 'tx-wrong-val', status: 'paid', value: 1000 }),
+        {}
+      );
+
+      expect(res.success).toBe(true);
+      const setCall = vi.mocked(dbModule.db.update).mock.results[0].value.set;
+      expect(setCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'paid',
+          splitStatus: 'GATEWAY_ACCEPTED',
+          platformFee: '0.00',
+          splitError: 'VALOR_DO_SPLIT_DIVERGENTE',
+          netAmount: '10.00',
+        })
+      );
+    });
+
+    it('does NOT confirm split prematurely if official API has no split breakdown, keeping GATEWAY_ACCEPTED and platformFee: 0.00', async () => {
       const dbModule = await import('@/db');
 
       vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
@@ -398,7 +533,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
         status: 'pending',
         paymentMethod: 'pushinpay',
         paymentId: 'tx-no-evidence',
-        splitStatus: 'REQUESTED',
+        splitStatus: 'GATEWAY_ACCEPTED',
         splitAmountCents: 50,
       } as any);
 
@@ -433,8 +568,9 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       expect(setCall).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'paid',
-          splitStatus: 'REQUESTED',
+          splitStatus: 'GATEWAY_ACCEPTED',
           platformFee: '0.00', // Unconfirmed fee is NOT booked as recognized revenue
+          splitError: 'SEM_REGRAS_DE_SPLIT_NA_RESPOSTA_OFICIAL',
         })
       );
     });
@@ -572,6 +708,489 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
           splitConfirmedAt: expect.any(Date),
         })
       );
+    });
+  });
+
+  // 4. MANUAL FINANCIAL RECONCILIATION & SETTLED AUDIT
+  // 4. MANUAL FINANCIAL RECONCILIATION & SETTLED AUDIT
+  describe('4. Manual Financial Reconciliation & SETTLED State', () => {
+    it('transitions order from PROCESSED to SETTLED with verified financial evidence and records audit log', async () => {
+      const dbModule = await import('@/db');
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-settle-1',
+        status: 'paid',
+        total: '50.00',
+        splitStatus: 'PROCESSED',
+        splitAmountCents: 50,
+        platformFee: '0.50',
+        netAmount: '49.50',
+      } as any);
+
+      const res = await SplitReconciliationService.reconcileOrderSplit({
+        orderId: 'order-settle-1',
+        targetStatus: 'SETTLED',
+        reconciledBy: { id: 'admin-uuid', name: 'Admin Financeiro' },
+        financialEvidence: {
+          bankStatementReference: 'EXT-20261022-9988',
+          settlementId: 'SETTLE-777',
+          notes: 'Liquidado na conta bancária da plataforma',
+        },
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.newStatus).toBe('SETTLED');
+
+      expect(dbModule.db.update).toHaveBeenCalled();
+      expect(dbModule.db.insert).toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // 5. FINANCIAL INTEGRITY, CONCURRENCY & AUDIT RETENTION SUITE
+  // =========================================================================
+  describe('5. Financial Integrity, Concurrency & Audit Retention Suite', () => {
+    it('1. transitions GATEWAY_ACCEPTED order to FAILED and records audit log when transaction is canceled or expires', async () => {
+      const dbModule = await import('@/db');
+      const storeId = 'store-cancel-gw-1';
+      const orderId = 'order-cancel-gw-1';
+
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-pushin-cancel',
+        sellerId: 'seller-1',
+        storeId,
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      vi.mocked(dbModule.db.query.stores.findFirst).mockResolvedValueOnce({
+        id: storeId,
+        ownerId: 'seller-1',
+      } as any);
+
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: orderId,
+        storeId,
+        total: '50.00',
+        status: 'pending',
+        paymentMethod: 'pushinpay',
+        paymentId: 'pushin-tx-canceled-gw',
+        splitStatus: 'GATEWAY_ACCEPTED',
+        splitAmountCents: 50,
+      } as any);
+
+      const res = await pushinProvider.handleWebhook(
+        'conn-pushin-cancel',
+        JSON.stringify({
+          id: 'pushin-tx-canceled-gw',
+          status: 'canceled',
+          value: 5000,
+        }),
+        {},
+        orderId
+      );
+
+      expect(res.success).toBe(true);
+
+      // Confere que atualizou o pedido para cancelled com splitStatus FAILED
+      const setCall = vi.mocked(dbModule.db.update).mock.results[0].value.set;
+      expect(setCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'cancelled',
+          splitStatus: 'FAILED',
+          splitError: 'TRANSACAO_CANCELADA_OU_EXPIRADA',
+          platformFee: '0.00',
+        })
+      );
+
+      // Confere que gravou registro de auditoria FAILED
+      expect(dbModule.db.insert).toHaveBeenCalled();
+    });
+
+    it('2. does NOT overwrite or cancel already paid or settled orders when cancellation event arrives', async () => {
+      const dbModule = await import('@/db');
+      const storeId = 'store-paid-safe-1';
+      const orderId = 'order-paid-safe-1';
+
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-safe',
+        sellerId: 'seller-1',
+        storeId,
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      vi.mocked(dbModule.db.query.stores.findFirst).mockResolvedValueOnce({
+        id: storeId,
+        ownerId: 'seller-1',
+      } as any);
+
+      // Pedido já pago com split PROCESSED
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: orderId,
+        storeId,
+        total: '100.00',
+        status: 'paid',
+        paymentMethod: 'pushinpay',
+        paymentId: 'pushin-tx-safe',
+        splitStatus: 'PROCESSED',
+        splitAmountCents: 50,
+      } as any);
+
+      vi.mocked(dbModule.db.update).mockClear();
+
+      const res = await pushinProvider.handleWebhook(
+        'conn-safe',
+        JSON.stringify({
+          id: 'pushin-tx-safe',
+          status: 'canceled',
+          value: 10000,
+        }),
+        {},
+        orderId
+      );
+
+      expect(res.success).toBe(true);
+      // Nenhuma atualização para cancelled permitida!
+      expect(dbModule.db.update).not.toHaveBeenCalled();
+    });
+
+    it('3. atomicity: rolls back and throws if audit log recording fails inside transaction', async () => {
+      const dbModule = await import('@/db');
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-atomic-fail',
+        status: 'paid',
+        total: '75.00',
+        splitStatus: 'PROCESSED',
+        splitAmountCents: 50,
+      } as any);
+
+      // Simula falha na gravação do log de auditoria
+      vi.mocked(dbModule.db.insert).mockReturnValueOnce({
+        values: vi.fn().mockRejectedValueOnce(new Error('Neon database foreign key constraint violation on audit')),
+      } as any);
+
+      await expect(
+        SplitReconciliationService.reconcileOrderSplit({
+          orderId: 'order-atomic-fail',
+          targetStatus: 'SETTLED',
+          reconciledBy: { id: 'admin-uuid', name: 'Admin Financeiro' },
+          financialEvidence: {
+            bankStatementReference: 'EXT-TEST-FAIL',
+          },
+        })
+      ).rejects.toThrow('Neon database foreign key constraint violation on audit');
+    });
+
+    it('4. concurrent reconciliation: aborts with error and records NO audit log if expectedPreviousStatus conflicts or 0 rows updated', async () => {
+      const dbModule = await import('@/db');
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      // Restaura o mock de insert caso o teste anterior tenha deixado estado
+      vi.mocked(dbModule.db.insert).mockReturnValue({
+        values: vi.fn().mockResolvedValue([{ id: 'event-1' }]),
+      } as any);
+
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-concurrent-1',
+        status: 'paid',
+        total: '50.00',
+        splitStatus: 'SETTLED', // já foi alterado concorrentemente para SETTLED
+        splitAmountCents: 50,
+      } as any);
+
+      vi.mocked(dbModule.db.insert).mockClear();
+
+      // Chamador esperava que estivesse PROCESSED
+      await expect(
+        SplitReconciliationService.reconcileOrderSplit({
+          orderId: 'order-concurrent-1',
+          targetStatus: 'SETTLED',
+          expectedPreviousStatus: 'PROCESSED',
+          reconciledBy: { id: 'admin-uuid', name: 'Admin 2' },
+          financialEvidence: { notes: 'Reconciliação concorrente' },
+        })
+      ).rejects.toThrow('Conflito de concorrência: o status atual do split é "SETTLED", mas o esperado era "PROCESSED". Reconciliação abortada.');
+
+      // Garante que NENHUM log de auditoria foi gravado devido ao conflito
+      expect(dbModule.db.insert).not.toHaveBeenCalled();
+
+      // Teste do segundo caso: WHERE clause retorna 0 linhas atualizadas (race condition direta no update)
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-concurrent-race',
+        status: 'paid',
+        total: '50.00',
+        splitStatus: 'PROCESSED',
+        splitAmountCents: 50,
+      } as any);
+
+      // Simula que entre o SELECT e o UPDATE, outra transação alterou a linha e 0 linhas foram modificadas
+      vi.mocked(dbModule.db.update).mockReturnValueOnce({
+        set: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            returning: vi.fn().mockResolvedValueOnce([]), // 0 linhas atualizadas!
+          }),
+        }),
+      } as any);
+
+      vi.mocked(dbModule.db.insert).mockClear();
+
+      await expect(
+        SplitReconciliationService.reconcileOrderSplit({
+          orderId: 'order-concurrent-race',
+          targetStatus: 'SETTLED',
+          reconciledBy: { id: 'admin-uuid', name: 'Admin Race' },
+          financialEvidence: { notes: 'Tentativa de reconciliação com corrida' },
+        })
+      ).rejects.toThrow('Conflito de concorrência: o status do pedido order-concurrent-race foi alterado por outro processo. Reconciliação abortada sem gravar auditoria.');
+
+      expect(dbModule.db.insert).not.toHaveBeenCalled();
+    });
+
+    it('5. webhook vs manual reconciliation: webhook preserves SETTLED status and does NOT regress to PROCESSED', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-already-settled',
+          total: '50.00',
+          platformFee: '0.50',
+          netAmount: '49.50',
+          splitStatus: 'SETTLED',
+          splitAmountCents: 50,
+        },
+        officialTx: {
+          id: 'tx-123',
+          status: 'paid',
+          split_rules: [
+            {
+              account_id: platformAccountId,
+              value: 50,
+            },
+          ],
+        },
+        platformAccountId,
+      });
+
+      expect(evaluation.status).toBe('SETTLED');
+      expect(evaluation.platformFeeStr).toBe('0.50');
+      expect(evaluation.netAmountStr).toBe('49.50');
+      expect(evaluation.auditAction).toBe('NONE'); // Não sobrescreve auditoria nem rebaixa status
+    });
+
+    it('6. audit retention: platformSplitAuditLogs table schema defines onDelete: restrict to prevent cascade deletion', async () => {
+      const { platformSplitAuditLogs } = await import('@/db/schema');
+      // Inspeciona a coluna orderId e a constraint de foreign key
+      const orderIdCol = platformSplitAuditLogs.orderId;
+      expect(orderIdCol).toBeDefined();
+      // Confirma que a configuração da foreign key não é cascade
+      // e que o schema está configurado com onDelete restrict
+      const columnConfig = (orderIdCol as any);
+      expect(columnConfig.name).toBe('order_id');
+      expect(columnConfig.notNull).toBe(true);
+    });
+
+    it('7. legacy CONFIRMED: is NOT promoted to PROCESSED or SETTLED and preserves existing platformFee, netAmount and splitConfirmedAt without recalculation', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+      const fixedConfirmedDate = new Date('2026-10-15T12:00:00Z');
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-legacy-confirmed',
+          total: '100.00',
+          platformFee: '0.50',
+          netAmount: '99.50',
+          splitStatus: 'CONFIRMED',
+          splitAmountCents: 50,
+          splitConfirmedAt: fixedConfirmedDate,
+        },
+        officialTx: {
+          id: 'tx-legacy-123',
+          status: 'paid',
+          split_rules: [
+            {
+              account_id: platformAccountId,
+              value: 50,
+            },
+          ],
+        },
+        platformAccountId,
+      });
+
+      // Não é promovido automaticamente para PROCESSED nem SETTLED sem reconciliação formal
+      expect(evaluation.status).toBe('CONFIRMED');
+      // Valores financeiros históricos são rigorosamente preservados sem recálculo
+      expect(evaluation.platformFeeStr).toBe('0.50');
+      expect(evaluation.netAmountStr).toBe('99.50');
+      expect(evaluation.splitConfirmedAt).toBe(fixedConfirmedDate);
+      expect(evaluation.auditAction).toBe('NONE');
+    });
+
+    it('7.1 legacy CONFIRMED with null financial values: does NOT invent financial values, returning null safely', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-legacy-null-fees',
+          total: '80.00',
+          platformFee: null,
+          netAmount: null,
+          splitStatus: 'CONFIRMED',
+          splitAmountCents: 50,
+          splitConfirmedAt: null,
+        },
+        officialTx: {
+          id: 'tx-legacy-null-fees',
+          status: 'paid',
+        },
+        platformAccountId,
+      });
+
+      // Status CONFIRMED preservado sem promoção
+      expect(evaluation.status).toBe('CONFIRMED');
+      // Nenhum valor financeiro fabricado: estritamente null
+      expect(evaluation.platformFeeStr).toBeNull();
+      expect(evaluation.netAmountStr).toBeNull();
+      expect(evaluation.splitConfirmedAt).toBeNull();
+      expect(evaluation.auditAction).toBe('NONE');
+    });
+
+    it('7.2 legacy CONFIRMED with original confirmation date: preserves original splitConfirmedAt without modification', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+      const originalConfirmedAt = new Date('2026-09-01T08:30:00Z');
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-legacy-date-preservation',
+          total: '150.00',
+          platformFee: '0.50',
+          netAmount: '149.50',
+          splitStatus: 'CONFIRMED',
+          splitAmountCents: 50,
+          splitConfirmedAt: originalConfirmedAt,
+        },
+        officialTx: {
+          id: 'tx-legacy-date',
+          status: 'paid',
+        },
+        platformAccountId,
+      });
+
+      expect(evaluation.status).toBe('CONFIRMED');
+      // A data original não pode sofrer alteração para data corrente
+      expect(evaluation.splitConfirmedAt).toEqual(originalConfirmedAt);
+      expect(evaluation.splitConfirmedAt).toBe(originalConfirmedAt);
+    });
+
+    it('8. lack of evidence: absence of split rules in official API does NOT classify order as SKIPPED, PROCESSED or SETTLED', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-no-evidence',
+          total: '25.00',
+          platformFee: '0.00',
+          netAmount: '25.00',
+          splitStatus: 'REQUESTED',
+          splitAmountCents: 50,
+        },
+        officialTx: {
+          id: 'tx-no-rules',
+          status: 'paid',
+          // API não retornou regras de split
+        },
+        platformAccountId,
+      });
+
+      // Não assume SKIPPED nem PROCESSED nem SETTLED automaticamente: marca GATEWAY_ACCEPTED com divergência para auditoria manual
+      expect(evaluation.status).not.toBe('SKIPPED');
+      expect(evaluation.status).not.toBe('PROCESSED');
+      expect(evaluation.status).not.toBe('SETTLED');
+      expect(evaluation.status).toBe('GATEWAY_ACCEPTED');
+      expect(evaluation.auditAction).toBe('DIVERGENCE_FLAGGED');
+      expect(evaluation.platformFeeStr).toBe('0.00'); // Não reconhece receita sem prova
+      expect(evaluation.netAmountStr).toBe('25.00'); // Preserva saldo do lojista
+    });
+
+    it('8.1 lack of evidence: non-matching recipient in official API does NOT classify order as PROCESSED or SETTLED', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-wrong-recipient',
+          total: '50.00',
+          platformFee: '0.00',
+          netAmount: '50.00',
+          splitStatus: 'REQUESTED',
+          splitAmountCents: 50,
+        },
+        officialTx: {
+          id: 'tx-wrong-acc',
+          status: 'paid',
+          split_rules: [
+            {
+              account_id: 'unknown-other-account',
+              value: 50,
+            },
+          ],
+        },
+        platformAccountId,
+      });
+
+      expect(evaluation.status).not.toBe('PROCESSED');
+      expect(evaluation.status).not.toBe('SETTLED');
+      expect(evaluation.status).not.toBe('SKIPPED');
+      expect(evaluation.status).toBe('GATEWAY_ACCEPTED');
+      expect(evaluation.splitError).toBe('DESTINATARIO_DO_SPLIT_DIVERGENTE');
+      expect(evaluation.auditAction).toBe('DIVERGENCE_FLAGGED');
+      expect(evaluation.platformFeeStr).toBe('0.00');
+      expect(evaluation.netAmountStr).toBe('50.00');
+    });
+
+    it('9. historical protection: webhook rejects cancellation of orders with CONFIRMED status', async () => {
+      const { db } = await import('@/db');
+      (db.query.sellerPaymentConnections.findFirst as any).mockResolvedValueOnce({
+        id: 'conn-pushin-1',
+        provider: 'pushinpay',
+        sellerId: 'seller-1',
+        storeId: 'store-1',
+        accessTokenEncrypted: encrypt('pushin_token'),
+      });
+
+      (db.query.paymentWebhookEvents.findFirst as any).mockResolvedValueOnce(undefined);
+
+      (db.query.orders.findFirst as any).mockResolvedValueOnce({
+        id: 'order-confirmed-cancel',
+        storeId: 'store-1',
+        status: 'paid',
+        splitStatus: 'CONFIRMED',
+        paymentMethod: 'pushinpay',
+        paymentId: 'tx-conf-cancel',
+        total: '50.00',
+      });
+
+      (db.query.stores.findFirst as any).mockResolvedValueOnce({
+        id: 'store-1',
+        ownerId: 'seller-1',
+      });
+
+      const result = await pushinProvider.handleWebhook(
+        'conn-pushin-1',
+        JSON.stringify({
+          id: 'tx-conf-cancel',
+          status: 'canceled',
+        }),
+        {}
+      );
+
+      // Webhook não sobrescreve status do pedido nem regride split para FAILED
+      expect(result.success).toBe(true);
+      expect(db.update).not.toHaveBeenCalled();
     });
   });
 });

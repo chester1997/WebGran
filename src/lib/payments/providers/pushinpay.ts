@@ -222,13 +222,23 @@ export class PushinPayProvider {
       webhook_url: webhookUrl,
     };
 
-    // Split configuration: dynamic platform commission (default 50 cents / R$ 0,50)
-    const { PlatformCommissionService } = await import('@/lib/commission/platform-commission-service');
-    const dynamicCommissionCents = await PlatformCommissionService.getCurrentCommissionCents().catch(() => 50);
+    // Split configuration: dynamic platform commission from administrative single source of truth
+    const { PlatformCommissionService, PlatformCommissionUnavailableError } = await import('@/lib/commission/platform-commission-service');
+    let dynamicCommissionCents: number;
+    try {
+      dynamicCommissionCents = await PlatformCommissionService.getCurrentCommissionCents();
+    } catch (commErr: any) {
+      if (commErr instanceof PlatformCommissionUnavailableError || commErr?.name === 'PlatformCommissionUnavailableError') {
+        console.error('[PushinPayProvider] Bloqueio de checkout: comissão oficial da plataforma indisponível:', commErr.message);
+        throw new Error('Parâmetros de cobrança temporariamente indisponíveis. Tente novamente em instantes.');
+      }
+      console.error('[PushinPayProvider] Bloqueio de checkout: erro inesperado ao consultar taxa de comissão:', commErr?.message);
+      throw new Error('Parâmetros de cobrança temporariamente indisponíveis. Tente novamente em instantes.');
+    }
 
     const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() || 
                               process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
-    let splitStatus: 'REQUESTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
+    let splitStatus: 'REQUESTED' | 'GATEWAY_ACCEPTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
     let splitError: string | null = null;
     const splitAmountCents = dynamicCommissionCents;
 
@@ -279,7 +289,7 @@ export class PushinPayProvider {
         await db.update(orders)
           .set({
             splitStatus: 'FAILED',
-            splitAmountCents: 50,
+            splitAmountCents,
             splitError: `PUSHINPAY_API_ERROR_HTTP_${res.status}: ${errorText.slice(0, 255)}`,
             updatedAt: new Date(),
           })
@@ -308,6 +318,12 @@ export class PushinPayProvider {
     const qrCodeBase64 = data.qr_code_base64 || '';
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
+    // Se o gateway aceitou a criação com sucesso e espelhou a regra, transiciona para GATEWAY_ACCEPTED
+    let creationSplitStatus: 'REQUESTED' | 'GATEWAY_ACCEPTED' | 'FAILED' | 'SKIPPED' = splitStatus;
+    if (splitStatus === 'REQUESTED' && (data.split_rules || data.id)) {
+      creationSplitStatus = 'GATEWAY_ACCEPTED';
+    }
+
     // Persist PushinPay charge and split audit state in database
     await db.update(orders)
       .set({
@@ -315,8 +331,8 @@ export class PushinPayProvider {
         paymentMethod: 'pushinpay',
         pixQrCode: pixCode,
         pixQrCodeBase64: qrCodeBase64,
-        platformFee: '0.00', // Only recognized as revenue upon payment confirmation
-        splitStatus,
+        platformFee: '0.00', // Somente reconhecido como receita após processamento confirmado
+        splitStatus: creationSplitStatus,
         splitAmountCents,
         splitError,
         splitDetails: data.split_rules ? data.split_rules : (payload.split_rules || null),
@@ -480,10 +496,16 @@ export class PushinPayProvider {
 
     let rawStatus = String(payload.status || payload.Status || '').toLowerCase().trim();
 
+    const normalizedOrderIdHint = typeof orderIdHint === 'string'
+      ? orderIdHint.trim()
+      : typeof (orderIdHint as any)?.order_id === 'string'
+      ? (orderIdHint as any).order_id.trim()
+      : null;
+
     // Fallback: If body was empty or missing transactionId, but orderIdHint was passed in URL query param
-    if (!transactionId && orderIdHint) {
+    if (!transactionId && normalizedOrderIdHint) {
       const hintOrder = await db.query.orders.findFirst({
-        where: eq(orders.id, orderIdHint),
+        where: eq(orders.id, normalizedOrderIdHint),
       });
       if (hintOrder?.paymentId && hintOrder.paymentMethod === 'pushinpay') {
         transactionId = hintOrder.paymentId;
@@ -556,8 +578,8 @@ export class PushinPayProvider {
     }
 
     // Guard against order_id URL manipulation (case-insensitive)
-    if (orderIdHint && order.id.toLowerCase() !== orderIdHint.toLowerCase()) {
-      console.error(`[PushinPayWebhook] Alerta de segurança: parâmetro order_id da URL (${orderIdHint}) diverge do pedido associado à transação (${order.id})`);
+    if (normalizedOrderIdHint && order.id.toLowerCase() !== normalizedOrderIdHint.toLowerCase()) {
+      console.error(`[PushinPayWebhook] Alerta de segurança: parâmetro order_id da URL (${normalizedOrderIdHint}) diverge do pedido associado à transação (${order.id})`);
       return { success: false, error: 'Parâmetro order_id inconsistente com a transação.' };
     }
 
@@ -652,91 +674,134 @@ export class PushinPayProvider {
         }
       }
 
-      // Split Confirmation Logic
-      // Check if order was SKIPPED, FAILED, or REQUESTED
-      let resolvedSplitStatus: 'CONFIRMED' | 'REQUESTED' | 'FAILED' | 'SKIPPED' = (order.splitStatus as any) || 'REQUESTED';
-      let splitConfirmedAt: Date | null = null;
-      let platformFeeStr = '0.00';
-      let netAmountStr = order.total;
+      // Split Confirmation Logic with strict verification
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+      const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() ||
+                                process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
 
-      if (order.splitStatus === 'SKIPPED') {
-        resolvedSplitStatus = 'SKIPPED';
-        platformFeeStr = '0.00';
-        netAmountStr = order.total;
-      } else if (order.splitStatus === 'FAILED') {
-        resolvedSplitStatus = 'FAILED';
-        platformFeeStr = '0.00';
-        netAmountStr = order.total;
-      } else {
-        // Order had split requested: verify official split evidence in officialTx
-        const hasSplitEvidence = Boolean(
-          (officialTx.split_rules && Array.isArray(officialTx.split_rules) && officialTx.split_rules.length > 0) ||
-          (officialTx.splits && Array.isArray(officialTx.splits) && officialTx.splits.length > 0) ||
-          (officialTx.split_status === 'processed' || officialTx.split_status === 'confirmed')
-        );
+      const evalResult = SplitReconciliationService.evaluatePushinPaySplit({
+        order,
+        officialTx,
+        platformAccountId,
+      });
 
-        const orderSplitCents = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
-          ? order.splitAmountCents
-          : 50;
-        const orderSplitReais = (orderSplitCents / 100).toFixed(2);
+      let orderWasUpdated = false;
 
-        if (hasSplitEvidence) {
-          resolvedSplitStatus = 'CONFIRMED';
-          splitConfirmedAt = new Date();
-          platformFeeStr = orderSplitReais;
-          netAmountStr = Math.max(0, Number(order.total) - Number(orderSplitReais)).toFixed(2);
-        } else {
-          // If official API response does not contain definitive split breakdown,
-          // keep as REQUESTED (pending reconciliation) rather than assuming confirmation without proof
-          resolvedSplitStatus = 'REQUESTED';
-          platformFeeStr = '0.00'; // Do NOT book as recognized revenue until confirmed
-          netAmountStr = order.total;
-        }
-      }
-
-      const updatedRows = await db.update(orders)
-        .set({
+      const runUpdateTx = async (tx: any) => {
+        const updatePayload: Record<string, any> = {
           status: 'paid',
           paymentMethod: 'pushinpay',
           paymentId: transactionId,
-          platformFee: platformFeeStr,
-          netAmount: netAmountStr,
-          splitStatus: resolvedSplitStatus,
-          splitConfirmedAt,
-          splitDetails: officialTx.split_rules || officialTx.splits || null,
+          splitStatus: evalResult.status,
+          splitError: evalResult.splitError,
+          splitDetails: evalResult.splitDetails,
           paidAt: new Date(),
           updatedAt: new Date(),
-        })
-        .where(and(
-          eq(orders.id, order.id),
-          eq(orders.status, 'pending') // ATOMIC GUARD
-        ))
-        .returning();
+        };
 
-      if (updatedRows.length > 0) {
-        console.log(`[PushinPayWebhook] Pedido ${order.id} confirmado via PushinPay! Split: ${resolvedSplitStatus}. Processando entrega...`);
+        if (evalResult.platformFeeStr !== null) {
+          updatePayload.platformFee = evalResult.platformFeeStr;
+        }
+        if (evalResult.netAmountStr !== null) {
+          updatePayload.netAmount = evalResult.netAmountStr;
+        }
+        if (evalResult.splitConfirmedAt !== null) {
+          updatePayload.splitConfirmedAt = evalResult.splitConfirmedAt;
+        }
+
+        const updatedRows = await tx.update(orders)
+          .set(updatePayload)
+          .where(and(
+            eq(orders.id, order.id),
+            eq(orders.status, 'pending') // ATOMIC GUARD
+          ))
+          .returning();
+
+        if (updatedRows.length > 0) {
+          orderWasUpdated = true;
+
+          // Registrar auditoria financeira dedicada na mesma transação atômica
+          if (evalResult.auditAction !== 'NONE') {
+            await SplitReconciliationService.recordAuditLog({
+              orderId: order.id,
+              previousStatus: order.splitStatus,
+              newStatus: evalResult.status,
+              action: evalResult.auditAction,
+              splitAmountCents: typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50,
+              platformAccountId,
+              evidenceDetails: evalResult.splitDetails,
+              notes: evalResult.divergenceReason || null,
+            }, tx);
+          }
+        }
+      };
+
+      await (db as any).transaction(runUpdateTx);
+
+      if (orderWasUpdated) {
+        console.log(`[PushinPayWebhook] Pedido ${order.id} confirmado via PushinPay! Split: ${evalResult.status}. Processando entrega...`);
         await AccessDeliveryService.processOrderDelivery(order.id);
       }
 
       return { success: true };
     } else if (isCanceled) {
+      // 1. Não sobrescrever estados de pedidos já pagos ou com split processado/liquidado/confirmado
+      if (order.status === 'paid' || order.splitStatus === 'PROCESSED' || order.splitStatus === 'SETTLED' || order.splitStatus === 'CONFIRMED') {
+        console.warn(`[PushinPayWebhook] Tentativa de cancelar pedido ${order.id} ignorada: pedido já está pago ou com split ${order.splitStatus}.`);
+        return { success: true };
+      }
+
+      // 2. Tratar corretamente REQUESTED e GATEWAY_ACCEPTED quando a transação for cancelada ou expirar
       let resolvedCancelSplit = order.splitStatus;
-      if (order.splitStatus === 'REQUESTED') {
+      if (order.splitStatus === 'REQUESTED' || order.splitStatus === 'GATEWAY_ACCEPTED') {
         resolvedCancelSplit = 'FAILED';
       }
 
-      await db.update(orders)
-        .set({
-          status: 'cancelled',
-          splitStatus: resolvedCancelSplit,
-          splitError: 'TRANSACAO_CANCELADA_OU_EXPIRADA',
-          platformFee: '0.00',
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(orders.id, order.id),
-          eq(orders.status, 'pending')
-        ));
+      const splitAmountCents = typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50;
+      let orderWasCancelled = false;
+
+      const runCancelTx = async (tx: any) => {
+        const updatedRows = await tx.update(orders)
+          .set({
+            status: 'cancelled',
+            splitStatus: resolvedCancelSplit,
+            splitError: 'TRANSACAO_CANCELADA_OU_EXPIRADA',
+            platformFee: '0.00',
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(orders.id, order.id),
+            eq(orders.status, 'pending')
+          ))
+          .returning();
+
+        if (updatedRows.length > 0) {
+          orderWasCancelled = true;
+
+          // Se o split transicionou para FAILED, grava a auditoria correspondente na mesma transação
+          if (resolvedCancelSplit === 'FAILED') {
+            const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+            const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() ||
+                                      process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
+
+            await SplitReconciliationService.recordAuditLog({
+              orderId: order.id,
+              previousStatus: order.splitStatus,
+              newStatus: 'FAILED',
+              action: 'FAILED',
+              splitAmountCents,
+              platformAccountId,
+              notes: 'Transação cancelada ou expirada no gateway',
+            }, tx);
+          }
+        }
+      };
+
+      await (db as any).transaction(runCancelTx);
+
+      if (orderWasCancelled) {
+        console.log(`[PushinPayWebhook] Pedido ${order.id} cancelado/expirado via PushinPay. Split atualizado para ${resolvedCancelSplit}.`);
+      }
 
       return { success: true };
     }

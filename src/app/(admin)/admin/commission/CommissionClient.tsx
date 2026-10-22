@@ -22,25 +22,27 @@ import {
 
 interface CommissionClientProps {
   user: any;
-  initialCommission: CommissionSettingsResponse;
+  initialCommission: CommissionSettingsResponse | null;
   initialHistory: CommissionAuditLogItem[];
+  initialError?: string | null;
 }
 
 export default function CommissionClient({
   user,
   initialCommission,
   initialHistory,
+  initialError,
 }: CommissionClientProps) {
-  const [commission, setCommission] = useState<CommissionSettingsResponse>(initialCommission);
+  const [commission, setCommission] = useState<CommissionSettingsResponse | null>(initialCommission);
   const [history, setHistory] = useState<CommissionAuditLogItem[]>(initialHistory);
 
   // Form state
   const [feeReaisInput, setFeeReaisInput] = useState<string>(
-    (initialCommission.feeCents / 100).toFixed(2).replace('.', ',')
+    initialCommission ? (initialCommission.feeCents / 100).toFixed(2).replace('.', ',') : ""
   );
   const [reason, setReason] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(initialError || null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -146,9 +148,11 @@ export default function CommissionClient({
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Comissão Atual / Venda</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl sm:text-4xl font-extrabold text-white">
-              {commission.formattedFee}
+              {commission ? commission.formattedFee : "Indisponível"}
             </span>
-            <span className="text-xs text-zinc-400 font-mono">({commission.feeCents} centavos)</span>
+            {commission && (
+              <span className="text-xs text-zinc-400 font-mono">({commission.feeCents} centavos)</span>
+            )}
           </div>
           <p className="mt-2 text-xs text-zinc-400 flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> Retido via split automático no Pix
@@ -160,11 +164,13 @@ export default function CommissionClient({
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Última Alteração</span>
           <div className="mt-2 flex items-center gap-2 text-zinc-200">
             <Clock className="w-4 h-4 text-rose-400" />
-            <span className="text-sm font-semibold">{formatDate(commission.updatedAt)}</span>
+            <span className="text-sm font-semibold">
+              {commission ? formatDate(commission.updatedAt) : "—"}
+            </span>
           </div>
           <div className="mt-2 text-xs text-zinc-400 flex items-center gap-1.5 truncate">
             <User className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Por: <strong className="text-zinc-300 font-medium">{commission.updatedByName || "Sistema"}</strong></span>
+            <span>Por: <strong className="text-zinc-300 font-medium">{commission?.updatedByName || "—"}</strong></span>
           </div>
         </div>
 

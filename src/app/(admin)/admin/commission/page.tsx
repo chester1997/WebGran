@@ -7,14 +7,23 @@ export default async function AdminCommissionPage() {
   await connection();
   const user = await requireAdmin();
 
-  const initialCommission = await PlatformCommissionService.getCurrentCommission();
-  const initialHistory = await PlatformCommissionService.getAuditHistory(30);
+  let initialCommission = null;
+  let initialHistory: any[] = [];
+  let initialError: string | null = null;
+
+  try {
+    initialCommission = await PlatformCommissionService.getCurrentCommission();
+    initialHistory = await PlatformCommissionService.getAuditHistory(30);
+  } catch (err: any) {
+    initialError = err?.message || 'Configuração da comissão temporariamente indisponível no banco de dados.';
+  }
 
   return (
     <CommissionClient
       user={user}
       initialCommission={initialCommission}
       initialHistory={initialHistory}
+      initialError={initialError}
     />
   );
 }
