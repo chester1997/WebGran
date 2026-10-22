@@ -24,7 +24,8 @@ import {
   HardDrive,
   ChevronDown,
   ChevronUp,
-  Layers
+  Layers,
+  Coins
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -41,6 +42,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
 
   // Group 1: Gestão Comercial
   const commercialItems = [
+    { label: "Comissão da Plataforma", href: "/admin/commission", icon: Coins },
     { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: CreditCard },
     { label: "Planos WebGran", href: "/admin/plans", icon: Package },
     { label: "Recursos & Features", href: "/admin/features", icon: Sliders },

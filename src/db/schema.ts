@@ -1058,6 +1058,28 @@ export const storeSessionsRelations = relations(storeSessions, ({ one, many }) =
   orders: many(orders),
 }));
 
+export const platformCommissionSettings = pgTable('platform_commission_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  feeCents: integer('fee_cents').notNull().default(50),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedById: uuid('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
+  updatedByName: text('updated_by_name'),
+  updatedByEmail: text('updated_by_email'),
+});
+
+export const platformCommissionAuditLogs = pgTable('platform_commission_audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  previousFeeCents: integer('previous_fee_cents').notNull(),
+  newFeeCents: integer('new_fee_cents').notNull(),
+  changedById: uuid('changed_by_id').references(() => users.id, { onDelete: 'set null' }),
+  changedByName: text('changed_by_name'),
+  changedByEmail: text('changed_by_email'),
+  reason: text('reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  commissionAuditCreatedIdx: index('commission_audit_created_idx').on(t.createdAt),
+}));
+
 
 
 

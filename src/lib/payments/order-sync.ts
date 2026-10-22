@@ -47,11 +47,16 @@ export async function syncOrderWithMercadoPago(orderId: string) {
             (txData.splits && Array.isArray(txData.splits) && txData.splits.length > 0) ||
             (txData.split_status === 'processed' || txData.split_status === 'confirmed')
           );
+          const orderSplitCents = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
+            ? order.splitAmountCents
+            : 50;
+          const orderSplitReais = (orderSplitCents / 100).toFixed(2);
+
           if (hasSplitEvidence) {
             resolvedSplitStatus = 'CONFIRMED';
             splitConfirmedAt = new Date();
-            platformFeeStr = '0.50';
-            netAmountStr = Math.max(0, Number(order.total) - 0.50).toFixed(2);
+            platformFeeStr = orderSplitReais;
+            netAmountStr = Math.max(0, Number(order.total) - Number(orderSplitReais)).toFixed(2);
           } else {
             resolvedSplitStatus = 'REQUESTED';
             platformFeeStr = '0.00';

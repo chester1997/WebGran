@@ -492,295 +492,48 @@ export default function SettingsClient({ storeName, isExempt, sellerProfile, sub
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-5">
               <div>
                 <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-bold text-white tracking-tight">Assinatura WebGran</h3>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                    isExempt || subStatus === "EXEMPT"
-                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-                      : "bg-red-500/10 border border-red-500/20 text-red-400"
-                  }`}>
-                    {isExempt || subStatus === "EXEMPT" ? "PROPRIETÁRIO DA PLATAFORMA" : "PLANO ÚNICO"}
+                  <h3 className="text-xl font-bold text-white tracking-tight">Plano & Modelo Comercial</h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                    SEM MENSALIDADE
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  Gerencie sua assinatura e acompanhe seus dados no WebGran SaaS.
+                  O WebGran não cobra mensalidade pelo uso da plataforma.
                 </p>
               </div>
 
               {/* Status Badge */}
               <div>
-                {(isExempt || subStatus === "EXEMPT") ? (
-                  <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-2 shadow-sm">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    ISENTO
-                  </span>
-                ) : (
-                  <>
-                    {subStatus === "ACTIVE" && (
-                      <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-2 shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        Assinatura ativa
-                      </span>
-                    )}
-                    {subStatus === "PENDING" && (
-                      <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        Pagamento pendente
-                      </span>
-                    )}
-                    {subStatus === "PAST_DUE" && (
-                      <span className="px-3.5 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-red-400" />
-                        Pagamento atrasado
-                      </span>
-                    )}
-                    {subStatus === "CANCELLED" && (
-                      <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
-                        Cancelada
-                      </span>
-                    )}
-                    {subStatus === "EXPIRED" && (
-                      <span className="px-3.5 py-1.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-xs font-bold">
-                        Expirada
-                      </span>
-                    )}
-                  </>
-                )}
+                <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-2 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Acesso Gratuito Ativo
+                </span>
               </div>
             </div>
 
             {/* Plan Display Grid */}
-            {(isExempt || subStatus === "EXEMPT") ? (
-              <div className="p-6 rounded-2xl bg-[#18181C] border border-emerald-500/20 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-bold">
-                      Plano Especial
-                    </span>
-                    <h4 className="text-2xl font-black text-white mt-1">Proprietário da Plataforma</h4>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Esta conta pertence ao proprietário do WebGran e possui acesso gratuito à plataforma.
-                    </p>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <span className="text-3xl font-black text-emerald-400">R$ 0,00</span>
-                    <span className="text-xs text-zinc-400 block font-medium">/ mês • ISENTO</span>
-                  </div>
+            <div className="p-6 rounded-2xl bg-[#18181C] border border-emerald-500/20 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-bold">
+                    Modelo de Receita
+                  </span>
+                  <h4 className="text-2xl font-black text-white mt-1">WebGran — Zero Mensalidade</h4>
+                  <p className="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+                    Você não paga assinatura mensal pelo uso do painel, bots, produtos, banners ou vitrine. A plataforma é monetizada exclusivamente por uma taxa fixa de R$ 0,50 por venda aprovada, retida automaticamente no split Pix.
+                  </p>
                 </div>
-
-                <div className="pt-3 border-t border-white/5 flex items-center gap-2 text-xs text-zinc-300">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Acesso ilimitado e vitalício ao painel do vendedor sem nenhuma cobrança.</span>
+                <div className="text-left sm:text-right shrink-0">
+                  <span className="text-3xl font-black text-emerald-400">R$ 0,00</span>
+                  <span className="text-xs text-zinc-400 block font-medium">/ mês • SEM CUSTO FIXO</span>
                 </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-                {/* Plan Price Box */}
-                <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
-                  <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Plano Ativo</span>
-                  <div>
-                    <p className="text-xl font-bold text-white uppercase">WebGran</p>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      <span className="text-3xl font-extrabold text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</span>
-                      <span className="text-xs text-zinc-400 font-medium">/ mês</span>
-                    </div>
-                  </div>
-                  <div className="pt-2 text-xs text-zinc-400 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-red-500" />
-                    <span>Acesso completo ao SaaS</span>
-                  </div>
-                </div>
 
-                {/* Billing Period Box */}
-                <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
-                  <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Próxima Cobrança</span>
-                  <div>
-                    <div className="flex items-center gap-2 text-white font-bold text-lg">
-                      <Calendar className="w-5 h-5 text-red-500 shrink-0" />
-                      <span>{formatDate(subscriptionData.subscription.currentPeriodEnd)}</span>
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1">Periodicidade: Mensal</p>
-                  </div>
-                  <div className="pt-2 text-xs text-zinc-400">
-                    <span>Renovação via PIX automático</span>
-                  </div>
-                </div>
-
-                {/* Payment Method & Action Box */}
-                {/* Payment Method & Action Box */}
-                <div className="bg-[#18181C] p-5 rounded-2xl border border-white/5 flex flex-col justify-between space-y-3">
-                  <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Forma de Pagamento</span>
-                  <div>
-                    <div className="flex items-center gap-2 text-white font-bold text-base">
-                      <QrCode className="w-5 h-5 text-emerald-400 shrink-0" />
-                      <span>PIX via SyncPay Plataforma</span>
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1">Confirmação automática no sistema</p>
-                  </div>
-
-                  <div className="pt-2 space-y-2">
-                    <Button
-                      onClick={() => handleGeneratePixPayment(false)}
-                      disabled={generatingPix}
-                      className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
-                    >
-                      {generatingPix ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Gerando PIX...</span>
-                        </>
-                      ) : (
-                        <>
-                          <QrCode className="w-4 h-4" />
-                          <span>Pagar R$ {planPrice.toFixed(2).replace(".", ",")}</span>
-                        </>
-                      )}
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsUpgradeModalOpen(true)}
-                      className="w-full bg-[#121214] border-white/10 hover:bg-zinc-800 text-white font-bold py-2 rounded-xl text-xs gap-2 cursor-pointer"
-                    >
-                      <Sparkles className="w-4 h-4 text-red-400" />
-                      <span>Fazer Upgrade de Plano</span>
-                    </Button>
-                  </div>
-                </div>
+              <div className="pt-3 border-t border-white/5 flex items-center gap-2 text-xs text-zinc-300">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Acesso completo ao painel do vendedor sem bloqueios ou paywall. As assinaturas adicionais aplicam-se apenas à Biblioteca de Vídeos.</span>
               </div>
-            )}
-
-            {/* Active PIX Payment Drawer / Modal Display */}
-            {activeInvoice && (
-              (activeInvoice.status === 'EXPIRED' || (timeLeftSeconds !== null && timeLeftSeconds <= 0)) ? (
-                /* EXPIRED PIX DISPLAY */
-                <div className="bg-[#16161C] border border-amber-500/30 rounded-2xl p-6 space-y-4 animate-in fade-in duration-200">
-                  <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                      <Clock className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">Este PIX expirou.</h4>
-                      <p className="text-xs text-zinc-400">Gere um novo PIX para continuar.</p>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    onClick={() => handleGeneratePixPayment(true)}
-                    disabled={generatingPix}
-                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl text-xs gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
-                  >
-                    {generatingPix ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Gerando novo PIX...</span>
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4" />
-                        <span>Gerar novo PIX</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                /* ACTIVE PENDING PIX DISPLAY */
-                <div className="bg-[#16161C] border border-red-500/30 rounded-2xl p-6 space-y-5 animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-4 gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-                        <QrCode className="w-5 h-5 text-red-500" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-white">Pagamento da assinatura</h4>
-                        <p className="text-xs text-zinc-400">Valor exato: <strong className="text-white">R$ {planPrice.toFixed(2).replace(".", ",")}</strong></p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {timeLeftSeconds !== null && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono font-bold">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Expira em: {formatCountdown(timeLeftSeconds)}</span>
-                        </span>
-                      )}
-                      <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
-                        Aguardando pagamento
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner border border-white/10">
-                      {(() => {
-                        const qrImageUrl = activeInvoice.qrCode || (
-                          activeInvoice.qrCodeText
-                            ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(activeInvoice.qrCodeText)}`
-                            : null
-                        );
-                        return qrImageUrl ? (
-                          <img src={qrImageUrl} alt="QR Code PIX SyncPay" className="w-48 h-48 object-contain" />
-                        ) : (
-                          <div className="w-48 h-48 flex items-center justify-center text-zinc-600 text-xs font-semibold">
-                            Gerando QR Code...
-                          </div>
-                        );
-                      })()}
-                      <span className="text-[11px] text-zinc-600 font-semibold mt-2">Escaneie o QR Code no app do seu banco</span>
-                    </div>
-
-                    {/* PIX Copia e Cola & Verification */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                          Pix Copia e Cola
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={activeInvoice.qrCodeText || ""}
-                            className="w-full bg-[#121214] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-300 select-all"
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => handleCopyPix(activeInvoice.qrCodeText || "")}
-                            className="bg-white/10 hover:bg-white/20 text-white text-xs px-4 rounded-xl shrink-0 cursor-pointer"
-                          >
-                            {copiedPix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                            <span>{copiedPix ? "Copiado!" : "Copiar"}</span>
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 space-y-2">
-                        <Button
-                          type="button"
-                          onClick={handleVerifyPayment}
-                          disabled={verifyingPayment}
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer"
-                        >
-                          {verifyingPayment ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <span>Consultando SyncPay Plataforma...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span>Já paguei</span>
-                            </>
-                          )}
-                        </Button>
-                        <p className="text-[10px] text-zinc-500 text-center">
-                          O status do pagamento é verificado em tempo real diretamente na SyncPay Plataforma.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            )}
+            </div>
           </div>
 
           {/* Invoice Payment History Table */}

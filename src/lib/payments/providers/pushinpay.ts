@@ -222,21 +222,28 @@ export class PushinPayProvider {
       webhook_url: webhookUrl,
     };
 
-    // Split configuration: R$ 0,50 (50 centavos) fixed commission
+    // Split configuration: dynamic platform commission (default 50 cents / R$ 0,50)
+    const { PlatformCommissionService } = await import('@/lib/commission/platform-commission-service');
+    const dynamicCommissionCents = await PlatformCommissionService.getCurrentCommissionCents().catch(() => 50);
+
     const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() || 
                               process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
     let splitStatus: 'REQUESTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
     let splitError: string | null = null;
+    const splitAmountCents = dynamicCommissionCents;
 
-    if (amountInCents <= 50) {
-      // Order amount is too low to split 50 cents leaving merchant balance
+    if (dynamicCommissionCents <= 0) {
+      splitStatus = 'SKIPPED';
+      splitError = 'COMISSAO_ZERO';
+    } else if (amountInCents <= dynamicCommissionCents) {
+      // Order amount is too low to split commission leaving merchant balance
       splitStatus = 'SKIPPED';
       splitError = 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
     } else if (platformAccountId) {
-      // Platform account configured: attach official split_rules
+      // Platform account configured: attach official split_rules with current commission
       payload.split_rules = [
         {
-          value: 50,
+          value: dynamicCommissionCents,
           account_id: platformAccountId,
         }
       ];
@@ -310,7 +317,7 @@ export class PushinPayProvider {
         pixQrCodeBase64: qrCodeBase64,
         platformFee: '0.00', // Only recognized as revenue upon payment confirmation
         splitStatus,
-        splitAmountCents: 50,
+        splitAmountCents,
         splitError,
         splitDetails: data.split_rules ? data.split_rules : (payload.split_rules || null),
         updatedAt: new Date(),
@@ -668,11 +675,16 @@ export class PushinPayProvider {
           (officialTx.split_status === 'processed' || officialTx.split_status === 'confirmed')
         );
 
+        const orderSplitCents = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
+          ? order.splitAmountCents
+          : 50;
+        const orderSplitReais = (orderSplitCents / 100).toFixed(2);
+
         if (hasSplitEvidence) {
           resolvedSplitStatus = 'CONFIRMED';
           splitConfirmedAt = new Date();
-          platformFeeStr = '0.50';
-          netAmountStr = Math.max(0, Number(order.total) - 0.50).toFixed(2);
+          platformFeeStr = orderSplitReais;
+          netAmountStr = Math.max(0, Number(order.total) - Number(orderSplitReais)).toFixed(2);
         } else {
           // If official API response does not contain definitive split breakdown,
           // keep as REQUESTED (pending reconciliation) rather than assuming confirmation without proof

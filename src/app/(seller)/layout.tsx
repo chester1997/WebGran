@@ -647,35 +647,9 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden bg-[#09090B]">
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-7 custom-scrollbar relative w-full max-w-full">
             
-            {subInfo && subInfo.isSubscriptionActive === false && !pathname.startsWith("/seller/settings") ? (
-              /* BLOCKING PAYWALL FOR EXPIRED 3-DAY TRIAL */
-              <ExpiredPaywall
-                plan={subInfo.plan}
-                latestInvoice={subInfo.latestInvoice}
-                onPaymentSuccess={() => {
-                  fetch(`/api/billing/subscription?t=${Date.now()}`, { cache: "no-store" })
-                    .then((res) => res.json())
-                    .then((data) => {
-                      if (data.success && data.data) {
-                        setSubInfo({
-                          isSubscriptionActive: data.data.isSubscriptionActive,
-                          isTrialActive: data.data.isTrialActive,
-                          trialDaysRemaining: data.data.trialDaysRemaining,
-                          status: data.data.subscription?.status || 'EXPIRED',
-                          isExempt: data.data.isExempt,
-                          plan: data.data.plan,
-                          latestInvoice: data.data.latestInvoice,
-                        });
-                      }
-                    })
-                    .catch(() => {});
-                }}
-              />
-            ) : (
-              <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
-                {children}
-              </Suspense>
-            )}
+            <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
+              {children}
+            </Suspense>
           </main>
         </div>
       </div>

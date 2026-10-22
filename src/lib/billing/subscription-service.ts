@@ -143,17 +143,18 @@ export async function getSellerSubscription(sellerId: string) {
     }
   }
 
-  const isTrialActive = status === 'TRIAL' && periodEndMs > now.getTime();
-  const isPaidActive = status === 'ACTIVE' && periodEndMs > now.getTime();
-  const isSubscriptionActive = isExempt || isTrialActive || isPaidActive;
-  const trialDaysRemaining = isTrialActive 
-    ? Math.max(1, Math.ceil((periodEndMs - now.getTime()) / (1000 * 60 * 60 * 24)))
-    : 0;
+  // Commercial Model: No monthly fee for general WebGran platform usage.
+  // Sellers are always active without trial expiration or paywall blocks.
+  const isTrialActive = false;
+  const isPaidActive = true;
+  const isSubscriptionActive = true;
+  const trialDaysRemaining = 0;
+  status = 'ACTIVE';
 
-  const invoiceHistory = await db.query.invoices.findMany({
+  const invoiceHistory = (await db.query.invoices.findMany({
     where: eq(invoices.sellerId, sellerId),
     orderBy: [desc(invoices.createdAt)],
-  });
+  })) || [];
 
   // Check and process expiration for any PENDING invoice (30 MINUTES EXPIRATION)
   let latestPending = invoiceHistory.find((i) => i.status === 'PENDING');
