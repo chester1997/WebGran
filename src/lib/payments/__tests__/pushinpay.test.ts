@@ -68,6 +68,8 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
     vi.restoreAllMocks();
     vi.clearAllMocks();
     provider = new PushinPayProvider();
+    delete process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID;
+    delete process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID;
   });
 
   describe('1. Cents Conversion & Minimum Charge Validation', () => {
@@ -179,6 +181,7 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
         id: 'conn-pushin-1',
         sellerId: 'seller-1',
+        storeId: 'store-1',
         provider: 'pushinpay',
         status: 'active',
         accessTokenEncrypted: encrypt(validToken),
@@ -256,6 +259,7 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
         id: 'conn-pushin-1',
         sellerId: 'seller-1',
+        storeId: 'store-1',
         provider: 'pushinpay',
         status: 'active',
         accessTokenEncrypted: encrypt(validToken),
@@ -279,6 +283,7 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
         id: 'conn-pushin-1',
         sellerId: 'seller-1',
+        storeId: 'store-1',
         provider: 'pushinpay',
         status: 'active',
         accessTokenEncrypted: encrypt('invalid_token'),
@@ -341,6 +346,62 @@ describe('PushinPay Integration — Security, Functional & Idempotency Suite', (
       const result = await provider.testConnection('wrong_token');
       expect(result.success).toBe(false);
       expect(result.message).toContain('Token de API da PushinPay inválido');
+    });
+
+    it('retrieves user info via GET /api/user returning userId and only returning accountId if officially present', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'A1670309-9682-4219-8D22-7057537A441F',
+          name: 'Luiz Fernando',
+          email: 'admin@webgran.online',
+        }),
+      } as Response);
+
+      const result = await provider.getAccountUser(validToken);
+
+      expect(result.success).toBe(true);
+      expect(result.userId).toBe('A1670309-9682-4219-8D22-7057537A441F');
+      expect(result.accountId).toBeUndefined(); // Exigência 3: Não trata data.id como accountId!
+      expect(result.userName).toBe('Luiz Fernando');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.pushinpay.com.br/api/user',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${validToken}`,
+          }),
+        })
+      );
+
+      // When Pushin Pay officially returns account_id
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'user-uuid-1',
+          account_id: 'account-uuid-1',
+          name: 'Luiz Fernando',
+        }),
+      } as Response);
+
+      const resWithAccount = await provider.getAccountUser(validToken);
+      expect(resWithAccount.success).toBe(true);
+      expect(resWithAccount.accountId).toBe('account-uuid-1');
+      expect(resWithAccount.userId).toBe('user-uuid-1');
+    });
+
+    it('returns failure when token is blank or GET /api/user returns HTTP error', async () => {
+      const emptyRes = await provider.getAccountUser('');
+      expect(emptyRes.success).toBe(false);
+      expect(emptyRes.error).toContain('Token PushinPay não informado');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      } as Response);
+      const errRes = await provider.getAccountUser(validToken);
+      expect(errRes.success).toBe(false);
+      expect(errRes.error).toContain('HTTP 401');
     });
   });
 

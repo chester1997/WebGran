@@ -56,6 +56,7 @@ export async function GET() {
       connection: {
         id: conn.id,
         status: conn.status,
+        accountId: conn.accountId || null,
         tokenMasked,
         webhookUrl,
         hasWebhookSecret,
@@ -126,12 +127,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: testRes.message }, { status: 400 });
     }
 
+    // 3. Resolve user/account information from PushinPay (without treating user ID as account ID)
+    const accountRes = await pushinPayProvider.getAccountUser(token.trim()).catch(() => null);
+    const resolvedAccountId = (body.accountId && typeof body.accountId === 'string' && body.accountId.trim())
+      ? body.accountId.trim()
+      : (accountRes?.accountId || conn?.accountId || null);
+
     const tokenEncrypted = encrypt(token.trim());
     let webhookSecretEncrypted = conn?.webhookSecretEncrypted || null;
     if (body.webhookSecret && typeof body.webhookSecret === 'string' && body.webhookSecret.trim()) {
       webhookSecretEncrypted = encrypt(body.webhookSecret.trim());
     }
-
 
     if (conn) {
       const [updated] = await db.update(sellerPaymentConnections)
@@ -139,6 +145,7 @@ export async function POST(req: NextRequest) {
           storeId: store?.id || conn.storeId,
           accessTokenEncrypted: tokenEncrypted,
           webhookSecretEncrypted,
+          accountId: resolvedAccountId,
           status: 'active',
           updatedAt: new Date(),
         })
@@ -153,6 +160,7 @@ export async function POST(req: NextRequest) {
           provider: 'pushinpay',
           accessTokenEncrypted: tokenEncrypted,
           webhookSecretEncrypted,
+          accountId: resolvedAccountId,
           status: 'active',
         })
         .returning();

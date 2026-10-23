@@ -36,6 +36,51 @@ export interface PushinPayTransactionResponse {
   [key: string]: any;
 }
 
+/**
+ * Determines whether two PushinPay account identifiers refer to the same account.
+ * Accounts are proven identical strictly by exact case-insensitive equality
+ * of official identifiers returned by Pushin Pay, after safe normalization.
+ * Identifiers that differ in any character (even if sharing a prefix) are NOT presumed identical.
+ */
+export function isSamePushinPayAccount(
+  sellerAccountId: string | null | undefined,
+  platformAccountId: string | null | undefined
+): boolean {
+  if (!sellerAccountId || !platformAccountId) return false;
+
+  const cleanSeller = sellerAccountId.trim().toLowerCase();
+  const cleanPlatform = platformAccountId.trim().toLowerCase();
+
+  if (!cleanSeller || !cleanPlatform) return false;
+
+  return cleanSeller === cleanPlatform;
+}
+
+/**
+ * Resolves the official platform store identifier from explicit server-side configuration.
+ * Supported environment variables:
+ * - PUSHINPAY_PLATFORM_STORE_ID
+ * - PLATFORM_STORE_ID
+ * - WEBGRAN_OFFICIAL_STORE_ID
+ */
+export function getPlatformStoreId(): string | null {
+  return process.env.PUSHINPAY_PLATFORM_STORE_ID?.trim() ||
+         process.env.PLATFORM_STORE_ID?.trim() ||
+         process.env.WEBGRAN_OFFICIAL_STORE_ID?.trim() || null;
+}
+
+/**
+ * Determines whether a given store ID belongs to the official platform store.
+ * Identification is server-side and explicit via verified configuration.
+ * Does NOT rely on user role 'admin' or arbitrary ID assumptions.
+ */
+export function isOfficialPlatformStore(storeId: string | null | undefined): boolean {
+  if (!storeId || typeof storeId !== 'string') return false;
+  const officialStoreId = getPlatformStoreId();
+  if (!officialStoreId) return false;
+  return storeId.trim().toLowerCase() === officialStoreId.toLowerCase();
+}
+
 export class PushinPayProvider {
   private static inFlightPixRequests: Map<string, Promise<PixPaymentResponse>> = new Map();
 
@@ -84,6 +129,7 @@ export class PushinPayProvider {
         sellerId: conn.sellerId,
         storeId: conn.storeId,
         token,
+        accountId: conn.accountId || null,
         webhookId: conn.webhookId,
         webhookSecret,
         updatedAt: conn.updatedAt,
@@ -91,6 +137,61 @@ export class PushinPayProvider {
     } catch (err) {
       console.error('[PushinPayProvider] Error decrypting credentials for connection:', conn.id);
       return null;
+    }
+  }
+
+  /**
+   * Retrieves official user information from PushinPay API via GET /api/user.
+   * Only returns accountId if officially provided by the API; never treats User ID (id) as accountId.
+   */
+  async getAccountUser(token: string): Promise<{
+    success: boolean;
+    accountId?: string;
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+    error?: string;
+  }> {
+    if (!token?.trim()) {
+      return { success: false, error: 'Token PushinPay não informado.' };
+    }
+
+    const cleanToken = token.trim();
+    const userUrl = `${this.getBaseUrl()}/user`;
+
+    try {
+      const res = await fetch(userUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${cleanToken}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        return {
+          success: false,
+          error: `Falha ao obter dados do usuário na PushinPay (HTTP ${res.status}).`,
+        };
+      }
+
+      const data = await res.json().catch(() => null);
+      const accountId = typeof data?.account_id === 'string' && data.account_id.trim() ? data.account_id.trim() : undefined;
+      const userId = typeof data?.id === 'string' && data.id.trim() ? data.id.trim() : undefined;
+
+      return {
+        success: true,
+        accountId,
+        userId,
+        userName: data?.name || undefined,
+        userEmail: data?.email || undefined,
+      };
+    } catch (err: any) {
+      console.error('[PushinPayProvider] getAccountUser error:', err?.message);
+      return {
+        success: false,
+        error: 'Erro de comunicação ao consultar usuário na PushinPay.',
+      };
     }
   }
 
@@ -242,6 +343,12 @@ export class PushinPayProvider {
     let splitError: string | null = null;
     const splitAmountCents = dynamicCommissionCents;
 
+    // Resolve store identity for charge
+    const chargeStoreId = params.storeId || order?.storeId || conn.storeId || null;
+    if (!chargeStoreId) {
+      throw new Error('Não foi possível identificar a loja do pedido para emissão da cobrança.');
+    }
+
     if (dynamicCommissionCents <= 0) {
       splitStatus = 'SKIPPED';
       splitError = 'COMISSAO_ZERO';
@@ -250,14 +357,34 @@ export class PushinPayProvider {
       splitStatus = 'SKIPPED';
       splitError = 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
     } else if (platformAccountId) {
-      // Platform account configured: attach official split_rules with current commission
-      payload.split_rules = [
-        {
-          value: dynamicCommissionCents,
-          account_id: platformAccountId,
-        }
-      ];
-      splitStatus = 'REQUESTED';
+      const platformStoreId = getPlatformStoreId();
+
+      if (!platformStoreId) {
+        // Bloqueio seguro: Se a identificação da loja oficial da plataforma não estiver configurada,
+        // não é possível determinar com segurança se a cobrança é própria ou de terceiro.
+        // Interrompe a criação com mensagem explícita, sem enviar split potencialmente inválido.
+        throw new Error('Configuração da loja oficial da plataforma ausente (PUSHINPAY_PLATFORM_STORE_ID). Cobrança interrompida para prevenir split potencialmente inválido.');
+      }
+
+      if (isOfficialPlatformStore(chargeStoreId)) {
+        // Exigência 2: Loja oficial da plataforma:
+        // - omite completamente split_rules do payload;
+        // - marca o split como SKIPPED com CONTA_PROPRIETARIA_PLATAFORMA;
+        // - não registra comissão como transferência de split;
+        // - mantém a criação normal da cobrança.
+        splitStatus = 'SKIPPED';
+        splitError = 'CONTA_PROPRIETARIA_PLATAFORMA';
+      } else {
+        // Loja de terceiro (incluindo lojas de usuários administradores que não sejam a loja oficial configurada):
+        // Preserva o split normal com a comissão dinâmica configurada.
+        payload.split_rules = [
+          {
+            value: dynamicCommissionCents,
+            account_id: platformAccountId,
+          }
+        ];
+        splitStatus = 'REQUESTED';
+      }
     } else {
       // Platform account not configured: do NOT send invalid split rule to prevent gateway rejection
       splitStatus = 'FAILED';

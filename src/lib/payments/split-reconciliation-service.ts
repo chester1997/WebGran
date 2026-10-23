@@ -85,7 +85,7 @@ export class SplitReconciliationService {
         platformFeeStr: '0.00',
         netAmountStr: order.total,
         splitConfirmedAt: null,
-        splitError: 'COMISSAO_ZERO_OU_VALOR_INSUFICIENTE',
+        splitError: order.splitError || 'COMISSAO_ZERO_OU_VALOR_INSUFICIENTE',
         splitDetails: officialTx?.split_rules || null,
         auditAction: 'SKIPPED',
       };

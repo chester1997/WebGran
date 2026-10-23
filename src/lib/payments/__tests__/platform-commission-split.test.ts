@@ -78,6 +78,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
     mpProvider = new MercadoPagoProvider();
     pushinProvider = new PushinPayProvider();
     process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID = platformAccountId;
+    process.env.PUSHINPAY_PLATFORM_STORE_ID = 'store-official-webgran';
   });
 
   // =========================================================================
@@ -201,6 +202,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
         storeId: 'store-1',
         provider: 'pushinpay',
         status: 'active',
+        accountId: 'different-seller-account-12345678',
         accessTokenEncrypted: encrypt(pushinToken),
       } as any);
 
@@ -247,6 +249,188 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       );
     });
 
+    it('omits split_rules completely when store is the official platform store (PUSHINPAY_PLATFORM_STORE_ID)', async () => {
+      const dbModule = await import('@/db');
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-owner-1',
+        storeId: 'store-official-webgran',
+      } as any);
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-pushin-owner',
+        sellerId: 'seller-admin',
+        storeId: 'store-official-webgran',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'tx-pushin-owner-charge',
+          qr_code: '00020126580014...',
+          status: 'created',
+          value: 100,
+        }),
+      } as Response);
+
+      const res = await pushinProvider.createPixPayment({
+        sellerId: 'seller-admin',
+        orderId: 'order-owner-1',
+        amount: 1.0,
+      });
+
+      expect(res.paymentId).toBe('tx-pushin-owner-charge');
+      const sentPayload = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentPayload.split_rules).toBeUndefined(); // split_rules COMPLETELY OMITTED
+
+      const setCall = vi.mocked(dbModule.db.update).mock.results[0].value.set;
+      expect(setCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          splitStatus: 'SKIPPED',
+          splitError: 'CONTA_PROPRIETARIA_PLATAFORMA',
+          platformFee: '0.00',
+        })
+      );
+    });
+
+    it('attaches split_rules with dynamic commission on third-party stores', async () => {
+      const dbModule = await import('@/db');
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-third-party-1',
+        storeId: 'store-third-party-123',
+      } as any);
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-pushin-third-party',
+        sellerId: 'seller-third-party',
+        storeId: 'store-third-party-123',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'tx-third-party-charge',
+          qr_code: '00020126580014...',
+          status: 'created',
+          value: 200,
+        }),
+      } as Response);
+
+      const res = await pushinProvider.createPixPayment({
+        sellerId: 'seller-third-party',
+        orderId: 'order-third-party-1',
+        amount: 2.0,
+      });
+
+      expect(res.paymentId).toBe('tx-third-party-charge');
+      const sentPayload = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentPayload.split_rules).toEqual([
+        {
+          value: 50,
+          account_id: platformAccountId,
+        },
+      ]);
+
+      const setCall = vi.mocked(dbModule.db.update).mock.results[0].value.set;
+      expect(setCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          splitStatus: 'GATEWAY_ACCEPTED',
+          splitAmountCents: 50,
+        })
+      );
+    });
+
+    it('attaches normal split when store is owned by an admin but is a third-party store (not official store)', async () => {
+      const dbModule = await import('@/db');
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce({
+        id: 'order-admin-other',
+        storeId: 'store-admin-secondary', // Not the official store!
+      } as any);
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-admin-secondary',
+        sellerId: 'admin-user-id',
+        storeId: 'store-admin-secondary',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'tx-admin-secondary-charge',
+          qr_code: '00020126580014...',
+          status: 'created',
+          value: 500,
+        }),
+      } as Response);
+
+      const res = await pushinProvider.createPixPayment({
+        sellerId: 'admin-user-id',
+        orderId: 'order-admin-other',
+        amount: 5.0,
+      });
+
+      expect(res.paymentId).toBe('tx-admin-secondary-charge');
+      const sentPayload = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      // Admin third-party store MUST still have split_rules attached
+      expect(sentPayload.split_rules).toEqual([
+        {
+          value: 50,
+          account_id: platformAccountId,
+        },
+      ]);
+    });
+
+    it('strictly aborts Pix creation when PUSHINPAY_PLATFORM_STORE_ID configuration is absent', async () => {
+      delete process.env.PUSHINPAY_PLATFORM_STORE_ID;
+      delete process.env.PLATFORM_STORE_ID;
+      delete process.env.WEBGRAN_OFFICIAL_STORE_ID;
+
+      const dbModule = await import('@/db');
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce(null as any);
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-pushin-1',
+        sellerId: 'seller-1',
+        storeId: 'store-1',
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      await expect(
+        pushinProvider.createPixPayment({
+          sellerId: 'seller-1',
+          orderId: 'order-missing-config',
+          amount: 25.0,
+        })
+      ).rejects.toThrow('Configuração da loja oficial da plataforma ausente (PUSHINPAY_PLATFORM_STORE_ID). Cobrança interrompida para prevenir split potencialmente inválido.');
+    });
+
+    it('strictly aborts Pix creation when store cannot be identified', async () => {
+      const dbModule = await import('@/db');
+      vi.mocked(dbModule.db.query.orders.findFirst).mockResolvedValueOnce(null as any);
+      vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
+        id: 'conn-pushin-nostore',
+        sellerId: 'seller-nostore',
+        storeId: null, // Unknown store
+        provider: 'pushinpay',
+        status: 'active',
+        accessTokenEncrypted: encrypt(pushinToken),
+      } as any);
+
+      await expect(
+        pushinProvider.createPixPayment({
+          sellerId: 'seller-nostore',
+          orderId: 'order-nostore-1',
+          amount: 25.0,
+        })
+      ).rejects.toThrow('Não foi possível identificar a loja do pedido para emissão da cobrança.');
+    });
+
     it('does NOT send invalid split rule when platform account_id is not configured, recording FAILED without breaking checkout', async () => {
       delete process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID;
       delete process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID;
@@ -259,6 +443,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
         storeId: 'store-1',
         provider: 'pushinpay',
         status: 'active',
+        accountId: 'different-seller-account-12345678',
         accessTokenEncrypted: encrypt(pushinToken),
       } as any);
 
@@ -292,6 +477,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
         storeId: 'store-1',
         provider: 'pushinpay',
         status: 'active',
+        accountId: 'different-seller-account-12345678',
         accessTokenEncrypted: encrypt(pushinToken),
       } as any);
 
@@ -1191,6 +1377,86 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       // Webhook não sobrescreve status do pedido nem regride split para FAILED
       expect(result.success).toBe(true);
       expect(db.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // 6. Pushin Pay Same Account Split Detection & SKIPPED Handling
+  // =========================================================================
+  describe('6. Pushin Pay Same Account Identity & SKIPPED Reconciliation', () => {
+    it('isSamePushinPayAccount strictly identifies identical accounts by exact match and rejects shared prefixes', async () => {
+      const { isSamePushinPayAccount } = await import('@/lib/payments/providers/pushinpay');
+
+      // Exact case-insensitive matches after normalization
+      expect(isSamePushinPayAccount('A1670309-BC4A-4600-A6F3-86EB25B818CF', 'a1670309-bc4a-4600-a6f3-86eb25b818cf')).toBe(true);
+      expect(isSamePushinPayAccount('  9C3AD98C-F00B-4729-BEAC-0A4B70B3A043  ', '9c3ad98c-f00b-4729-beac-0a4b70b3a043')).toBe(true);
+
+      // Shared 8-char prefix, but different full values -> MUST BE FALSE (cannot presume same account without official evidence)
+      expect(isSamePushinPayAccount('A1670309-9682-4219-8D22-7057537A441F', 'A1670309-BC4A-4600-A6F3-86EB25B818CF')).toBe(false);
+      expect(isSamePushinPayAccount('9C3AD98C-AAAA-BBBB-CCCC-DDDDDDD00001', '9C3AD98C-F00B-4729-BEAC-0A4B70B3A043')).toBe(false);
+
+      // Completely different accounts -> FALSE
+      expect(isSamePushinPayAccount('A2E4ABCE-7EE3-4AC7-8954-861D7D7111CA', 'A1670309-BC4A-4600-A6F3-86EB25B818CF')).toBe(false);
+      expect(isSamePushinPayAccount('seller-1-uuid', 'platform-1-uuid')).toBe(false);
+
+      // Null, empty, undefined or whitespace -> FALSE
+      expect(isSamePushinPayAccount(null, 'platform-id')).toBe(false);
+      expect(isSamePushinPayAccount('seller-id', null)).toBe(false);
+      expect(isSamePushinPayAccount('', '')).toBe(false);
+      expect(isSamePushinPayAccount('   ', 'platform-id')).toBe(false);
+    });
+
+    it('evaluatePushinPaySplit preserves CONTA_PROPRIETARIA_PLATAFORMA and sets platformFee 0.00 without transfer', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-owner-eval',
+          total: '50.00',
+          splitStatus: 'SKIPPED',
+          splitAmountCents: 50,
+          splitError: 'CONTA_PROPRIETARIA_PLATAFORMA',
+          platformFee: '0.00',
+        },
+        officialTx: {
+          id: 'tx-owner',
+          status: 'paid',
+          value: 5000,
+          split_rules: [],
+        },
+        platformAccountId,
+      });
+
+      expect(evaluation.status).toBe('SKIPPED');
+      expect(evaluation.platformFeeStr).toBe('0.00'); // No commission transfer
+      expect(evaluation.netAmountStr).toBe('50.00'); // Full amount to merchant (which is the platform)
+      expect(evaluation.splitError).toBe('CONTA_PROPRIETARIA_PLATAFORMA');
+      expect(evaluation.auditAction).toBe('SKIPPED');
+    });
+
+    it('isOfficialPlatformStore accurately validates official store ID and rejects arbitrary IDs or missing config', async () => {
+      const { isOfficialPlatformStore, getPlatformStoreId } = await import('@/lib/payments/providers/pushinpay');
+
+      process.env.PUSHINPAY_PLATFORM_STORE_ID = '27d28329-7e24-4688-b04d-d3587d7d261f';
+      expect(getPlatformStoreId()).toBe('27d28329-7e24-4688-b04d-d3587d7d261f');
+      expect(isOfficialPlatformStore('27d28329-7e24-4688-b04d-d3587d7d261f')).toBe(true);
+      expect(isOfficialPlatformStore('27D28329-7E24-4688-B04D-D3587D7D261F')).toBe(true); // Case-insensitive
+      expect(isOfficialPlatformStore('  27d28329-7e24-4688-b04d-d3587d7d261f  ')).toBe(true);
+
+      // Third-party stores
+      expect(isOfficialPlatformStore('6ab2687f-db1f-431d-9d23-5749efeb9cdd')).toBe(false);
+      expect(isOfficialPlatformStore('some-other-store-id')).toBe(false);
+
+      // Empty, null, undefined
+      expect(isOfficialPlatformStore('')).toBe(false);
+      expect(isOfficialPlatformStore(null)).toBe(false);
+      expect(isOfficialPlatformStore(undefined)).toBe(false);
+
+      // Missing configuration
+      delete process.env.PUSHINPAY_PLATFORM_STORE_ID;
+      delete process.env.PLATFORM_STORE_ID;
+      delete process.env.WEBGRAN_OFFICIAL_STORE_ID;
+      expect(getPlatformStoreId()).toBeNull();
+      expect(isOfficialPlatformStore('27d28329-7e24-4688-b04d-d3587d7d261f')).toBe(false);
     });
   });
 });

@@ -106,6 +106,7 @@ describe('WebGran Platform Commission & Commercial Model Suite', () => {
     vi.clearAllMocks();
     PlatformCommissionService._resetCacheForTesting();
     process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID = 'plat-account-uuid-123';
+    process.env.PUSHINPAY_PLATFORM_STORE_ID = 'store-official-webgran';
   });
 
   // 1. Banco disponível com comissão configurada em 50 centavos
