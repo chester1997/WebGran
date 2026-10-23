@@ -23,7 +23,7 @@ export default async function SettingsPage() {
   // Fetch real transaction fee from Single Source of Truth
   let transactionFee = {
     isAvailable: false,
-    formattedFee: "IndisponÃ­vel",
+    formattedFee: "Indisponível",
     feeReais: 0,
     feeCents: 0,
   };
@@ -40,7 +40,7 @@ export default async function SettingsPage() {
     console.error("Error fetching platform commission in SettingsPage:", err);
     transactionFee = {
       isAvailable: false,
-      formattedFee: "IndisponÃ­vel",
+      formattedFee: "Indisponível",
       feeReais: 0,
       feeCents: 0,
     };
@@ -50,7 +50,6 @@ export default async function SettingsPage() {
     <SettingsClient
       storeName={store?.name || "Minha Loja"}
       storeId={store?.id || null}
-      storeTelegramNotificationId={store?.telegramNotificationId || null}
       transactionFee={transactionFee}
       sellerProfile={{
         id: seller.id,
@@ -59,7 +58,6 @@ export default async function SettingsPage() {
         avatarUrl: userRecord?.avatarUrl || null,
         role: userRecord?.role || seller.role || "seller",
         createdAt: userRecord?.createdAt ? new Date(userRecord.createdAt).toISOString() : null,
-        lastLoginAt: null, // O banco nÃ£o possui campo de Ãºltimo acesso; mantido nulo para nÃ£o inventar dados
       }}
     />
   );

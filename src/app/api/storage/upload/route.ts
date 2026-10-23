@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const allowedMimeTypes = ["image/webp", "image/jpeg", "image/png", "image/gif"];
     if (!allowedMimeTypes.includes(mimeType.toLowerCase())) {
       return NextResponse.json(
-        { success: false, error: "Formato de imagem nÃ£o permitido. Envie WebP, JPEG ou PNG." },
+        { success: false, error: "Formato de imagem não permitido. Envie WebP, JPEG ou PNG." },
         { status: 400 }
       );
     }
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     if (!isPng && !isJpg && !isGif && !isWebp) {
       return NextResponse.json(
-        { success: false, error: "O arquivo enviado nÃ£o Ã© uma imagem vÃ¡lida ou contÃ©m assinatura invÃ¡lida." },
+        { success: false, error: "O arquivo enviado não é uma imagem válida ou contém assinatura inválida." },
         { status: 400 }
       );
     }

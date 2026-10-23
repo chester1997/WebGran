@@ -92,7 +92,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
     it("rejects empty name", async () => {
       await expect(
         updateSellerProfileAction({ name: "   " })
-      ).rejects.toThrow("O nome Ã© obrigatÃ³rio.");
+      ).rejects.toThrow("O nome é obrigatório.");
     });
 
     it("allows removing avatar by setting it to null", async () => {
@@ -114,7 +114,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
           newPassword: "NewSecretPassword123!",
           confirmPassword: "NewSecretPassword123!",
         })
-      ).rejects.toThrow("Todos os campos de senha sÃ£o obrigatÃ³rios.");
+      ).rejects.toThrow("Todos os campos de senha são obrigatórios.");
 
       await expect(
         changePasswordAction({
@@ -122,7 +122,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
           newPassword: "",
           confirmPassword: "NewSecretPassword123!",
         })
-      ).rejects.toThrow("Todos os campos de senha sÃ£o obrigatÃ³rios.");
+      ).rejects.toThrow("Todos os campos de senha são obrigatórios.");
     });
 
     it("enforces minimum password length of 6 characters", async () => {
@@ -132,7 +132,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
           newPassword: "12345",
           confirmPassword: "12345",
         })
-      ).rejects.toThrow("A nova senha deve ter no mÃ­nimo 6 caracteres.");
+      ).rejects.toThrow("A nova senha deve ter no mínimo 6 caracteres.");
     });
 
     it("rejects when confirmation does not match", async () => {
@@ -142,7 +142,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
           newPassword: "Password123!",
           confirmPassword: "DifferentPassword123!",
         })
-      ).rejects.toThrow("A confirmaÃ§Ã£o da nova senha nÃ£o confere.");
+      ).rejects.toThrow("A confirmação da nova senha não confere.");
     });
 
     it("rejects when new password is identical to current password", async () => {
@@ -152,7 +152,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
           newPassword: "OldPassword123!",
           confirmPassword: "OldPassword123!",
         })
-      ).rejects.toThrow("A nova senha nÃ£o pode ser igual Ã  senha atual.");
+      ).rejects.toThrow("A nova senha não pode ser igual à senha atual.");
     });
 
     it("fails when current password is wrong", async () => {
@@ -162,7 +162,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
           newPassword: "NewPassword123!",
           confirmPassword: "NewPassword123!",
         })
-      ).rejects.toThrow("A senha atual informada estÃ¡ incorreta.");
+      ).rejects.toThrow("A senha atual informada está incorreta.");
     });
 
     it("successfully hashes and updates password when current password is valid", async () => {
@@ -183,7 +183,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
     });
   });
 
-  describe("3. Seller Notification Preferences", () => {
+  describe("3. Seller Notification Preferences Backend", () => {
     it("saves valid telegram ID for sale notifications", async () => {
       const res = await saveSellerNotificationPreferenceAction({
         telegramNotificationId: "888777666",
@@ -209,7 +209,7 @@ describe("Seller Settings & Profile Reformulation Suite", () => {
         saveSellerNotificationPreferenceAction({
           telegramNotificationId: "abc_invalid_id",
         })
-      ).rejects.toThrow("O Telegram ID deve conter apenas nÃºmeros (ex: 123456789).");
+      ).rejects.toThrow("O Telegram ID deve conter apenas números (ex: 123456789).");
     });
 
     it("rejects telegram ID matching store bot ID to prevent circular bot messaging", async () => {

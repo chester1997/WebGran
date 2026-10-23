@@ -10,12 +10,12 @@ export async function updateSellerProfileAction(data: { name: string; avatarUrl?
   const seller = await requireSeller();
 
   if (!data.name || !data.name.trim()) {
-    throw new Error("O nome Ã© obrigatÃ³rio.");
+    throw new Error("O nome é obrigatório.");
   }
 
   // Validate avatarUrl size if it's base64 data URL (max 5MB image string ~7MB base64)
   if (data.avatarUrl && data.avatarUrl.startsWith("data:") && data.avatarUrl.length > 8 * 1024 * 1024) {
-    throw new Error("A imagem do perfil excede o limite mÃ¡ximo de 5MB.");
+    throw new Error("A imagem do perfil excede o limite máximo de 5MB.");
   }
 
   const updatedAvatar = data.avatarUrl !== undefined ? (data.avatarUrl ? data.avatarUrl.trim() : null) : undefined;
@@ -45,19 +45,19 @@ export async function changePasswordAction(data: {
   const { currentPassword, newPassword, confirmPassword } = data;
 
   if (!currentPassword || !newPassword || !confirmPassword) {
-    throw new Error("Todos os campos de senha sÃ£o obrigatÃ³rios.");
+    throw new Error("Todos os campos de senha são obrigatórios.");
   }
 
   if (newPassword.length < 6) {
-    throw new Error("A nova senha deve ter no mÃ­nimo 6 caracteres.");
+    throw new Error("A nova senha deve ter no mínimo 6 caracteres.");
   }
 
   if (newPassword !== confirmPassword) {
-    throw new Error("A confirmaÃ§Ã£o da nova senha nÃ£o confere.");
+    throw new Error("A confirmação da nova senha não confere.");
   }
 
   if (newPassword === currentPassword) {
-    throw new Error("A nova senha nÃ£o pode ser igual Ã  senha atual.");
+    throw new Error("A nova senha não pode ser igual à senha atual.");
   }
 
   const bcrypt = await import("bcryptjs");
@@ -66,12 +66,12 @@ export async function changePasswordAction(data: {
   });
 
   if (!userRecord) {
-    throw new Error("UsuÃ¡rio nÃ£o encontrado.");
+    throw new Error("Usuário não encontrado.");
   }
 
   const isCurrentValid = await bcrypt.default.compare(currentPassword, userRecord.password);
   if (!isCurrentValid) {
-    throw new Error("A senha atual informada estÃ¡ incorreta.");
+    throw new Error("A senha atual informada está incorreta.");
   }
 
   const hashedPassword = await bcrypt.default.hash(newPassword, 10);
@@ -96,13 +96,13 @@ export async function saveSellerNotificationPreferenceAction(data: {
 
   const seller = await requireSeller();
   const store = await getCurrentStore();
-  if (!store) throw new Error("Loja nÃ£o encontrada.");
+  if (!store) throw new Error("Loja não encontrada.");
 
   const cleanId = (data.telegramNotificationId || "").trim();
 
   if (cleanId) {
     if (!/^-?\d+$/.test(cleanId)) {
-      throw new Error("O Telegram ID deve conter apenas nÃºmeros (ex: 123456789).");
+      throw new Error("O Telegram ID deve conter apenas números (ex: 123456789).");
     }
 
     const storeBots = db.query.telegramBots?.findMany
@@ -117,7 +117,7 @@ export async function saveSellerNotificationPreferenceAction(data: {
 
     if (isBotId) {
       throw new Error(
-        `O ID informado (${cleanId}) pertence ao bot da sua loja. VocÃª deve informar o seu ID pessoal de usuÃ¡rio (obtido com @userinfobot).`
+        `O ID informado (${cleanId}) pertence ao bot da sua loja. Você deve informar o seu ID pessoal de usuário (obtido com @userinfobot).`
       );
     }
   }

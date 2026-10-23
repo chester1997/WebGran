@@ -14,7 +14,6 @@ import {
   Percent,
   Copy,
   Check,
-  Clock,
   Calendar,
   ShieldCheck,
   KeyRound,
@@ -24,13 +23,13 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Info
+  Info,
+  Volume2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   updateSellerProfileAction,
-  changePasswordAction,
-  saveSellerNotificationPreferenceAction
+  changePasswordAction
 } from "./actions";
 
 interface SellerProfile {
@@ -40,7 +39,6 @@ interface SellerProfile {
   avatarUrl: string | null;
   role?: string;
   createdAt?: string | null;
-  lastLoginAt?: string | null;
 }
 
 interface TransactionFeeData {
@@ -53,19 +51,18 @@ interface TransactionFeeData {
 interface Props {
   storeName: string;
   storeId: string | null;
-  storeTelegramNotificationId: string | null;
   transactionFee: TransactionFeeData;
   sellerProfile: SellerProfile;
 }
 
 /**
- * Formata data no padrÃ£o brasileiro com fuso horÃ¡rio America/Recife
+ * Formata data no padrão brasileiro com fuso comercial America/Recife
  */
 function formatDateRecife(dateStr?: string | null): string {
-  if (!dateStr) return "IndisponÃ­vel";
+  if (!dateStr) return "Indisponível";
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "IndisponÃ­vel";
+    if (isNaN(d.getTime())) return "Indisponível";
     return new Intl.DateTimeFormat("pt-BR", {
       timeZone: "America/Recife",
       day: "2-digit",
@@ -73,14 +70,13 @@ function formatDateRecife(dateStr?: string | null): string {
       year: "numeric",
     }).format(d);
   } catch {
-    return "IndisponÃ­vel";
+    return "Indisponível";
   }
 }
 
 export default function SettingsClient({
   storeName,
   storeId,
-  storeTelegramNotificationId,
   transactionFee,
   sellerProfile
 }: Props) {
@@ -109,28 +105,31 @@ export default function SettingsClient({
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Notifications State
-  const [telegramNotificationsEnabled, setTelegramNotificationsEnabled] = useState(
-    Boolean(storeTelegramNotificationId && storeTelegramNotificationId.trim())
-  );
-  const [telegramId, setTelegramId] = useState(storeTelegramNotificationId || "");
-  const [isEditingTelegramId, setIsEditingTelegramId] = useState(false);
-  const [telegramInputVal, setTelegramInputVal] = useState(storeTelegramNotificationId || "");
-  const [savingNotification, setSavingNotification] = useState(false);
-  const [notificationError, setNotificationError] = useState<string | null>(null);
-
   // Browser Notifications State
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
-  const [browserPermission, setBrowserPermission] = useState<string>("default");
+  const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [requestingPermission, setRequestingPermission] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("webgran_browser_notifications");
-      if (saved === "true" && "Notification" in window && Notification.permission === "granted") {
-        setBrowserNotificationsEnabled(true);
+      if (!("Notification" in window)) {
+        setBrowserPermission("unsupported");
+        setBrowserNotificationsEnabled(false);
+        return;
       }
-      if ("Notification" in window) {
-        setBrowserPermission(Notification.permission);
+
+      const currentPerm = Notification.permission;
+      setBrowserPermission(currentPerm);
+
+      const savedPref = localStorage.getItem("webgran_browser_notifications");
+      // Respeita o estado real: se a permissão foi concedida E o usuário ativou a preferência
+      if (currentPerm === "granted" && savedPref === "true") {
+        setBrowserNotificationsEnabled(true);
+      } else {
+        setBrowserNotificationsEnabled(false);
+        if (currentPerm === "denied") {
+          localStorage.setItem("webgran_browser_notifications", "false");
+        }
       }
     }
   }, []);
@@ -159,7 +158,7 @@ export default function SettingsClient({
 
     // Validate size (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage("A imagem selecionada excede o tamanho mÃ¡ximo de 10MB.");
+      setErrorMessage("A imagem selecionada excede o tamanho máximo de 10MB.");
       return;
     }
 
@@ -186,7 +185,7 @@ export default function SettingsClient({
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setErrorMessage("O nome do vendedor Ã© obrigatÃ³rio.");
+      setErrorMessage("O nome do vendedor é obrigatório.");
       return;
     }
 
@@ -196,7 +195,7 @@ export default function SettingsClient({
     try {
       let finalAvatarUrl = avatarUrl;
 
-      // If a new file was chosen, upload it through the optimized CDN pipeline
+      // Se um novo arquivo foi selecionado, faz o upload através da pipeline otimizada para o Bunny CDN
       if (selectedAvatarFile) {
         const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
         const uploadRes = await uploadOptimizedImage(selectedAvatarFile, "profiles");
@@ -238,22 +237,22 @@ export default function SettingsClient({
     setPasswordError(null);
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError("Todos os campos sÃ£o obrigatÃ³rios.");
+      setPasswordError("Todos os campos são obrigatórios.");
       return;
     }
 
     if (newPassword.length < 6) {
-      setPasswordError("A nova senha deve ter no mÃ­nimo 6 caracteres.");
+      setPasswordError("A nova senha deve ter no mínimo 6 caracteres.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("A confirmaÃ§Ã£o da nova senha nÃ£o confere.");
+      setPasswordError("A confirmação da nova senha não confere.");
       return;
     }
 
     if (newPassword === currentPassword) {
-      setPasswordError("A nova senha nÃ£o pode ser igual Ã  senha atual.");
+      setPasswordError("A nova senha não pode ser igual à senha atual.");
       return;
     }
 
@@ -280,104 +279,80 @@ export default function SettingsClient({
     }
   };
 
-  const handleToggleTelegramNotifications = async () => {
-    setNotificationError(null);
-
-    // If currently enabled, toggling off disables notifications
-    if (telegramNotificationsEnabled) {
-      setSavingNotification(true);
-      try {
-        await saveSellerNotificationPreferenceAction({ telegramNotificationId: null });
-        setTelegramNotificationsEnabled(false);
-        setTelegramId("");
-        setTelegramInputVal("");
-        setIsEditingTelegramId(false);
-        showToast("NotificaÃ§Ãµes de vendas no Telegram desativadas.");
-        router.refresh();
-      } catch (err: any) {
-        setNotificationError(err?.message || "Erro ao desativar notificaÃ§Ãµes.");
-      } finally {
-        setSavingNotification(false);
-      }
-    } else {
-      // Toggling on: if we already have an ID, save it; otherwise open the input
-      if (telegramId && telegramId.trim()) {
-        setSavingNotification(true);
-        try {
-          await saveSellerNotificationPreferenceAction({ telegramNotificationId: telegramId });
-          setTelegramNotificationsEnabled(true);
-          showToast("NotificaÃ§Ãµes de vendas no Telegram ativadas.");
-          router.refresh();
-        } catch (err: any) {
-          setNotificationError(err?.message || "Erro ao ativar notificaÃ§Ãµes.");
-        } finally {
-          setSavingNotification(false);
-        }
-      } else {
-        setIsEditingTelegramId(true);
-      }
-    }
-  };
-
-  const handleSaveTelegramId = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanId = telegramInputVal.trim();
-    if (!cleanId) {
-      setNotificationError("Informe o seu Telegram ID (somente nÃºmeros).");
-      return;
-    }
-
-    if (!/^-?\d+$/.test(cleanId)) {
-      setNotificationError("O Telegram ID deve conter apenas nÃºmeros (ex: 123456789).");
-      return;
-    }
-
-    setSavingNotification(true);
-    setNotificationError(null);
-
-    try {
-      const res = await saveSellerNotificationPreferenceAction({ telegramNotificationId: cleanId });
-      setTelegramId(res.telegramNotificationId || cleanId);
-      setTelegramNotificationsEnabled(true);
-      setIsEditingTelegramId(false);
-      showToast("Telegram ID salvo e notificaÃ§Ãµes ativadas com sucesso!");
-      router.refresh();
-    } catch (err: any) {
-      setNotificationError(err?.message || "Erro ao salvar Telegram ID.");
-    } finally {
-      setSavingNotification(false);
-    }
-  };
-
   const handleToggleBrowserNotifications = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
-      alert("Seu navegador nÃ£o suporta notificaÃ§Ãµes de Ã¡rea de trabalho.");
+      alert("Seu navegador não oferece suporte a notificações de área de trabalho.");
       return;
     }
 
     if (browserNotificationsEnabled) {
+      // Desativação pelo usuário
       setBrowserNotificationsEnabled(false);
       localStorage.setItem("webgran_browser_notifications", "false");
-      showToast("NotificaÃ§Ãµes do navegador desativadas.");
-    } else {
-      if (Notification.permission === "granted") {
+      showToast("Notificações do navegador desativadas.");
+      return;
+    }
+
+    // Ativação
+    const currentPermission = Notification.permission;
+    setBrowserPermission(currentPermission);
+
+    if (currentPermission === "granted") {
+      setBrowserNotificationsEnabled(true);
+      localStorage.setItem("webgran_browser_notifications", "true");
+      showToast("Notificações do navegador ativadas com sucesso!");
+      return;
+    }
+
+    if (currentPermission === "denied") {
+      alert("As notificações estão bloqueadas nas configurações do seu navegador. Por favor, acesse as configurações do site e selecione 'Permitir' para ativá-las.");
+      return;
+    }
+
+    // Permissão pendente ('default'): solicita permissão ao usuário
+    setRequestingPermission(true);
+    try {
+      const result = await Notification.requestPermission();
+      setBrowserPermission(result);
+
+      if (result === "granted") {
         setBrowserNotificationsEnabled(true);
         localStorage.setItem("webgran_browser_notifications", "true");
-        showToast("NotificaÃ§Ãµes do navegador ativadas.");
-      } else if (Notification.permission !== "denied") {
-        const permission = await Notification.requestPermission();
-        setBrowserPermission(permission);
-        if (permission === "granted") {
-          setBrowserNotificationsEnabled(true);
-          localStorage.setItem("webgran_browser_notifications", "true");
-          showToast("NotificaÃ§Ãµes do navegador ativadas com sucesso!");
-        } else {
-          setBrowserNotificationsEnabled(false);
-          localStorage.setItem("webgran_browser_notifications", "false");
+        showToast("Notificações do navegador autorizadas e ativadas com sucesso!");
+        try {
+          new Notification("WebGran", {
+            body: "Notificações ativadas! Você receberá alertas em tempo real sobre vendas confirmadas.",
+            icon: "/icon.png",
+          });
+        } catch {
+          // ignora falha silenciosa de construtor em alguns navegadores
         }
       } else {
-        alert("As notificaÃ§Ãµes estÃ£o bloqueadas nas configuraÃ§Ãµes do seu navegador. Por favor, libere a permissÃ£o para ativÃ¡-las.");
+        setBrowserNotificationsEnabled(false);
+        localStorage.setItem("webgran_browser_notifications", "false");
+        if (result === "denied") {
+          showToast("Permissão de notificações recusada no navegador.");
+        }
       }
+    } catch (err) {
+      console.error("Erro ao solicitar permissão de notificações:", err);
+    } finally {
+      setRequestingPermission(false);
+    }
+  };
+
+  const handleSendTestNotification = () => {
+    if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") {
+      return;
+    }
+    try {
+      new Notification("🔔 Teste de Notificação WebGran", {
+        body: "Suas notificações do navegador estão ativas e funcionando perfeitamente!",
+        icon: "/icon.png",
+      });
+      showToast("Notificação de teste enviada!");
+    } catch (err) {
+      console.error("Erro ao disparar notificação de teste:", err);
     }
   };
 
@@ -401,7 +376,7 @@ export default function SettingsClient({
           Meu Perfil
         </h1>
         <p className="text-zinc-400 text-sm mt-1">
-          Gerencie as suas informaÃ§Ãµes de vendedor, seguranÃ§a e preferÃªncias na plataforma WebGran.
+          Gerencie as suas informações de vendedor, segurança e preferências na plataforma WebGran.
         </p>
       </div>
 
@@ -414,7 +389,7 @@ export default function SettingsClient({
       )}
 
       {/* ========================================================================= */}
-      {/* ÃREA 1: PERFIL DO VENDEDOR & DESTAQUE DE TAXA POR TRANSAÃ‡ÃƒO */}
+      {/* ÁREA 1: PERFIL DO VENDEDOR & DESTAQUE DE TAXA POR TRANSAÇÃO */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Card Principal: Perfil do Vendedor (2 Colunas no Desktop) */}
@@ -424,10 +399,10 @@ export default function SettingsClient({
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <User className="w-4 h-4 text-red-500" />
-                  InformaÃ§Ãµes da Conta
+                  Informações da Conta
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Dados de identificaÃ§Ã£o do vendedor cadastrado na plataforma.
+                  Dados de identificação do vendedor cadastrado na plataforma.
                 </p>
               </div>
 
@@ -488,13 +463,13 @@ export default function SettingsClient({
                 <div className="space-y-2 text-center sm:text-left min-w-0 flex-1">
                   <h3 className="text-sm font-bold text-white">Foto de perfil</h3>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    Formatos aceitos: JPG, PNG ou WEBP. Tamanho mÃ¡ximo: 10MB.
+                    Formatos aceitos: JPG, PNG ou WEBP. Tamanho máximo: 10MB.
                   </p>
 
                   {avatarPreview && (
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                       <Sparkles className="w-3 h-3" />
-                      PrÃ©via carregada. Clique em "Salvar alteraÃ§Ãµes" para confirmar.
+                      Prévia carregada. Clique em "Salvar alterações" para confirmar.
                     </span>
                   )}
 
@@ -554,43 +529,28 @@ export default function SettingsClient({
                     className="w-full bg-[#141418] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-zinc-400 cursor-not-allowed select-none"
                   />
                   <p className="text-[11px] text-zinc-400 mt-1">
-                    O e-mail Ã© utilizado para login no sistema e nÃ£o pode ser alterado diretamente.
+                    O e-mail é utilizado para login no sistema e não pode ser alterado diretamente.
                   </p>
                 </div>
               </div>
 
-              {/* Metadata Info Chips: Membro desde & Ãšltimo acesso */}
-              <div className="pt-4 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181C] border border-white/5">
+              {/* Metadata Info: Membro desde (Layout limpo e balanceado) */}
+              <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181C] border border-white/5 flex-1">
                   <Calendar className="w-4 h-4 text-red-500 shrink-0" />
-                  <div>
-                    <span className="text-zinc-400 block text-[11px]">Membro desde:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-400 text-xs">Membro desde:</span>
                     <span className="text-white font-semibold">
                       {formatDateRecife(sellerProfile.createdAt)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181C] border border-white/5">
-                  <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-zinc-400 block text-[11px]">Ãšltimo acesso:</span>
-                    <span className="text-zinc-400 font-medium italic">
-                      NÃ£o registrado
-                    </span>
-                  </div>
-                  <div title="O registro de histÃ³rico de logins nÃ£o estÃ¡ ativado no banco de dados.">
-                    <Info className="w-3.5 h-3.5 text-zinc-400" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Save Button */}
-              <div className="pt-2 flex items-center justify-end">
+                {/* Save Button */}
                 <Button
                   type="submit"
                   disabled={savingProfile}
-                  className="bg-red-600 hover:bg-red-500 text-white font-semibold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-red-600/20 cursor-pointer"
+                  className="bg-red-600 hover:bg-red-500 text-white font-semibold px-6 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 cursor-pointer shrink-0"
                 >
                   {savingProfile ? (
                     <>
@@ -600,7 +560,7 @@ export default function SettingsClient({
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      <span>Salvar alteraÃ§Ãµes</span>
+                      <span>Salvar alterações</span>
                     </>
                   )}
                 </Button>
@@ -609,7 +569,7 @@ export default function SettingsClient({
           </div>
         </div>
 
-        {/* Card de Destaque: Taxa por TransaÃ§Ã£o (1 Coluna no Desktop) */}
+        {/* Card de Destaque: Taxa por Transação (1 Coluna no Desktop) */}
         <div className="bg-gradient-to-br from-[#16161c] via-[#121214] to-[#121214] border border-emerald-500/20 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-6 relative overflow-hidden">
           {/* Subtle Glow */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -629,7 +589,7 @@ export default function SettingsClient({
 
             <div className="mt-6 space-y-3">
               <h3 className="text-sm font-semibold text-zinc-300">
-                Taxa por transaÃ§Ã£o
+                Taxa por transação
               </h3>
 
               {transactionFee.isAvailable ? (
@@ -643,17 +603,17 @@ export default function SettingsClient({
                 </div>
               ) : (
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
-                  Taxa temporariamente indisponÃ­vel no servidor.
+                  Taxa temporariamente indisponível no servidor.
                 </div>
               )}
 
               <p className="text-xs text-emerald-400/90 font-medium flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                Taxa aplicada em cada transaÃ§Ã£o aprovada
+                Taxa aplicada em cada transação aprovada
               </p>
 
               <p className="text-xs text-zinc-400 leading-relaxed pt-2">
-                VocÃª nÃ£o paga taxa de adesÃ£o ou assinatura mensal pelo uso do painel e bots. A taxa Ã© retida automaticamente no split Pix exclusivamente em pedidos pagos com sucesso.
+                Você não paga taxa de adesão ou assinatura mensal pelo uso do painel e bots. A taxa é retida automaticamente no split Pix exclusivamente em pedidos pagos com sucesso.
               </p>
             </div>
           </div>
@@ -664,11 +624,11 @@ export default function SettingsClient({
               <span className="font-bold text-emerald-400">R$ 0,00</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>RetenÃ§Ã£o no split Pix:</span>
-              <span className="font-semibold text-zinc-200">AutomÃ¡tica</span>
+              <span>Retenção no split Pix:</span>
+              <span className="font-semibold text-zinc-200">Automática</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>TransaÃ§Ãµes nÃ£o concluÃ­das:</span>
+              <span>Transações não concluídas:</span>
               <span className="font-semibold text-zinc-200">Isentas de taxa</span>
             </div>
           </div>
@@ -676,17 +636,17 @@ export default function SettingsClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* ÃREA 2: SEGURANÃ‡A, PREFERÃŠNCIAS & PREMIAÃ‡Ã•ES */}
+      {/* ÁREA 2: SEGURANÇA, PREFERÊNCIAS & PREMIAÇÕES */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1: SeguranÃ§a (Apenas Trocar Senha) */}
+        {/* Card 1: Segurança (Apenas Trocar Senha) */}
         <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-5">
           <div>
             <div className="flex items-center gap-2.5 pb-4 border-b border-white/5">
               <ShieldCheck className="w-5 h-5 text-red-500 shrink-0" />
               <div>
-                <h3 className="text-sm font-bold text-white">SeguranÃ§a</h3>
-                <p className="text-[11px] text-zinc-400">Credenciais de acesso Ã  conta</p>
+                <h3 className="text-sm font-bold text-white">Segurança</h3>
+                <p className="text-[11px] text-zinc-400">Credenciais de acesso à conta</p>
               </div>
             </div>
 
@@ -715,133 +675,40 @@ export default function SettingsClient({
           </div>
         </div>
 
-        {/* Card 2: PreferÃªncias (Apenas NotificaÃ§Ãµes) */}
+        {/* Card 2: Preferências (Somente Notificações do Navegador) */}
         <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-5">
           <div>
             <div className="flex items-center gap-2.5 pb-4 border-b border-white/5">
               <Bell className="w-5 h-5 text-red-500 shrink-0" />
               <div>
-                <h3 className="text-sm font-bold text-white">PreferÃªncias</h3>
-                <p className="text-[11px] text-zinc-400">Canais e alertas de notificaÃ§Ã£o</p>
+                <h3 className="text-sm font-bold text-white">Preferências</h3>
+                <p className="text-[11px] text-zinc-400">Notificações do navegador</p>
               </div>
             </div>
 
-            {notificationError && (
-              <div className="mt-3 p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{notificationError}</span>
-              </div>
-            )}
-
-            <div className="mt-4 space-y-4">
-              {/* NotificaÃ§Ãµes de Vendas no Telegram */}
+            <div className="mt-4 space-y-3">
+              {/* Notificações no Navegador */}
               <div className="p-3.5 rounded-xl bg-[#18181C] border border-white/5 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <span className="text-xs font-semibold text-white block">
-                      Alertas no Telegram
+                      Notificações no Navegador
                     </span>
                     <span className="text-[11px] text-zinc-400 block leading-tight mt-0.5">
-                      Avisos de vendas confirmadas
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleToggleTelegramNotifications}
-                    disabled={savingNotification}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      telegramNotificationsEnabled ? "bg-red-600" : "bg-zinc-700"
-                    } ${savingNotification ? "opacity-50 cursor-not-allowed" : ""}`}
-                    role="switch"
-                    aria-checked={telegramNotificationsEnabled}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                        telegramNotificationsEnabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Telegram ID Status / Edit */}
-                {telegramNotificationsEnabled && (
-                  <div className="pt-2 border-t border-white/5">
-                    {isEditingTelegramId ? (
-                      <form onSubmit={handleSaveTelegramId} className="space-y-2 mt-1">
-                        <input
-                          type="text"
-                          value={telegramInputVal}
-                          onChange={(e) => setTelegramInputVal(e.target.value)}
-                          placeholder="Ex: 123456789"
-                          className="w-full bg-[#121214] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500"
-                        />
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsEditingTelegramId(false);
-                              setTelegramInputVal(telegramId);
-                            }}
-                            className="px-2.5 py-1 rounded text-[11px] text-zinc-400 hover:text-white"
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={savingNotification}
-                            className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[11px] font-semibold flex items-center gap-1"
-                          >
-                            {savingNotification ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <span>Salvar</span>
-                            )}
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-mono text-zinc-300">
-                          ID: {telegramId || "NÃ£o configurado"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTelegramInputVal(telegramId);
-                            setIsEditingTelegramId(true);
-                          }}
-                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-                        >
-                          Alterar ID
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* NotificaÃ§Ãµes no Navegador (Web Push / Alertas) */}
-              <div className="p-3.5 rounded-xl bg-[#18181C] border border-white/5 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <span className="text-xs font-semibold text-white block">
-                      Alertas no Navegador
-                    </span>
-                    <span className="text-[11px] text-zinc-400 block leading-tight mt-0.5">
-                      Sons e avisos em tempo real
+                      Alertas em tempo real sobre vendas
                     </span>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleToggleBrowserNotifications}
+                    disabled={requestingPermission || browserPermission === "unsupported"}
                     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                       browserNotificationsEnabled ? "bg-red-600" : "bg-zinc-700"
-                    }`}
+                    } ${requestingPermission ? "opacity-50 cursor-wait" : ""}`}
                     role="switch"
                     aria-checked={browserNotificationsEnabled}
+                    aria-label="Ativar ou desativar notificações do navegador"
                   >
                     <span
                       aria-hidden="true"
@@ -852,31 +719,67 @@ export default function SettingsClient({
                   </button>
                 </div>
 
-                <div className="text-[11px] text-zinc-400 pt-1">
-                  Status: {browserPermission === "granted" ? (
-                    <span className="text-emerald-400 font-semibold">Autorizado no navegador</span>
+                {/* Status Explicativo e Contextual */}
+                <div className="pt-2 border-t border-white/5 text-[11px] leading-relaxed">
+                  {browserPermission === "unsupported" ? (
+                    <div className="flex items-start gap-1.5 text-zinc-400">
+                      <Info className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                      <span>Este navegador não possui suporte a notificações de área de trabalho.</span>
+                    </div>
                   ) : browserPermission === "denied" ? (
-                    <span className="text-rose-400 font-semibold">Bloqueado no navegador</span>
+                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 space-y-1">
+                      <div className="font-semibold flex items-center gap-1.5 text-rose-400">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Permissão bloqueada no navegador</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-300">
+                        Para reativar, clique no ícone de cadeado na barra de endereços do seu navegador e altere a permissão de Notificações para <strong>"Permitir"</strong>.
+                      </p>
+                    </div>
+                  ) : browserPermission === "granted" && browserNotificationsEnabled ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-emerald-400 font-medium">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          Ativas e autorizadas no navegador
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSendTestNotification}
+                        className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                        Enviar notificação de teste
+                      </button>
+                    </div>
+                  ) : browserPermission === "granted" && !browserNotificationsEnabled ? (
+                    <div className="text-zinc-400">
+                      Desativadas. O navegador já está autorizado; clique no interruptor para ativar os alertas.
+                    </div>
                   ) : (
-                    <span>PadrÃ£o do navegador</span>
+                    <div className="text-amber-400/90 flex items-start gap-1.5">
+                      <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>O navegador solicitará sua autorização ao ativar este recurso.</span>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="text-[11px] text-zinc-400 pt-2">
-            PreferÃªncias salvas de forma persistente na sua conta.
+          <div className="text-[11px] text-zinc-400 pt-2 border-t border-white/5">
+            Preferência salva localmente no seu dispositivo.
           </div>
         </div>
 
-        {/* Card 3: PremiaÃ§Ãµes (Em Breve) */}
+        {/* Card 3: Premiações (Em Breve) */}
         <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-5 relative">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-2.5">
                 <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
-                <h3 className="text-sm font-bold text-white">PremiaÃ§Ãµes</h3>
+                <h3 className="text-sm font-bold text-white">Premiações</h3>
               </div>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400 uppercase tracking-wide">
                 Em breve
@@ -893,7 +796,7 @@ export default function SettingsClient({
                   </span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Conquiste placas e benefÃ­cios exclusivos conforme o faturamento da sua loja cresce no WebGran.
+                  Conquiste placas e benefícios exclusivos conforme o faturamento da sua loja cresce no WebGran.
                 </p>
               </div>
 
@@ -905,7 +808,7 @@ export default function SettingsClient({
                   </span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Vantagens comerciais, suporte prioritÃ¡rio e recursos exclusivos em desenvolvimento.
+                  Vantagens comerciais, suporte prioritário e recursos exclusivos em desenvolvimento.
                 </p>
               </div>
             </div>
@@ -913,7 +816,7 @@ export default function SettingsClient({
 
           <div className="text-[11px] text-zinc-400 pt-2 border-t border-white/5 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-            <span>Recurso previsto para as prÃ³ximas atualizaÃ§Ãµes da plataforma.</span>
+            <span>Recurso previsto para as próximas atualizações da plataforma.</span>
           </div>
         </div>
       </div>
@@ -934,7 +837,7 @@ export default function SettingsClient({
                 onClick={() => setIsPasswordModalOpen(false)}
                 className="text-zinc-400 hover:text-white p-1 rounded-lg text-xs"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -962,7 +865,7 @@ export default function SettingsClient({
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-white"
+                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-white cursor-pointer"
                   >
                     {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -978,7 +881,7 @@ export default function SettingsClient({
                     type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="MÃ­nimo de 6 caracteres"
+                    placeholder="Mínimo de 6 caracteres"
                     className="w-full bg-[#18181C] border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-red-500 pr-10"
                     required
                     minLength={6}
@@ -986,7 +889,7 @@ export default function SettingsClient({
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-white"
+                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-white cursor-pointer"
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1010,7 +913,7 @@ export default function SettingsClient({
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-white"
+                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-white cursor-pointer"
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
