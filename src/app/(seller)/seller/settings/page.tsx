@@ -3,7 +3,7 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getSellerSubscription } from "@/lib/billing/subscription-service";
+import { PlatformCommissionService } from "@/lib/commission/platform-commission-service";
 import SettingsClient from "./SettingsClient";
 
 export default async function SettingsPage() {
@@ -20,80 +20,46 @@ export default async function SettingsPage() {
     console.error("Error fetching user profile record:", err);
   }
 
-  let subscriptionData: any = null;
+  // Fetch real transaction fee from Single Source of Truth
+  let transactionFee = {
+    isAvailable: false,
+    formattedFee: "IndisponÃ­vel",
+    feeReais: 0,
+    feeCents: 0,
+  };
+
   try {
-    subscriptionData = await getSellerSubscription(seller.id);
+    const commission = await PlatformCommissionService.getCurrentCommission();
+    transactionFee = {
+      isAvailable: true,
+      formattedFee: commission.formattedFee,
+      feeReais: commission.feeReais,
+      feeCents: commission.feeCents,
+    };
   } catch (err) {
-    console.error("Error fetching seller subscription in SettingsPage:", err);
+    console.error("Error fetching platform commission in SettingsPage:", err);
+    transactionFee = {
+      isAvailable: false,
+      formattedFee: "IndisponÃ­vel",
+      feeReais: 0,
+      feeCents: 0,
+    };
   }
-
-  // Safe fallbacks to prevent 500 server crashes in case of database or provider errors
-  const safeSubscription = subscriptionData?.subscription || {
-    id: "default-sub",
-    status: "ACTIVE",
-    currentPeriodStart: new Date().toISOString(),
-    currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
-  };
-
-  const safePlan = subscriptionData?.plan || {
-    id: "default-plan",
-    name: "WebGran",
-    price: 0,
-    currency: "BRL",
-    billingInterval: "MONTHLY",
-  };
-
-  const safeLatestInvoice = subscriptionData?.latestInvoice ? {
-    id: subscriptionData.latestInvoice.id,
-    externalId: subscriptionData.latestInvoice.externalId || null,
-    amount: Number(subscriptionData.latestInvoice.amount || 0),
-    status: subscriptionData.latestInvoice.status || "PENDING",
-    dueDate: subscriptionData.latestInvoice.dueDate ? new Date(subscriptionData.latestInvoice.dueDate).toISOString() : null,
-    paidAt: subscriptionData.latestInvoice.paidAt ? new Date(subscriptionData.latestInvoice.paidAt).toISOString() : null,
-    createdAt: subscriptionData.latestInvoice.createdAt ? new Date(subscriptionData.latestInvoice.createdAt).toISOString() : new Date().toISOString(),
-    expiresAt: subscriptionData.latestInvoice.expiresAt ? new Date(subscriptionData.latestInvoice.expiresAt).toISOString() : null,
-    qrCode: subscriptionData.latestInvoice.qrCode || (subscriptionData.latestInvoice.qrCodeText ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(subscriptionData.latestInvoice.qrCodeText)}` : null),
-    qrCodeText: subscriptionData.latestInvoice.qrCodeText || null,
-  } : null;
-
-  const safeInvoiceHistory = (subscriptionData?.invoiceHistory || []).map((inv: any) => ({
-    id: inv.id,
-    externalId: inv.externalId || null,
-    amount: Number(inv.amount || 0),
-    status: inv.status || "PENDING",
-    dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : null,
-    paidAt: inv.paidAt ? new Date(inv.paidAt).toISOString() : null,
-    createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString() : new Date().toISOString(),
-    expiresAt: inv.expiresAt ? new Date(inv.expiresAt).toISOString() : null,
-    qrCode: inv.qrCode || (inv.qrCodeText ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inv.qrCodeText)}` : null),
-    qrCodeText: inv.qrCodeText || null,
-  }));
 
   return (
     <SettingsClient
       storeName={store?.name || "Minha Loja"}
-      isExempt={Boolean(subscriptionData?.isExempt)}
+      storeId={store?.id || null}
+      storeTelegramNotificationId={store?.telegramNotificationId || null}
+      transactionFee={transactionFee}
       sellerProfile={{
         id: seller.id,
         name: userRecord?.name || seller.name || "Vendedor",
         email: seller.email || "",
         avatarUrl: userRecord?.avatarUrl || null,
         role: userRecord?.role || seller.role || "seller",
-      }}
-      subscriptionData={{
-        subscription: {
-          id: safeSubscription.id,
-          status: safeSubscription.status,
-          currentPeriodStart: safeSubscription.currentPeriodStart 
-            ? new Date(safeSubscription.currentPeriodStart).toISOString() 
-            : new Date().toISOString(),
-          currentPeriodEnd: safeSubscription.currentPeriodEnd 
-            ? new Date(safeSubscription.currentPeriodEnd).toISOString() 
-            : new Date().toISOString(),
-        },
-        plan: safePlan,
-        latestInvoice: safeLatestInvoice,
-        invoiceHistory: safeInvoiceHistory,
+        createdAt: userRecord?.createdAt ? new Date(userRecord.createdAt).toISOString() : null,
+        lastLoginAt: null, // O banco nÃ£o possui campo de Ãºltimo acesso; mantido nulo para nÃ£o inventar dados
       }}
     />
   );

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
     if (!seller || !store) {
       return NextResponse.json(
-        { success: false, error: "Não autorizado ou loja não encontrada." },
+        { success: false, error: "NÃ£o autorizado ou loja nÃ£o encontrada." },
         { status: 401 }
       );
     }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
       if (!dataUrl || typeof dataUrl !== "string") {
         return NextResponse.json(
-          { success: false, error: "Impossível processar dados da imagem." },
+          { success: false, error: "ImpossÃ­vel processar dados da imagem." },
           { status: 400 }
         );
       }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         fileBuffer = Buffer.from(base64Data, "base64");
       } else {
         return NextResponse.json(
-          { success: false, error: "Formato de dados de imagem inválido." },
+          { success: false, error: "Formato de dados de imagem invÃ¡lido." },
           { status: 400 }
         );
       }
@@ -77,7 +77,20 @@ export async function POST(req: NextRequest) {
     const allowedMimeTypes = ["image/webp", "image/jpeg", "image/png", "image/gif"];
     if (!allowedMimeTypes.includes(mimeType.toLowerCase())) {
       return NextResponse.json(
-        { success: false, error: "Formato de imagem não permitido. Envie WebP, JPEG ou PNG." },
+        { success: false, error: "Formato de imagem nÃ£o permitido. Envie WebP, JPEG ou PNG." },
+        { status: 400 }
+      );
+    }
+
+    // Verify file content magic bytes (prevent executable files disguised as images)
+    const isPng = fileBuffer.length >= 8 && fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50 && fileBuffer[2] === 0x4E && fileBuffer[3] === 0x47;
+    const isJpg = fileBuffer.length >= 3 && fileBuffer[0] === 0xFF && fileBuffer[1] === 0xD8 && fileBuffer[2] === 0xFF;
+    const isGif = fileBuffer.length >= 4 && fileBuffer[0] === 0x47 && fileBuffer[1] === 0x49 && fileBuffer[2] === 0x46 && fileBuffer[3] === 0x38;
+    const isWebp = fileBuffer.length >= 12 && fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49 && fileBuffer[2] === 0x46 && fileBuffer[3] === 0x46 && fileBuffer[8] === 0x57 && fileBuffer[9] === 0x45 && fileBuffer[10] === 0x42 && fileBuffer[11] === 0x50;
+
+    if (!isPng && !isJpg && !isGif && !isWebp) {
+      return NextResponse.json(
+        { success: false, error: "O arquivo enviado nÃ£o Ã© uma imagem vÃ¡lida ou contÃ©m assinatura invÃ¡lida." },
         { status: 400 }
       );
     }
@@ -85,7 +98,7 @@ export async function POST(req: NextRequest) {
     // Maximum size validation: 10MB
     if (fileBuffer.length > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { success: false, error: "A imagem excede o tamanho máximo de 10MB." },
+        { success: false, error: "A imagem excede o tamanho mÃ¡ximo de 10MB." },
         { status: 400 }
       );
     }
