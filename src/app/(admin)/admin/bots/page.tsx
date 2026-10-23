@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { telegramBots } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
 import BotsClient from "./BotsClient";
 
 async function AdminBotsData() {
@@ -22,11 +23,7 @@ async function AdminBotsData() {
     displayName: b.displayName,
     photoUrl: b.photoUrl,
     status: b.status,
-    createdAt: new Date(b.createdAt).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }),
+    createdAt: formatBusinessDate(b.createdAt),
     storeName: b.store?.name || null,
     storeSlug: b.store?.slug || null
   }));

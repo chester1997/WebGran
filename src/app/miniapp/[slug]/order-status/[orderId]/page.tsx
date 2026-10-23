@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Clock, AlertCircle, ArrowRight, ShieldCheck, ShoppingBag } from "lucide-react";
+import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
 
 export default async function OrderStatusPage({
   params
@@ -84,7 +85,7 @@ export default async function OrderStatusPage({
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800 text-xs text-zinc-400">
           <span>Pedido #{order.id.slice(0, 8)}</span>
           <span className="font-mono text-zinc-300">
-            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : ''}
+            {order.createdAt ? formatBusinessDate(order.createdAt) : ''}
           </span>
         </div>
 

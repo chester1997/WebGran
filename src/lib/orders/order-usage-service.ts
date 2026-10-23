@@ -2,9 +2,11 @@ import { db } from "@/db";
 import { orders, stores } from "@/db/schema";
 import { eq, and, gte, lt, inArray, count } from "drizzle-orm";
 
+import { getBusinessStartOfMonth, getBusinessStartOfNextMonth } from "@/lib/analytics/timezone-utils";
+
 /**
  * Computes the total number of orders created for a seller within the current calendar month.
- * Period: First day of current month 00:00:00.000 up to first day of next month 00:00:00.000.
+ * Period: First day of current month 00:00:00.000 up to first day of next month 00:00:00.000 in America/Recife.
  */
 export async function getMonthlyOrderUsage(sellerId: string, referenceDate: Date = new Date()): Promise<number> {
   if (!sellerId) return 0;
@@ -21,9 +23,9 @@ export async function getMonthlyOrderUsage(sellerId: string, referenceDate: Date
 
   const storeIds = sellerStores.map((s) => s.id);
 
-  // 2. Compute start of current calendar month & start of next calendar month
-  const startOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1, 0, 0, 0, 0);
-  const startOfNextMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1, 0, 0, 0, 0);
+  // 2. Compute start of current calendar month & start of next calendar month in America/Recife
+  const startOfMonth = getBusinessStartOfMonth(referenceDate);
+  const startOfNextMonth = getBusinessStartOfNextMonth(referenceDate);
 
   // 3. Count all orders created within this calendar month for these stores
   const [result] = await db

@@ -22,6 +22,7 @@ import {
   toggleCouponStatusAction, 
   deleteCouponAction 
 } from "./actions";
+import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
 
 interface CouponItem {
   id: string;
@@ -318,7 +319,7 @@ export default function CouponsClient({ initialCoupons }: { initialCoupons: Coup
                           <div className="flex items-center gap-1.5 text-zinc-300">
                             <Calendar className="w-3.5 h-3.5 text-zinc-500" />
                             <span className={isExpired ? "text-red-400 font-semibold" : ""}>
-                              {new Date(coupon.expiresAt).toLocaleDateString("pt-BR")}
+                              {formatBusinessDate(coupon.expiresAt)}
                             </span>
                             {isExpired && (
                               <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold">

@@ -6,6 +6,7 @@ import { eq, desc } from "drizzle-orm";
 import { Search, ShoppingCart, MoreHorizontal, Filter, Receipt, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RetryDeliveryButton } from "./RetryDeliveryButton";
+import { formatBusinessDateTime } from "@/lib/analytics/timezone-utils";
 
 import SetupStoreClient from "../SetupStoreClient";
 
@@ -127,7 +128,7 @@ export default async function OrdersPage() {
                         )}
                       </td>
                       <td className="py-4 text-zinc-400 text-xs">
-                        {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {formatBusinessDateTime(order.createdAt)}
                       </td>
                       <td className="py-4">
                         <span className="text-emerald-400 font-medium tracking-tight">R$ {Number(order.total).toFixed(2).replace('.', ',')}</span>
@@ -246,7 +247,7 @@ export default async function OrdersPage() {
                   <div className="flex items-center justify-between text-zinc-400">
                     <span className="text-zinc-500">Data</span>
                     <span className="text-zinc-300">
-                      {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {formatBusinessDateTime(order.createdAt)}
                     </span>
                   </div>
 

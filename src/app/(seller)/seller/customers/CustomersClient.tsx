@@ -15,6 +15,7 @@ import {
   CheckCircle2 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BUSINESS_TIMEZONE } from "@/lib/analytics/timezone-utils";
 
 interface CustomerItem {
   id: string;
@@ -201,7 +202,7 @@ export default function CustomersClient({ customers, stats }: Props) {
                     <div>
                       <span className="text-zinc-500 text-[10px] uppercase font-mono block">Data Cadastro</span>
                       <span className="text-zinc-300 font-medium">
-                        {new Date(c.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {new Date(c.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: BUSINESS_TIMEZONE })}
                       </span>
                     </div>
                   </div>
@@ -305,7 +306,7 @@ export default function CustomersClient({ customers, stats }: Props) {
 
                       {/* Registration Date */}
                       <td className="py-4 text-zinc-400">
-                        {new Date(c.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {new Date(c.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: BUSINESS_TIMEZONE })}
                       </td>
 
                       {/* Actions */}
@@ -383,7 +384,7 @@ export default function CustomersClient({ customers, stats }: Props) {
                   <Calendar className="w-4 h-4 text-red-400" /> Data de Cadastro
                 </span>
                 <span className="text-white font-medium">
-                  {new Date(selectedCustomer.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  {new Date(selectedCustomer.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: BUSINESS_TIMEZONE })}
                 </span>
               </div>
             </div>

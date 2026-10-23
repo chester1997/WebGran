@@ -12,6 +12,12 @@ import {
 } from "@/db/schema";
 import { eq, sql, gte, lte, and, desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import {
+  BUSINESS_TIMEZONE,
+  getBusinessParts,
+  getBusinessStartOfDay,
+  getBusinessChartDateLabel
+} from "@/lib/analytics/timezone-utils";
 
 import { connection } from "next/server";
 
@@ -24,26 +30,36 @@ export async function GET(req: Request) {
     const period = searchParams.get("period") || "30d";
 
     const now = new Date();
+    const startOfToday = getBusinessStartOfDay(now);
     let startDate: Date;
     let previousStartDate: Date;
     let previousEndDate: Date;
 
     if (period === "today") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      previousStartDate = new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
-      previousEndDate = new Date(startDate.getTime() - 1);
+      startDate = startOfToday;
+      previousStartDate = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+      previousEndDate = new Date(startOfToday.getTime() - 1);
     } else if (period === "7d") {
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      previousStartDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      // 7 commercial days ending today in America/Recife
+      startDate = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+      previousStartDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       previousEndDate = new Date(startDate.getTime() - 1);
     } else if (period === "12m") {
-      startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-      previousStartDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+      // 12 calendar months in America/Recife
+      const { year, month } = getBusinessParts(now);
+      let startYear = year;
+      let startMonth = month - 11;
+      while (startMonth <= 0) {
+        startMonth += 12;
+        startYear -= 1;
+      }
+      startDate = new Date(Date.UTC(startYear, startMonth - 1, 1, 3, 0, 0, 0));
+      previousStartDate = new Date(Date.UTC(startYear - 1, startMonth - 1, 1, 3, 0, 0, 0));
       previousEndDate = new Date(startDate.getTime() - 1);
     } else {
-      // Default: 30d
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      previousStartDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      // Default: 30d (30 commercial days ending today in America/Recife)
+      startDate = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
+      previousStartDate = new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000);
       previousEndDate = new Date(startDate.getTime() - 1);
     }
 
@@ -186,34 +202,59 @@ export async function GET(req: Request) {
     const timeMap = new Map<string, { revenue: number; ordersCount: number }>();
     const growthMap = new Map<string, { sellers: number; stores: number }>();
 
-    // Pre-populate date keys for smooth chart lines
-    const daysCount = period === "today" ? 1 : period === "7d" ? 7 : period === "12m" ? 12 : 30;
-    for (let i = daysCount - 1; i >= 0; i--) {
-      let dateKey: string;
-      if (period === "12m") {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        dateKey = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-      } else if (period === "today") {
-        const d = new Date(now.getTime() - i * 3600 * 1000);
-        dateKey = `${String(d.getHours()).padStart(2, '0')}:00`;
-      } else {
-        const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
-        dateKey = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    // Pre-populate date keys for smooth chart lines in America/Recife
+    if (period === "today") {
+      for (let h = 0; h < 24; h++) {
+        const hourKey = `${String(h).padStart(2, '0')}:00`;
+        timeMap.set(hourKey, { revenue: 0, ordersCount: 0 });
+        growthMap.set(hourKey, { sellers: 0, stores: 0 });
       }
-      timeMap.set(dateKey, { revenue: 0, ordersCount: 0 });
-      growthMap.set(dateKey, { sellers: 0, stores: 0 });
+    } else if (period === "12m") {
+      const { year, month } = getBusinessParts(now);
+      for (let i = 11; i >= 0; i--) {
+        let m = month - i;
+        let y = year;
+        while (m <= 0) {
+          m += 12;
+          y -= 1;
+        }
+        const monthInstant = new Date(Date.UTC(y, m - 1, 1, 3, 0, 0, 0));
+        const dateKey = new Intl.DateTimeFormat("pt-BR", {
+          timeZone: BUSINESS_TIMEZONE,
+          month: "short",
+          year: "2-digit"
+        }).format(monthInstant);
+        timeMap.set(dateKey, { revenue: 0, ordersCount: 0 });
+        growthMap.set(dateKey, { sellers: 0, stores: 0 });
+      }
+    } else {
+      const daysCount = period === "7d" ? 7 : 30;
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const dayInstant = new Date(startOfToday.getTime() - i * 24 * 3600 * 1000);
+        const dateKey = getBusinessChartDateLabel(dayInstant);
+        timeMap.set(dateKey, { revenue: 0, ordersCount: 0 });
+        growthMap.set(dateKey, { sellers: 0, stores: 0 });
+      }
     }
 
-    periodOrders.forEach((ord) => {
-      let key: string;
+    const formatItemKey = (dateVal: Date | string) => {
+      const d = typeof dateVal === "string" ? new Date(dateVal) : dateVal;
       if (period === "12m") {
-        key = new Date(ord.createdAt).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-      } else if (period === "today") {
-        key = `${String(new Date(ord.createdAt).getHours()).padStart(2, '0')}:00`;
-      } else {
-        key = new Date(ord.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+        return new Intl.DateTimeFormat("pt-BR", {
+          timeZone: BUSINESS_TIMEZONE,
+          month: "short",
+          year: "2-digit"
+        }).format(d);
       }
+      if (period === "today") {
+        const { hour } = getBusinessParts(d);
+        return `${String(hour).padStart(2, '0')}:00`;
+      }
+      return getBusinessChartDateLabel(d);
+    };
 
+    periodOrders.forEach((ord) => {
+      const key = formatItemKey(ord.createdAt);
       if (timeMap.has(key)) {
         const existing = timeMap.get(key)!;
         if (ord.status === "paid") {
@@ -240,28 +281,14 @@ export async function GET(req: Request) {
     ]);
 
     periodSellers.forEach((s) => {
-      let key: string;
-      if (period === "12m") {
-        key = new Date(s.createdAt).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-      } else if (period === "today") {
-        key = `${String(new Date(s.createdAt).getHours()).padStart(2, '0')}:00`;
-      } else {
-        key = new Date(s.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-      }
+      const key = formatItemKey(s.createdAt);
       if (growthMap.has(key)) {
         growthMap.get(key)!.sellers += 1;
       }
     });
 
     periodStores.forEach((st) => {
-      let key: string;
-      if (period === "12m") {
-        key = new Date(st.createdAt).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-      } else if (period === "today") {
-        key = `${String(new Date(st.createdAt).getHours()).padStart(2, '0')}:00`;
-      } else {
-        key = new Date(st.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-      }
+      const key = formatItemKey(st.createdAt);
       if (growthMap.has(key)) {
         growthMap.get(key)!.stores += 1;
       }
@@ -358,12 +385,13 @@ export async function GET(req: Request) {
       store: sale.storeName,
       amount: Number(sale.total),
       status: sale.status,
-      date: new Date(sale.createdAt).toLocaleDateString("pt-BR", {
+      date: new Intl.DateTimeFormat("pt-BR", {
+        timeZone: BUSINESS_TIMEZONE,
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
         minute: "2-digit"
-      })
+      }).format(new Date(sale.createdAt))
     }));
 
     // 5. Recent Stores
@@ -396,7 +424,11 @@ export async function GET(req: Request) {
           botName: botRes[0] ? `@${botRes[0].username}` : null,
           productCount: Number(prodRes[0].count),
           status: st.status,
-          createdAt: new Date(st.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+          createdAt: new Intl.DateTimeFormat("pt-BR", {
+            timeZone: BUSINESS_TIMEZONE,
+            day: "2-digit",
+            month: "short"
+          }).format(new Date(st.createdAt))
         };
       })
     );

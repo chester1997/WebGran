@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
 import { 
   Users, 
   Building2, 
@@ -337,11 +338,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatBusinessDate(dateStr);
   };
 
   return (

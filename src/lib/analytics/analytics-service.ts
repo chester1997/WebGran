@@ -13,10 +13,12 @@ import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
 import { CommercialMetricsService, CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import {
-  getSaoPauloDateKey,
-  getSaoPauloDateLabel,
-  getSaoPauloStartOfDay,
-  getSaoPauloParts,
+  BUSINESS_TIMEZONE,
+  getBusinessDateKey,
+  getBusinessDateLabel,
+  getBusinessStartOfDay,
+  getBusinessEndOfDay,
+  getBusinessParts,
 } from "@/lib/analytics/timezone-utils";
 
 
@@ -125,7 +127,11 @@ function formatTimeAgo(date: Date): string {
   if (diffSec < 3600) return `há ${Math.floor(diffSec / 60)} min`;
   if (diffSec < 86400) return `há ${Math.floor(diffSec / 3600)} h`;
   if (diffSec < 172800) return "ontem";
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: BUSINESS_TIMEZONE,
+    day: "2-digit",
+    month: "short"
+  }).format(date);
 }
 
 function formatCurrency(val: number): string {
@@ -152,36 +158,44 @@ export class AnalyticsService {
     const userName = store?.owner?.name || "";
 
     const now = new Date();
-    let currentStart = new Date();
-    let currentEnd = new Date(now);
-    let prevStart: Date | null = new Date();
-    let prevEnd: Date | null = new Date();
+    const startOfToday = getBusinessStartOfDay(now);
+
+    let currentStart: Date;
+    let currentEnd: Date = now;
+    let prevStart: Date | null = null;
+    let prevEnd: Date | null = null;
 
     switch (period) {
       case "TODAY": {
-        currentStart.setHours(0, 0, 0, 0);
-        prevStart.setDate(prevStart.getDate() - 1);
-        prevStart.setHours(0, 0, 0, 0);
-        prevEnd.setDate(prevEnd.getDate() - 1);
-        prevEnd.setHours(23, 59, 59, 999);
+        currentStart = startOfToday;
+        currentEnd = now;
+        prevStart = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+        prevEnd = new Date(startOfToday.getTime() - 1);
         break;
       }
       case "7D": {
-        currentStart.setDate(currentStart.getDate() - 7);
-        prevStart.setDate(prevStart.getDate() - 14);
-        prevEnd.setDate(prevEnd.getDate() - 7);
+        currentStart = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(currentStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+        prevEnd = new Date(currentStart.getTime() - 1);
         break;
       }
       case "90D": {
-        currentStart.setDate(currentStart.getDate() - 90);
-        prevStart.setDate(prevStart.getDate() - 180);
-        prevEnd.setDate(prevEnd.getDate() - 90);
+        currentStart = new Date(startOfToday.getTime() - 89 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(currentStart.getTime() - 90 * 24 * 60 * 60 * 1000);
+        prevEnd = new Date(currentStart.getTime() - 1);
         break;
       }
       case "12M": {
-        currentStart.setFullYear(currentStart.getFullYear() - 1);
-        prevStart.setFullYear(prevStart.getFullYear() - 2);
-        prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+        const { year, month } = getBusinessParts(now);
+        let startYear = year;
+        let startMonth = month - 11;
+        while (startMonth <= 0) {
+          startMonth += 12;
+          startYear -= 1;
+        }
+        currentStart = new Date(Date.UTC(startYear, startMonth - 1, 1, 3, 0, 0, 0));
+        prevStart = new Date(Date.UTC(startYear - 1, startMonth - 1, 1, 3, 0, 0, 0));
+        prevEnd = new Date(currentStart.getTime() - 1);
         break;
       }
       case "ALL": {
@@ -192,9 +206,9 @@ export class AnalyticsService {
       }
       case "30D":
       default: {
-        currentStart.setDate(currentStart.getDate() - 30);
-        prevStart.setDate(prevStart.getDate() - 60);
-        prevEnd.setDate(prevEnd.getDate() - 30);
+        currentStart = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(currentStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+        prevEnd = new Date(currentStart.getTime() - 1);
         break;
       }
     }
@@ -292,7 +306,8 @@ export class AnalyticsService {
       }
       currentPaidOrders.forEach(o => {
         const d = new Date(o.paidAt || o.createdAt);
-        const h = Math.floor(d.getHours() / 2) * 2;
+        const businessHour = getBusinessParts(d).hour;
+        const h = Math.floor(businessHour / 2) * 2;
         const hourStr = `${String(h).padStart(2, '0')}:00`;
         const item = chartMap.get(hourStr);
         if (item) {
@@ -319,21 +334,20 @@ export class AnalyticsService {
         }
       });
     } else {
-      // Group by Day (7D, 30D, 90D) in America/Sao_Paulo timezone
+      // Group by Day (7D, 30D, 90D) in America/Recife timezone
       const days = period === "7D" ? 7 : period === "90D" ? 90 : 30;
       const step = period === "90D" ? 3 : 1; // Group every 3 days for 90D to keep SVG chart clean
-      const startOfToday = getSaoPauloStartOfDay(now);
       
       for (let i = days - 1; i >= 0; i -= step) {
         const d = new Date(startOfToday.getTime() - i * 24 * 60 * 60 * 1000);
-        const dateKey = getSaoPauloDateKey(d);
-        const dateLabel = getSaoPauloDateLabel(d);
+        const dateKey = getBusinessDateKey(d);
+        const dateLabel = getBusinessDateLabel(d);
         chartMap.set(dateKey, { fullDate: dateLabel, revenue: 0, salesCount: 0 });
       }
 
       currentPaidOrders.forEach(o => {
         const d = new Date(o.paidAt || o.createdAt);
-        const dateKey = getSaoPauloDateKey(d);
+        const dateKey = getBusinessDateKey(d);
         // Find closest date key if stepped
         let targetKey = dateKey;
         if (!chartMap.has(targetKey)) {
@@ -509,26 +523,26 @@ export class AnalyticsService {
 
     currentPaidOrders.forEach(o => {
       const d = new Date(o.paidAt || o.createdAt);
-      const h = d.getHours();
+      const h = getBusinessParts(d).hour;
       hourlyMap[h].salesCount += 1;
       hourlyMap[h].revenue += Number(o.total || 0);
     });
 
-    // 6. Activity & Health Indicators (Fuso Oficial America/Sao_Paulo)
-    const spStartOfToday = getSaoPauloStartOfDay(now);
-    const spEndOfToday = new Date(spStartOfToday.getTime() + 24 * 60 * 60 * 1000);
+    // 6. Activity & Health Indicators (Fuso Oficial America/Recife)
+    const recifeStartOfToday = getBusinessStartOfDay(now);
+    const recifeEndOfToday = getBusinessEndOfDay(now);
 
-    // Vendas hoje: pedidos estritamente confirmados como 'paid' dentro do dia oficial de Brasília
+    // Vendas hoje: pedidos estritamente confirmados como 'paid' dentro do dia oficial de Recife
     const salesToday = paidOrders.filter(o => {
       if (o.status !== 'paid') return false;
       const d = new Date(o.paidAt || o.createdAt);
-      return d >= spStartOfToday && d < spEndOfToday;
+      return d >= recifeStartOfToday && d < recifeEndOfToday;
     }).length;
 
     // Clientes cadastrados hoje no fuso oficial
     const customersToday = allCustomers.filter(c => {
       const d = new Date(c.createdAt);
-      return d >= spStartOfToday && d < spEndOfToday;
+      return d >= recifeStartOfToday && d < recifeEndOfToday;
     }).length;
 
     // Acessos liberados: apenas acessos ACTIVE vinculados a pedidos legítimos com pagamento confirmado

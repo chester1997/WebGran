@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
 import { 
   CreditCard, 
   Palette, 
@@ -470,7 +471,7 @@ export default function AdminSettingsClient({
                     <span className="text-xs text-gray-400">Conectado em</span>
                     <span className="text-xs font-mono text-gray-300">
                       {mp.connectedAt 
-                        ? new Date(mp.connectedAt).toLocaleDateString("pt-BR")
+                        ? formatBusinessDate(mp.connectedAt)
                         : "Ativo"}
                     </span>
                   </div>

@@ -4,6 +4,7 @@ import { orders, orderItems, products, telegramBots, stores } from "@/db/schema"
 import { eq, and, sql, asc } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
+import { BUSINESS_TIMEZONE } from "@/lib/analytics/timezone-utils";
 
 export interface SaleNotificationResult {
   success: boolean;
@@ -15,7 +16,7 @@ export interface SaleNotificationResult {
 
 export function formatBrtDateTime(date: Date): string {
   const formatter = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
+    timeZone: BUSINESS_TIMEZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

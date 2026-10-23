@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { formatBusinessDateTime } from "@/lib/analytics/timezone-utils";
 import OrdersClient from "./OrdersClient";
 
 export default async function AdminOrdersPage() {
@@ -20,13 +21,7 @@ export default async function AdminOrdersPage() {
     total: Number(o.total),
     status: o.status,
     paymentMethod: o.paymentMethod,
-    createdAt: new Date(o.createdAt).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    }),
+    createdAt: formatBusinessDateTime(o.createdAt),
     storeName: o.store?.name || "Loja Excluída",
     customerName: o.customer?.firstName
       ? `${o.customer.firstName} ${o.customer.lastName || ""}`.trim()

@@ -4,6 +4,7 @@ import {
   resolvePeriodDateRange, 
   formatBRLCurrency 
 } from "../commercial-metrics-service";
+import { getBusinessParts } from "../timezone-utils";
 
 // Mock db for database isolation tests
 vi.mock("@/db", () => ({
@@ -403,8 +404,9 @@ describe("CommercialMetricsService Suite", () => {
       const ref = new Date("2026-10-14T15:30:00.000Z");
 
       const today = resolvePeriodDateRange("TODAY", ref);
-      expect(today.startDate.getHours()).toBe(0);
-      expect(today.startDate.getMinutes()).toBe(0);
+      const todayParts = getBusinessParts(today.startDate);
+      expect(todayParts.hour).toBe(0);
+      expect(todayParts.minute).toBe(0);
 
       const p7d = resolvePeriodDateRange("7D", ref);
       const diff7 = (p7d.endDate.getTime() - p7d.startDate.getTime()) / (1000 * 3600 * 24);

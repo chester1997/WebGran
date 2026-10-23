@@ -14,6 +14,7 @@ import {
   Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatBusinessDateTime } from '@/lib/analytics/timezone-utils';
 
 interface Metrics {
   totalBruto: number;
@@ -60,13 +61,7 @@ export default function FinanceiroClient({ metrics, transactions }: Props) {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatBusinessDateTime(dateStr);
   };
 
   return (
