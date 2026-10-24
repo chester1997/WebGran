@@ -868,6 +868,20 @@ export class PushinPayProvider {
       if (orderWasUpdated) {
         console.log(`[PushinPayWebhook] Pedido ${order.id} confirmado via PushinPay! Split: ${evalResult.status}. Processando entrega...`);
         await AccessDeliveryService.processOrderDelivery(order.id);
+
+        if (evalResult.status === 'PROCESSED') {
+          try {
+            const { PlatformFinancialNotificationService } = await import('@/lib/push/platform-financial-notification-service');
+            await PlatformFinancialNotificationService.notifyOwnerOfCommission({
+              orderId: order.id,
+              eventType: 'SPLIT_PROCESSED',
+              platformFeeReais: evalResult.platformFeeStr,
+              splitAmountCents: typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50,
+            });
+          } catch (notifErr) {
+            console.warn('[PushinPayWebhook] Falha não bloqueante ao notificar proprietário sobre split:', notifErr);
+          }
+        }
       }
 
       return { success: true };

@@ -142,6 +142,14 @@ export class AccessDeliveryService {
       console.error("[AccessDeliveryService] Seller notification trigger failed:", err);
     }
 
+    // Trigger seller PWA push notification asynchronously / non-blocking
+    try {
+      const { SellerPushService } = await import("@/lib/push/seller-push-service");
+      await SellerPushService.notifySellerOfSale(orderId);
+    } catch (err) {
+      console.error("[AccessDeliveryService] Seller push notification trigger failed:", err);
+    }
+
     return results;
   }
 

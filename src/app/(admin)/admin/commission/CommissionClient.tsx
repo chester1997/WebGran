@@ -12,9 +12,11 @@ import {
   ShieldCheck, 
   ArrowRight,
   TrendingUp,
-  Info
+  Info,
+  Volume2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { playCommissionChime, unlockAudioContext } from "@/lib/sound/notification-sound";
 import { 
   CommissionSettingsResponse, 
   CommissionAuditLogItem 
@@ -99,6 +101,15 @@ export default function CommissionClient({
     }
   };
 
+  const [isPlayingSound, setIsPlayingSound] = useState(false);
+
+  const handleTestSound = async () => {
+    setIsPlayingSound(true);
+    await unlockAudioContext();
+    await playCommissionChime({ force: true });
+    setTimeout(() => setIsPlayingSound(false), 1200);
+  };
+
   const formatDate = (d: string | Date) => {
     try {
       const date = new Date(d);
@@ -132,9 +143,21 @@ export default function CommissionClient({
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-          <ShieldCheck className="w-4 h-4" />
-          Split Ativo & Seguro
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleTestSound}
+            disabled={isPlayingSound}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+            title="Ouvir som de notificação de comissão"
+          >
+            <Volume2 className={`w-3.5 h-3.5 ${isPlayingSound ? "animate-bounce text-emerald-400" : "text-amber-400"}`} />
+            <span>{isPlayingSound ? "Tocando..." : "Testar Som"}</span>
+          </button>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+            <ShieldCheck className="w-4 h-4" />
+            Split Ativo & Seguro
+          </div>
         </div>
       </div>
 

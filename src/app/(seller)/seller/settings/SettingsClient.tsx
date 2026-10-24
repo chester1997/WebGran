@@ -24,8 +24,15 @@ import {
   EyeOff,
   Sparkles,
   Info,
-  Volume2
+  Volume2,
+  VolumeX
 } from "lucide-react";
+import {
+  isNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+  playCommissionChime,
+  unlockAudioContext
+} from "@/lib/sound/notification-sound";
 import { Button } from "@/components/ui/button";
 import {
   updateSellerProfileAction,
@@ -105,33 +112,66 @@ export default function SettingsClient({
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Browser Notifications State
+  // Browser Notifications & Real Web Push State
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
   const [requestingPermission, setRequestingPermission] = useState(false);
+  const [vapidConfigured, setVapidConfigured] = useState<boolean | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [isPlayingSoundTest, setIsPlayingSoundTest] = useState<boolean>(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (!("Notification" in window)) {
-        setBrowserPermission("unsupported");
-        setBrowserNotificationsEnabled(false);
+    setSoundEnabled(isNotificationSoundEnabled());
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkPushStatus() {
+      if (typeof window === "undefined") return;
+
+      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (isMounted) {
+          setBrowserPermission("unsupported");
+          setBrowserNotificationsEnabled(false);
+        }
         return;
       }
 
       const currentPerm = Notification.permission;
-      setBrowserPermission(currentPerm);
+      if (isMounted) setBrowserPermission(currentPerm);
 
-      const savedPref = localStorage.getItem("webgran_browser_notifications");
-      // Respeita o estado real: se a permissão foi concedida E o usuário ativou a preferência
-      if (currentPerm === "granted" && savedPref === "true") {
-        setBrowserNotificationsEnabled(true);
-      } else {
-        setBrowserNotificationsEnabled(false);
-        if (currentPerm === "denied") {
-          localStorage.setItem("webgran_browser_notifications", "false");
+      try {
+        // Checa status do servidor
+        const statusRes = await fetch("/api/seller/push/status").then((r) => r.json()).catch(() => null);
+        if (statusRes && isMounted) {
+          setVapidConfigured(!!statusRes.configured);
         }
+
+        // Checa se o Service Worker possui assinatura Push ativa no dispositivo
+        const reg = await navigator.serviceWorker.ready.catch(() => null);
+        const sub = reg ? await reg.pushManager.getSubscription().catch(() => null) : null;
+
+        const savedPref = localStorage.getItem("webgran_browser_notifications");
+
+        if (currentPerm === "granted" && sub && (statusRes?.hasActiveSubscription || savedPref === "true")) {
+          if (isMounted) setBrowserNotificationsEnabled(true);
+        } else {
+          if (isMounted) setBrowserNotificationsEnabled(false);
+          if (currentPerm === "denied") {
+            localStorage.setItem("webgran_browser_notifications", "false");
+          }
+        }
+      } catch (err) {
+        console.warn("[PWA Settings] Falha ao verificar status push:", err);
       }
     }
+
+    checkPushStatus();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -279,81 +319,176 @@ export default function SettingsClient({
     }
   };
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
   const handleToggleBrowserNotifications = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      alert("Seu navegador não oferece suporte a notificações de área de trabalho.");
+    if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      alert("Seu navegador não oferece suporte completo a notificações Web Push / PWA.");
       return;
     }
 
     if (browserNotificationsEnabled) {
       // Desativação pelo usuário
-      setBrowserNotificationsEnabled(false);
-      localStorage.setItem("webgran_browser_notifications", "false");
-      showToast("Notificações do navegador desativadas.");
+      setRequestingPermission(true);
+      try {
+        const reg = await navigator.serviceWorker.ready.catch(() => null);
+        const sub = reg ? await reg.pushManager.getSubscription().catch(() => null) : null;
+        if (sub) {
+          await fetch("/api/seller/push/unsubscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          }).catch(() => {});
+          await sub.unsubscribe().catch(() => {});
+        }
+        setBrowserNotificationsEnabled(false);
+        localStorage.setItem("webgran_browser_notifications", "false");
+        showToast("Notificações push desativadas.");
+      } catch (err: any) {
+        console.error("Erro ao desativar push:", err);
+      } finally {
+        setRequestingPermission(false);
+      }
       return;
     }
 
     // Ativação
-    const currentPermission = Notification.permission;
+    let currentPermission = Notification.permission;
     setBrowserPermission(currentPermission);
-
-    if (currentPermission === "granted") {
-      setBrowserNotificationsEnabled(true);
-      localStorage.setItem("webgran_browser_notifications", "true");
-      showToast("Notificações do navegador ativadas com sucesso!");
-      return;
-    }
 
     if (currentPermission === "denied") {
       alert("As notificações estão bloqueadas nas configurações do seu navegador. Por favor, acesse as configurações do site e selecione 'Permitir' para ativá-las.");
       return;
     }
 
-    // Permissão pendente ('default'): solicita permissão ao usuário
     setRequestingPermission(true);
     try {
-      const result = await Notification.requestPermission();
-      setBrowserPermission(result);
-
-      if (result === "granted") {
-        setBrowserNotificationsEnabled(true);
-        localStorage.setItem("webgran_browser_notifications", "true");
-        showToast("Notificações do navegador autorizadas e ativadas com sucesso!");
-        try {
-          new Notification("WebGran", {
-            body: "Notificações ativadas! Você receberá alertas em tempo real sobre vendas confirmadas.",
-            icon: "/icon.png",
-          });
-        } catch {
-          // ignora falha silenciosa de construtor em alguns navegadores
-        }
-      } else {
-        setBrowserNotificationsEnabled(false);
-        localStorage.setItem("webgran_browser_notifications", "false");
-        if (result === "denied") {
-          showToast("Permissão de notificações recusada no navegador.");
+      if (currentPermission !== "granted") {
+        currentPermission = await Notification.requestPermission();
+        setBrowserPermission(currentPermission);
+        if (currentPermission !== "granted") {
+          setBrowserNotificationsEnabled(false);
+          localStorage.setItem("webgran_browser_notifications", "false");
+          if (currentPermission === "denied") {
+            showToast("Permissão de notificações recusada no navegador.");
+          }
+          return;
         }
       }
-    } catch (err) {
-      console.error("Erro ao solicitar permissão de notificações:", err);
+
+      // 1. Obter chave pública VAPID do servidor
+      const statusRes = await fetch("/api/seller/push/status").then((r) => r.json()).catch(() => null);
+      const publicKey = statusRes?.publicKey;
+
+      if (!publicKey) {
+        alert("A chave pública VAPID ainda não foi configurada nas variáveis de ambiente da Vercel (NEXT_PUBLIC_VAPID_PUBLIC_KEY).");
+        return;
+      }
+
+      // 2. Registrar PushManager no Service Worker
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+
+      if (!sub) {
+        const convertedKey = urlBase64ToUint8Array(publicKey);
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedKey,
+        });
+      }
+
+      // 3. Extrair chaves criptográficas
+      const rawKey = sub.getKey ? sub.getKey("p256dh") : null;
+      const rawAuth = sub.getKey ? sub.getKey("auth") : null;
+      const p256dh = rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "";
+      const auth = rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "";
+
+      // 4. Salvar assinatura no servidor vinculada ao vendedor autenticado
+      const saveRes = await fetch("/api/seller/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: sub.endpoint,
+          keys: { p256dh, auth },
+          userAgent: window.navigator.userAgent,
+        }),
+      });
+
+      const saveData = await saveRes.json().catch(() => null);
+
+      if (!saveRes.ok) {
+        throw new Error(saveData?.error || "Erro ao registrar assinatura no servidor.");
+      }
+
+      setBrowserNotificationsEnabled(true);
+      localStorage.setItem("webgran_browser_notifications", "true");
+      showToast("Notificações push PWA ativadas com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao ativar notificações push:", err);
+      alert(`Falha ao ativar notificações push: ${err?.message || "Erro desconhecido"}`);
     } finally {
       setRequestingPermission(false);
     }
   };
 
-  const handleSendTestNotification = () => {
+  const handleSendTestNotification = async () => {
     if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") {
+      alert("Permissão de notificação não concedida.");
       return;
     }
+
     try {
-      new Notification("🔔 Teste de Notificação WebGran", {
-        body: "Suas notificações do navegador estão ativas e funcionando perfeitamente!",
-        icon: "/icon.png",
-      });
-      showToast("Notificação de teste enviada!");
-    } catch (err) {
+      showToast("Enviando notificação de teste...");
+      const res = await fetch("/api/seller/push/test", { method: "POST" });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.success) {
+        // Fallback local se o servidor não conseguir enviar o push (ex: VAPID pendente no ambiente)
+        try {
+          new Notification("🔔 Teste de Notificação WebGran", {
+            body: data?.message || "Suas notificações do navegador estão ativas!",
+            icon: "/icon.png",
+          });
+          showToast("Notificação local exibida (configuração VAPID pendente no servidor).");
+        } catch {
+          alert(data?.message || "Erro ao disparar teste de notificação.");
+        }
+      } else {
+        showToast(data.message || "Notificação push enviada com sucesso!");
+      }
+
+      // Reproduzir o som da comissão quando a notificação for testada
+      playCommissionChime({ force: false });
+    } catch (err: any) {
       console.error("Erro ao disparar notificação de teste:", err);
+      showToast("Erro ao contatar o servidor para envio de teste.");
     }
+  };
+
+  const handleToggleSound = async () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    setNotificationSoundEnabled(next);
+    if (next) {
+      await unlockAudioContext();
+      playCommissionChime({ force: true });
+    }
+  };
+
+  const handleTestSound = async () => {
+    setIsPlayingSoundTest(true);
+    await unlockAudioContext();
+    await playCommissionChime({ force: true });
+    setTimeout(() => setIsPlayingSoundTest(false), 1200);
   };
 
   const displayedAvatar = avatarPreview || avatarUrl;
@@ -741,9 +876,14 @@ export default function SettingsClient({
                       <div className="flex items-center justify-between text-emerald-400 font-medium">
                         <span className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                          Ativas e autorizadas no navegador
+                          Ativas e autorizadas (Push PWA)
                         </span>
                       </div>
+                      {vapidConfigured === false && (
+                        <p className="text-[10px] text-amber-400/90 leading-tight">
+                          Nota: Configure as chaves VAPID na Vercel para envio de alertas em segundo plano com o app fechado.
+                        </p>
+                      )}
                       <button
                         type="button"
                         onClick={handleSendTestNotification}
@@ -755,7 +895,7 @@ export default function SettingsClient({
                     </div>
                   ) : browserPermission === "granted" && !browserNotificationsEnabled ? (
                     <div className="text-zinc-400">
-                      Desativadas. O navegador já está autorizado; clique no interruptor para ativar os alertas.
+                      Desativadas. O navegador já está autorizado; clique no interruptor para ativar os alertas push.
                     </div>
                   ) : (
                     <div className="text-amber-400/90 flex items-start gap-1.5">
@@ -764,6 +904,57 @@ export default function SettingsClient({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Som das Notificações */}
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium text-white flex items-center gap-2">
+                      {soundEnabled ? (
+                        <Volume2 className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <VolumeX className="w-4 h-4 text-zinc-500" />
+                      )}
+                      <span>Som das notificações</span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Reproduzir efeito sonoro personalizado ao receber eventos com o painel aberto.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTestSound}
+                      disabled={isPlayingSoundTest}
+                      title="Testar som"
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5"
+                    >
+                      <Volume2 className={`w-3.5 h-3.5 ${isPlayingSoundTest ? "animate-bounce text-emerald-400" : ""}`} />
+                      <span>{isPlayingSoundTest ? "Tocando..." : "Testar Som"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleToggleSound}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-950 ${
+                        soundEnabled ? "bg-emerald-500" : "bg-zinc-700"
+                      }`}
+                      role="switch"
+                      aria-checked={soundEnabled}
+                      aria-label="Ativar ou desativar som das notificações"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          soundEnabled ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-tight">
+                  Nota: Com o WebGran minimizado ou fechado, o som da notificação é o padrão definido pelo sistema operacional do dispositivo.
+                </p>
               </div>
             </div>
           </div>

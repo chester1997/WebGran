@@ -9,7 +9,8 @@ import {
   jsonb, 
   unique, 
   decimal,
-  index
+  index,
+  uniqueIndex
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -1095,4 +1096,58 @@ export const platformSplitAuditLogs = pgTable('platform_split_audit_logs', {
 }, (t) => ({
   splitAuditOrderIdx: index('split_audit_order_idx').on(t.orderId),
   splitAuditCreatedIdx: index('split_audit_created_idx').on(t.createdAt),
+}));
+
+export const sellerPushSubscriptions = pgTable('seller_push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  isActive: boolean('is_active').default(true).notNull(),
+  failureCount: integer('failure_count').default(0).notNull(),
+  lastSuccessAt: timestamp('last_success_at'),
+  lastFailureAt: timestamp('last_failure_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  userActiveIdx: index('seller_push_subs_user_active_idx').on(t.userId, t.isActive),
+  endpointIdx: index('seller_push_subs_endpoint_idx').on(t.endpoint),
+}));
+
+export const sellerPushSubscriptionsRelations = relations(sellerPushSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [sellerPushSubscriptions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const platformFinancialNotificationEvents = pgTable('platform_financial_notification_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  eventType: text('event_type').notNull(), // 'SPLIT_PROCESSED' | 'COMMISSION_CONFIRMED' | 'COMMISSION_SETTLED'
+  recipientUserId: uuid('recipient_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  platformFee: decimal('platform_fee', { precision: 10, scale: 2 }),
+  splitAmountCents: integer('split_amount_cents'),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  url: text('url'),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  orderEventUnique: uniqueIndex('platform_fin_notif_order_event_uidx').on(t.orderId, t.eventType),
+  recipientIdx: index('platform_fin_notif_recipient_idx').on(t.recipientUserId),
+  orderIdx: index('platform_fin_notif_order_idx').on(t.orderId),
+}));
+
+export const platformFinancialNotificationEventsRelations = relations(platformFinancialNotificationEvents, ({ one }) => ({
+  order: one(orders, {
+    fields: [platformFinancialNotificationEvents.orderId],
+    references: [orders.id],
+  }),
+  recipient: one(users, {
+    fields: [platformFinancialNotificationEvents.recipientUserId],
+    references: [users.id],
+  }),
 }));

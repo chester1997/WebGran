@@ -104,3 +104,65 @@ self.addEventListener('fetch', (event) => {
   // 5. ALL OTHER REQUESTS: Network-First
   event.respondWith(fetch(request));
 });
+
+// 6. WEB PUSH NOTIFICATIONS
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'WebGran',
+    body: 'Você tem uma nova notificação.',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    url: '/seller/financeiro',
+    tag: 'webgran-notification',
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      data = { ...data, ...payload };
+    } catch {
+      data.body = event.data.text() || data.body;
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icons/icon-192x192.png',
+    badge: data.badge || '/icons/icon-192x192.png',
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || '/seller/financeiro',
+      dateOfArrival: Date.now(),
+    },
+    tag: data.tag || 'webgran-general',
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+// 7. NOTIFICATION CLICK HANDLING
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url || '/seller/financeiro';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Se houver uma aba aberta no mesmo domínio, foca nela e navega para targetUrl
+      for (const client of windowClients) {
+        if ('focus' in client) {
+          client.focus();
+          if ('navigate' in client && targetUrl) {
+            return client.navigate(targetUrl);
+          }
+          return;
+        }
+      }
+      // Se não houver janela aberta, abre uma nova
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

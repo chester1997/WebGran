@@ -331,6 +331,23 @@ export class SplitReconciliationService {
       };
     };
 
-    return await (db as any).transaction(runInTransaction);
+    const result = await (db as any).transaction(runInTransaction);
+
+    if (result?.success && (params.targetStatus === 'SETTLED' || params.targetStatus === 'PROCESSED')) {
+      try {
+        const { PlatformFinancialNotificationService } = await import('@/lib/push/platform-financial-notification-service');
+        const splitAmountCents = typeof (params as any).splitAmountCents === 'number' ? (params as any).splitAmountCents : 50;
+        await PlatformFinancialNotificationService.notifyOwnerOfCommission({
+          orderId: params.orderId,
+          eventType: params.targetStatus === 'SETTLED' ? 'COMMISSION_SETTLED' : 'COMMISSION_CONFIRMED',
+          platformFeeReais: (splitAmountCents / 100).toFixed(2),
+          splitAmountCents,
+        });
+      } catch (notifErr) {
+        console.warn('[SplitReconciliationService] Falha não bloqueante ao notificar comissão reconciliada:', notifErr);
+      }
+    }
+
+    return result;
   }
 }
