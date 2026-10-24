@@ -5,6 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "WebGran",
     short_name: "WebGran",
     description: "plataforma WebGran",
+    id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",

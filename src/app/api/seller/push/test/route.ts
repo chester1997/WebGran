@@ -15,12 +15,16 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await SellerPushService.sendToSeller(user.id, {
-      title: "🔔 Teste de notificações WebGran",
-      body: "Suas notificações estão configuradas corretamente.",
+      title: "🛒 Nova venda no WebGran",
+      body: "Você recebeu R$ 49,90",
       icon: "/icons/icon-192x192.png",
       badge: "/icons/badge-72x72.png",
-      url: "/seller/settings",
-      tag: "test-push",
+      url: "/seller/financeiro",
+      tag: "test-sale-push",
+      data: {
+        isTest: true,
+        amount: 49.9,
+      },
     });
 
 
