@@ -223,310 +223,300 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
         </span>
       </div>
 
-      {/* Main 2-Area Grid:
-          - Left (Desktop lg:col-span-2 / 40% width): 4 Cards in 2x2 Grid (2fr)
-          - Right (Desktop lg:col-span-3 / 60% width): "Seu Desempenho" Performance Chart matching full height (3fr) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5 w-full max-w-full items-stretch">
+      {/* Grade 2x2 de Métricas Comerciais (2 Colunas x 2 Linhas em Desktop e Tablets) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 w-full max-w-full">
 
-        {/* =========================================================================
-            COLUNA ESQUERDA: 4 CARDS (2 colunas x 2 linhas - 40% da largura)
-           ========================================================================= */}
-        <div className="lg:col-span-2 flex flex-col justify-between">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 h-full">
-
-            {/* CARD 1: VENDAS APROVADAS */}
-            <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px]"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 80%), #0E0E11`
-              }}
-            >
-              {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
-                        Vendas Aprovadas
-                      </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
-                        Exclusivamente pagamentos confirmados
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-emerald-400 mt-0.5">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="my-auto py-1">
-                    <div className="text-2xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
-                      {approvedSales?.formatted || "R$ 0,00"}
-                    </div>
-                  </div>
-
-                  {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
-                    <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400 font-medium">Meta comercial</span>
-                        <span className="text-emerald-400 font-bold font-mono">
-                          {approvedSales.targetProgressPercent}%
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
-                          style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+        {/* CARD 1: VENDAS APROVADAS (Linha 1, Coluna Esquerda) */}
+        <div 
+          className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px] sm:min-h-[170px] h-full"
+          style={{
+            background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 80%), #0E0E11`
+          }}
+        >
+          {isPending ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-white/5 rounded w-1/3" />
+              <div className="h-8 bg-white/5 rounded w-2/3" />
             </div>
-
-            {/* CARD 2: TAXA DE CONVERSÃO */}
-            <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px]"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 80%), #0E0E11`
-              }}
-            >
-              {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
-                        Taxa de Conversão
-                      </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
-                        Cobranças Pix vs pagamentos aprovados
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-sky-400 mt-0.5">
-                      <TrendingUp className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="my-auto py-1 flex flex-col items-center justify-center">
-                    <SemicircleGauge 
-                      percentage={conversionRate?.ratePercent ?? null} 
-                      isAvailable={Boolean(conversionRate?.isTelemetryAvailable && !conversionRate?.hasError)}
-                      hasError={Boolean(conversionRate?.hasError)}
-                      totalPaid={conversionRate?.totalPixPagos ?? conversionRate?.convertedOrders ?? 0}
-                      totalGenerated={conversionRate?.totalPixGerados ?? conversionRate?.totalVisits ?? 0}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* CARD 3: TOTAL DE STARTS */}
-            <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px]"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #0E0E11`
-              }}
-            >
-              {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
-                        Total de Starts
-                      </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
-                        Inícios de conversa nos bots da loja
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-purple-400 mt-0.5">
-                      <Bot className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="my-auto py-1">
-                    <div className="text-2xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
-                      {botStarts?.formatted || "0"}
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
-                      {botStarts?.isTelemetryAvailable 
-                        ? ((botStarts.totalStarts || 0) === 0 
-                            ? "Nenhum start registrado" 
-                            : `${botStarts.uniqueUsers} ${botStarts.uniqueUsers === 1 ? 'usuário único' : 'usuários únicos'}`)
-                        : "Webhook sem persistência de eventos"}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* CARD 4: TICKET MÉDIO */}
-            <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px]"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 50%, transparent 80%), #0E0E11`
-              }}
-            >
-              {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
-                        Ticket Médio
-                      </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
-                        Receita aprovada / pedidos pagos
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-amber-400 mt-0.5">
-                      <CreditCard className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="my-auto py-1">
-                    <div className="text-2xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
-                      {averageTicket?.formatted || "R$ 0,00"}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-          </div>
-        </div>
-
-        {/* =========================================================================
-            COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (60% da largura)
-           ========================================================================= */}
-        <div className="lg:col-span-3 flex flex-col h-full">
-          <div 
-            className="bg-[#0E0E11] border border-white/[0.06] hover:border-rose-500/30 rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm transition-all flex flex-col justify-between h-full relative overflow-hidden min-h-[320px] sm:min-h-[340px]"
-            style={{
-              background: `radial-gradient(ellipse 80% 60% at 95% 8%, rgba(244, 63, 94, 0.10) 0%, rgba(244, 63, 94, 0.02) 50%, transparent 80%), #0E0E11`
-            }}
-          >
-            {/* Header: Title + Subtitle + Total Badge */}
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <BarChart3 className="w-5 h-5 text-rose-500 shrink-0" />
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">Seu Desempenho</h3>
-                  <p className="text-xs text-zinc-400">{periodConfig.subtitle}</p>
-                </div>
-              </div>
-
-
-              <div className="text-right">
-                <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider">
-                  {periodConfig.badge}
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-rose-400 font-mono wg-tabular">
-                  R$ {totalPeriodRevenue.toFixed(2).replace(".", ",")}
-                </span>
-              </div>
-            </div>
-
-            {/* Performance Area Chart */}
-            <div className="flex-1 min-h-[190px] sm:min-h-[210px] w-full flex items-center justify-center py-1 sm:py-2">
-              {isPending ? (
-                <div className="h-full w-full bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
-                  Carregando desempenho...
-                </div>
-              ) : !hasSeriesSales ? (
-                <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#141418]/40 rounded-xl border border-white/[0.04] space-y-1.5 my-auto">
-                  <div className="w-8 h-8 rounded-lg bg-zinc-800/60 border border-white/10 flex items-center justify-center text-zinc-500">
-                    <BarChart3 className="w-4 h-4 opacity-50" />
-                  </div>
-                  <p className="text-zinc-300 text-xs font-semibold">{periodConfig.emptyText}</p>
-                  <p className="text-zinc-500 text-[11px] max-w-xs leading-relaxed">
-                    Quando novos pedidos forem aprovados, a curva de receita aparecerá aqui.
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
+                    Vendas Aprovadas
+                  </span>
+                  <p className="text-[11px] text-zinc-500 leading-tight">
+                    Exclusivamente pagamentos confirmados
                   </p>
                 </div>
-              ) : (
-                <div className="w-full h-48 sm:h-52 md:h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={performanceSeries}
-                      margin={{ top: 10, right: 12, left: -20, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="rosePerformanceGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                      <XAxis
-                        dataKey="dateLabel"
-                        stroke="#71717A"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={5}
-                      />
-                      <YAxis
-                        stroke="#71717A"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(val) =>
-                          val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
-                        }
-                      />
-                      <RechartsTooltip content={<PerformanceTooltip />} />
-                      <Area
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#F43F5E"
-                        strokeWidth={2.5}
-                        fillOpacity={1}
-                        fill="url(#rosePerformanceGrad)"
-                        dot={{ r: 3, fill: "#F43F5E", stroke: "#0E0E11", strokeWidth: 1.5 }}
-                        activeDot={{
-                          r: 5,
-                          stroke: "#FFFFFF",
-                          strokeWidth: 2,
-                          fill: "#F43F5E"
-                        }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="shrink-0 text-emerald-400 mt-0.5">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="my-auto py-1">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  {approvedSales?.formatted || "R$ 0,00"}
+                </div>
+              </div>
+
+              {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
+                <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400 font-medium">Meta comercial</span>
+                    <span className="text-emerald-400 font-bold font-mono">
+                      {approvedSales.targetProgressPercent}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
+                      style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
+                    />
+                  </div>
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Footer Summary */}
-            <div className="pt-2.5 mt-auto border-t border-white/[0.04] flex items-center justify-between text-[11px] text-zinc-500">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                Receita confirmada
-              </span>
-              <span className="font-mono text-zinc-400">
-                {periodConfig.footer}
-              </span>
+        {/* CARD 2: TAXA DE CONVERSÃO (Linha 1, Coluna Direita) */}
+        <div 
+          className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px] sm:min-h-[170px] h-full"
+          style={{
+            background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 80%), #0E0E11`
+          }}
+        >
+          {isPending ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-white/5 rounded w-1/3" />
+              <div className="h-8 bg-white/5 rounded w-2/3" />
             </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
+                    Taxa de Conversão
+                  </span>
+                  <p className="text-[11px] text-zinc-500 leading-tight">
+                    Cobranças Pix vs pagamentos aprovados
+                  </p>
+                </div>
+                <div className="shrink-0 text-sky-400 mt-0.5">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+              </div>
 
+              <div className="my-auto py-1 flex flex-col items-center justify-center">
+                <SemicircleGauge 
+                  percentage={conversionRate?.ratePercent ?? null} 
+                  isAvailable={Boolean(conversionRate?.isTelemetryAvailable && !conversionRate?.hasError)}
+                  hasError={Boolean(conversionRate?.hasError)}
+                  totalPaid={conversionRate?.totalPixPagos ?? conversionRate?.convertedOrders ?? 0}
+                  totalGenerated={conversionRate?.totalPixGerados ?? conversionRate?.totalVisits ?? 0}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* CARD 3: TOTAL DE STARTS (Linha 2, Coluna Esquerda) */}
+        <div 
+          className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px] sm:min-h-[170px] h-full"
+          style={{
+            background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #0E0E11`
+          }}
+        >
+          {isPending ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-white/5 rounded w-1/3" />
+              <div className="h-8 bg-white/5 rounded w-2/3" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
+                    Total de Starts
+                  </span>
+                  <p className="text-[11px] text-zinc-500 leading-tight">
+                    Inícios de conversa nos bots da loja
+                  </p>
+                </div>
+                <div className="shrink-0 text-purple-400 mt-0.5">
+                  <Bot className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="my-auto py-1">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  {botStarts?.formatted || "0"}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                  {botStarts?.isTelemetryAvailable 
+                    ? ((botStarts.totalStarts || 0) === 0 
+                        ? "Nenhum start registrado" 
+                        : `${botStarts.uniqueUsers} ${botStarts.uniqueUsers === 1 ? 'usuário único' : 'usuários únicos'}`)
+                    : "Webhook sem persistência de eventos"}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* CARD 4: TICKET MÉDIO (Linha 2, Coluna Direita) */}
+        <div 
+          className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px] sm:min-h-[170px] h-full"
+          style={{
+            background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 50%, transparent 80%), #0E0E11`
+          }}
+        >
+          {isPending ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-white/5 rounded w-1/3" />
+              <div className="h-8 bg-white/5 rounded w-2/3" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
+                    Ticket Médio
+                  </span>
+                  <p className="text-[11px] text-zinc-500 leading-tight">
+                    Receita aprovada / pedidos pagos
+                  </p>
+                </div>
+                <div className="shrink-0 text-amber-400 mt-0.5">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="my-auto py-1">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  {averageTicket?.formatted || "R$ 0,00"}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                  {averageTicket?.consideredSalesCount
+                    ? `${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? 'venda considerada' : 'vendas consideradas'}`
+                    : "Média por pedido aprovado"}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+
+      </div>
+
+      {/* =========================================================================
+          GRÁFICO SEU DESEMPENHO (Card Preservado)
+         ========================================================================= */}
+      <div 
+        className="bg-[#0E0E11] border border-white/[0.06] hover:border-rose-500/30 rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm transition-all flex flex-col justify-between w-full relative overflow-hidden min-h-[300px] sm:min-h-[320px]"
+        style={{
+          background: `radial-gradient(ellipse 80% 60% at 95% 8%, rgba(244, 63, 94, 0.10) 0%, rgba(244, 63, 94, 0.02) 50%, transparent 80%), #0E0E11`
+        }}
+      >
+        {/* Header: Title + Subtitle + Total Badge */}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <BarChart3 className="w-5 h-5 text-rose-500 shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight">Seu Desempenho</h3>
+              <p className="text-xs text-zinc-400">{periodConfig.subtitle}</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider">
+              {periodConfig.badge}
+            </span>
+            <span className="text-xs sm:text-sm font-bold text-rose-400 font-mono wg-tabular">
+              R$ {totalPeriodRevenue.toFixed(2).replace(".", ",")}
+            </span>
           </div>
         </div>
 
+        {/* Performance Area Chart */}
+        <div className="flex-1 min-h-[190px] sm:min-h-[210px] w-full flex items-center justify-center py-1 sm:py-2">
+          {isPending ? (
+            <div className="h-full w-full bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
+              Carregando desempenho...
+            </div>
+          ) : !hasSeriesSales ? (
+            <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#141418]/40 rounded-xl border border-white/[0.04] space-y-1.5 my-auto">
+              <div className="w-8 h-8 rounded-lg bg-zinc-800/60 border border-white/10 flex items-center justify-center text-zinc-500">
+                <BarChart3 className="w-4 h-4 opacity-50" />
+              </div>
+              <p className="text-zinc-300 text-xs font-semibold">{periodConfig.emptyText}</p>
+              <p className="text-zinc-500 text-[11px] max-w-xs leading-relaxed">
+                Quando novos pedidos forem aprovados, a curva de receita aparecerá aqui.
+              </p>
+            </div>
+          ) : (
+            <div className="w-full h-48 sm:h-52 md:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={performanceSeries}
+                  margin={{ top: 10, right: 12, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="rosePerformanceGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="dateLabel"
+                    stroke="#71717A"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    dy={5}
+                  />
+                  <YAxis
+                    stroke="#71717A"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(val) =>
+                      val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
+                    }
+                  />
+                  <RechartsTooltip content={<PerformanceTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#F43F5E"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#rosePerformanceGrad)"
+                    dot={{ r: 3, fill: "#F43F5E", stroke: "#0E0E11", strokeWidth: 1.5 }}
+                    activeDot={{
+                      r: 5,
+                      stroke: "#FFFFFF",
+                      strokeWidth: 2,
+                      fill: "#F43F5E"
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Summary */}
+        <div className="pt-2.5 mt-auto border-t border-white/[0.04] flex items-center justify-between text-[11px] text-zinc-500">
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            Receita confirmada
+          </span>
+          <span className="font-mono text-zinc-400">
+            {periodConfig.footer}
+          </span>
+        </div>
       </div>
     </div>
   );

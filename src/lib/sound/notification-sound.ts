@@ -147,6 +147,13 @@ export async function playCommissionChime(options?: {
 }
 
 /**
+ * Retorna o caminho do arquivo de áudio oficial do WebGran.
+ */
+export function getNotificationSoundUrl(): string {
+  return "/sounds/commission.mp3";
+}
+
+/**
  * Reseta o estado interno de som para suítes de teste automatizadas.
  */
 export function _resetNotificationSoundStateForTesting(): void {
@@ -159,7 +166,8 @@ export function _resetNotificationSoundStateForTesting(): void {
 /**
  * Registra o listener global para tocar o som de notificação no primeiro plano
  * quando o Service Worker receber um evento Web Push.
- * Inclui desbloqueio preventivo de autoplay sob o primeiro toque/clique do usuário.
+ * Inclui desbloqueio preventivo de autoplay sob o primeiro toque/clique do usuário
+ * tanto para o Web Audio API quanto para o elemento HTML5 Audio.
  */
 let isForegroundListenerRegistered = false;
 
@@ -167,10 +175,25 @@ export function setupForegroundNotificationSoundListener(): void {
   if (typeof window === "undefined" || isForegroundListenerRegistered) return;
   isForegroundListenerRegistered = true;
 
-  // 1. Desbloqueio preventivo de autoplay sob primeira interação do usuário
+  // 1. Desbloqueio preventivo de autoplay sob primeira interação do usuário (toque, clique ou tecla)
   if (typeof window.addEventListener === "function") {
     const handleFirstInteraction = () => {
+      // Desbloqueia AudioContext
       unlockAudioContext().catch(() => {});
+
+      // Pré-carrega e prepara o elemento HTML5 Audio para contornar o bloqueio de Autoplay no Chrome Android
+      try {
+        if (!cachedAudioElement) {
+          cachedAudioElement = new Audio(getNotificationSoundUrl());
+          cachedAudioElement.preload = "auto";
+        }
+        if (typeof cachedAudioElement.load === "function") {
+          cachedAudioElement.load();
+        }
+      } catch {
+        // Ignora caso o ambiente não suporte Audio
+      }
+
       if (typeof window.removeEventListener === "function") {
         window.removeEventListener("click", handleFirstInteraction);
         window.removeEventListener("touchstart", handleFirstInteraction);

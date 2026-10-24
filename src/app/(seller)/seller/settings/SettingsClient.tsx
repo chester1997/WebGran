@@ -25,13 +25,18 @@ import {
   Sparkles,
   Info,
   Volume2,
-  VolumeX
+  VolumeX,
+  Download,
+  Smartphone,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import {
   isNotificationSoundEnabled,
   setNotificationSoundEnabled,
   playCommissionChime,
-  unlockAudioContext
+  unlockAudioContext,
+  getNotificationSoundUrl
 } from "@/lib/sound/notification-sound";
 import { buildTestNotificationPayload } from "@/lib/push/notification-payload-builder";
 import { Button } from "@/components/ui/button";
@@ -120,6 +125,7 @@ export default function SettingsClient({
   const [vapidConfigured, setVapidConfigured] = useState<boolean | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isPlayingSoundTest, setIsPlayingSoundTest] = useState<boolean>(false);
+  const [showAndroidSoundGuide, setShowAndroidSoundGuide] = useState<boolean>(false);
 
   useEffect(() => {
     setSoundEnabled(isNotificationSoundEnabled());
@@ -524,7 +530,7 @@ function urlBase64ToUint8Array(base64String: string) {
 
       // Desbloquear audio e reproduzir o som da comissão quando a notificação for testada
       await unlockAudioContext();
-      await playCommissionChime({ force: false });
+      await playCommissionChime({ force: false, eventId: "test-notification" });
     } catch (err: any) {
       console.error("Erro ao disparar notificação de teste:", err);
       showToast("Erro ao contatar o servidor para envio de teste.");
@@ -964,8 +970,8 @@ function urlBase64ToUint8Array(base64String: string) {
               </div>
 
               {/* Som das Notificações */}
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <div className="text-sm font-medium text-white flex items-center gap-2">
                       {soundEnabled ? (
@@ -976,16 +982,25 @@ function urlBase64ToUint8Array(base64String: string) {
                       <span>Som das notificações</span>
                     </div>
                     <p className="text-xs text-zinc-400">
-                      Reproduzir efeito sonoro personalizado ao receber eventos com o painel aberto.
+                      Reproduzir efeito sonoro oficial ao receber notificações com o painel aberto.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <a
+                      href={getNotificationSoundUrl()}
+                      download="webgran-notificacao.mp3"
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title="Baixar arquivo de áudio para definir como toque de notificação no Android"
+                    >
+                      <Download className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Baixar Áudio (.mp3)</span>
+                    </a>
                     <button
                       type="button"
                       onClick={handleTestSound}
                       disabled={isPlayingSoundTest}
-                      title="Testar som"
-                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5"
+                      title="Testar som agora"
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Volume2 className={`w-3.5 h-3.5 ${isPlayingSoundTest ? "animate-bounce text-emerald-400" : ""}`} />
                       <span>{isPlayingSoundTest ? "Tocando..." : "Testar Som"}</span>
@@ -1009,9 +1024,50 @@ function urlBase64ToUint8Array(base64String: string) {
                     </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-zinc-500 leading-tight">
-                  Nota: Com o WebGran minimizado ou fechado, o som da notificação é o padrão definido pelo sistema operacional do dispositivo.
-                </p>
+
+                {/* Guia Android / Notificações em Segundo Plano */}
+                <div className="pt-2 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setShowAndroidSoundGuide(!showAndroidSoundGuide)}
+                    className="text-[11px] text-zinc-400 hover:text-white flex items-center justify-between w-full transition-colors cursor-pointer text-left"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Smartphone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <span>Como ativar o som personalizado no Android (PWA fechado ou em segundo plano)</span>
+                    </span>
+                    {showAndroidSoundGuide ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    )}
+                  </button>
+
+                  {showAndroidSoundGuide && (
+                    <div className="mt-2.5 p-3.5 rounded-xl bg-black/40 border border-white/5 text-[11px] text-zinc-300 space-y-2.5 leading-relaxed animate-in fade-in-50 duration-150">
+                      <p className="font-semibold text-white">
+                        Por que o Android requer esse ajuste para o som em segundo plano?
+                      </p>
+                      <p className="text-zinc-400">
+                        Quando o WebGran está fechado, as notificações são entregues pelo sistema operacional via <strong>Canais de Notificação</strong>. Por segurança e padrão do Android, navegadores e WebAPKs não têm permissão para injetar arquivos MP3 arbitrários diretamente no motor de som nativo do sistema. No entanto, o Android permite que você atribua o som desejado ao canal da aplicação:
+                      </p>
+                      <div className="space-y-1.5 text-zinc-300 pt-0.5">
+                        <div className="flex items-start gap-2">
+                          <span className="font-bold text-red-500 shrink-0">1.</span>
+                          <span>Clique no botão <strong>"Baixar Áudio (.mp3)"</strong> acima e salve o arquivo na pasta <em>Notifications</em> do seu celular.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-bold text-red-500 shrink-0">2.</span>
+                          <span>Na tela inicial do Android, pressione e segure o ícone do <strong>WebGran</strong> &gt; toque no ícone de informação <strong>(i)</strong> &gt; <strong>Notificações</strong>.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-bold text-red-500 shrink-0">3.</span>
+                          <span>Acesse <strong>Categorias de notificação</strong> &gt; toque na categoria do WebGran &gt; certifique-se de selecionar <strong>Alerta</strong> (não silencioso) &gt; toque em <strong>Som</strong> e escolha o arquivo baixado.</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

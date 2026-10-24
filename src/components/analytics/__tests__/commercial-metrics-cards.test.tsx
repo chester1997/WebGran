@@ -363,4 +363,38 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     const rendered = CommercialMetricsCards({ metrics: metrics30D, isPending: false });
     expect(rendered).toBeDefined();
   });
+
+  it("12. Valida layout em grade 2x2 (md:grid-cols-2) com os 4 cards na ordem correta e gráfico preservado", () => {
+    const metrics: CommercialMetrics = {
+      period: "30D",
+      storeId: "store-2x2",
+      approvedSales: { total: 1000, formatted: "R$ 1.000,00", count: 10, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
+      conversionRate: { ratePercent: 100, formatted: "100%", isTelemetryAvailable: true, totalVisits: 10, convertedOrders: 10, totalPixGerados: 10, totalPixPagos: 10, statusMessage: "10 pagos de 10 Pix", hasError: false },
+      botStarts: { totalStarts: 50, formatted: "50", isTelemetryAvailable: true, uniqueUsers: 45, statusMessage: "50 inícios" },
+      averageTicket: { averageTicket: 100, formatted: "R$ 100,00", consideredSalesCount: 10, approvedPixCount: 10, generatedPixCount: 10, pixConversionRatePercent: 100 },
+      performanceSeries: [{ dateLabel: "24/10", dayName: "Hoje", revenue: 1000, salesCount: 10, formattedRevenue: "R$ 1.000,00" }],
+      last7DaysPerformance: [],
+    };
+
+    const rendered: any = CommercialMetricsCards({ metrics, isPending: false });
+    expect(rendered).toBeDefined();
+
+    // Inspeciona os nós JSX retornados
+    const children = React.Children.toArray(rendered.props.children);
+    expect(children.length).toBeGreaterThanOrEqual(3);
+
+    // O segundo filho é a grade 2x2 dos 4 cards comerciais
+    const grid2x2: any = children[1];
+    expect(grid2x2.props.className).toContain("grid-cols-1");
+    expect(grid2x2.props.className).toContain("md:grid-cols-2");
+
+    // A grade contém exatamente os 4 cards de métricas
+    const cards = React.Children.toArray(grid2x2.props.children);
+    expect(cards.length).toBe(4);
+
+    // O terceiro filho é o gráfico de desempenho preservado
+    const performanceChartCard: any = children[2];
+    expect(performanceChartCard.props.className).toContain("w-full");
+  });
 });
+

@@ -48,6 +48,7 @@ import {
   playCommissionChime,
   setupForegroundNotificationSoundListener,
   _resetNotificationSoundStateForTesting,
+  getNotificationSoundUrl,
 } from "@/lib/sound/notification-sound";
 
 describe("WebGran — Platform Owner Commission Notifications & Custom Sound Suite", () => {
@@ -431,6 +432,82 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
 
       await new Promise((r) => setTimeout(r, 10));
       expect(mockPlay).toHaveBeenCalled();
+    });
+
+    it("retorna o caminho oficial do áudio do WebGran", () => {
+      expect(getNotificationSoundUrl()).toBe("/sounds/commission.mp3");
+    });
+
+    it("prime o elemento HTML5 Audio na primeira interação do usuário para compatibilidade com Chrome Android", () => {
+      _resetNotificationSoundStateForTesting();
+      const windowListeners: Record<string, (e?: any) => void> = {};
+      const mockLoad = vi.fn();
+      class MockAudio {
+        play = vi.fn().mockResolvedValue(undefined);
+        load = mockLoad;
+        preload = "";
+        currentTime = 0;
+        constructor(public src?: string) {}
+      }
+
+      vi.stubGlobal("window", {
+        addEventListener: vi.fn((type: string, listener: any) => {
+          windowListeners[type] = listener;
+        }),
+        removeEventListener: vi.fn(),
+      });
+      vi.stubGlobal("Audio", MockAudio);
+
+      setupForegroundNotificationSoundListener();
+
+      expect(windowListeners["touchstart"]).toBeDefined();
+      // Simula primeiro toque do usuário
+      windowListeners["touchstart"]();
+
+      expect(mockLoad).toHaveBeenCalled();
+    });
+
+    it("executa fallback sintetizado via Web Audio API caso o carregamento do MP3 seja rejeitado pelo navegador", async () => {
+      _resetNotificationSoundStateForTesting();
+      storageStore["webgran_notification_sound_enabled"] = "true";
+
+      // Simula Audio falhando (ex: Autoplay Policy bloqueado ou erro de decodificação)
+      class MockFailingAudio {
+        play = vi.fn().mockRejectedValue(new Error("NotAllowedError: play() failed"));
+        load = vi.fn();
+        preload = "";
+        currentTime = 0;
+      }
+      vi.stubGlobal("Audio", MockFailingAudio);
+
+      // Simula Web Audio API funcionando
+      const mockCreateOscillator = vi.fn().mockReturnValue({
+        type: "sine",
+        frequency: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+      });
+      const mockCreateGain = vi.fn().mockReturnValue({
+        gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+        connect: vi.fn(),
+      });
+
+      class MockAudioContext {
+        state = "running";
+        currentTime = 0;
+        destination = {};
+        createOscillator = mockCreateOscillator;
+        createGain = mockCreateGain;
+        resume = vi.fn().mockResolvedValue(undefined);
+      }
+
+      vi.stubGlobal("AudioContext", MockAudioContext);
+      (window as any).AudioContext = MockAudioContext;
+
+      const played = await playCommissionChime({ eventId: "test-synth-fallback", force: true });
+      expect(played).toBe(true);
+      expect(mockCreateOscillator).toHaveBeenCalled();
     });
   });
 });
