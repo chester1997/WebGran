@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Download, X, Share } from "lucide-react";
+import { setupForegroundNotificationSoundListener } from "@/lib/sound/notification-sound";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -20,6 +21,9 @@ export function PwaRegisterAndInstall() {
   const [showIosInstructions, setShowIosInstructions] = useState(false);
 
   useEffect(() => {
+    // 0. Ativar listener de som em primeiro plano para notificações push
+    setupForegroundNotificationSoundListener();
+
     // 1. Safe Service Worker registration
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       window.addEventListener("load", () => {

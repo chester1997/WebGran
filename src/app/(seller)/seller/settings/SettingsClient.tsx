@@ -487,11 +487,12 @@ function urlBase64ToUint8Array(base64String: string) {
           alert(data?.message || "Erro ao disparar teste de notificação.");
         }
       } else {
-        showToast(data.message || "Notificação push enviada com sucesso!");
+        showToast(data.message || `Notificação push enviada para ${data.details?.sentCount || 1} dispositivo(s)!`);
       }
 
-      // Reproduzir o som da comissão quando a notificação for testada
-      playCommissionChime({ force: false });
+      // Desbloquear audio e reproduzir o som da comissão quando a notificação for testada
+      await unlockAudioContext();
+      await playCommissionChime({ force: false });
     } catch (err: any) {
       console.error("Erro ao disparar notificação de teste:", err);
       showToast("Erro ao contatar o servidor para envio de teste.");

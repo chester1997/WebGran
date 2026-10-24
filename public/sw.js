@@ -1,7 +1,7 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v2';
+const CACHE_NAME = 'webgran-static-v3';
 
-// Static brand assets explicitly safe to pre-cache (brand icons and monochrome notification badges)
+// Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
@@ -10,6 +10,8 @@ const PRECACHE_ASSETS = [
   '/icons/badge-72x72.png',
   '/icons/badge-96x96.png',
   '/icons/apple-touch-icon.png',
+  '/sounds/commission.mp3',
+  '/sounds/commission.ogg',
   '/manifest.webmanifest'
 ];
 
@@ -82,8 +84,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. STATIC BRAND ASSETS: Cache-First with Network fallback (icons only)
-  if (url.pathname.startsWith('/icons/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.ico')) {
+  // 4. STATIC BRAND ASSETS: Cache-First with Network fallback (icons and notification sounds)
+  if (
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.startsWith('/sounds/') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.mp3') ||
+    url.pathname.endsWith('.ogg')
+  ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -156,7 +165,27 @@ self.addEventListener('push', (event) => {
       : new URL(data.image, self.location.origin).href;
   }
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  // Notifica clientes com janelas abertas em primeiro plano para reprodução do som personalizado
+  const notifyForegroundClients = clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((windowClients) => {
+      for (const client of windowClients) {
+        client.postMessage({
+          type: 'WEBGRAN_PUSH_RECEIVED',
+          payload: data,
+        });
+      }
+    })
+    .catch((err) => {
+      console.warn('[SW] Falha ao enviar evento para clientes em primeiro plano:', err);
+    });
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(data.title, options),
+      notifyForegroundClients,
+    ])
+  );
 });
 
 // 7. NOTIFICATION CLICK HANDLING

@@ -46,6 +46,8 @@ import {
   isNotificationSoundEnabled,
   setNotificationSoundEnabled,
   playCommissionChime,
+  setupForegroundNotificationSoundListener,
+  _resetNotificationSoundStateForTesting,
 } from "@/lib/sound/notification-sound";
 
 describe("WebGran — Platform Owner Commission Notifications & Custom Sound Suite", () => {
@@ -345,7 +347,11 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
 
     beforeEach(() => {
       storageStore = {};
-      vi.stubGlobal("window", {});
+      _resetNotificationSoundStateForTesting();
+      vi.stubGlobal("window", {
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
       vi.stubGlobal("localStorage", {
         getItem: (k: string) => storageStore[k] ?? null,
         setItem: (k: string, v: string) => { storageStore[k] = String(v); },
@@ -388,6 +394,43 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       const secondPlay = await playCommissionChime({ eventId: "chime-once-test" });
       expect(secondPlay).toBe(false);
       expect(mockPlay).toHaveBeenCalledTimes(1);
+    });
+
+    it("setupForegroundNotificationSoundListener registra listener do service worker e toca áudio no primeiro plano", async () => {
+      const messageListeners: Array<(event: any) => void> = [];
+      vi.stubGlobal("navigator", {
+        serviceWorker: {
+          addEventListener: vi.fn((type: string, listener: any) => {
+            if (type === "message") messageListeners.push(listener);
+          }),
+        },
+      });
+
+      const mockPlay = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal("Audio", class {
+        play = mockPlay;
+        preload = "";
+        currentTime = 0;
+      });
+
+      setupForegroundNotificationSoundListener();
+
+      expect(messageListeners.length).toBeGreaterThan(0);
+
+      // Dispara evento vindo do Service Worker
+      messageListeners[0]({
+        data: {
+          type: "WEBGRAN_PUSH_RECEIVED",
+          payload: {
+            title: "💰 Comissão WebGran",
+            body: "Comissão de R$ 0,50 confirmada",
+            data: { orderId: "order-fg-sound-test" },
+          },
+        },
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockPlay).toHaveBeenCalled();
     });
   });
 });

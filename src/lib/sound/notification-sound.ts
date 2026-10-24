@@ -145,3 +145,56 @@ export async function playCommissionChime(options?: {
 
   return false;
 }
+
+/**
+ * Reseta o estado interno de som para suítes de teste automatizadas.
+ */
+export function _resetNotificationSoundStateForTesting(): void {
+  playedSoundEvents.clear();
+  cachedAudioElement = null;
+  audioContext = null;
+  isForegroundListenerRegistered = false;
+}
+
+/**
+ * Registra o listener global para tocar o som de notificação no primeiro plano
+ * quando o Service Worker receber um evento Web Push.
+ * Inclui desbloqueio preventivo de autoplay sob o primeiro toque/clique do usuário.
+ */
+let isForegroundListenerRegistered = false;
+
+export function setupForegroundNotificationSoundListener(): void {
+  if (typeof window === "undefined" || isForegroundListenerRegistered) return;
+  isForegroundListenerRegistered = true;
+
+  // 1. Desbloqueio preventivo de autoplay sob primeira interação do usuário
+  if (typeof window.addEventListener === "function") {
+    const handleFirstInteraction = () => {
+      unlockAudioContext().catch(() => {});
+      if (typeof window.removeEventListener === "function") {
+        window.removeEventListener("click", handleFirstInteraction);
+        window.removeEventListener("touchstart", handleFirstInteraction);
+        window.removeEventListener("keydown", handleFirstInteraction);
+      }
+    };
+
+    window.addEventListener("click", handleFirstInteraction, { once: true, passive: true });
+    window.addEventListener("touchstart", handleFirstInteraction, { once: true, passive: true });
+    window.addEventListener("keydown", handleFirstInteraction, { once: true, passive: true });
+  }
+
+  // 2. Escutar eventos enviados pelo Service Worker
+  if (typeof navigator !== "undefined" && "serviceWorker" in navigator && navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "WEBGRAN_PUSH_RECEIVED") {
+        const payload = event.data.payload;
+        const eventId = payload?.data?.orderId || payload?.tag || `push-${Date.now()}`;
+        // Toca o sino no primeiro plano respeitando as preferências do usuário e deduplicação
+        playCommissionChime({ eventId }).catch((err) => {
+          console.warn("[NotificationSound] Falha ao reproduzir áudio em primeiro plano:", err);
+        });
+      }
+    });
+  }
+}
+
