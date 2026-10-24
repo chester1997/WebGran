@@ -207,72 +207,11 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         isPending={isPending} 
       />
 
-      {/* 3. Vendas por Canal & Atividade da Loja (2 Cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* 3. Atividades, Mais Vendidos e Vendas por Canal (3 Cols Lado a Lado) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
-        {/* Channels Breakdown Card */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2.5 mb-5">
-              <Bot className="w-5 h-5 text-rose-500 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Vendas por Canal</h3>
-                <p className="text-xs text-zinc-400">Origem dos pedidos efetuados</p>
-              </div>
-            </div>
-
-
-            {isPending ? (
-              <div className="space-y-3 py-3">
-                <div className="h-10 bg-white/5 rounded-lg animate-pulse" />
-                <div className="h-10 bg-white/5 rounded-lg animate-pulse" />
-              </div>
-            ) : data.channels.length === 0 ? (
-              <p className="text-zinc-500 text-xs py-10 text-center">Nenhum canal ativo registrado.</p>
-            ) : (
-              <div className="space-y-4 py-1">
-                {data.channels.map((chan) => (
-                  <div key={chan.channel} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-white flex items-center gap-2 min-w-0">
-                        <ChannelAvatarItem chan={chan} />
-                        <span className="truncate">{chan.label}</span>
-                      </span>
-                      <span className="font-mono font-bold text-zinc-300 shrink-0 ml-2 wg-tabular">{chan.percentage}%</span>
-                    </div>
-
-                    {/* Progress Bar in WebGran Red / Rose */}
-                    <div className="h-2 bg-[#141418] rounded-full overflow-hidden border border-white/[0.04]">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          chan.channel === "web" 
-                            ? "bg-emerald-500" 
-                            : "bg-rose-500"
-                        }`}
-                        style={{ width: `${Math.max(chan.percentage, 5)}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
-                      <span>{chan.salesCount} {chan.salesCount === 1 ? "venda" : "vendas"}</span>
-                      <span className="font-bold text-white wg-tabular">R$ {chan.revenue.toFixed(2).replace(".", ",")}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
-            <span>Canal principal:</span>
-            <span className="font-bold text-white uppercase tracking-wider">
-              {data.channels[0]?.label || "Nenhum"}
-            </span>
-          </div>
-        </div>
-
-        {/* Log de Atividades */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between min-h-[340px]">
+        {/* 1. Log de Atividades (Esquerda) */}
+        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
@@ -319,18 +258,18 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                   return (
                     <div
                       key={event.id}
-                      className="p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/[0.1] transition-all flex items-center justify-between gap-3"
+                      className="p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/[0.1] transition-all flex items-center justify-between gap-2.5"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div
-                          className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconContainerClass}`}
+                          className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${iconContainerClass}`}
                         >
                           {isSale ? (
-                            <CheckCircle2 className="w-4.5 h-4.5" />
+                            <CheckCircle2 className="w-4 h-4" />
                           ) : isPendingPay ? (
-                            <Clock className="w-4.5 h-4.5" />
+                            <Clock className="w-4 h-4" />
                           ) : (
-                            <UserPlus className="w-4.5 h-4.5" />
+                            <UserPlus className="w-4 h-4" />
                           )}
                         </div>
 
@@ -349,7 +288,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="inline-flex items-center text-[11px] font-mono font-medium text-zinc-400 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/[0.05] wg-tabular">
+                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-zinc-400 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/[0.05] wg-tabular">
                           {event.dateFormatted} • {event.timeFormatted}
                         </span>
                       </div>
@@ -368,79 +307,146 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </div>
         </div>
 
-      </div>
-
-      {/* 4. Top Selling Products */}
-      <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
-            <div>
-              <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
-              <p className="text-xs text-zinc-400">Ranking por receita no período</p>
+        {/* 2. Mais Vendidos (Meio) */}
+        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+          <div>
+            <div className="flex items-center gap-2.5 mb-4">
+              <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
+                <p className="text-xs text-zinc-400">Ranking por receita no período</p>
+              </div>
             </div>
+
+            {isPending ? (
+              <div className="space-y-3 py-3">
+                <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
+                <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
+              </div>
+            ) : data.topProducts.length === 0 ? (
+              <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
+                <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
+                <p className="text-zinc-400 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+                {data.topProducts.map((prod, idx) => (
+                  <div
+                    key={prod.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Rank Badge */}
+                      {idx === 0 ? (
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
+                      ) : idx === 1 ? (
+                        <div className="w-6 h-6 rounded-lg bg-zinc-300/15 border border-zinc-300/30 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
+                      ) : idx === 2 ? (
+                        <div className="w-6 h-6 rounded-lg bg-amber-700/15 border border-amber-700/30 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                      )}
+
+                      {/* Product Cover */}
+                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0 flex items-center justify-center text-zinc-500">
+                        {prod.coverUrl ? (
+                          <img
+                            src={prod.coverUrl}
+                            alt={prod.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-4 h-4 text-zinc-600" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{prod.title}</p>
+                        <p className="text-[11px] text-zinc-400 font-medium">
+                          {prod.salesCount} {prod.salesCount === 1 ? "unidade" : "unidades"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0 ml-2">
+                      <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
+                        R$ {prod.revenue.toFixed(2).replace(".", ",")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+            <span>Ranking de produtos:</span>
+            <span className="font-bold text-white wg-tabular">
+              {data.topProducts?.length || 0} {(data.topProducts?.length || 0) === 1 ? "produto" : "produtos"}
+            </span>
           </div>
         </div>
 
-        {isPending ? (
-          <div className="space-y-3 py-3">
-            <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-            <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-          </div>
-        ) : data.topProducts.length === 0 ? (
-          <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
-            <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
-            <p className="text-zinc-400 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
-          </div>
-        ) : (
-          <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar p-0.5 pr-1">
-            {data.topProducts.map((prod, idx) => (
-              <div
-                key={prod.id}
-                className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 group"
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* Rank Badge */}
-                  {idx === 0 ? (
-                    <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
-                  ) : idx === 1 ? (
-                    <div className="w-6 h-6 rounded-lg bg-zinc-300/15 border border-zinc-300/30 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
-                  ) : idx === 2 ? (
-                    <div className="w-6 h-6 rounded-lg bg-amber-700/15 border border-amber-700/30 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
-                  ) : (
-                    <div className="w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
-                  )}
-
-                  {/* Product Cover */}
-                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0 flex items-center justify-center text-zinc-500">
-                    {prod.coverUrl ? (
-                      <img
-                        src={prod.coverUrl}
-                        alt={prod.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Package className="w-4.5 h-4.5 text-zinc-600" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{prod.title}</p>
-                    <p className="text-[11px] text-zinc-400 font-medium">
-                      {prod.salesCount} {prod.salesCount === 1 ? "unidade" : "unidades"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0 ml-3">
-                  <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
-                    R$ {prod.revenue.toFixed(2).replace(".", ",")}
-                  </p>
-                </div>
+        {/* 3. Vendas por Canal (Direita) */}
+        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+          <div>
+            <div className="flex items-center gap-2.5 mb-4">
+              <Bot className="w-5 h-5 text-rose-500 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Vendas por Canal</h3>
+                <p className="text-xs text-zinc-400">Origem dos pedidos efetuados</p>
               </div>
-            ))}
+            </div>
+
+            {isPending ? (
+              <div className="space-y-3 py-3">
+                <div className="h-10 bg-white/5 rounded-lg animate-pulse" />
+                <div className="h-10 bg-white/5 rounded-lg animate-pulse" />
+              </div>
+            ) : data.channels.length === 0 ? (
+              <p className="text-zinc-500 text-xs py-10 text-center">Nenhum canal ativo registrado.</p>
+            ) : (
+              <div className="space-y-4 py-1 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+                {data.channels.map((chan) => (
+                  <div key={chan.channel} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-white flex items-center gap-2 min-w-0">
+                        <ChannelAvatarItem chan={chan} />
+                        <span className="truncate">{chan.label}</span>
+                      </span>
+                      <span className="font-mono font-bold text-zinc-300 shrink-0 ml-2 wg-tabular">{chan.percentage}%</span>
+                    </div>
+
+                    {/* Progress Bar in WebGran Red / Rose */}
+                    <div className="h-2 bg-[#141418] rounded-full overflow-hidden border border-white/[0.04]">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          chan.channel === "web" 
+                            ? "bg-emerald-500" 
+                            : "bg-rose-500"
+                        }`}
+                        style={{ width: `${Math.max(chan.percentage, 5)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
+                      <span>{chan.salesCount} {chan.salesCount === 1 ? "venda" : "vendas"}</span>
+                      <span className="font-bold text-white wg-tabular">R$ {chan.revenue.toFixed(2).replace(".", ",")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+            <span>Canal principal:</span>
+            <span className="font-bold text-white uppercase tracking-wider">
+              {data.channels[0]?.label || "Nenhum"}
+            </span>
+          </div>
+        </div>
+
       </div>
 
     </div>
