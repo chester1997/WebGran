@@ -6,6 +6,7 @@ const { mockDb, mockSendToSeller } = vi.hoisted(() => ({
     query: {
       users: {
         findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       stores: {
         findFirst: vi.fn(),
@@ -18,9 +19,7 @@ const { mockDb, mockSendToSeller } = vi.hoisted(() => ({
       },
     },
     insert: vi.fn(() => ({
-      values: vi.fn(() => ({
-        onConflictDoNothing: vi.fn().mockResolvedValue({ rowCount: 1 }),
-      })),
+      values: vi.fn().mockResolvedValue({ rowCount: 1 }),
     })),
   },
   mockSendToSeller: vi.fn().mockResolvedValue({
@@ -96,11 +95,12 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(ownerId).toBe("owner-uuid-from-store");
     });
 
-    it("interrompe o envio e não inventa destinatário caso o proprietário não esteja configurado", async () => {
+    it("interrompe o envio e não inventa destinatário caso o proprietário não esteja configurado e não haja admin único", async () => {
       delete process.env.PLATFORM_OWNER_USER_ID;
       delete process.env.PLATFORM_OWNER_EMAIL;
       delete process.env.PUSHINPAY_PLATFORM_STORE_ID;
       delete process.env.PLATFORM_STORE_ID;
+      mockDb.query.users.findMany.mockResolvedValueOnce([]); // Nenhum admin
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
         orderId: "order-123",
@@ -113,6 +113,28 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(result.skipped).toBe(true);
       expect(result.reason).toBe("PLATFORM_OWNER_NOT_IDENTIFIED");
       expect(mockSendToSeller).not.toHaveBeenCalled();
+    });
+
+    it("resolve com segurança para o único administrador caso não haja env var explícita", async () => {
+      delete process.env.PLATFORM_OWNER_USER_ID;
+      delete process.env.PLATFORM_OWNER_EMAIL;
+      delete process.env.PUSHINPAY_PLATFORM_STORE_ID;
+      delete process.env.PLATFORM_STORE_ID;
+      mockDb.query.users.findMany.mockResolvedValueOnce([{ id: "single-admin-id" }]);
+
+      const ownerId = await PlatformFinancialNotificationService.getPlatformOwnerId();
+      expect(ownerId).toBe("single-admin-id");
+    });
+
+    it("bloqueia e não adivinha se existirem múltiplos administradores sem env var explícita", async () => {
+      delete process.env.PLATFORM_OWNER_USER_ID;
+      delete process.env.PLATFORM_OWNER_EMAIL;
+      delete process.env.PUSHINPAY_PLATFORM_STORE_ID;
+      delete process.env.PLATFORM_STORE_ID;
+      mockDb.query.users.findMany.mockResolvedValueOnce([{ id: "admin-1" }, { id: "admin-2" }]);
+
+      const ownerId = await PlatformFinancialNotificationService.getPlatformOwnerId();
+      expect(ownerId).toBeNull();
     });
 
     it("garante que vendedor comum nunca receba notificações financeiras da plataforma", async () => {
@@ -130,7 +152,7 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-legit",
         expect.objectContaining({
-          title: "Split processado",
+          title: "💰 Comissão WebGran",
           url: "/admin/commission",
         })
       );
@@ -168,7 +190,7 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).not.toHaveBeenCalled();
     });
 
-    it("envia 'Split processado' com valor real quando comprovado na API oficial (SPLIT_PROCESSED)", async () => {
+    it("envia '💰 Comissão WebGran' com valor real quando comprovado na API oficial (SPLIT_PROCESSED)", async () => {
       mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
@@ -182,7 +204,7 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-1",
         expect.objectContaining({
-          title: "Split processado",
+          title: "💰 Comissão WebGran",
           body: expect.stringMatching(/0,50/),
           url: "/admin/commission",
           tag: "commission-order-proc-1-split_processed",
@@ -190,7 +212,7 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       );
     });
 
-    it("envia 'Comissão confirmada!' quando confirmado por reconciliação formal (COMMISSION_CONFIRMED)", async () => {
+    it("envia '💰 Comissão WebGran' quando confirmado por reconciliação formal (COMMISSION_CONFIRMED)", async () => {
       mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
@@ -204,14 +226,14 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-1",
         expect.objectContaining({
-          title: "Comissão confirmada!",
+          title: "💰 Comissão WebGran",
           body: expect.stringMatching(/1,50/),
           url: "/admin/commission",
         })
       );
     });
 
-    it("envia 'Comissão liquidada!' quando houver evidência bancária (COMMISSION_SETTLED)", async () => {
+    it("envia '💰 Comissão recebida' quando houver evidência bancária (COMMISSION_SETTLED)", async () => {
       mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
@@ -225,8 +247,8 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-1",
         expect.objectContaining({
-          title: "Comissão liquidada!",
-          body: expect.stringContaining("liquidada na conta bancária"),
+          title: "💰 Comissão recebida",
+          body: expect.stringContaining("Você recebeu"),
         })
       );
     });
@@ -291,6 +313,30 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
 
       expect(result.success).toBe(false);
       expect(result.skipped).toBe(true);
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it("quando vendedor não tem inscrição ativa, não insere no banco como enviado e permite retentativa futura", async () => {
+      mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
+      mockSendToSeller.mockResolvedValueOnce({
+        success: true,
+        skipped: true,
+        reason: "Seller has no active push subscriptions.",
+        totalSubscriptions: 0,
+        sentCount: 0,
+        failedCount: 0,
+        deactivatedCount: 0,
+      });
+
+      const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
+        orderId: "order-no-sub",
+        eventType: "SPLIT_PROCESSED",
+        platformFeeReais: "0.50",
+        splitAmountCents: 50,
+      });
+
+      expect(result.skipped).toBe(true);
+      expect(mockDb.insert).not.toHaveBeenCalled();
     });
   });
 

@@ -30,16 +30,18 @@ export interface CommissionNotificationResult {
 
 // In-memory fast-path idempotency cache to prevent duplicate dispatches within runtime
 const inMemoryDispatchedEvents = new Set<string>();
+const inMemoryPendingDispatches = new Set<string>();
 
 export class PlatformFinancialNotificationService {
   /**
    * Identifica o proprietário da plataforma de forma segura e confiável no backend.
-   * Não confia em role=admin genérica nem em IDs fornecidos pelo cliente.
+   * Não confia em IDs fornecidos pelo cliente nem amplia permissões indiscriminadamente.
    *
    * Ordem de resolução:
    * 1. Variável explícita de ambiente PLATFORM_OWNER_USER_ID
    * 2. Variável explícita de ambiente PLATFORM_OWNER_EMAIL vinculada a users
    * 3. Proprietário da loja oficial configurada (PUSHINPAY_PLATFORM_STORE_ID / PLATFORM_STORE_ID)
+   * 4. Fallback estrito: Se não houver env var, verifica se existe um único usuário com role='admin'
    */
   static async getPlatformOwnerId(): Promise<string | null> {
     // 1. ID explícito configurado
@@ -84,6 +86,25 @@ export class PlatformFinancialNotificationService {
       } catch (err) {
         console.warn("[PlatformFinancialNotification] Falha ao consultar loja oficial da plataforma:", err);
       }
+    }
+
+    // 4. Fallback estrito: único administrador registrado no sistema
+    try {
+      if (typeof (db?.query?.users as any)?.findMany === "function") {
+        const admins = await db.query.users.findMany({
+          where: eq(users.role, "admin"),
+          columns: { id: true },
+        });
+        if (admins.length === 1 && admins[0]?.id) {
+          const singleAdminId = admins[0].id;
+          console.info(
+            `[PlatformFinancialNotification] Proprietário resolvido via administrador único da plataforma (${singleAdminId.slice(0, 8)}...). Recomenda-se configurar PLATFORM_OWNER_USER_ID na Vercel.`
+          );
+          return singleAdminId;
+        }
+      }
+    } catch (adminErr) {
+      console.warn("[PlatformFinancialNotification] Falha ao consultar administradores para fallback:", adminErr);
     }
 
     return null;
@@ -131,6 +152,16 @@ export class PlatformFinancialNotificationService {
       };
     }
 
+    if (inMemoryPendingDispatches.has(idempotencyKey)) {
+      return {
+        success: true,
+        skipped: true,
+        reason: "DISPATCH_ALREADY_IN_PROGRESS",
+      };
+    }
+
+    inMemoryPendingDispatches.add(idempotencyKey);
+
     try {
       // 3. Resolução confiável do proprietário da plataforma
       const ownerId = await this.getPlatformOwnerId();
@@ -160,20 +191,16 @@ export class PlatformFinancialNotificationService {
         currency: "BRL",
       });
 
-      // 5. Definição do texto compatível com as evidências reais
-      let title = "Split processado";
-      let body = `O WebGran registrou ${formattedFee} de comissão.`;
+      // 5. Definição do texto compatível com as evidências reais (Seção 4 do requisito)
+      let title = "💰 Comissão WebGran";
+      let body = `Comissão de ${formattedFee} confirmada`;
 
-      if (eventType === "COMMISSION_CONFIRMED") {
-        title = "Comissão confirmada!";
-        body = `O WebGran registrou ${formattedFee} de comissão.`;
-      } else if (eventType === "COMMISSION_SETTLED") {
-        title = "Comissão liquidada!";
-        body = `Comissão de ${formattedFee} liquidada na conta bancária.`;
+      if (eventType === "COMMISSION_SETTLED") {
+        title = "💰 Comissão recebida";
+        body = `Você recebeu ${formattedFee} em comissão`;
       }
 
-      // 6. Guarda de Idempotência Persistente no Banco de Dados
-      let isDuplicate = false;
+      // 6. Guarda de Idempotência Prévia no Banco de Dados (Verifica se já foi entregue anteriormente)
       try {
         const existing = await db.query.platformFinancialNotificationEvents.findFirst({
           where: and(
@@ -183,46 +210,22 @@ export class PlatformFinancialNotificationService {
         });
 
         if (existing) {
-          isDuplicate = true;
-        } else {
-          await db.insert(platformFinancialNotificationEvents).values({
-            orderId,
-            eventType,
-            recipientUserId: ownerId,
-            platformFee: (resolvedFeeCents / 100).toFixed(2),
-            splitAmountCents: resolvedFeeCents,
-            title,
-            body,
-            url: "/admin/commission",
-          });
+          inMemoryDispatchedEvents.add(idempotencyKey);
+          return {
+            success: true,
+            skipped: true,
+            alreadySent: true,
+            ownerId,
+            reason: "IDEMPOTENT_ALREADY_SENT_DATABASE",
+          };
         }
       } catch (dbErr: any) {
-        // Se a tabela ainda não tiver sido migrada no Neon, ignora sem quebrar
-        if (dbErr?.message?.includes("platform_financial_notification_events") || dbErr?.code === "42P01") {
-          // Fallback gracioso mantendo idempotência em memória
-        } else if (dbErr?.code === "23505" || dbErr?.message?.includes("unique")) {
-          // Violação de constraint de unicidade (concorrência): considera duplicado
-          isDuplicate = true;
-        } else {
-          console.warn("[PlatformFinancialNotification] Aviso de persistência idempotente:", dbErr?.message);
+        if (!dbErr?.message?.includes("platform_financial_notification_events") && dbErr?.code !== "42P01") {
+          console.warn("[PlatformFinancialNotification] Aviso ao verificar idempotência no banco:", dbErr?.message);
         }
       }
 
-      if (isDuplicate) {
-        inMemoryDispatchedEvents.add(idempotencyKey);
-        return {
-          success: true,
-          skipped: true,
-          alreadySent: true,
-          ownerId,
-          reason: "IDEMPOTENT_ALREADY_SENT_DATABASE",
-        };
-      }
-
-      // Marca em memória após registrar no banco
-      inMemoryDispatchedEvents.add(idempotencyKey);
-
-      // 7. Envio do Web Push exclusivo ao proprietário da plataforma
+      // 7. Envio do Web Push exclusivo ao proprietário da plataforma ANTES da marcação definitiva no banco
       const pushResult = await SellerPushService.sendToSeller(ownerId, {
         title,
         body,
@@ -238,6 +241,41 @@ export class PlatformFinancialNotificationService {
         },
       });
 
+      // Diagnóstico detalhado por estado de envio
+      if (pushResult.skipped) {
+        console.warn(
+          `[PlatformFinancialNotification] Notificação não enviada ao proprietário (${ownerId.slice(0, 8)}...): ${pushResult.reason || "Sem inscrições push ativas"}. Pedido: ${orderId}.`
+        );
+      } else if (pushResult.sentCount > 0) {
+        console.info(
+          `[PlatformFinancialNotification] Push aceito pelo gateway (${pushResult.sentCount} dispositivo(s)) para proprietário (${ownerId.slice(0, 8)}...). Pedido: ${orderId}.`
+        );
+
+        // 8. Persistência idempotente no banco SOMENTE após envio aceito com sucesso
+        try {
+          await db.insert(platformFinancialNotificationEvents).values({
+            orderId,
+            eventType,
+            recipientUserId: ownerId,
+            platformFee: (resolvedFeeCents / 100).toFixed(2),
+            splitAmountCents: resolvedFeeCents,
+            title,
+            body,
+            url: "/admin/commission",
+          });
+          inMemoryDispatchedEvents.add(idempotencyKey);
+        } catch (insertErr: any) {
+          if (insertErr?.code === "23505" || insertErr?.message?.includes("unique")) {
+            inMemoryDispatchedEvents.add(idempotencyKey);
+          } else if (!insertErr?.message?.includes("platform_financial_notification_events") && insertErr?.code !== "42P01") {
+            console.warn("[PlatformFinancialNotification] Aviso de persistência idempotente pós-envio:", insertErr?.message);
+          }
+        }
+      } else {
+        console.error(
+          `[PlatformFinancialNotification] Falha de entrega Push (${pushResult.failedCount} erro(s)). Notificação mantida elegível para retry no pedido ${orderId}.`
+        );
+      }
 
       return {
         success: pushResult.success,
@@ -252,6 +290,8 @@ export class PlatformFinancialNotificationService {
         skipped: true,
         reason: err?.message || "Internal error",
       };
+    } finally {
+      inMemoryPendingDispatches.delete(idempotencyKey);
     }
   }
 }

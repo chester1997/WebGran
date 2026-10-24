@@ -163,8 +163,14 @@ export class SplitReconciliationService {
       };
     }
 
-    // 6. Validação rigorosa de valor em centavos
-    const ruleValueCents = Math.round(Number(matchingRule.value));
+    // 6. Validação rigorosa de valor em centavos (suporta matchingRule.amount da API oficial e matchingRule.value)
+    const rawRuleValue = matchingRule.amount !== undefined && matchingRule.amount !== null
+      ? matchingRule.amount
+      : matchingRule.value;
+    let ruleValueCents = Math.round(Number(rawRuleValue));
+    if (ruleValueCents === 0 && Number(rawRuleValue) > 0 && Math.round(Number(rawRuleValue) * 100) === orderSplitCents) {
+      ruleValueCents = Math.round(Number(rawRuleValue) * 100);
+    }
     if (isNaN(ruleValueCents) || ruleValueCents !== orderSplitCents) {
       return {
         status: 'GATEWAY_ACCEPTED',

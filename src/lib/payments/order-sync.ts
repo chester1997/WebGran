@@ -90,6 +90,21 @@ export async function syncOrderWithMercadoPago(orderId: string) {
 
         if (orderWasUpdated) {
           const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
+
+          if (evalResult.status === 'PROCESSED') {
+            try {
+              const { PlatformFinancialNotificationService } = await import('@/lib/push/platform-financial-notification-service');
+              await PlatformFinancialNotificationService.notifyOwnerOfCommission({
+                orderId: order.id,
+                eventType: 'SPLIT_PROCESSED',
+                platformFeeReais: evalResult.platformFeeStr,
+                splitAmountCents: typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50,
+              });
+            } catch (notifErr) {
+              console.warn('[OrderSync] Falha não bloqueante ao notificar proprietário sobre split:', notifErr);
+            }
+          }
+
           const accessList = await db.query.accesses.findMany({
             where: eq(accesses.orderId, order.id),
           });

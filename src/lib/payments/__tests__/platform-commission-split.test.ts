@@ -1458,5 +1458,42 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       expect(getPlatformStoreId()).toBeNull();
       expect(isOfficialPlatformStore('27d28329-7e24-4688-b04d-d3587d7d261f')).toBe(false);
     });
+
+    it('evaluatePushinPaySplit handles real PushinPay API response containing amount field instead of value', async () => {
+      const { SplitReconciliationService } = await import('@/lib/payments/split-reconciliation-service');
+      const targetPlatformAccount = 'A1670309-BC4A-4600-A6F3-86EB25B818CF';
+
+      const evaluation = SplitReconciliationService.evaluatePushinPaySplit({
+        order: {
+          id: 'order-pushinpay-real-amount',
+          total: '6.00',
+          platformFee: '0.00',
+          netAmount: '6.00',
+          splitStatus: 'GATEWAY_ACCEPTED',
+          splitAmountCents: 50,
+        },
+        officialTx: {
+          id: 'tx-pushinpay-amount',
+          status: 'paid',
+          split_rules: [
+            {
+              id: 132865824,
+              baas: '0',
+              type: 'fixed',
+              amount: '50',
+              account_id: targetPlatformAccount,
+              transaction_id: 'A30F5F91-5984-49B0-8516-762C86DB3C5E',
+            },
+          ],
+        },
+        platformAccountId: targetPlatformAccount,
+      });
+
+      expect(evaluation.status).toBe('PROCESSED');
+      expect(evaluation.platformFeeStr).toBe('0.50');
+      expect(evaluation.netAmountStr).toBe('5.50');
+      expect(evaluation.splitError).toBeNull();
+      expect(evaluation.auditAction).toBe('PROCESSED_BY_GATEWAY');
+    });
   });
 });
