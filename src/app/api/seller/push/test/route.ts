@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { SellerPushService } from "@/lib/push/seller-push-service";
+import { buildTestNotificationPayload } from "@/lib/push/notification-payload-builder";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,23 +10,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const role = (user.role || "").toLowerCase();
+    const role = (user.role || "seller").toLowerCase();
     if (role !== "seller" && role !== "admin" && role !== "super_admin") {
       return NextResponse.json({ error: "Acesso não autorizado." }, { status: 403 });
     }
 
-    const result = await SellerPushService.sendToSeller(user.id, {
-      title: "🛒 Nova venda no WebGran",
-      body: "Você recebeu R$ 49,90",
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/badge-72x72.png",
-      url: "/seller/financeiro",
-      tag: "test-sale-push",
-      data: {
-        isTest: true,
-        amount: 49.9,
-      },
+    const payload = buildTestNotificationPayload({
+      userName: user.name || "",
+      role: user.role || "seller",
     });
+
+    const result = await SellerPushService.sendToSeller(user.id, payload);
 
 
     if (result.skipped) {

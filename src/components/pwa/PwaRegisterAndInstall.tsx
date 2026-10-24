@@ -41,6 +41,33 @@ export function PwaRegisterAndInstall() {
                 });
               }
             });
+
+            // Sincroniza silenciosamente a assinatura push com o usuário atual se a permissão já foi concedida
+            if ("Notification" in window && Notification.permission === "granted" && "pushManager" in reg) {
+              reg.pushManager.getSubscription().then((sub) => {
+                if (sub) {
+                  try {
+                    const rawKey = sub.getKey ? sub.getKey("p256dh") : null;
+                    const rawAuth = sub.getKey ? sub.getKey("auth") : null;
+                    const p256dh = rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "";
+                    const auth = rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "";
+                    if (p256dh && auth) {
+                      fetch("/api/seller/push/subscribe", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          endpoint: sub.endpoint,
+                          keys: { p256dh, auth },
+                          userAgent: window.navigator.userAgent,
+                        }),
+                      }).catch(() => {});
+                    }
+                  } catch {
+                    // Ignora falhas de auto-sincronização
+                  }
+                }
+              }).catch(() => {});
+            }
           })
           .catch((err) => {
             console.warn("[PWA] Falha ao registrar Service Worker:", err);

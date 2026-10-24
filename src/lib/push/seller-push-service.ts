@@ -2,16 +2,18 @@ import webpush from "web-push";
 import { db } from "@/db";
 import { sellerPushSubscriptions, orders, stores } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
+import {
+  standardizePushPayload,
+  buildSaleNotificationPayload,
+  buildAccessDeliveredPayload,
+  buildPaymentPendingPayload,
+  StandardPushPayload,
+} from "./notification-payload-builder";
 
-export interface PushNotificationPayload {
+export type PushNotificationPayload = Partial<StandardPushPayload> & {
   title: string;
   body: string;
-  icon?: string;
-  badge?: string;
-  url?: string;
-  tag?: string;
-  data?: Record<string, any>;
-}
+};
 
 export interface PushSendResult {
   success: boolean;
@@ -218,15 +220,8 @@ export class SellerPushService {
       };
     }
 
-    const payloadString = JSON.stringify({
-      title: payload.title,
-      body: payload.body,
-      icon: payload.icon || "/icons/icon-192x192.png",
-      badge: payload.badge || "/icons/badge-72x72.png",
-      url: payload.url || "/seller/financeiro",
-      tag: payload.tag || "general",
-      data: payload.data || {},
-    });
+    const standardized = standardizePushPayload(payload);
+    const payloadString = JSON.stringify(standardized);
 
     let sentCount = 0;
     let failedCount = 0;
@@ -374,31 +369,18 @@ export class SellerPushService {
         }
       }
 
-      // Valor real do pedido formatado no padrão brasileiro (BRL)
+      // Valor real do pedido
       const rawNum = typeof order.total === "string" ? parseFloat(order.total) : Number(order.total || 0);
-      const totalFormatted = (isNaN(rawNum) ? 0 : rawNum)
-        .toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        })
-        .replace(/\u00A0/g, " ");
 
-
-      // Dispara a notificação com padrão Sharkbot: título limpo e mensagem com valor real
-      const result = await this.sendToSeller(store.ownerId, {
-        title: "🛒 Nova venda no WebGran",
-        body: `Você recebeu ${totalFormatted}`,
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/badge-72x72.png",
-        url: "/seller/financeiro",
-        tag: `sale-${order.id}`,
-        data: {
-          orderId: order.id,
-          storeId: store.id,
-          amount: rawNum,
-          itemTitle,
-        },
+      // Dispara a notificação padronizada para o vendedor dono da loja
+      const payload = buildSaleNotificationPayload({
+        orderId: order.id,
+        amount: rawNum,
+        itemTitle,
+        storeId: store.id,
       });
+
+      const result = await this.sendToSeller(store.ownerId, payload);
 
       if (result.success) {
         this.dispatchedSaleOrders.add(orderId);
@@ -407,6 +389,134 @@ export class SellerPushService {
       return result;
     } catch (err: any) {
       console.error("[SellerPushService] Erro ao enviar notificação de venda:", err);
+      return {
+        success: false,
+        skipped: true,
+        reason: err?.message || "Internal error",
+        totalSubscriptions: 0,
+        sentCount: 0,
+        failedCount: 0,
+        deactivatedCount: 0,
+      };
+    }
+  }
+
+  /**
+   * Notificação de Liberação de Acesso / Entrega para o vendedor.
+   * Isolamento estrito por loja e proprietário.
+   */
+  static async notifySellerOfAccessDelivery(params: {
+    orderId: string;
+    itemTitle?: string;
+  }): Promise<PushSendResult> {
+    const { orderId, itemTitle = "Produto" } = params;
+
+    try {
+      const order = await db.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+      });
+
+      if (!order) {
+        return {
+          success: false,
+          skipped: true,
+          reason: "Order not found.",
+          totalSubscriptions: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deactivatedCount: 0,
+        };
+      }
+
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, order.storeId),
+      });
+
+      if (!store || !store.ownerId) {
+        return {
+          success: false,
+          skipped: true,
+          reason: "Store or store owner not found.",
+          totalSubscriptions: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deactivatedCount: 0,
+        };
+      }
+
+      const payload = buildAccessDeliveredPayload({
+        orderId,
+        itemTitle,
+        storeId: store.id,
+      });
+
+      return await this.sendToSeller(store.ownerId, payload);
+    } catch (err: any) {
+      console.error("[SellerPushService] Erro ao enviar notificação de entrega:", err);
+      return {
+        success: false,
+        skipped: true,
+        reason: err?.message || "Internal error",
+        totalSubscriptions: 0,
+        sentCount: 0,
+        failedCount: 0,
+        deactivatedCount: 0,
+      };
+    }
+  }
+
+  /**
+   * Notificação de Pix Gerado / Pagamento Pendente para o vendedor.
+   * Isolamento estrito por loja e proprietário.
+   */
+  static async notifySellerOfPendingPayment(params: {
+    orderId: string;
+    amount: number | string;
+  }): Promise<PushSendResult> {
+    const { orderId, amount } = params;
+
+    try {
+      const order = await db.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+      });
+
+      if (!order) {
+        return {
+          success: false,
+          skipped: true,
+          reason: "Order not found.",
+          totalSubscriptions: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deactivatedCount: 0,
+        };
+      }
+
+      const store = await db.query.stores.findFirst({
+        where: eq(stores.id, order.storeId),
+      });
+
+      if (!store || !store.ownerId) {
+        return {
+          success: false,
+          skipped: true,
+          reason: "Store or store owner not found.",
+          totalSubscriptions: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deactivatedCount: 0,
+        };
+      }
+
+      const payload = buildPaymentPendingPayload({
+        orderId,
+        amount,
+        storeId: store.id,
+      });
+
+      return await this.sendToSeller(store.ownerId, payload);
+    } catch (err: any) {
+      console.error("[SellerPushService] Erro ao enviar notificação de pagamento pendente:", err);
       return {
         success: false,
         skipped: true,

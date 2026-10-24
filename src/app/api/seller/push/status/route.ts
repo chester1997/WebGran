@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const role = (user.role || "").toLowerCase();
+    const role = (user.role || "seller").toLowerCase();
     if (role !== "seller" && role !== "admin" && role !== "super_admin") {
       return NextResponse.json(
         { error: "Acesso não autorizado." },

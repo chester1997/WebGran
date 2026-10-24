@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const role = (user.role || "").toLowerCase();
+    const role = (user.role || "seller").toLowerCase();
     if (role !== "seller" && role !== "admin" && role !== "super_admin") {
       return NextResponse.json({ error: "Acesso não autorizado." }, { status: 403 });
     }

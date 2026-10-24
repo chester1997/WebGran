@@ -3,6 +3,7 @@ import { orders, stores, users, platformFinancialNotificationEvents } from "@/db
 import { eq, and } from "drizzle-orm";
 import { SellerPushService, PushSendResult } from "./seller-push-service";
 import { getPlatformStoreId } from "../payments/providers/pushinpay";
+import { buildPlatformCommissionPayload } from "./notification-payload-builder";
 
 export type FinancialEventType =
   | "COMMISSION_CALCULATED"
@@ -186,19 +187,12 @@ export class PlatformFinancialNotificationService {
         }
       }
 
-      const formattedFee = (resolvedFeeCents / 100).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
+      // 5. Definição do payload padronizado e compatível com as evidências reais
+      const pushPayload = buildPlatformCommissionPayload({
+        orderId,
+        feeReais: resolvedFeeCents / 100,
+        eventType,
       });
-
-      // 5. Definição do texto compatível com as evidências reais (Seção 4 do requisito)
-      let title = "💰 Comissão WebGran";
-      let body = `Comissão de ${formattedFee} confirmada`;
-
-      if (eventType === "COMMISSION_SETTLED") {
-        title = "💰 Comissão recebida";
-        body = `Você recebeu ${formattedFee} em comissão`;
-      }
 
       // 6. Guarda de Idempotência Prévia no Banco de Dados (Verifica se já foi entregue anteriormente)
       try {
@@ -226,20 +220,7 @@ export class PlatformFinancialNotificationService {
       }
 
       // 7. Envio do Web Push exclusivo ao proprietário da plataforma ANTES da marcação definitiva no banco
-      const pushResult = await SellerPushService.sendToSeller(ownerId, {
-        title,
-        body,
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/badge-72x72.png",
-        url: "/admin/commission",
-        tag: `commission-${orderId}-${eventType.toLowerCase()}`,
-        data: {
-          orderId,
-          eventType,
-          platformFeeCents: resolvedFeeCents,
-          url: "/admin/commission",
-        },
-      });
+      const pushResult = await SellerPushService.sendToSeller(ownerId, pushPayload);
 
       // Diagnóstico detalhado por estado de envio
       if (pushResult.skipped) {
@@ -259,8 +240,8 @@ export class PlatformFinancialNotificationService {
             recipientUserId: ownerId,
             platformFee: (resolvedFeeCents / 100).toFixed(2),
             splitAmountCents: resolvedFeeCents,
-            title,
-            body,
+            title: pushPayload.title,
+            body: pushPayload.body,
             url: "/admin/commission",
           });
           inMemoryDispatchedEvents.add(idempotencyKey);

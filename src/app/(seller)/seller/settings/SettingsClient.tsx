@@ -33,6 +33,7 @@ import {
   playCommissionChime,
   unlockAudioContext
 } from "@/lib/sound/notification-sound";
+import { buildTestNotificationPayload } from "@/lib/push/notification-payload-builder";
 import { Button } from "@/components/ui/button";
 import {
   updateSellerProfileAction,
@@ -157,7 +158,29 @@ export default function SettingsClient({
 
         const savedPref = localStorage.getItem("webgran_browser_notifications");
 
-        if (currentPerm === "granted" && sub && (statusRes?.hasActiveSubscription || savedPref === "true")) {
+        if (currentPerm === "granted" && sub) {
+          // Se o dispositivo possui inscrição no PushManager, assegura que está registrada no servidor para este usuário
+          if (!statusRes?.hasActiveSubscription) {
+            try {
+              const rawKey = sub.getKey ? sub.getKey("p256dh") : null;
+              const rawAuth = sub.getKey ? sub.getKey("auth") : null;
+              const p256dh = rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "";
+              const auth = rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "";
+              if (p256dh && auth) {
+                fetch("/api/seller/push/subscribe", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    endpoint: sub.endpoint,
+                    keys: { p256dh, auth },
+                    userAgent: window.navigator.userAgent,
+                  }),
+                }).catch(() => {});
+              }
+            } catch (syncErr) {
+              console.warn("[PWA Settings] Falha na auto-sincronização de assinatura:", syncErr);
+            }
+          }
           if (isMounted) setBrowserNotificationsEnabled(true);
         } else {
           if (isMounted) setBrowserNotificationsEnabled(false);
@@ -461,24 +484,33 @@ function urlBase64ToUint8Array(base64String: string) {
       if (!res.ok || !data?.success) {
         // Fallback local se o servidor não conseguir enviar o push (ex: VAPID pendente no ambiente)
         try {
+          const testPayload = buildTestNotificationPayload({
+            userName: sellerProfile.name,
+            role: sellerProfile.role,
+          });
+
           let shownViaSw = false;
           if (typeof window !== "undefined" && "serviceWorker" in navigator) {
             const reg = await navigator.serviceWorker.ready.catch(() => null);
             if (reg && "showNotification" in reg) {
-              await reg.showNotification("🔔 Teste de notificações WebGran", {
-                body: data?.message || "Suas notificações estão configuradas corretamente.",
-                icon: "/icons/icon-192x192.png",
-                badge: "/icons/badge-72x72.png",
+              await reg.showNotification(testPayload.title, {
+                body: testPayload.body,
+                icon: testPayload.icon,
+                badge: testPayload.badge,
+                data: testPayload.data,
+                tag: testPayload.tag,
               });
               shownViaSw = true;
             }
           }
 
           if (!shownViaSw) {
-            new Notification("🔔 Teste de notificações WebGran", {
-              body: data?.message || "Suas notificações estão configuradas corretamente.",
-              icon: "/icons/icon-192x192.png",
-              badge: "/icons/badge-72x72.png",
+            new Notification(testPayload.title, {
+              body: testPayload.body,
+              icon: testPayload.icon,
+              badge: testPayload.badge,
+              data: testPayload.data,
+              tag: testPayload.tag,
             });
           }
 
