@@ -13,7 +13,6 @@ import {
   Clock, 
   CheckCircle2, 
   AlertCircle, 
-  Plus, 
   Bot, 
   Globe, 
   Sparkles,
@@ -371,123 +370,77 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
       </div>
 
-      {/* 4. Mais Vendidos & Visão do Catálogo (2 Cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        
-        {/* Top Selling Products */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
-                <p className="text-xs text-zinc-400">Ranking por receita no período</p>
-              </div>
+      {/* 4. Top Selling Products */}
+      <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
+              <p className="text-xs text-zinc-400">Ranking por receita no período</p>
             </div>
           </div>
+        </div>
 
+        {isPending ? (
+          <div className="space-y-3 py-3">
+            <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
+            <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
+          </div>
+        ) : data.topProducts.length === 0 ? (
+          <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
+            <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
+            <p className="text-zinc-400 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar p-0.5 pr-1">
+            {data.topProducts.map((prod, idx) => (
+              <div
+                key={prod.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 group"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Rank Badge */}
+                  {idx === 0 ? (
+                    <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
+                  ) : idx === 1 ? (
+                    <div className="w-6 h-6 rounded-lg bg-zinc-300/15 border border-zinc-300/30 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
+                  ) : idx === 2 ? (
+                    <div className="w-6 h-6 rounded-lg bg-amber-700/15 border border-amber-700/30 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                  )}
 
-          {isPending ? (
-            <div className="space-y-3 py-3">
-              <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-              <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-            </div>
-          ) : data.topProducts.length === 0 ? (
-            <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
-              <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
-              <p className="text-zinc-400 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar p-0.5 pr-1">
-              {data.topProducts.map((prod, idx) => (
-                <div
-                  key={prod.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 group"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Rank Badge */}
-                    {idx === 0 ? (
-                      <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
-                    ) : idx === 1 ? (
-                      <div className="w-6 h-6 rounded-lg bg-zinc-300/15 border border-zinc-300/30 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
-                    ) : idx === 2 ? (
-                      <div className="w-6 h-6 rounded-lg bg-amber-700/15 border border-amber-700/30 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
+                  {/* Product Cover */}
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0 flex items-center justify-center text-zinc-500">
+                    {prod.coverUrl ? (
+                      <img
+                        src={prod.coverUrl}
+                        alt={prod.title}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <div className="w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                      <Package className="w-4.5 h-4.5 text-zinc-600" />
                     )}
-
-                    {/* Product Cover */}
-                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0 flex items-center justify-center text-zinc-500">
-                      {prod.coverUrl ? (
-                        <img
-                          src={prod.coverUrl}
-                          alt={prod.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Package className="w-4.5 h-4.5 text-zinc-600" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{prod.title}</p>
-                      <p className="text-[11px] text-zinc-400 font-medium">
-                        {prod.salesCount} {prod.salesCount === 1 ? "unidade" : "unidades"}
-                      </p>
-                    </div>
                   </div>
 
-                  <div className="text-right shrink-0 ml-3">
-                    <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
-                      R$ {prod.revenue.toFixed(2).replace(".", ",")}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{prod.title}</p>
+                    <p className="text-[11px] text-zinc-400 font-medium">
+                      {prod.salesCount} {prod.salesCount === 1 ? "unidade" : "unidades"}
                     </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Visão do Catálogo */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Package className="w-5 h-5 text-blue-400 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Visão do Catálogo</h3>
-                <p className="text-xs text-zinc-400">Resumo dos produtos e estrutura</p>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
+                    R$ {prod.revenue.toFixed(2).replace(".", ",")}
+                  </p>
+                </div>
               </div>
-            </div>
-
-            <Link
-              href="/seller/products"
-              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold shadow-sm inline-flex items-center gap-1.5 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Novo produto</span>
-            </Link>
+            ))}
           </div>
-
-          <div className="grid grid-cols-4 gap-2 pt-1 text-center">
-            <div className="p-3 rounded-xl bg-[#141418] border border-white/[0.05]">
-              <span className="block text-lg font-bold text-white wg-tabular">{data.catalog.totalProducts}</span>
-              <span className="text-[10px] font-semibold text-zinc-400 uppercase">Total</span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#141418] border border-white/[0.05]">
-              <span className="block text-lg font-bold text-emerald-400 wg-tabular">{data.catalog.activeProducts}</span>
-              <span className="text-[10px] font-semibold text-zinc-400 uppercase">Ativos</span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#141418] border border-white/[0.05]">
-              <span className="block text-lg font-bold text-zinc-400 wg-tabular">{data.catalog.inactiveProducts}</span>
-              <span className="text-[10px] font-semibold text-zinc-400 uppercase">Inativos</span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#141418] border border-white/[0.05]">
-              <span className="block text-lg font-bold text-indigo-400 wg-tabular">{data.catalog.categoriesCount}</span>
-              <span className="text-[10px] font-semibold text-zinc-400 uppercase">Categorias</span>
-            </div>
-          </div>
-        </div>
-
+        )}
       </div>
 
     </div>
