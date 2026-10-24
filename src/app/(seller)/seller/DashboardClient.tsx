@@ -14,7 +14,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Plus, 
-  ChevronRight, 
   Bot, 
   Globe, 
   Sparkles,
@@ -113,12 +112,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     salesCount: number;
     x: number;
     y: number;
-  } | null>(null);
-
-  const [hoveredHour, setHoveredHour] = useState<{
-    hourLabel: string;
-    salesCount: number;
-    revenue: number;
   } | null>(null);
 
   const handlePeriodChange = (newPeriod: string) => {
@@ -378,7 +371,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
       </div>
 
-      {/* 4. Top Products & Recent Sales Grid (2 Cols) */}
+      {/* 4. Mais Vendidos & Visão do Catálogo (2 Cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
         {/* Top Selling Products */}
@@ -455,87 +448,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           )}
         </div>
 
-        {/* Recent Sales History */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Clock className="w-5 h-5 text-emerald-400 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Últimas Vendas</h3>
-                <p className="text-xs text-zinc-400">Pedidos recentes recebidos</p>
-              </div>
-            </div>
-
-
-            <Link
-              href="/seller/orders"
-              className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20"
-            >
-              <span>Ver todas</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {isPending ? (
-            <div className="space-y-3 py-3">
-              <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-              <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-            </div>
-          ) : data.recentOrders.length === 0 ? (
-            <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
-              <CheckCircle2 className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
-              <p className="text-zinc-400 text-xs font-semibold">O histórico de vendas está vazio.</p>
-              <p className="text-zinc-500 text-[11px]">Quando os clientes comprarem via PIX/Cartão, os pedidos aparecerão aqui.</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar p-0.5 pr-1">
-              {data.recentOrders.map((ord) => (
-                <Link
-                  key={ord.id}
-                  href={`/seller/orders`}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 gap-2 sm:gap-3 group"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{ord.productTitle}</p>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 truncate mt-0.5">
-                      {ord.customerName} • <span className="text-zinc-500">{ord.timeAgo}</span>
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-0 border-white/[0.04]">
-                    <span
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
-                        ord.status === "paid"
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : ord.status === "pending"
-                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
-                      }`}
-                    >
-                      {ord.status === "paid" ? "Pago" : ord.status === "pending" ? "Pendente" : ord.status}
-                    </span>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
-                        R$ {ord.total.toFixed(2).replace(".", ",")}
-                      </p>
-                      {ord.paymentMethod && (
-                        <p className="text-[10px] text-zinc-500 uppercase font-semibold">{ord.paymentMethod}</p>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* 5. Catalog Overview & Hourly Sales Distribution (2 Cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        
         {/* Visão do Catálogo */}
         <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
@@ -573,65 +485,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               <span className="block text-lg font-bold text-indigo-400 wg-tabular">{data.catalog.categoriesCount}</span>
               <span className="text-[10px] font-semibold text-zinc-400 uppercase">Categorias</span>
             </div>
-          </div>
-        </div>
-
-        {/* Horários de Maior Venda (00h - 23h) */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2.5">
-            <Clock className="w-5 h-5 text-amber-400 shrink-0" />
-            <div>
-              <h3 className="text-sm font-bold text-white tracking-tight">Horários de Maior Venda</h3>
-              <p className="text-xs text-zinc-400">Distribuição de vendas por hora do dia (00:00 às 23:00)</p>
-            </div>
-          </div>
-
-
-          {/* 24-Hour Bar Chart */}
-          <div className="relative pt-3">
-            <div className="h-36 flex items-end gap-1 sm:gap-1.5 w-full">
-              {data.hourlySales.map((hItem) => {
-                const maxHourSales = Math.max(...data.hourlySales.map((h) => h.salesCount), 1);
-                const heightPercent = Math.max((hItem.salesCount / maxHourSales) * 100, 5);
-
-                return (
-                  <div
-                    key={hItem.hour}
-                    className="flex-1 flex flex-col items-center group relative h-full justify-end"
-                    onMouseEnter={() => setHoveredHour(hItem)}
-                    onMouseLeave={() => setHoveredHour(null)}
-                  >
-                    {/* Bar */}
-                    <div
-                      className={`w-full rounded-t transition-all duration-200 ${
-                        hItem.salesCount > 0
-                          ? "bg-amber-500 group-hover:bg-amber-400"
-                          : "bg-white/[0.04] group-hover:bg-white/[0.08]"
-                      }`}
-                      style={{ height: `${heightPercent}%` }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Hour Labels */}
-            <div className="flex justify-between pt-3 text-[10px] text-zinc-500 font-mono">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>23:00</span>
-            </div>
-
-            {/* Tooltip for Hourly Bar Hover */}
-            {hoveredHour && (
-              <div className="absolute top-0 right-4 bg-[#141418] border border-white/10 text-white p-2.5 rounded-xl text-xs z-20 shadow-xl space-y-0.5">
-                <p className="font-bold text-amber-400">{hoveredHour.hourLabel}</p>
-                <p className="text-zinc-200 font-medium">{hoveredHour.salesCount} {hoveredHour.salesCount === 1 ? "venda" : "vendas"}</p>
-                <p className="text-emerald-400 font-bold text-[11px] wg-tabular">R$ {hoveredHour.revenue.toFixed(2).replace(".", ",")}</p>
-              </div>
-            )}
           </div>
         </div>
 
