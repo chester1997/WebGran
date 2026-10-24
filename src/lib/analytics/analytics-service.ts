@@ -7,7 +7,8 @@ import {
   accesses, 
   categories, 
   stores,
-  telegramBots
+  telegramBots,
+  botStartEvents
 } from "@/db/schema";
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
@@ -89,6 +90,19 @@ export interface CatalogOverview {
   categoriesCount: number;
 }
 
+export type ActivityLogType = 'lead' | 'sale_approved' | 'payment_pending';
+
+export interface ActivityLogItem {
+  id: string;
+  type: ActivityLogType;
+  title: string;
+  targetName: string;
+  description: string;
+  timestamp: string;
+  dateFormatted: string;
+  timeFormatted: string;
+}
+
 export interface StoreAnalyticsData {
   period: string;
   storeName: string;
@@ -105,6 +119,7 @@ export interface StoreAnalyticsData {
   recentOrders: RecentOrder[];
   hourlySales: HourlySalesPoint[];
   activity: ActivityStats;
+  activityLog: ActivityLogItem[];
   catalog: CatalogOverview;
   hasSales: boolean;
   commercialMetrics: CommercialMetrics;
@@ -219,7 +234,43 @@ export class AnalyticsService {
       ? eq(orders.storeId, storeId)
       : and(eq(orders.storeId, storeId), gte(orders.createdAt, oldestDate));
 
-    const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories] = await Promise.all([
+    const fetchBotStarts = async () => {
+      try {
+        if (db.query?.botStartEvents?.findMany) {
+          return await db.query.botStartEvents.findMany({
+            where: period === "ALL"
+              ? eq(botStartEvents.storeId, storeId)
+              : and(eq(botStartEvents.storeId, storeId), gte(botStartEvents.createdAt, oldestDate)),
+            orderBy: [desc(botStartEvents.createdAt)],
+            limit: 40,
+          });
+        }
+        if (typeof db.select === "function") {
+          return await db
+            .select({
+              id: botStartEvents.id,
+              telegramUserId: botStartEvents.telegramUserId,
+              telegramUsername: botStartEvents.telegramUsername,
+              telegramFirstName: botStartEvents.telegramFirstName,
+              createdAt: botStartEvents.createdAt,
+            })
+            .from(botStartEvents)
+            .where(
+              period === "ALL"
+                ? eq(botStartEvents.storeId, storeId)
+                : and(eq(botStartEvents.storeId, storeId), gte(botStartEvents.createdAt, oldestDate))
+            )
+            .orderBy(desc(botStartEvents.createdAt))
+            .limit(40);
+        }
+        return [];
+      } catch (err: any) {
+        console.warn("[AnalyticsService] Warning querying botStartEvents for activity log:", err?.message);
+        return [];
+      }
+    };
+
+    const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories, botStarts] = await Promise.all([
       db.query.orders.findMany({
         where: orderWhere,
         with: {
@@ -244,7 +295,8 @@ export class AnalyticsService {
       db.query.categories.findMany({
         where: eq(categories.storeId, storeId),
         columns: { id: true }
-      })
+      }),
+      fetchBotStarts(),
     ]);
 
     const paidOrders = allOrders.filter(o => o.status === 'paid');
@@ -587,6 +639,89 @@ export class AnalyticsService {
     // 8. Commercial Metrics (4 Reference KPI Cards)
     const commercialMetrics = await CommercialMetricsService.getCommercialMetrics(storeId, period);
 
+    // 9. Activity Log (Tempo real / Acontecimentos da Loja: Novo Lead, Venda Aprovada, Pagamento Pendente)
+    const formatEventDateTime = (rawDate: any) => {
+      const d = rawDate ? new Date(rawDate) : new Date();
+      const validDate = isNaN(d.getTime()) ? new Date() : d;
+      const parts = getBusinessParts(validDate);
+      return {
+        dateFormatted: `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}/${parts.year}`,
+        timeFormatted: `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`,
+        isoString: validDate.toISOString(),
+      };
+    };
+
+    const leadEvents: ActivityLogItem[] = (botStarts || []).map((bs) => {
+      const dt = formatEventDateTime(bs.createdAt);
+      const targetName = bs.telegramFirstName?.trim()
+        ? bs.telegramFirstName.trim()
+        : bs.telegramUsername?.trim()
+        ? `@${bs.telegramUsername.trim()}`
+        : "Novo Lead";
+
+      return {
+        id: `lead-${bs.id}`,
+        type: "lead" as const,
+        title: "Novo Lead",
+        targetName,
+        description: "Iniciou conversa",
+        timestamp: dt.isoString,
+        dateFormatted: dt.dateFormatted,
+        timeFormatted: dt.timeFormatted,
+      };
+    });
+
+    const saleEvents: ActivityLogItem[] = paidOrders.map((o) => {
+      const dt = formatEventDateTime(o.paidAt || o.updatedAt || o.createdAt);
+      const firstProduct = o.items?.[0]?.product?.title;
+      const targetName = firstProduct
+        ? o.items && o.items.length > 1
+          ? `${firstProduct} (+${o.items.length - 1})`
+          : firstProduct
+        : "Produto Digital";
+
+      const totalValue = Number(o.total || 0).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+      return {
+        id: `sale-${o.id}`,
+        type: "sale_approved" as const,
+        title: "Venda Aprovada",
+        targetName,
+        description: `Pagou R$ ${totalValue}`,
+        timestamp: dt.isoString,
+        dateFormatted: dt.dateFormatted,
+        timeFormatted: dt.timeFormatted,
+      };
+    });
+
+    const pendingEvents: ActivityLogItem[] = pendingOrders.map((o) => {
+      const dt = formatEventDateTime(o.createdAt);
+      const firstProduct = o.items?.[0]?.product?.title;
+      const targetName = firstProduct
+        ? o.items && o.items.length > 1
+          ? `${firstProduct} (+${o.items.length - 1})`
+          : firstProduct
+        : "Produto Digital";
+
+      return {
+        id: `pending-${o.id}`,
+        type: "payment_pending" as const,
+        title: "Pagamento Pendente",
+        targetName,
+        description: "Aguardando pagamento",
+        timestamp: dt.isoString,
+        dateFormatted: dt.dateFormatted,
+        timeFormatted: dt.timeFormatted,
+      };
+    });
+
+    const combinedLog = [...leadEvents, ...saleEvents, ...pendingEvents];
+    combinedLog.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const activityLog = combinedLog.slice(0, 30);
+
     return {
       period,
       storeName,
@@ -627,6 +762,7 @@ export class AnalyticsService {
       recentOrders,
       hourlySales: hourlyMap,
       activity,
+      activityLog,
       catalog,
       hasSales: paidOrders.length > 0,
       commercialMetrics,

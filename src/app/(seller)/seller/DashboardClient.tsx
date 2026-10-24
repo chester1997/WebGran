@@ -24,7 +24,8 @@ import {
   ArrowUpRight,
   CreditCard,
   Layers,
-  Tag
+  Tag,
+  UserPlus
 } from "lucide-react";
 import {
   AreaChart,
@@ -278,60 +279,99 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </div>
         </div>
 
-        {/* Atividade da Loja */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between">
+        {/* Log de Atividades */}
+        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between min-h-[340px]">
           <div>
-            <div className="flex items-center gap-2.5 mb-5">
-              <Activity className="w-5 h-5 text-emerald-400 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Atividade da Loja</h3>
-                <p className="text-xs text-zinc-400">Indicadores de movimentação operacional</p>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-5 h-5 text-rose-500 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Log de Atividades</h3>
+                  <p className="text-xs text-zinc-400">Acompanhe os acontecimentos da loja</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-medium text-emerald-400 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Tempo real</span>
               </div>
             </div>
 
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Vendas hoje</span>
-                </div>
-                <span className="font-bold text-sm text-white wg-tabular">{data.activity.salesToday}</span>
+            {isPending ? (
+              <div className="space-y-2 py-2">
+                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
+                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
+                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
               </div>
-
-              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span>Novos clientes</span>
-                  </div>
-                  <span className="text-[10px] text-zinc-500 pl-4">({data.activity.customersToday ?? 0} hoje)</span>
-                </div>
-                <span className="font-bold text-sm text-white wg-tabular">{data.activity.newCustomersPeriod}</span>
+            ) : (!data.activityLog || data.activityLog.length === 0) ? (
+              <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
+                <Activity className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
+                <p className="text-zinc-400 text-xs font-semibold">Nenhuma atividade recente registrada.</p>
+                <p className="text-zinc-500 text-[11px] max-w-xs mx-auto">
+                  Novos leads, pagamentos pendentes e vendas aprovadas aparecerão aqui automaticamente.
+                </p>
               </div>
+            ) : (
+              <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+                {data.activityLog.map((event) => {
+                  const isLead = event.type === "lead";
+                  const isSale = event.type === "sale_approved";
+                  const isPendingPay = event.type === "payment_pending";
 
-              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span>Acessos liberados</span>
-                </div>
-                <span className="font-bold text-sm text-white wg-tabular">{data.activity.activeAccesses}</span>
-              </div>
+                  const iconContainerClass = isSale
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : isPendingPay
+                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    : "bg-sky-500/10 text-sky-400 border-sky-500/20";
 
-              <div className="p-3.5 rounded-xl bg-[#141418] border border-white/[0.05] flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>PIX pendentes</span>
-                </div>
-                <span className="font-bold text-sm text-amber-400 wg-tabular">{data.activity.pendingPayments}</span>
+                  return (
+                    <div
+                      key={event.id}
+                      className="p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/[0.1] transition-all flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconContainerClass}`}
+                        >
+                          {isSale ? (
+                            <CheckCircle2 className="w-4.5 h-4.5" />
+                          ) : isPendingPay ? (
+                            <Clock className="w-4.5 h-4.5" />
+                          ) : (
+                            <UserPlus className="w-4.5 h-4.5" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white tracking-tight">
+                            {event.title}
+                          </p>
+                          <p className="text-[11px] text-zinc-400 font-medium truncate">
+                            <span className="text-zinc-200 font-medium">{event.targetName}</span>
+                            <span className="mx-1 text-zinc-600">—</span>
+                            <span className={isSale ? "text-emerald-400 font-semibold" : isPendingPay ? "text-amber-400 font-medium" : "text-zinc-400"}>
+                              {event.description}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="inline-flex items-center text-[11px] font-mono font-medium text-zinc-400 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/[0.05] wg-tabular">
+                          {event.dateFormatted} • {event.timeFormatted}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
 
           <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
-            <span>Operação:</span>
-            <span className="font-bold text-emerald-400 uppercase tracking-wider">
-              {data.activity.pendingPayments > 0 ? `${data.activity.pendingPayments} pendentes` : "Normal"}
+            <span>Histórico de acontecimentos:</span>
+            <span className="font-bold text-white wg-tabular">
+              {data.activityLog?.length || 0} {(data.activityLog?.length || 0) === 1 ? "registro" : "registros"}
             </span>
           </div>
         </div>

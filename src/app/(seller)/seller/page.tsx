@@ -34,6 +34,7 @@ export default async function SellerDashboardPage() {
       recentOrders: [],
       hourlySales: [],
       activity: { salesToday: 0, newCustomersPeriod: 0, customersToday: 0, activeAccesses: 0, pendingPayments: 0, pendingDeliveries: 0 },
+      activityLog: [],
       catalog: { totalProducts: 0, activeProducts: 0, inactiveProducts: 0, categoriesCount: 0 },
       hasSales: false,
       commercialMetrics: {
