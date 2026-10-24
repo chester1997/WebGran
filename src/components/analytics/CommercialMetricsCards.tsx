@@ -62,8 +62,8 @@ function SemicircleGauge({
     : (totalGenerated > 0 ? `0 pagos de ${totalGenerated} Pix` : "0 pagos de 0 Pix");
 
   return (
-    <div className="relative flex flex-col items-center justify-center shrink-0 select-none py-1">
-      <div className="relative flex flex-col items-center justify-center w-[120px] h-[65px]">
+    <div className="relative flex flex-col items-center justify-center shrink-0 select-none py-0.5 max-w-full">
+      <div className="relative flex flex-col items-center justify-center w-[105px] sm:w-[115px] xl:w-[120px] h-[54px] sm:h-[60px] xl:h-[65px]">
         <svg 
           viewBox="0 0 110 58" 
           className="w-full h-full overflow-visible"
@@ -107,14 +107,14 @@ function SemicircleGauge({
 
         {/* Center Percentage / Status Label */}
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center text-center">
-          <span className={`font-mono font-extrabold text-white tracking-tight leading-none wg-tabular ${hasValidData ? "text-lg sm:text-xl" : "text-xs text-zinc-400 font-semibold"}`}>
+          <span className={`font-mono font-extrabold text-white tracking-tight leading-none wg-tabular ${hasValidData ? "text-base sm:text-lg xl:text-xl" : "text-[11px] text-zinc-400 font-semibold"}`}>
             {formattedPct}
           </span>
         </div>
       </div>
 
       {/* Subtitle below speedometer: "X pagos de Y Pix" */}
-      <span className="text-[11px] sm:text-xs font-medium text-zinc-400 mt-2 text-center tracking-tight">
+      <span className="text-[10px] sm:text-[11px] font-medium text-zinc-400 mt-1 text-center tracking-tight truncate max-w-full">
         {subText}
       </span>
     </div>
@@ -224,19 +224,19 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
       </div>
 
       {/* Main 2-Area Grid:
-          - Left (Desktop lg:col-span-7): 4 Cards in 2x2 Grid
-          - Right (Desktop lg:col-span-5): "Seu Desempenho — Últimos 7 Dias" Chart matching full height */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full max-w-full items-stretch">
+          - Left (Desktop xl:col-span-3 / 30% width, Tablet lg:col-span-4): 4 Compact Cards in 2x2 Grid
+          - Right (Desktop xl:col-span-7 / 70% width, Tablet lg:col-span-8): "Seu Desempenho" Expanded Chart matching full height */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-10 gap-4 sm:gap-5 w-full max-w-full items-stretch">
 
         {/* =========================================================================
-            COLUNA ESQUERDA: 4 CARDS (2 colunas x 2 linhas)
+            COLUNA ESQUERDA: 4 CARDS (2 colunas x 2 linhas - ~30% no desktop)
            ========================================================================= */}
-        <div className="lg:col-span-7 flex flex-col justify-between">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+        <div className="lg:col-span-4 xl:col-span-3 flex flex-col justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 h-full">
 
             {/* CARD 1: VENDAS APROVADAS */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[148px] sm:min-h-[155px]"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 80%), #0E0E11`
               }}
@@ -244,35 +244,34 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
               {isPending ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                  <div className="h-7 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="flex items-start justify-between gap-1.5 mb-2">
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate" title="Vendas Aprovadas">
                         Vendas Aprovadas
                       </span>
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-1" title="Exclusivamente pagamentos confirmados">
                         Exclusivamente pagamentos confirmados
                       </p>
                     </div>
-                    <div className="shrink-0 text-emerald-400">
-                      <CheckCircle2 className="w-5 h-5" />
+                    <div className="shrink-0 text-emerald-400 mt-0.5">
+                      <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
-
-                  <div className="my-1">
-                    <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  <div className="my-auto py-0.5">
+                    <div className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate" title={approvedSales?.formatted || "R$ 0,00"}>
                       {approvedSales?.formatted || "R$ 0,00"}
                     </div>
                   </div>
 
                   {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
-                    <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400 font-medium">Meta comercial</span>
+                    <div className="pt-1.5 mt-auto border-t border-white/[0.04] space-y-1">
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                        <span className="text-zinc-400 font-medium truncate">Meta</span>
                         <span className="text-emerald-400 font-bold font-mono">
                           {approvedSales.targetProgressPercent}%
                         </span>
@@ -291,7 +290,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 2: TAXA DE CONVERSÃO */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[148px] sm:min-h-[155px]"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 80%), #0E0E11`
               }}
@@ -299,26 +298,25 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
               {isPending ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                  <div className="h-7 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate" title="Taxa de Conversão">
                         Taxa de Conversão
                       </span>
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-1" title="Cobranças Pix vs pagamentos aprovados">
                         Cobranças Pix vs pagamentos aprovados
                       </p>
                     </div>
-                    <div className="shrink-0 text-sky-400">
-                      <TrendingUp className="w-5 h-5" />
+                    <div className="shrink-0 text-sky-400 mt-0.5">
+                      <TrendingUp className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
-
-                  <div className="my-auto py-1 flex flex-col items-center justify-center">
+                  <div className="my-auto py-0.5 flex flex-col items-center justify-center">
                     <SemicircleGauge 
                       percentage={conversionRate?.ratePercent ?? null} 
                       isAvailable={Boolean(conversionRate?.isTelemetryAvailable && !conversionRate?.hasError)}
@@ -333,7 +331,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 3: TOTAL DE STARTS */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[148px] sm:min-h-[155px]"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #0E0E11`
               }}
@@ -341,35 +339,34 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
               {isPending ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                  <div className="h-7 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="flex items-start justify-between gap-1.5 mb-2">
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate" title="Total de Starts">
                         Total de Starts
                       </span>
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-1" title="Inícios de conversa nos bots da loja">
                         Inícios de conversa nos bots da loja
                       </p>
                     </div>
-                    <div className="shrink-0 text-purple-400">
-                      <Bot className="w-5 h-5" />
+                    <div className="shrink-0 text-purple-400 mt-0.5">
+                      <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
-
-                  <div className="my-1">
-                    <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  <div className="my-auto py-0.5">
+                    <div className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
                       {botStarts?.formatted || "0"}
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 truncate">
                       {botStarts?.isTelemetryAvailable 
                         ? ((botStarts.totalStarts || 0) === 0 
                             ? "Nenhum start registrado" 
                             : `${botStarts.uniqueUsers} ${botStarts.uniqueUsers === 1 ? 'usuário único' : 'usuários únicos'}`)
-                        : "Webhook sem persistência de eventos"}
+                        : "Webhook sem persistência"}
                     </p>
                   </div>
                 </>
@@ -378,7 +375,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 4: TICKET MÉDIO */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[160px]"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[148px] sm:min-h-[155px]"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 50%, transparent 80%), #0E0E11`
               }}
@@ -386,27 +383,26 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
               {isPending ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                  <div className="h-7 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="flex items-start justify-between gap-1.5 mb-2">
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate" title="Ticket Médio">
                         Ticket Médio
                       </span>
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-1" title="Receita aprovada / pedidos pagos">
                         Receita aprovada / pedidos pagos
                       </p>
                     </div>
-                    <div className="shrink-0 text-amber-400">
-                      <CreditCard className="w-5 h-5" />
+                    <div className="shrink-0 text-amber-400 mt-0.5">
+                      <CreditCard className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
-
-                  <div className="my-1">
-                    <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  <div className="my-auto py-0.5">
+                    <div className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate" title={averageTicket?.formatted || "R$ 0,00"}>
                       {averageTicket?.formatted || "R$ 0,00"}
                     </div>
                   </div>
@@ -418,11 +414,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
         </div>
 
         {/* =========================================================================
-            COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (Dinâmico por Período)
+            COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (Expandido ~70% no desktop)
            ========================================================================= */}
-        <div className="lg:col-span-5 flex flex-col h-full">
+        <div className="lg:col-span-8 xl:col-span-7 flex flex-col h-full">
           <div 
-            className="bg-[#0E0E11] border border-white/[0.06] hover:border-rose-500/30 rounded-2xl p-5 sm:p-6 shadow-sm transition-all flex flex-col justify-between h-full relative overflow-hidden min-h-[340px]"
+            className="bg-[#0E0E11] border border-white/[0.06] hover:border-rose-500/30 rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm transition-all flex flex-col justify-between h-full relative overflow-hidden min-h-[320px] sm:min-h-[340px]"
             style={{
               background: `radial-gradient(ellipse 80% 60% at 95% 8%, rgba(244, 63, 94, 0.10) 0%, rgba(244, 63, 94, 0.02) 50%, transparent 80%), #0E0E11`
             }}
@@ -449,7 +445,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* Performance Area Chart */}
-            <div className="flex-1 min-h-[190px] w-full flex items-center justify-center py-2">
+            <div className="flex-1 min-h-[190px] sm:min-h-[210px] w-full flex items-center justify-center py-1 sm:py-2">
               {isPending ? (
                 <div className="h-full w-full bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
                   Carregando desempenho...
@@ -465,11 +461,11 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                   </p>
                 </div>
               ) : (
-                <div className="w-full h-48 sm:h-52">
+                <div className="w-full h-48 sm:h-52 md:h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={performanceSeries}
-                      margin={{ top: 10, right: 10, left: -22, bottom: 0 }}
+                      margin={{ top: 10, right: 12, left: -20, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient id="rosePerformanceGrad" x1="0" y1="0" x2="0" y2="1">
