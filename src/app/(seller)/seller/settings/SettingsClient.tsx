@@ -150,6 +150,9 @@ export default function SettingsClient({
 
         // Checa se o Service Worker possui assinatura Push ativa no dispositivo
         const reg = await navigator.serviceWorker.ready.catch(() => null);
+        if (reg) {
+          reg.update().catch(() => null);
+        }
         const sub = reg ? await reg.pushManager.getSubscription().catch(() => null) : null;
 
         const savedPref = localStorage.getItem("webgran_browser_notifications");
@@ -447,6 +450,10 @@ function urlBase64ToUint8Array(base64String: string) {
     }
 
     try {
+      if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.ready.then((reg) => reg?.update().catch(() => null)).catch(() => null);
+      }
+
       showToast("Enviando notificação de teste...");
       const res = await fetch("/api/seller/push/test", { method: "POST" });
       const data = await res.json().catch(() => null);
@@ -454,11 +461,26 @@ function urlBase64ToUint8Array(base64String: string) {
       if (!res.ok || !data?.success) {
         // Fallback local se o servidor não conseguir enviar o push (ex: VAPID pendente no ambiente)
         try {
-          new Notification("🔔 Teste de notificações WebGran", {
-            body: data?.message || "Suas notificações estão configuradas corretamente.",
-            icon: "/icons/icon-192x192.png",
-            badge: "/icons/badge-72x72.png",
-          });
+          let shownViaSw = false;
+          if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+            const reg = await navigator.serviceWorker.ready.catch(() => null);
+            if (reg && "showNotification" in reg) {
+              await reg.showNotification("🔔 Teste de notificações WebGran", {
+                body: data?.message || "Suas notificações estão configuradas corretamente.",
+                icon: "/icons/icon-192x192.png",
+                badge: "/icons/badge-72x72.png",
+              });
+              shownViaSw = true;
+            }
+          }
+
+          if (!shownViaSw) {
+            new Notification("🔔 Teste de notificações WebGran", {
+              body: data?.message || "Suas notificações estão configuradas corretamente.",
+              icon: "/icons/icon-192x192.png",
+              badge: "/icons/badge-72x72.png",
+            });
+          }
 
           showToast("Notificação local exibida (configuração VAPID pendente no servidor).");
         } catch {

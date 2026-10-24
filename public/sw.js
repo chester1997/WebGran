@@ -1,12 +1,14 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v1';
+const CACHE_NAME = 'webgran-static-v2';
 
-// Static brand assets explicitly safe to pre-cache (brand icons only)
+// Static brand assets explicitly safe to pre-cache (brand icons and monochrome notification badges)
 const PRECACHE_ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/icon-maskable-192x192.png',
   '/icons/icon-maskable-512x512.png',
+  '/icons/badge-72x72.png',
+  '/icons/badge-96x96.png',
   '/icons/apple-touch-icon.png',
   '/manifest.webmanifest'
 ];
