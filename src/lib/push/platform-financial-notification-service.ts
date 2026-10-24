@@ -226,6 +226,8 @@ export class PlatformFinancialNotificationService {
       const pushResult = await SellerPushService.sendToSeller(ownerId, {
         title,
         body,
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/badge-72x72.png",
         url: "/admin/commission",
         tag: `commission-${orderId}-${eventType.toLowerCase()}`,
         data: {
@@ -235,6 +237,7 @@ export class PlatformFinancialNotificationService {
           url: "/admin/commission",
         },
       });
+
 
       return {
         success: pushResult.success,

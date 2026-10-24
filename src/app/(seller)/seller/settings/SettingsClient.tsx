@@ -454,10 +454,12 @@ function urlBase64ToUint8Array(base64String: string) {
       if (!res.ok || !data?.success) {
         // Fallback local se o servidor não conseguir enviar o push (ex: VAPID pendente no ambiente)
         try {
-          new Notification("🔔 Teste de Notificação WebGran", {
-            body: data?.message || "Suas notificações do navegador estão ativas!",
-            icon: "/icon.png",
+          new Notification("🔔 Teste de notificações WebGran", {
+            body: data?.message || "Suas notificações estão configuradas corretamente.",
+            icon: "/icons/icon-192x192.png",
+            badge: "/icons/badge-72x72.png",
           });
+
           showToast("Notificação local exibida (configuração VAPID pendente no servidor).");
         } catch {
           alert(data?.message || "Erro ao disparar teste de notificação.");

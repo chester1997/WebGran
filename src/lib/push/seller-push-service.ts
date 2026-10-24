@@ -222,7 +222,7 @@ export class SellerPushService {
       title: payload.title,
       body: payload.body,
       icon: payload.icon || "/icons/icon-192x192.png",
-      badge: payload.badge || "/icons/icon-192x192.png",
+      badge: payload.badge || "/icons/badge-72x72.png",
       url: payload.url || "/seller/financeiro",
       tag: payload.tag || "general",
       data: payload.data || {},
@@ -297,12 +297,36 @@ export class SellerPushService {
     };
   }
 
+  // Cache em memória para idempotência de disparos de venda por pedido
+  private static dispatchedSaleOrders = new Set<string>();
+
+  /**
+   * Limpa o cache de idempotência de vendas (apenas para testes automatizados).
+   */
+  static _clearDispatchedSaleOrdersForTest(): void {
+    this.dispatchedSaleOrders.clear();
+  }
+
   /**
    * Integração com evento de venda confirmada:
-   * Localiza a loja, o proprietário (vendedor) e envia push seguro.
+   * Localiza a loja, o vendedor (proprietário) e envia push seguro
+   * com o valor real da venda no padrão Sharkbot: "Você recebeu R$ XX,XX".
    */
   static async notifySellerOfSale(orderId: string): Promise<PushSendResult> {
     try {
+      // 1. Guarda de Idempotência em memória contra disparos duplicados
+      if (this.dispatchedSaleOrders.has(orderId)) {
+        return {
+          success: true,
+          skipped: true,
+          reason: `Push notification already sent for order ${orderId}`,
+          totalSubscriptions: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deactivatedCount: 0,
+        };
+      }
+
       const order = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {
@@ -350,22 +374,37 @@ export class SellerPushService {
         }
       }
 
+      // Valor real do pedido formatado no padrão brasileiro (BRL)
       const rawNum = typeof order.total === "string" ? parseFloat(order.total) : Number(order.total || 0);
-      const totalFormatted = (isNaN(rawNum) ? 0 : rawNum).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      });
+      const totalFormatted = (isNaN(rawNum) ? 0 : rawNum)
+        .toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+        .replace(/\u00A0/g, " ");
 
-      return await this.sendToSeller(store.ownerId, {
-        title: "🎉 Nova Venda Confirmada!",
-        body: `${itemTitle} • ${totalFormatted}`,
+
+      // Dispara a notificação com padrão Sharkbot: título limpo e mensagem com valor real
+      const result = await this.sendToSeller(store.ownerId, {
+        title: "🛒 Nova venda no WebGran",
+        body: `Você recebeu ${totalFormatted}`,
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/badge-72x72.png",
         url: "/seller/financeiro",
         tag: `sale-${order.id}`,
         data: {
           orderId: order.id,
           storeId: store.id,
+          amount: rawNum,
+          itemTitle,
         },
       });
+
+      if (result.success) {
+        this.dispatchedSaleOrders.add(orderId);
+      }
+
+      return result;
     } catch (err: any) {
       console.error("[SellerPushService] Erro ao enviar notificação de venda:", err);
       return {
@@ -380,3 +419,4 @@ export class SellerPushService {
     }
   }
 }
+

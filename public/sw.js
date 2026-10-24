@@ -111,7 +111,7 @@ self.addEventListener('push', (event) => {
     title: 'WebGran',
     body: 'Você tem uma nova notificação.',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
+    badge: '/icons/badge-72x72.png',
     url: '/seller/financeiro',
     tag: 'webgran-notification',
   };
@@ -125,18 +125,34 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Garante URLs absolutas acessíveis para o sistema operacional renderizar
+  const iconUrl = data.icon
+    ? (data.icon.startsWith('http') ? data.icon : new URL(data.icon, self.location.origin).href)
+    : new URL('/icons/icon-192x192.png', self.location.origin).href;
+
+  const badgeUrl = data.badge
+    ? (data.badge.startsWith('http') ? data.badge : new URL(data.badge, self.location.origin).href)
+    : new URL('/icons/badge-72x72.png', self.location.origin).href;
+
   const options = {
     body: data.body,
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/icon-192x192.png',
+    icon: iconUrl,
+    badge: badgeUrl,
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/seller/financeiro',
       dateOfArrival: Date.now(),
+      ...(data.data || {}),
     },
     tag: data.tag || 'webgran-general',
     renotify: true,
   };
+
+  if (data.image) {
+    options.image = data.image.startsWith('http')
+      ? data.image
+      : new URL(data.image, self.location.origin).href;
+  }
 
   event.waitUntil(self.registration.showNotification(data.title, options));
 });

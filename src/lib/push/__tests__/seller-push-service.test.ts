@@ -45,7 +45,9 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
+    SellerPushService._clearDispatchedSaleOrdersForTest();
   });
+
 
   describe("1. Registro e Gerenciamento de Assinaturas (Autenticado & Isolado)", () => {
     it("registra assinatura push com sucesso vinculada ao vendedor autenticado", async () => {
@@ -189,7 +191,7 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
       expect(res.reason).toContain("not paid");
     });
 
-    it("resolve a loja e o vendedor correto e envia push seguro sem expor dados sensíveis", async () => {
+    it("resolve a loja e o vendedor correto e envia push seguro no padrão Sharkbot com valor real, ícone e badge", async () => {
       process.env.VAPID_PRIVATE_KEY = "mock-private-key";
       process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = "mock-public-key";
 
@@ -197,7 +199,7 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
         id: "order-paid-123",
         status: "paid",
         storeId: "store-456",
-        total: "150.00",
+        total: "49.90",
         items: [{ productId: "prod-789" }],
       });
 
@@ -208,7 +210,7 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
 
       mockDb.query.products.findFirst.mockResolvedValue({
         id: "prod-789",
-        title: "Curso Avançado de Robótica",
+        title: "Acesso VIP Grupo Alpha",
       });
 
       mockDb.query.sellerPushSubscriptions.findMany.mockResolvedValue([
@@ -234,17 +236,65 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
       expect(res.success).toBe(true);
       expect(res.sentCount).toBe(1);
 
-      // Garante que o payload enviado para o webpush é seguro
+      // Garante que o payload enviado para o webpush segue o padrão Sharkbot
       const [subArg, payloadArg] = vi.mocked(webpush.sendNotification).mock.calls[0];
       const parsedPayload = JSON.parse(payloadArg as string);
 
-      expect(parsedPayload.title).toBe("🎉 Nova Venda Confirmada!");
-      expect(parsedPayload.body).toContain("Curso Avançado de Robótica");
+      expect(parsedPayload.title).toBe("🛒 Nova venda no WebGran");
+      expect(parsedPayload.body).toBe("Você recebeu R$ 49,90");
+      expect(parsedPayload.icon).toBe("/icons/icon-192x192.png");
+      expect(parsedPayload.badge).toBe("/icons/badge-72x72.png");
       expect(parsedPayload.url).toBe("/seller/financeiro");
       expect(parsedPayload.tag).toBe("sale-order-paid-123");
       // Nunca expõe senhas ou tokens
       expect(payloadArg).not.toContain("password");
       expect(payloadArg).not.toContain("token");
+    });
+
+    it("garante idempotência e não dispara notificação duplicada para o mesmo pedido já notificado", async () => {
+      process.env.VAPID_PRIVATE_KEY = "mock-private-key";
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = "mock-public-key";
+
+      mockDb.query.orders.findFirst.mockResolvedValue({
+        id: "order-idempotent-456",
+        status: "paid",
+        storeId: "store-456",
+        total: "120.00",
+        items: [{ productId: "prod-789" }],
+      });
+
+      mockDb.query.stores.findFirst.mockResolvedValue({
+        id: "store-456",
+        ownerId: "seller-owner-999",
+      });
+
+      mockDb.query.sellerPushSubscriptions.findMany.mockResolvedValue([
+        {
+          id: "sub-phone",
+          userId: "seller-owner-999",
+          endpoint: "https://push.example.com/phone",
+          p256dh: "key-phone",
+          auth: "auth-phone",
+          isActive: true,
+        },
+      ]);
+
+      const webpush = (await import("web-push")).default;
+      vi.mocked(webpush.sendNotification).mockResolvedValueOnce({} as any);
+
+      // Primeiro envio: sucesso
+      const res1 = await SellerPushService.notifySellerOfSale("order-idempotent-456");
+      expect(res1.success).toBe(true);
+      expect(res1.sentCount).toBe(1);
+
+      // Segundo envio imediato com mesmo orderId (ex: retentativa de webhook): ignorado de forma idempotente
+      const res2 = await SellerPushService.notifySellerOfSale("order-idempotent-456");
+      expect(res2.success).toBe(true);
+      expect(res2.skipped).toBe(true);
+      expect(res2.reason).toContain("already sent");
+
+      // webpush deve ter sido chamado exatamente 1 vez
+      expect(vi.mocked(webpush.sendNotification)).toHaveBeenCalledTimes(1);
     });
 
     it("falha no serviço de push não interrompe a confirmação da venda", async () => {
@@ -257,6 +307,7 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
     });
   });
 
+
   describe("4. Service Worker Push & Notification Click Handlers", () => {
     const swPath = path.join(process.cwd(), "public", "sw.js");
 
@@ -267,6 +318,30 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
       expect(swCode).toContain("self.registration.showNotification");
       expect(swCode).toContain("self.addEventListener('notificationclick'");
       expect(swCode).toContain("event.notification.close()");
+    });
+
+    it("service worker configura icon e badge monocromático com URLs absolutas", () => {
+      const swCode = fs.readFileSync(swPath, "utf8");
+
+      expect(swCode).toContain("/icons/icon-192x192.png");
+      expect(swCode).toContain("/icons/badge-72x72.png");
+      expect(swCode).toContain("icon: iconUrl");
+      expect(swCode).toContain("badge: badgeUrl");
+    });
+
+    it("assets oficiais de icon e badge existem publicamente no diretório public/icons", () => {
+      const iconPath = path.join(process.cwd(), "public", "icons", "icon-192x192.png");
+      const badgePath = path.join(process.cwd(), "public", "icons", "badge-72x72.png");
+
+      expect(fs.existsSync(iconPath)).toBe(true);
+      expect(fs.existsSync(badgePath)).toBe(true);
+
+      const iconBytes = fs.readFileSync(iconPath);
+      const badgeBytes = fs.readFileSync(badgePath);
+
+      // Assinatura PNG válida: 137 80 78 71 13 10 26 10
+      expect(iconBytes.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      expect(badgeBytes.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
     });
 
     it("reutiliza janelas abertas ou abre nova rota protegida ao clicar na notificação", () => {
@@ -287,3 +362,4 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
     });
   });
 });
+

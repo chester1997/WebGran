@@ -15,11 +15,14 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await SellerPushService.sendToSeller(user.id, {
-      title: "🔔 Teste de Notificação WebGran",
-      body: "Suas notificações push PWA estão ativas e funcionando perfeitamente!",
+      title: "🔔 Teste de notificações WebGran",
+      body: "Suas notificações estão configuradas corretamente.",
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/badge-72x72.png",
       url: "/seller/settings",
       tag: "test-push",
     });
+
 
     if (result.skipped) {
       return NextResponse.json(
