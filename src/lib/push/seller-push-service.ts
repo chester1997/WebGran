@@ -359,13 +359,20 @@ export class SellerPushService {
 
       const items = order.items || [];
       let itemTitle = "Produto";
-      if (items.length > 0 && items[0].productId) {
-        const { products } = await import("@/db/schema");
-        const prod = await db.query.products.findFirst({
-          where: eq(products.id, items[0].productId),
-        });
-        if (prod?.title) {
-          itemTitle = prod.title;
+      if (items.length > 0) {
+        if (items[0].productId) {
+          const { products } = await import("@/db/schema");
+          const prod = await db.query.products.findFirst({
+            where: eq(products.id, items[0].productId),
+          });
+          if (prod?.title) {
+            itemTitle = prod.title;
+          }
+        } else if (items[0].comboSnapshot && typeof items[0].comboSnapshot === "object") {
+          const snapshot = items[0].comboSnapshot as { title?: string };
+          if (snapshot.title) {
+            itemTitle = snapshot.title;
+          }
         }
       }
 

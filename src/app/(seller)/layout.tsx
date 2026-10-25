@@ -30,7 +30,8 @@ import {
   Bell,
   Video,
   Film,
-  DollarSign
+  DollarSign,
+  Boxes
 } from "lucide-react";
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
@@ -44,6 +45,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     { name: "Boas-vindas", href: "/seller/boas-vindas", icon: Sparkles },
     { name: "Banners", href: "/seller/banners", icon: ImageIcon },
     { name: "Produtos", href: "/seller/products", icon: Package },
+    { name: "Combos", href: "/seller/combos", icon: Boxes },
     { name: "Biblioteca de Vídeos", href: "/seller/videos", icon: Film },
     { name: "Carrosséis", href: "/seller/carousels", icon: Layers },
     { name: "Categorias", href: "/seller/categories", icon: Tags },

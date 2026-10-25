@@ -105,7 +105,12 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       const checkoutAmount = displayTotal;
       const result = await createCheckoutSession(
         storeSlug,
-        items.map((i) => ({ id: i.id, quantity: i.quantity })),
+        items.map((i) => ({
+          id: i.id,
+          quantity: i.quantity,
+          isCombo: i.isCombo,
+          comboId: i.comboId,
+        })),
         appliedCoupon?.code
       );
 

@@ -15,6 +15,8 @@ import { TelegramBotService } from "@/lib/telegram/bot";
 
 import { Category3DPopoutCard } from "../components/Category3DPopoutCard";
 import { CategoryIconCard } from "../components/CategoryIconCard";
+import { ComboService } from "@/lib/combos/combo-service";
+import { CombosCarousel } from "../components/CombosCarousel";
 
 import { getStoreBySlug } from "@/lib/store-cache";
 
@@ -32,7 +34,8 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     storeBanners,
     rankingCarousel,
     standardCarousels,
-    firstBot
+    firstBot,
+    activeCombos
   ] = await Promise.all([
     db.query.banners.findMany({
       where: and(eq(banners.storeId, store.id), eq(banners.status, 'active')),
@@ -72,7 +75,8 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
     }),
     db.query.telegramBots.findFirst({
       where: eq(telegramBots.storeId, store.id),
-    })
+    }),
+    ComboService.getActiveCombos(store.id)
   ]);
 
   const rankingProducts = rankingCarousel?.items?.map(i => i.product).filter(p => p && p.status === 'active') || [];
@@ -152,6 +156,11 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
               ))}
             </div>
           </section>
+        )}
+
+        {/* Combos Promocionais Carousel */}
+        {activeCombos.length > 0 && (
+          <CombosCarousel combos={activeCombos} storeSlug={storeSlug} />
         )}
 
         {/* Editorial Ranking Carousel (Top 15) */}

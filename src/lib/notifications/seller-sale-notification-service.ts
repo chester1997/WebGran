@@ -147,13 +147,20 @@ export class SellerSaleNotificationService {
       let targetBotId: string | null = null;
 
       for (const item of items) {
-        const prod = await db.query.products.findFirst({
-          where: and(eq(products.id, item.productId), eq(products.storeId, order.storeId)),
-        });
-        if (prod) {
-          productTitles.push(prod.title);
-          if (!targetBotId && prod.botId) {
-            targetBotId = prod.botId;
+        if (item.productId) {
+          const prod = await db.query.products.findFirst({
+            where: and(eq(products.id, item.productId), eq(products.storeId, order.storeId)),
+          });
+          if (prod) {
+            productTitles.push(prod.title);
+            if (!targetBotId && prod.botId) {
+              targetBotId = prod.botId;
+            }
+          }
+        } else if (item.comboSnapshot && typeof item.comboSnapshot === 'object') {
+          const snapshot = item.comboSnapshot as { title?: string };
+          if (snapshot.title) {
+            productTitles.push(snapshot.title);
           }
         }
       }

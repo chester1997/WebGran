@@ -147,3 +147,25 @@ export function resolveClipStatusTransition(
 
   return targetStatus;
 }
+
+export type ResolvedBunnyVideoType = "CLIP" | "PRODUCT_VIDEO" | "UNKNOWN";
+
+export async function resolveBunnyVideo(videoGuid: string): Promise<{
+  type: ResolvedBunnyVideoType;
+  entity: any;
+}> {
+  const { ClipService } = await import("@/lib/clips/service");
+  const { ProductVideoService } = await import("@/lib/videos/product-video-service");
+
+  const clip = await ClipService.getClipByBunnyVideoId(videoGuid);
+  if (clip) {
+    return { type: "CLIP", entity: clip };
+  }
+
+  const productVideo = await ProductVideoService.getProductVideoByBunnyId(videoGuid);
+  if (productVideo) {
+    return { type: "PRODUCT_VIDEO", entity: productVideo };
+  }
+
+  return { type: "UNKNOWN", entity: null };
+}

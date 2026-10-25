@@ -43,7 +43,7 @@ function getStatusBadge(
   if (deliveryStatus === "FAILED") {
     return { label: "Falha na entrega", dot: "bg-red-500", text: "text-red-400", bg: "bg-red-500/15 border-red-500/30" };
   }
-  if (deliveryStatus === "PENDING" || status === "PENDING") {
+  if (deliveryStatus === "PENDING" || status === "PENDING" || (typeof deliveryStatus === "string" && deliveryStatus.startsWith("PROCESSING"))) {
     return { label: "Processando", dot: "bg-amber-400", text: "text-amber-300", bg: "bg-amber-500/15 border-amber-500/30" };
   }
   if (expInfo.isLifetime) {

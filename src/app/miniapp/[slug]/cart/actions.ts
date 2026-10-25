@@ -1,16 +1,23 @@
 "use server";
 
 import { db } from "@/db";
-import { products, orders, orderItems, stores, coupons } from "@/db/schema";
-import { eq, inArray, and, sql } from "drizzle-orm";
+import { products, orders, orderItems, stores, coupons, combos, comboProducts } from "@/db/schema";
+import { eq, inArray, and, sql, asc, desc } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { getMiniAppSession } from "@/lib/telegram/session";
 import { AccessService } from "@/lib/orders/access-service";
 import { paymentService } from "@/lib/payments/payment-service";
 
+export interface CheckoutItemInput {
+  id: string;
+  quantity: number;
+  isCombo?: boolean;
+  comboId?: string | null;
+}
+
 export async function createCheckoutSession(
   storeSlug: string, 
-  items: { id: string, quantity: number }[],
+  items: CheckoutItemInput[],
   couponCode?: string,
   paymentGateway?: 'mercadopago' | 'pushinpay' | 'syncpay'
 ) {
@@ -26,22 +33,7 @@ export async function createCheckoutSession(
       return { success: false, error: "Carrinho vazio" };
     }
 
-    const productIds = items.map(i => i.id);
-    
-    // Fetch real products from DB for this store
-    const realProducts = await db.query.products.findMany({
-      where: and(
-        eq(products.storeId, storeId),
-        inArray(products.id, productIds),
-        eq(products.status, 'active')
-      )
-    });
-
-    if (realProducts.length !== items.length) {
-      return { success: false, error: "Alguns produtos são inválidos ou estão indisponíveis" };
-    }
-
-    // Check seller max_orders_per_month entitlement
+    // Validate store existence and owner
     const storeRecord = await db.query.stores.findFirst({
       where: eq(stores.id, storeId),
     });
@@ -50,6 +42,51 @@ export async function createCheckoutSession(
       return { success: false, error: "Loja não encontrada." };
     }
 
+    // Validate quantities and item IDs
+    for (const item of items) {
+      const qty = Math.floor(Number(item.quantity));
+      if (isNaN(qty) || qty <= 0) {
+        return { success: false, error: "Quantidade inválida para um ou mais itens." };
+      }
+      if (qty > 99) {
+        return { success: false, error: "Quantidade máxima permitida por item é 99." };
+      }
+      if (!item.id || typeof item.id !== 'string') {
+        return { success: false, error: "Item inválido no carrinho." };
+      }
+    }
+
+    const candidateIds = Array.from(new Set(items.map(i => i.comboId || i.id)));
+
+    // Fetch active products belonging to this store
+    const realProducts = await db.query.products.findMany({
+      where: and(
+        eq(products.storeId, storeId),
+        inArray(products.id, candidateIds),
+        eq(products.status, 'active')
+      )
+    });
+
+    // Fetch active combos belonging to this store with component products
+    const realCombos = db.query.combos
+      ? await db.query.combos.findMany({
+          where: and(
+            eq(combos.storeId, storeId),
+            inArray(combos.id, candidateIds),
+            eq(combos.status, 'active')
+          ),
+          with: {
+            products: {
+              with: {
+                product: true,
+              },
+              orderBy: [asc(comboProducts.position), asc(comboProducts.createdAt)],
+            },
+          },
+        })
+      : [];
+
+    // Check seller max_orders_per_month entitlement
     const { getMonthlyOrderUsage } = await import("@/lib/orders/order-usage-service");
     const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
 
@@ -63,24 +100,128 @@ export async function createCheckoutSession(
     }
 
     let subtotal = 0;
-    const itemsToInsert = [];
+    const itemsToInsert: {
+      productId: string | null;
+      comboId: string | null;
+      comboSnapshot: any | null;
+      quantity: number;
+      unitPrice: string;
+      total: string;
+    }[] = [];
 
     for (const item of items) {
-      const realProduct = realProducts.find(p => p.id === item.id);
-      if (!realProduct) continue;
-      
-      const qty = item.quantity;
-      const unitPrice = Number(realProduct.price);
-      const totalLine = unitPrice * qty;
-      
-      subtotal += totalLine;
+      const qty = Math.floor(Number(item.quantity));
+      const targetId = (item.isCombo && item.comboId) ? item.comboId : item.id;
 
-      itemsToInsert.push({
-        productId: realProduct.id,
-        quantity: qty,
-        unitPrice: unitPrice.toString(),
-        total: totalLine.toString()
-      });
+      const matchedCombo = (item.isCombo || item.comboId)
+        ? realCombos.find(c => c.id === targetId)
+        : realCombos.find(c => c.id === targetId);
+
+      const matchedProduct = (!item.isCombo && !item.comboId)
+        ? realProducts.find(p => p.id === targetId)
+        : null;
+
+      // Discriminate or validate existence
+      if (item.isCombo || item.comboId) {
+        if (!matchedCombo || matchedCombo.status !== 'active') {
+          return {
+            success: false,
+            error: "Combo inexistente, inativo ou pertencente a outra loja."
+          };
+        }
+      } else if ((!matchedProduct || matchedProduct.status !== 'active') && (!matchedCombo || matchedCombo.status !== 'active')) {
+        return {
+          success: false,
+          error: "Alguns produtos ou combos são inválidos ou estão indisponíveis"
+        };
+      }
+
+      if (matchedCombo && (item.isCombo || item.comboId || !matchedProduct)) {
+        // Validate combo components: must have at least 2 active products belonging to the same store
+        if (!matchedCombo.products || matchedCombo.products.length < 2) {
+          return {
+            success: false,
+            error: `O combo "${matchedCombo.title}" deve possuir pelo menos dois produtos participantes.`
+          };
+        }
+
+        const invalidComponents = matchedCombo.products.filter(
+          cp => !cp.product || cp.product.storeId !== storeId || cp.product.status !== 'active'
+        );
+
+        if (invalidComponents.length > 0) {
+          return {
+            success: false,
+            error: `O combo "${matchedCombo.title}" possui produtos indisponíveis ou pertencentes a outra loja.`
+          };
+        }
+
+        const validComponents = matchedCombo.products;
+        const normalPrice = validComponents.reduce((acc, cp) => acc + Number(cp.product.price), 0);
+        const promoPrice = Number(matchedCombo.price);
+        if (isNaN(promoPrice) || promoPrice < 0) {
+          return { success: false, error: "Preço inválido para o combo." };
+        }
+
+        const savings = Math.max(0, normalPrice - promoPrice);
+        const savingsPercentage = normalPrice > 0 ? Math.round((savings / normalPrice) * 100) : 0;
+        const totalLine = Math.round(promoPrice * qty * 100) / 100;
+
+        subtotal = Math.round((subtotal + totalLine) * 100) / 100;
+
+        // Frozen immutable snapshot for delivery & historic preservation
+        const comboSnapshot = {
+          comboId: matchedCombo.id,
+          title: matchedCombo.title,
+          slug: matchedCombo.slug,
+          description: matchedCombo.description || null,
+          coverUrl: matchedCombo.coverUrl || null,
+          priceAtPurchase: promoPrice.toFixed(2),
+          calculatedNormalPrice: normalPrice.toFixed(2),
+          savings: savings.toFixed(2),
+          savingsPercentage,
+          products: validComponents.map(cp => ({
+            id: cp.product.id,
+            title: cp.product.title,
+            slug: cp.product.slug,
+            price: Number(cp.product.price).toFixed(2),
+            deliveryType: cp.product.deliveryType || null,
+            deliveryValue: cp.product.deliveryValue || null,
+            botId: cp.product.botId || null,
+          })),
+          purchasedAt: new Date().toISOString(),
+        };
+
+        itemsToInsert.push({
+          productId: null,
+          comboId: matchedCombo.id,
+          comboSnapshot,
+          quantity: qty,
+          unitPrice: promoPrice.toFixed(2),
+          total: totalLine.toFixed(2),
+        });
+      } else if (matchedProduct) {
+        const unitPrice = Number(matchedProduct.price);
+        if (isNaN(unitPrice) || unitPrice < 0) {
+          return { success: false, error: "Preço inválido para o produto." };
+        }
+
+        const totalLine = Math.round(unitPrice * qty * 100) / 100;
+        subtotal = Math.round((subtotal + totalLine) * 100) / 100;
+
+        itemsToInsert.push({
+          productId: matchedProduct.id,
+          comboId: null,
+          comboSnapshot: null,
+          quantity: qty,
+          unitPrice: unitPrice.toFixed(2),
+          total: totalLine.toFixed(2),
+        });
+      }
+    }
+
+    if (itemsToInsert.length !== items.length) {
+      return { success: false, error: "Alguns produtos ou combos são inválidos ou estão indisponíveis" };
     }
 
     // Process Coupon Validation & Discount
@@ -127,7 +268,53 @@ export async function createCheckoutSession(
       }
     }
 
-    const finalTotal = Math.max(0, subtotal - discountAmount);
+    const finalTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+
+    // Idempotency: check if an active pending order exists for this store & customer with identical items
+    const existingPendingOrders = db.query.orders?.findMany
+      ? await db.query.orders.findMany({
+          where: and(
+            eq(orders.storeId, storeId),
+            eq(orders.customerId, customerId),
+            eq(orders.status, 'pending'),
+            eq(orders.total, finalTotal.toFixed(2))
+          ),
+          with: {
+            items: true,
+          },
+          orderBy: [desc(orders.createdAt)],
+          limit: 3,
+        })
+      : [];
+
+    const matchingExistingOrder = existingPendingOrders.find(ord => {
+      if (!ord.pixExpiresAt || new Date(ord.pixExpiresAt) <= new Date()) return false;
+      if (!ord.pixQrCode) return false;
+      if (!ord.items || ord.items.length !== itemsToInsert.length) return false;
+
+      return itemsToInsert.every(ins => {
+        if (ins.productId) {
+          return ord.items.some((oi: any) => oi.productId === ins.productId && oi.quantity === ins.quantity);
+        }
+        if (ins.comboId) {
+          return ord.items.some((oi: any) => oi.comboId === ins.comboId && oi.quantity === ins.quantity);
+        }
+        return false;
+      });
+    });
+
+    if (matchingExistingOrder) {
+      return {
+        success: true,
+        orderId: matchingExistingOrder.id,
+        paymentGateway: (matchingExistingOrder.paymentMethod as any) || 'pushinpay',
+        pix: {
+          qrCode: matchingExistingOrder.pixQrCode || '',
+          qrCodeBase64: matchingExistingOrder.pixQrCodeBase64 || '',
+          expiresAt: matchingExistingOrder.pixExpiresAt ? matchingExistingOrder.pixExpiresAt.toISOString() : new Date().toISOString(),
+        }
+      };
+    }
 
     const cookieStore = await cookies();
     const sessionId =
@@ -140,10 +327,10 @@ export async function createCheckoutSession(
       storeId,
       customerId,
       status: 'pending', // PENDING, PAID, FAILED, CANCELLED, REFUNDED
-      subtotal: subtotal.toString(),
-      discount: discountAmount.toString(),
+      subtotal: subtotal.toFixed(2),
+      discount: discountAmount.toFixed(2),
       couponCode: appliedCouponCode,
-      total: finalTotal.toString(),
+      total: finalTotal.toFixed(2),
       currency: 'BRL',
       sessionId: sessionId || null,
     }).returning();
@@ -154,7 +341,12 @@ export async function createCheckoutSession(
     await db.insert(orderItems).values(
       itemsToInsert.map(i => ({
         orderId: newOrder.id,
-        ...i
+        productId: i.productId,
+        comboId: i.comboId,
+        comboSnapshot: i.comboSnapshot,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        total: i.total,
       }))
     );
 

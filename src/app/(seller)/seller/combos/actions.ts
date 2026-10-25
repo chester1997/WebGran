@@ -1,0 +1,551 @@
+"use server";
+
+import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { db } from "@/db";
+import { combos, comboProducts, products, orderItems } from "@/db/schema";
+import { eq, and, inArray, desc, asc, ne } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
+import { StorageUsageService } from "@/lib/storage/storage-usage-service";
+
+export interface ComboProductSummary {
+  id: string;
+  title: string;
+  price: string;
+  coverUrl: string | null;
+  status: string;
+  position: number;
+}
+
+export interface ComboItem {
+  id: string;
+  storeId: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverUrl: string | null;
+  price: string;
+  status: string;
+  position: number;
+  normalPrice: number;
+  savings: number;
+  savingsPercentage: number;
+  products: ComboProductSummary[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateComboInput {
+  title: string;
+  slug?: string;
+  description?: string | null;
+  coverUrl?: string | null;
+  price: number;
+  productIds: string[];
+  status?: "active" | "inactive";
+  position?: number;
+}
+
+export interface UpdateComboInput {
+  title?: string;
+  slug?: string;
+  description?: string | null;
+  coverUrl?: string | null;
+  price?: number;
+  productIds?: string[];
+  status?: "active" | "inactive";
+  position?: number;
+}
+
+async function processImageUrl(
+  rawUrl: string | null,
+  storeId: string,
+  sellerId: string,
+  prefix: string
+): Promise<string | null> {
+  if (!rawUrl || !rawUrl.trim()) return null;
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith("data:")) {
+    const parts = trimmed.split(",");
+    const meta = parts[0];
+    const base64Data = parts[1] || "";
+    const matchMime = meta.match(/data:(.*?);/);
+    const mimeType = matchMime ? matchMime[1] : "image/webp";
+    const buffer = Buffer.from(base64Data, "base64");
+    const actualBytes = buffer.length;
+
+    const reservation = await StorageUsageService.reserveStorageForUpload({
+      sellerId,
+      storeId,
+      bytes: actualBytes,
+      referenceType: "image_upload",
+    });
+
+    if (!reservation.allowed) {
+      throw new Error(reservation.reason || "Capacidade de armazenamento excedida para o seu plano.");
+    }
+
+    const storagePath = generateMultiTenantStoragePath(storeId, "products", `${prefix}-${Date.now()}.webp`);
+    const provider = getStorageProvider();
+    try {
+      const uploadRes = await provider.upload(buffer, storagePath, mimeType);
+      if (reservation.reservationId) {
+        await StorageUsageService.confirmReservation(reservation.reservationId, uploadRes.sizeBytes || actualBytes);
+      }
+      return uploadRes.url;
+    } catch (err: any) {
+      if (reservation.reservationId) {
+        await StorageUsageService.releaseReservation(reservation.reservationId);
+      }
+      console.error("[Storage Upload Error]:", err);
+      throw new Error(`Upload de imagem do combo falhou: ${err?.message || "Erro no storage"}`);
+    }
+  }
+  return trimmed;
+}
+
+function sanitizeSlug(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+/**
+ * Lists all active and inactive combos for the authenticated seller's store.
+ */
+export async function getCombosAction(): Promise<ComboItem[]> {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  const storeCombos = await db.query.combos.findMany({
+    where: and(eq(combos.storeId, store.id), ne(combos.status, "archived")),
+    orderBy: [asc(combos.position), desc(combos.createdAt)],
+    with: {
+      products: {
+        with: {
+          product: true,
+        },
+        orderBy: [asc(comboProducts.position)],
+      },
+    },
+  });
+
+  return storeCombos.map((combo) => {
+    const componentProducts: ComboProductSummary[] = (combo.products || [])
+      .filter((cp) => Boolean(cp.product))
+      .map((cp) => ({
+        id: cp.product.id,
+        title: cp.product.title,
+        price: cp.product.price,
+        coverUrl: cp.product.coverUrl,
+        status: cp.product.status,
+        position: cp.position,
+      }));
+
+    const normalPrice = componentProducts.reduce(
+      (sum, p) => sum + parseFloat(p.price || "0"),
+      0
+    );
+    const promoPrice = parseFloat(combo.price || "0");
+    const savings = Math.max(0, normalPrice - promoPrice);
+    const savingsPercentage = normalPrice > 0 ? Math.round((savings / normalPrice) * 100) : 0;
+
+    return {
+      id: combo.id,
+      storeId: combo.storeId,
+      title: combo.title,
+      slug: combo.slug,
+      description: combo.description,
+      coverUrl: combo.coverUrl,
+      price: combo.price,
+      status: combo.status,
+      position: combo.position,
+      normalPrice,
+      savings,
+      savingsPercentage,
+      products: componentProducts,
+      createdAt: combo.createdAt,
+      updatedAt: combo.updatedAt,
+    };
+  });
+}
+
+/**
+ * Lists all active products of the store to populate the combo product selector.
+ */
+export async function getStoreActiveProductsAction() {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  return await db.query.products.findMany({
+    where: and(eq(products.storeId, store.id), eq(products.status, "active")),
+    orderBy: [desc(products.createdAt)],
+    columns: {
+      id: true,
+      title: true,
+      price: true,
+      coverUrl: true,
+      status: true,
+    },
+  });
+}
+
+/**
+ * Creates a new combo with verified component products and promotional pricing.
+ */
+export async function createComboAction(input: CreateComboInput) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  // 1. Title validation
+  const title = input.title?.trim();
+  if (!title) {
+    throw new Error("O nome do combo é obrigatório.");
+  }
+
+  // 2. Slug generation & uniqueness
+  let cleanSlug = input.slug ? sanitizeSlug(input.slug) : sanitizeSlug(title);
+  if (!cleanSlug) {
+    cleanSlug = `combo-${Date.now().toString().slice(-4)}`;
+  }
+
+  const existingWithSlug = await db.query.combos.findFirst({
+    where: and(eq(combos.storeId, store.id), eq(combos.slug, cleanSlug)),
+  });
+
+  if (existingWithSlug) {
+    if (input.slug && input.slug.trim()) {
+      throw new Error("Já existe um combo com este slug na sua loja.");
+    }
+    cleanSlug = `${cleanSlug}-${Date.now().toString().slice(-4)}`;
+  }
+
+  // 3. Product selection validation (min 2 distinct products)
+  if (!Array.isArray(input.productIds)) {
+    throw new Error("A lista de produtos do combo é obrigatória.");
+  }
+
+  const uniqueProductIds = Array.from(new Set(input.productIds.filter(Boolean)));
+  if (uniqueProductIds.length < 2) {
+    throw new Error("O combo deve conter pelo menos 2 produtos distintos.");
+  }
+
+  // 4. Products multi-tenant verification & status check
+  const dbProducts = await db.query.products.findMany({
+    where: and(inArray(products.id, uniqueProductIds), eq(products.storeId, store.id)),
+  });
+
+  if (dbProducts.length !== uniqueProductIds.length) {
+    throw new Error("Um ou mais produtos selecionados não pertencem a esta loja ou não existem.");
+  }
+
+  const inactiveProduct = dbProducts.find((p) => p.status !== "active");
+  if (inactiveProduct) {
+    throw new Error(`O produto "${inactiveProduct.title}" não está ativo. Apenas produtos ativos podem ser incluídos no combo.`);
+  }
+
+  // 5. Price validation & savings calculation
+  const price = Number(input.price);
+  if (isNaN(price) || price <= 0) {
+    throw new Error("Informe um preço promocional válido e maior que zero.");
+  }
+
+  const normalPrice = dbProducts.reduce((sum, p) => sum + parseFloat(p.price || "0"), 0);
+  if (price >= normalPrice) {
+    throw new Error(
+      `O preço promocional (R$ ${price.toFixed(2)}) deve ser menor que a soma dos produtos individuais (R$ ${normalPrice.toFixed(2)}).`
+    );
+  }
+
+  // 6. Cover image upload processing
+  const coverUrl = await processImageUrl(input.coverUrl || null, store.id, seller.id, "combo-cover");
+
+  // 7. Atomic transaction
+  const newCombo = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(combos)
+      .values({
+        storeId: store.id,
+        title,
+        slug: cleanSlug,
+        description: input.description?.trim() || null,
+        coverUrl,
+        price: price.toFixed(2),
+        status: input.status === "inactive" ? "inactive" : "active",
+        position: input.position || 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    const comboProductsToInsert = uniqueProductIds.map((productId, index) => ({
+      comboId: inserted.id,
+      productId,
+      position: index,
+      createdAt: new Date(),
+    }));
+
+    await tx.insert(comboProducts).values(comboProductsToInsert);
+    return inserted;
+  });
+
+  revalidatePath("/seller/combos");
+  return { success: true, combo: newCombo };
+}
+
+/**
+ * Updates an existing combo.
+ */
+export async function updateComboAction(comboId: string, input: UpdateComboInput) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  // 1. Verify existence and store ownership
+  const existingCombo = await db.query.combos.findFirst({
+    where: and(eq(combos.id, comboId), eq(combos.storeId, store.id)),
+  });
+
+  if (!existingCombo) {
+    throw new Error("Combo não encontrado ou não pertence a esta loja.");
+  }
+
+  // 2. Title validation
+  const title = input.title !== undefined ? input.title.trim() : existingCombo.title;
+  if (!title) {
+    throw new Error("O nome do combo não pode ficar vazio.");
+  }
+
+  // 3. Slug validation if updated
+  let cleanSlug = existingCombo.slug;
+  if (input.slug !== undefined) {
+    cleanSlug = sanitizeSlug(input.slug || title);
+    if (!cleanSlug) cleanSlug = existingCombo.slug;
+
+    const conflict = await db.query.combos.findFirst({
+      where: and(
+        eq(combos.storeId, store.id),
+        eq(combos.slug, cleanSlug),
+        ne(combos.id, comboId)
+      ),
+    });
+    if (conflict) {
+      throw new Error("Já existe outro combo com este slug na sua loja.");
+    }
+  }
+
+  // 4. Products validation if updated
+  let uniqueProductIds: string[] | null = null;
+  let dbProducts = null;
+
+  if (input.productIds !== undefined) {
+    if (!Array.isArray(input.productIds)) {
+      throw new Error("A lista de produtos é obrigatória.");
+    }
+    uniqueProductIds = Array.from(new Set(input.productIds.filter(Boolean)));
+    if (uniqueProductIds.length < 2) {
+      throw new Error("O combo deve conter pelo menos 2 produtos distintos.");
+    }
+
+    dbProducts = await db.query.products.findMany({
+      where: and(inArray(products.id, uniqueProductIds), eq(products.storeId, store.id)),
+    });
+
+    if (dbProducts.length !== uniqueProductIds.length) {
+      throw new Error("Um ou mais produtos selecionados não pertencem a esta loja ou não existem.");
+    }
+
+    const inactiveProduct = dbProducts.find((p) => p.status !== "active");
+    if (inactiveProduct) {
+      throw new Error(`O produto "${inactiveProduct.title}" não está ativo.`);
+    }
+  }
+
+  // 5. Price validation
+  const price = input.price !== undefined ? Number(input.price) : parseFloat(existingCombo.price);
+  if (isNaN(price) || price <= 0) {
+    throw new Error("Informe um preço promocional válido e maior que zero.");
+  }
+
+  // If products weren't changed, fetch current component products to calculate normal price
+  if (!dbProducts) {
+    const currentComboProducts = await db.query.comboProducts.findMany({
+      where: eq(comboProducts.comboId, comboId),
+      with: { product: true },
+    });
+    dbProducts = currentComboProducts.map((cp) => cp.product).filter(Boolean);
+  }
+
+  const normalPrice = dbProducts.reduce((sum, p) => sum + parseFloat(p.price || "0"), 0);
+  if (price >= normalPrice) {
+    throw new Error(
+      `O preço promocional (R$ ${price.toFixed(2)}) deve ser menor que a soma dos produtos (R$ ${normalPrice.toFixed(2)}).`
+    );
+  }
+
+  // 6. Cover image
+  let coverUrl = existingCombo.coverUrl;
+  if (input.coverUrl !== undefined) {
+    coverUrl = await processImageUrl(input.coverUrl, store.id, seller.id, "combo-cover");
+  }
+
+  // 7. Atomic transaction
+  await db.transaction(async (tx) => {
+    await tx
+      .update(combos)
+      .set({
+        title,
+        slug: cleanSlug,
+        description: input.description !== undefined ? input.description?.trim() || null : existingCombo.description,
+        coverUrl,
+        price: price.toFixed(2),
+        status: input.status !== undefined ? input.status : existingCombo.status,
+        position: input.position !== undefined ? input.position : existingCombo.position,
+        updatedAt: new Date(),
+      })
+      .where(eq(combos.id, comboId));
+
+    if (uniqueProductIds) {
+      await tx.delete(comboProducts).where(eq(comboProducts.comboId, comboId));
+
+      const comboProductsToInsert = uniqueProductIds.map((productId, index) => ({
+        comboId,
+        productId,
+        position: index,
+        createdAt: new Date(),
+      }));
+
+      await tx.insert(comboProducts).values(comboProductsToInsert);
+    }
+  });
+
+  revalidatePath("/seller/combos");
+  return { success: true };
+}
+
+/**
+ * Toggles a combo between active and inactive.
+ */
+export async function toggleComboStatusAction(comboId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  const existingCombo = await db.query.combos.findFirst({
+    where: and(eq(combos.id, comboId), eq(combos.storeId, store.id)),
+  });
+
+  if (!existingCombo) {
+    throw new Error("Combo não encontrado ou não pertence a esta loja.");
+  }
+
+  const newStatus = existingCombo.status === "active" ? "inactive" : "active";
+
+  await db
+    .update(combos)
+    .set({
+      status: newStatus,
+      updatedAt: new Date(),
+    })
+    .where(eq(combos.id, comboId));
+
+  revalidatePath("/seller/combos");
+  return { success: true, status: newStatus };
+}
+
+/**
+ * Archives a combo (soft delete).
+ */
+export async function archiveComboAction(comboId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  const existingCombo = await db.query.combos.findFirst({
+    where: and(eq(combos.id, comboId), eq(combos.storeId, store.id)),
+  });
+
+  if (!existingCombo) {
+    throw new Error("Combo não encontrado ou não pertence a esta loja.");
+  }
+
+  await db
+    .update(combos)
+    .set({
+      status: "archived",
+      updatedAt: new Date(),
+    })
+    .where(eq(combos.id, comboId));
+
+  revalidatePath("/seller/combos");
+  return { success: true };
+}
+
+/**
+ * Deletes a combo or archives it if referenced in historical orders.
+ */
+export async function deleteComboAction(comboId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada.");
+  }
+
+  const existingCombo = await db.query.combos.findFirst({
+    where: and(eq(combos.id, comboId), eq(combos.storeId, store.id)),
+  });
+
+  if (!existingCombo) {
+    throw new Error("Combo não encontrado ou não pertence a esta loja.");
+  }
+
+  // Check if combo has any historical orders
+  const referencedOrder = await db.query.orderItems.findFirst({
+    where: eq(orderItems.comboId, comboId),
+  });
+
+  if (referencedOrder) {
+    // Preserve financial history by archiving
+    await db
+      .update(combos)
+      .set({
+        status: "archived",
+        updatedAt: new Date(),
+      })
+      .where(eq(combos.id, comboId));
+
+    revalidatePath("/seller/combos");
+    return {
+      success: true,
+      action: "archived",
+      message: "O combo possui pedidos registrados e foi arquivado para preservar o histórico financeiro.",
+    };
+  }
+
+  // Otherwise, safe to hard delete
+  await db.transaction(async (tx) => {
+    await tx.delete(comboProducts).where(eq(comboProducts.comboId, comboId));
+    await tx.delete(combos).where(eq(combos.id, comboId));
+  });
+
+  revalidatePath("/seller/combos");
+  return { success: true, action: "deleted" };
+}

@@ -157,8 +157,31 @@ export class TelegramBotService {
     throw new Error("Not implemented yet");
   }
 
-  async editMessage(_chatId: string | number, _messageId: number, _text: string): Promise<unknown> {
-    throw new Error("Not implemented yet");
+  async editMessageText(
+    chatId: string | number,
+    messageId: number,
+    text: string,
+    replyMarkup?: any,
+    parseMode?: string
+  ): Promise<unknown> {
+    const payload: any = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      reply_markup: replyMarkup,
+    };
+    if (parseMode) payload.parse_mode = parseMode;
+    return telegramFetch(this.token, 'editMessageText', payload);
+  }
+
+  async editMessage(
+    chatId: string | number,
+    messageId: number,
+    text: string,
+    replyMarkup?: any,
+    parseMode?: string
+  ): Promise<unknown> {
+    return this.editMessageText(chatId, messageId, text, replyMarkup, parseMode);
   }
 
   async answerCallbackQuery(callbackQueryId: string, text?: string, showAlert: boolean = false): Promise<unknown> {

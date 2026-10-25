@@ -10,9 +10,10 @@ import {
   unique, 
   decimal,
   index,
-  uniqueIndex
+  uniqueIndex,
+  check
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // Enum-like options or just text for simplicity (using text to avoid custom ENUM types complexity across environments if not strictly needed)
 
@@ -149,6 +150,36 @@ export const products = pgTable('products', {
   storeCategoryIdx: index('products_store_category_idx').on(t.storeId, t.categoryId)
 }));
 
+export const combos = pgTable('combos', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  coverUrl: text('cover_url'),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  status: text('status').notNull().default('active'), // 'active' | 'inactive' | 'archived'
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeSlugUnique: unique().on(t.storeId, t.slug),
+  storeStatusIdx: index('combos_store_status_idx').on(t.storeId, t.status),
+  storeIdx: index('combos_store_idx').on(t.storeId),
+}));
+
+export const comboProducts = pgTable('combo_products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  comboId: uuid('combo_id').notNull().references(() => combos.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  comboProductUnique: unique('combo_products_combo_product_unique').on(t.comboId, t.productId),
+  comboIdx: index('combo_products_combo_idx').on(t.comboId),
+  productIdx: index('combo_products_product_idx').on(t.productId),
+}));
+
 export const telegramCustomers = pgTable('telegram_customers', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
@@ -204,11 +235,46 @@ export const orders = pgTable('orders', {
 export const orderItems = pgTable('order_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  comboId: uuid('combo_id').references(() => combos.id, { onDelete: 'restrict' }),
+  comboSnapshot: jsonb('combo_snapshot'),
   quantity: integer('quantity').notNull(),
   unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
   total: decimal('total', { precision: 10, scale: 2 }).notNull(),
-});
+}, (t) => ({
+  orderIdx: index('order_items_order_idx').on(t.orderId),
+  productIdx: index('order_items_product_idx').on(t.productId),
+  comboIdx: index('order_items_combo_idx').on(t.comboId),
+  itemTypeCheck: check('order_items_item_type_check', sql`("product_id" IS NOT NULL AND "combo_id" IS NULL) OR ("product_id" IS NULL AND "combo_id" IS NOT NULL)`),
+}));
+
+export const carts = pgTable('carts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeCustomerUnique: uniqueIndex('carts_store_customer_uidx').on(t.storeId, t.customerId),
+  storeCustomerIdx: index('carts_store_customer_idx').on(t.storeId, t.customerId),
+}));
+
+export const cartItems = pgTable('cart_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  cartId: uuid('cart_id').notNull().references(() => carts.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  comboId: uuid('combo_id').references(() => combos.id, { onDelete: 'cascade' }),
+  quantity: integer('quantity').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  cartIdx: index('cart_items_cart_idx').on(t.cartId),
+  productIdx: index('cart_items_product_idx').on(t.productId),
+  comboIdx: index('cart_items_combo_idx').on(t.comboId),
+  cartProductUidx: uniqueIndex('cart_items_cart_product_uidx').on(t.cartId, t.productId).where(sql`"product_id" IS NOT NULL`),
+  cartComboUidx: uniqueIndex('cart_items_cart_combo_uidx').on(t.cartId, t.comboId).where(sql`"combo_id" IS NOT NULL`),
+  itemTypeCheck: check('cart_items_item_type_check', sql`("product_id" IS NOT NULL AND "combo_id" IS NULL) OR ("product_id" IS NULL AND "combo_id" IS NOT NULL)`),
+}));
 
 export const accesses = pgTable('accesses', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -233,7 +299,7 @@ export const accesses = pgTable('accesses', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
-  accessOrderUnique: unique().on(t.storeId, t.customerId, t.productId, t.orderId),
+  accessOrderUnique: uniqueIndex('accesses_store_customer_product_order_uidx').on(t.storeId, t.customerId, t.productId, t.orderId).where(sql`"order_id" IS NOT NULL`),
   storeCustomerStatusIdx: index('accesses_store_customer_status_idx').on(t.storeId, t.customerId, t.status)
 }));
 
@@ -347,6 +413,8 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   videoProgresses: many(videoProgress),
   botStartEvents: many(botStartEvents),
   sessions: many(storeSessions),
+  carts: many(carts),
+  combos: many(combos),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -410,6 +478,8 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   orderItems: many(orderItems),
   accesses: many(accesses),
   productVideos: many(productVideos),
+  cartItems: many(cartItems),
+  comboProducts: many(comboProducts),
 }));
 
 export const telegramCustomersRelations = relations(telegramCustomers, ({ one, many }) => ({
@@ -420,6 +490,7 @@ export const telegramCustomersRelations = relations(telegramCustomers, ({ one, m
   orders: many(orders),
   accesses: many(accesses),
   videoProgresses: many(videoProgress),
+  carts: many(carts),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -446,6 +517,58 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   }),
   product: one(products, {
     fields: [orderItems.productId],
+    references: [products.id],
+  }),
+  combo: one(combos, {
+    fields: [orderItems.comboId],
+    references: [combos.id],
+  }),
+}));
+
+export const cartsRelations = relations(carts, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [carts.storeId],
+    references: [stores.id],
+  }),
+  customer: one(telegramCustomers, {
+    fields: [carts.customerId],
+    references: [telegramCustomers.id],
+  }),
+  items: many(cartItems),
+}));
+
+export const cartItemsRelations = relations(cartItems, ({ one }) => ({
+  cart: one(carts, {
+    fields: [cartItems.cartId],
+    references: [carts.id],
+  }),
+  product: one(products, {
+    fields: [cartItems.productId],
+    references: [products.id],
+  }),
+  combo: one(combos, {
+    fields: [cartItems.comboId],
+    references: [combos.id],
+  }),
+}));
+
+export const combosRelations = relations(combos, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [combos.storeId],
+    references: [stores.id],
+  }),
+  products: many(comboProducts),
+  orderItems: many(orderItems),
+  cartItems: many(cartItems),
+}));
+
+export const comboProductsRelations = relations(comboProducts, ({ one }) => ({
+  combo: one(combos, {
+    fields: [comboProducts.comboId],
+    references: [combos.id],
+  }),
+  product: one(products, {
+    fields: [comboProducts.productId],
     references: [products.id],
   }),
 }));

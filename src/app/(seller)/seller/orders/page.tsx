@@ -160,6 +160,12 @@ export default async function OrdersPage() {
                               <span className="text-[10px] text-zinc-500 font-mono">Chat: {access.telegramChatId}</span>
                             )}
                           </div>
+                        ) : access.deliveryStatus === 'PENDING' || (typeof access.deliveryStatus === 'string' && access.deliveryStatus.startsWith('PROCESSING')) ? (
+                          <div className="flex flex-col">
+                            <span className="inline-flex items-center gap-1 text-amber-400 text-xs font-semibold">
+                              🟡 PROCESSANDO
+                            </span>
+                          </div>
                         ) : (
                           <div className="flex flex-col gap-1 items-start">
                             <span className="inline-flex items-center gap-1 text-red-400 text-xs font-semibold">
@@ -263,6 +269,8 @@ export default async function OrdersPage() {
                       <span className="text-zinc-500">Entrega</span>
                       {access.deliveryStatus === 'DELIVERED' || access.status === 'ACTIVE' ? (
                         <span className="text-emerald-400 font-medium">🟢 Entregue</span>
+                      ) : access.deliveryStatus === 'PENDING' || (typeof access.deliveryStatus === 'string' && access.deliveryStatus.startsWith('PROCESSING')) ? (
+                        <span className="text-amber-400 font-medium">🟡 Processando</span>
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="text-red-400 font-medium">🔴 Falhou</span>

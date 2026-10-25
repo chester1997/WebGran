@@ -7,27 +7,10 @@ import {
   resolveClipStatusTransition,
   DEFAULT_LIBRARY_ID,
   ClipStatus,
+  resolveBunnyVideo,
+  ResolvedBunnyVideoType,
 } from "@/lib/bunny/webhook-utils";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
-
-export type ResolvedBunnyVideoType = "CLIP" | "PRODUCT_VIDEO" | "UNKNOWN";
-
-export async function resolveBunnyVideo(videoGuid: string): Promise<{
-  type: ResolvedBunnyVideoType;
-  entity: any;
-}> {
-  const clip = await ClipService.getClipByBunnyVideoId(videoGuid);
-  if (clip) {
-    return { type: "CLIP", entity: clip };
-  }
-
-  const productVideo = await ProductVideoService.getProductVideoByBunnyId(videoGuid);
-  if (productVideo) {
-    return { type: "PRODUCT_VIDEO", entity: productVideo };
-  }
-
-  return { type: "UNKNOWN", entity: null };
-}
 
 export async function POST(req: Request) {
   try {

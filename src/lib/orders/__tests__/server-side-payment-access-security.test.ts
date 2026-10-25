@@ -82,6 +82,9 @@ vi.mock("@/db", () => ({
     update: vi.fn().mockImplementation(() => ({
       set: vi.fn().mockImplementation((updates: any) => ({
         where: vi.fn().mockImplementation(async () => {
+          for (const key of Object.keys(dbAccesses)) {
+            Object.assign(dbAccesses[key], updates);
+          }
           return [updates];
         }),
       })),

@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
     const { store, token } = resolved;
     const update = await req.json();
 
+    // Prevent duplicate processing of the same update during retries
+    const { isDuplicateTelegramUpdate } = await import("@/lib/telegram/update-dedup");
+    if (update.update_id && isDuplicateTelegramUpdate(update.update_id)) {
+      console.log(`[TELEGRAM WEBHOOK] Skipping duplicate update_id=${update.update_id}`);
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+
     if (update.my_chat_member) {
       try {
         const { handleMyChatMemberUpdate } = await import("@/lib/telegram/chat-sync");
@@ -75,6 +82,31 @@ export async function POST(req: NextRequest) {
             );
           }
         }
+      } else if (cbData.startsWith("cart_") || cbData.startsWith("combo_")) {
+        const fromUser = update.callback_query.from;
+        if (fromUser && fromUser.id) {
+          const botService = new TelegramBotService(token);
+          let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+          if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+          if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
+            rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
+          }
+          const appUrl = rawAppUrl.replace(/\/+$/, "");
+          const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
+
+          const { handleCartCallbackQuery } = await import("@/lib/telegram/bot-cart-handler");
+          const messageId = update.callback_query.message?.message_id;
+
+          await handleCartCallbackQuery(
+            { store, botService, miniAppUrl },
+            cbId,
+            chatId,
+            messageId,
+            cbData,
+            fromUser
+          );
+          return NextResponse.json({ ok: true });
+        }
       } else {
         const botService = new TelegramBotService(token);
         await botService.answerCallbackQuery(cbId);
@@ -93,6 +125,46 @@ export async function POST(req: NextRequest) {
       }
       const appUrl = rawAppUrl.replace(/\/+$/, "");
       const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
+
+      // Check /carrinho command
+      const cleanCmd = text.toLowerCase();
+      if (
+        cleanCmd === "/carrinho" ||
+        cleanCmd.startsWith("/carrinho ") ||
+        cleanCmd === "/cart" ||
+        cleanCmd === "/cesta" ||
+        cleanCmd === "/sacola"
+      ) {
+        const fromUser = update.message.from || { id: chatId };
+        const { handleCartCommand } = await import("@/lib/telegram/bot-cart-handler");
+        await handleCartCommand({ store, botService, miniAppUrl }, chatId, fromUser);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Check /produtos or /catalogo command
+      if (
+        cleanCmd === "/produtos" ||
+        cleanCmd.startsWith("/produtos ") ||
+        cleanCmd === "/catalogo" ||
+        cleanCmd === "/loja" ||
+        cleanCmd === "/shop"
+      ) {
+        const { handleCatalogCommand } = await import("@/lib/telegram/bot-cart-handler");
+        await handleCatalogCommand({ store, botService, miniAppUrl }, chatId);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Check /combos command
+      if (
+        cleanCmd === "/combos" ||
+        cleanCmd.startsWith("/combos ") ||
+        cleanCmd === "/pacotes" ||
+        cleanCmd === "/kits"
+      ) {
+        const { handleCombosCommand } = await import("@/lib/telegram/bot-cart-handler");
+        await handleCombosCommand({ store, botService, miniAppUrl }, chatId);
+        return NextResponse.json({ ok: true });
+      }
       
       const isStartCommand = text.startsWith("/start");
       if (isStartCommand && update.update_id) {
@@ -185,7 +257,17 @@ export async function POST(req: NextRequest) {
                 url: miniAppUrl
               }
             }
-          ]
+          ],
+          [
+            {
+              text: "🛒 Ver Carrinho",
+              callback_data: "cart_view",
+            },
+            {
+              text: "📦 Ver Produtos",
+              callback_data: "cart_cat",
+            },
+          ],
         ]
       };
 

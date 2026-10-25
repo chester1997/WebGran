@@ -18,7 +18,7 @@ vi.mock("@/db/ensure-product-video-tables", () => ({
 
 import { generateBunnyPlaybackToken } from "@/lib/bunny/token";
 import { resolveClipStatusTransition } from "@/lib/bunny/webhook-utils";
-import { resolveBunnyVideo } from "@/app/api/webhooks/bunny-stream/route";
+import { resolveBunnyVideo } from "@/lib/bunny/webhook-utils";
 import { ClipService } from "@/lib/clips/service";
 import { ProductVideoService } from "../product-video-service";
 
