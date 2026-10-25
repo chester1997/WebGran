@@ -364,7 +364,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     expect(rendered).toBeDefined();
   });
 
-  it("12. Valida layout em grade 2x2 (md:grid-cols-2) com os 4 cards na ordem correta e gráfico preservado", () => {
+  it("12. Valida layout desktop original com métricas 40% (2x2) e gráfico 60% lado a lado", () => {
     const metrics: CommercialMetrics = {
       period: "30D",
       storeId: "store-2x2",
@@ -381,20 +381,30 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
 
     // Inspeciona os nós JSX retornados
     const children = React.Children.toArray(rendered.props.children);
-    expect(children.length).toBeGreaterThanOrEqual(3);
+    expect(children.length).toBeGreaterThanOrEqual(2);
 
-    // O segundo filho é a grade 2x2 dos 4 cards comerciais
-    const grid2x2: any = children[1];
-    expect(grid2x2.props.className).toContain("grid-cols-1");
-    expect(grid2x2.props.className).toContain("md:grid-cols-2");
+    // O segundo filho é a grade principal de 5 colunas (40% / 60%)
+    const mainGrid: any = children[1];
+    expect(mainGrid.props.className).toContain("lg:grid-cols-5");
 
-    // A grade contém exatamente os 4 cards de métricas
+    const columns = React.Children.toArray(mainGrid.props.children);
+    expect(columns.length).toBe(2);
+
+    // Coluna esquerda: 40% (lg:col-span-2)
+    const leftCol: any = columns[0];
+    expect(leftCol.props.className).toContain("lg:col-span-2");
+
+    // Dentro da coluna esquerda: grade 2x2 com os 4 cards
+    const grid2x2: any = React.Children.toArray(leftCol.props.children)[0];
+    expect(grid2x2.props.className).toContain("sm:grid-cols-2");
     const cards = React.Children.toArray(grid2x2.props.children);
     expect(cards.length).toBe(4);
 
-    // O terceiro filho é o gráfico de desempenho preservado
-    const performanceChartCard: any = children[2];
-    expect(performanceChartCard.props.className).toContain("w-full");
+    // Coluna direita: 60% (lg:col-span-3) com o gráfico de desempenho
+    const rightCol: any = columns[1];
+    expect(rightCol.props.className).toContain("lg:col-span-3");
+    const chartCard: any = React.Children.toArray(rightCol.props.children)[0];
+    expect(chartCard.props.className).toContain("min-h-[320px]");
   });
 });
 
