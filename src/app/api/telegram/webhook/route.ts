@@ -82,7 +82,14 @@ export async function POST(req: NextRequest) {
             );
           }
         }
-      } else if (cbData.startsWith("cart_") || cbData.startsWith("combo_") || cbData.startsWith("prog_")) {
+      } else if (
+        cbData.startsWith("cart_") ||
+        cbData.startsWith("combo_") ||
+        cbData.startsWith("prog_") ||
+        cbData === "my_accesses" ||
+        cbData === "support_info" ||
+        cbData === "start_menu"
+      ) {
         const fromUser = update.callback_query.from;
         if (fromUser && fromUser.id) {
           const botService = new TelegramBotService(token);
@@ -180,7 +187,33 @@ export async function POST(req: NextRequest) {
         await handleProgressiveOffersCommand({ store, botService, miniAppUrl }, chatId);
         return NextResponse.json({ ok: true });
       }
-      
+
+      // Check /acessos command
+      if (
+        cleanCmd === "/acessos" ||
+        cleanCmd.startsWith("/acessos ") ||
+        cleanCmd === "/meusacessos" ||
+        cleanCmd === "/meus_acessos"
+      ) {
+        const fromUser = update.message.from || { id: chatId };
+        const { handleAccessesCommand } = await import("@/lib/telegram/bot-cart-handler");
+        await handleAccessesCommand({ store, botService, miniAppUrl }, chatId, fromUser);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Check /suporte command
+      if (
+        cleanCmd === "/suporte" ||
+        cleanCmd.startsWith("/suporte ") ||
+        cleanCmd === "/ajuda" ||
+        cleanCmd === "/support" ||
+        cleanCmd === "/help"
+      ) {
+        const { handleSupportCommand } = await import("@/lib/telegram/bot-cart-handler");
+        await handleSupportCommand({ store, botService, miniAppUrl }, chatId, store);
+        return NextResponse.json({ ok: true });
+      }
+
       const isStartCommand = text.startsWith("/start");
       if (isStartCommand && update.update_id) {
         try {
@@ -261,34 +294,8 @@ export async function POST(req: NextRequest) {
         .replace(/\{nome\}/gi, customerFirstName)
         .replace(/\{name\}/gi, customerFirstName);
 
-      const buttonLabel = resolved.bot?.buttonText || "Abrir App";
-
-      const inlineKeyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: buttonLabel,
-              web_app: {
-                url: miniAppUrl
-              }
-            }
-          ],
-          [
-            {
-              text: "🛒 Ver Carrinho",
-              callback_data: "cart_view",
-            },
-            {
-              text: "🔥 Ofertas",
-              callback_data: "prog_view",
-            },
-            {
-              text: "📦 Ver Produtos",
-              callback_data: "cart_cat",
-            },
-          ],
-        ]
-      };
+      const { getInitialBotKeyboard } = await import("@/lib/telegram/bot-cart-handler");
+      const inlineKeyboard = getInitialBotKeyboard(store, miniAppUrl);
 
       const banners = welcomeAllowed ? ((store.welcomeBanners as string[]) || []) : [];
       let primaryBanner = banners.find(b => b && typeof b === "string" && b.trim() !== "");

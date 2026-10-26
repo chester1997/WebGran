@@ -2,15 +2,19 @@ import { TelegramBotService } from "./bot";
 import { CartService, CartDTO } from "@/lib/cart/cart-service";
 import { ComboService, ActiveComboDTO, ActiveProgressivePromotionDTO } from "@/lib/combos/combo-service";
 import { db } from "@/db";
-import { products } from "@/db/schema";
+import { products, telegramCustomers } from "@/db/schema";
 import { and, eq, desc, inArray } from "drizzle-orm";
 import { isDuplicateTelegramCallback } from "./update-dedup";
+import { parseSupportConfig } from "@/lib/support/support-helper";
+import { AccessService } from "@/lib/orders/access-service";
 
 interface BotCartContext {
   store: {
     id: string;
     name: string;
     slug: string;
+    supportType?: string | null;
+    supportValue?: string | null;
   };
   botService: TelegramBotService;
   miniAppUrl: string;
@@ -613,6 +617,214 @@ export async function handleProgressiveOffersCommand(
 }
 
 /**
+ * Generates the standardized 4-row initial inline keyboard for the bot welcome menu.
+ */
+export function getInitialBotKeyboard(
+  store: { supportType?: string | null; supportValue?: string | null },
+  miniAppUrl: string
+) {
+  const supportConfig = parseSupportConfig(store.supportType, store.supportValue);
+  const supportButton = supportConfig.isValid && supportConfig.url
+    ? { text: "💬 Suporte", url: supportConfig.url }
+    : { text: "💬 Suporte", callback_data: "support_info" };
+
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "🛍️ ABRIR LOJA",
+          web_app: { url: miniAppUrl },
+        },
+      ],
+      [
+        {
+          text: "🛒 Carrinho",
+          callback_data: "cart_view",
+        },
+        {
+          text: "📺 Meus Acessos",
+          callback_data: "my_accesses",
+        },
+      ],
+      [
+        {
+          text: "📚 Catálogo",
+          callback_data: "cart_cat",
+        },
+      ],
+      [
+        supportButton,
+      ],
+    ],
+  };
+}
+
+/**
+ * Formats the customer's unlocked accesses into a friendly Telegram Markdown message.
+ */
+export async function formatAccessesMessage(
+  store: { id: string; name: string; slug: string },
+  telegramUserId: number | string,
+  miniAppUrl: string
+): Promise<{ text: string; replyMarkup: any }> {
+  const customer = await db.query.telegramCustomers.findFirst({
+    where: and(
+      eq(telegramCustomers.storeId, store.id),
+      eq(telegramCustomers.telegramUserId, String(telegramUserId))
+    ),
+  });
+
+  const accessesList = customer
+    ? await AccessService.getCustomerAccesses(store.id, customer.id)
+    : [];
+
+  if (accessesList.length === 0) {
+    const text =
+      `📺 *Meus Acessos — ${store.name}*\n\n` +
+      `Você ainda não possui conteúdos liberados nesta loja.\n\n` +
+      `💡 *Como funciona?*\n` +
+      `Assim que seu pagamento for confirmado via PIX ou cartão, seus links de acesso aos canais ou grupos VIP serão liberados aqui automaticamente!`;
+
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          {
+            text: "🛍️ ABRIR LOJA",
+            web_app: { url: miniAppUrl },
+          },
+        ],
+        [
+          {
+            text: "🛒 Carrinho",
+            callback_data: "cart_view",
+          },
+          {
+            text: "📚 Catálogo",
+            callback_data: "cart_cat",
+          },
+        ],
+      ],
+    };
+
+    return { text, replyMarkup };
+  }
+
+  let text =
+    `📺 *Meus Acessos — ${store.name}*\n\n` +
+    `Você possui *${accessesList.length}* ${accessesList.length === 1 ? "produto liberado" : "produtos liberados"} nesta loja:\n\n`;
+
+  const inlineKeyboardRows: any[][] = [];
+
+  for (const acc of accessesList) {
+    const prodTitle = acc.product?.title || "Produto";
+    text += `• *${prodTitle}*\n`;
+    if (acc.inviteLink) {
+      inlineKeyboardRows.push([
+        {
+          text: `▶️ Acessar: ${prodTitle.length > 25 ? prodTitle.slice(0, 22) + "..." : prodTitle}`,
+          url: acc.inviteLink,
+        },
+      ]);
+    }
+  }
+
+  text += `\n_Toque no botão acima para acessar seu canal/conteúdo ou gerencie pelo Mini App._`;
+
+  inlineKeyboardRows.push([
+    {
+      text: "📺 Ver Meus Acessos no Mini App",
+      web_app: { url: `${miniAppUrl}/accesses` },
+    },
+  ]);
+
+  inlineKeyboardRows.push([
+    {
+      text: "🛍️ ABRIR LOJA",
+      web_app: { url: miniAppUrl },
+    },
+    {
+      text: "🛒 Carrinho",
+      callback_data: "cart_view",
+    },
+  ]);
+
+  return { text, replyMarkup: { inline_keyboard: inlineKeyboardRows } };
+}
+
+/**
+ * Handles the /acessos command.
+ */
+export async function handleAccessesCommand(
+  ctx: BotCartContext,
+  chatId: number | string,
+  telegramUser: { id: number | string }
+) {
+  try {
+    const { text, replyMarkup } = await formatAccessesMessage(ctx.store, telegramUser.id, ctx.miniAppUrl);
+    await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+  } catch (error: any) {
+    console.error("[BOT CART] Error handling /acessos command:", error);
+    await ctx.botService.sendMessage(
+      chatId,
+      "⚠️ Ocorreu um erro ao consultar seus acessos. Tente novamente em instantes."
+    );
+  }
+}
+
+/**
+ * Handles the /suporte command.
+ */
+export async function handleSupportCommand(
+  ctx: BotCartContext,
+  chatId: number | string,
+  store: { name: string; supportType?: string | null; supportValue?: string | null }
+) {
+  try {
+    const supportConfig = parseSupportConfig(store.supportType, store.supportValue);
+
+    if (supportConfig.isValid && supportConfig.url) {
+      const text =
+        `💬 *Atendimento e Suporte — ${store.name}*\n\n` +
+        `Para dúvidas, suporte ou atendimento sobre suas compras, clique no botão abaixo para falar diretamente com nossa equipe:`;
+
+      const replyMarkup = {
+        inline_keyboard: [
+          [
+            { text: "💬 Falar com Suporte", url: supportConfig.url },
+          ],
+          [
+            { text: "🛍️ ABRIR LOJA", web_app: { url: ctx.miniAppUrl } },
+          ],
+        ],
+      };
+
+      await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+    } else {
+      const text =
+        `💬 *Atendimento e Suporte — ${store.name}*\n\n` +
+        `Nossa equipe de atendimento está à disposição através do nosso Mini App.\n\n` +
+        `Clique no botão abaixo para abrir a loja e ver mais informações de contato:`;
+
+      const replyMarkup = {
+        inline_keyboard: [
+          [
+            { text: "🛍️ ABRIR LOJA", web_app: { url: ctx.miniAppUrl } },
+          ],
+        ],
+      };
+
+      await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+    }
+  } catch (error: any) {
+    console.error("[BOT CART] Error handling /suporte command:", error);
+    await ctx.botService.sendMessage(
+      chatId,
+      "⚠️ Ocorreu um erro ao carregar as informações de suporte. Tente novamente em instantes."
+    );
+  }
+}
+
+/**
  * Handles interactive callback queries for cart, combo and progressive offer operations.
  */
 export async function handleCartCallbackQuery(
@@ -628,7 +840,14 @@ export async function handleCartCallbackQuery(
     username?: string | null;
   }
 ) {
-  if (!cbData.startsWith("cart_") && !cbData.startsWith("combo_") && !cbData.startsWith("prog_")) {
+  if (
+    !cbData.startsWith("cart_") &&
+    !cbData.startsWith("combo_") &&
+    !cbData.startsWith("prog_") &&
+    cbData !== "my_accesses" &&
+    cbData !== "support_info" &&
+    cbData !== "start_menu"
+  ) {
     return false;
   }
 
@@ -693,6 +912,38 @@ export async function handleCartCallbackQuery(
       await ctx.botService.answerCallbackQuery(cbId);
       if (chatId && messageId) {
         await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      }
+      return true;
+    }
+
+    // 3.1 View unlocked customer accesses
+    if (cbData === "my_accesses") {
+      const { text, replyMarkup } = await formatAccessesMessage(ctx.store, telegramUser.id, ctx.miniAppUrl);
+      await ctx.botService.answerCallbackQuery(cbId);
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      } else if (chatId) {
+        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+      }
+      return true;
+    }
+
+    // 3.2 View support information
+    if (cbData === "support_info") {
+      await ctx.botService.answerCallbackQuery(cbId);
+      await handleSupportCommand(ctx, chatId || telegramUser.id, ctx.store);
+      return true;
+    }
+
+    // 3.3 Return to initial start menu
+    if (cbData === "start_menu") {
+      const replyMarkup = getInitialBotKeyboard(ctx.store, ctx.miniAppUrl);
+      const text = `🛍️ *Menu Inicial — ${ctx.store.name}*\n\nSelecione uma opção abaixo para navegar:`;
+      await ctx.botService.answerCallbackQuery(cbId);
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      } else if (chatId) {
+        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
       }
       return true;
     }
