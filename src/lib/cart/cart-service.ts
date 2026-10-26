@@ -1,6 +1,8 @@
 import { db } from "@/db";
 import { carts, cartItems, products, combos, telegramCustomers } from "@/db/schema";
 import { eq, and, or, inArray } from "drizzle-orm";
+import { ComboService } from "@/lib/combos/combo-service";
+import type { AppliedTierSummary, NextTierProgress } from "@/lib/combos/pricing-engine";
 
 export interface CartItemDTO {
   id: string; // Product or Combo UUID
@@ -21,6 +23,16 @@ export interface CartDTO {
   customerId: string;
   items: CartItemDTO[];
   subtotal: number;
+  progressiveDiscount?: number;
+  progressivePromotion?: {
+    id: string;
+    title: string;
+    slug: string;
+    savings: number;
+    savingsPercentage: number;
+    appliedTiers: AppliedTierSummary[];
+    nextTierProgress: NextTierProgress | null;
+  } | null;
   total: number;
   itemCount: number;
 }
@@ -169,13 +181,49 @@ export class CartService {
     const subtotal = validItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
     const itemCount = validItems.reduce((acc, curr) => acc + curr.quantity, 0);
 
+    // Avalia promoção progressiva ativa da loja para os produtos elegíveis do carrinho
+    let progressiveDiscount = 0;
+    let progressivePromotion: CartDTO["progressivePromotion"] = null;
+
+    try {
+      const progressiveEval = await ComboService.calculateProgressivePricingForCart(
+        storeId,
+        validItems.map((vi) => ({
+          productId: vi.productId || null,
+          quantity: vi.quantity,
+          price: vi.price,
+          title: vi.title,
+        }))
+      );
+
+      if (progressiveEval.hasPromotion && progressiveEval.promotion && progressiveEval.pricingResult) {
+        progressiveDiscount = progressiveEval.discountAmount;
+        progressivePromotion = {
+          id: progressiveEval.promotion.id,
+          title: progressiveEval.promotion.title,
+          slug: progressiveEval.promotion.slug,
+          savings: progressiveEval.discountAmount,
+          savingsPercentage: progressiveEval.pricingResult.savingsPercentage,
+          appliedTiers: progressiveEval.pricingResult.appliedTiers,
+          nextTierProgress: progressiveEval.pricingResult.nextTierProgress,
+        };
+      }
+    } catch (err) {
+      console.warn("[CartService] Falha não-bloqueante ao calcular oferta progressiva:", err);
+    }
+
+    const finalSubtotal = Math.round(subtotal * 100) / 100;
+    const finalTotal = Math.max(0, Math.round((subtotal - progressiveDiscount) * 100) / 100);
+
     return {
       id: cartRecord.id,
       storeId,
       customerId,
       items: validItems,
-      subtotal: Math.round(subtotal * 100) / 100,
-      total: Math.round(subtotal * 100) / 100,
+      subtotal: finalSubtotal,
+      progressiveDiscount,
+      progressivePromotion,
+      total: finalTotal,
       itemCount,
     };
   }

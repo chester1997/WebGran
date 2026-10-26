@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
             );
           }
         }
-      } else if (cbData.startsWith("cart_") || cbData.startsWith("combo_")) {
+      } else if (cbData.startsWith("cart_") || cbData.startsWith("combo_") || cbData.startsWith("prog_")) {
         const fromUser = update.callback_query.from;
         if (fromUser && fromUser.id) {
           const botService = new TelegramBotService(token);
@@ -163,6 +163,21 @@ export async function POST(req: NextRequest) {
       ) {
         const { handleCombosCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleCombosCommand({ store, botService, miniAppUrl }, chatId);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Check /ofertas or /promocao command
+      if (
+        cleanCmd === "/ofertas" ||
+        cleanCmd.startsWith("/ofertas ") ||
+        cleanCmd === "/promocao" ||
+        cleanCmd.startsWith("/promocao ") ||
+        cleanCmd === "/promocoes" ||
+        cleanCmd === "/progressiva" ||
+        cleanCmd === "/desconto"
+      ) {
+        const { handleProgressiveOffersCommand } = await import("@/lib/telegram/bot-cart-handler");
+        await handleProgressiveOffersCommand({ store, botService, miniAppUrl }, chatId);
         return NextResponse.json({ ok: true });
       }
       
@@ -262,6 +277,10 @@ export async function POST(req: NextRequest) {
             {
               text: "🛒 Ver Carrinho",
               callback_data: "cart_view",
+            },
+            {
+              text: "🔥 Ofertas",
+              callback_data: "prog_view",
             },
             {
               text: "📦 Ver Produtos",

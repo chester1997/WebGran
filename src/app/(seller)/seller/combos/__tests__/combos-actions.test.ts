@@ -151,7 +151,7 @@ describe("Seller Combos Actions Suite (Phase 4 — Etapa 3)", () => {
           productIds: ["prod-1"],
           price: 30.00,
         })
-      ).rejects.toThrow("O combo deve conter pelo menos 2 produtos distintos.");
+      ).rejects.toThrow("O combo tradicional deve conter pelo menos 2 produtos distintos.");
     });
 
     it("should reject combo creation with duplicate product IDs resulting in fewer than 2 distinct products", async () => {
@@ -161,7 +161,7 @@ describe("Seller Combos Actions Suite (Phase 4 — Etapa 3)", () => {
           productIds: ["prod-1", "prod-1"],
           price: 30.00,
         })
-      ).rejects.toThrow("O combo deve conter pelo menos 2 produtos distintos.");
+      ).rejects.toThrow("O combo tradicional deve conter pelo menos 2 produtos distintos.");
     });
 
     it("should reject combo if any product belongs to another store or doesn't exist", async () => {
@@ -215,7 +215,7 @@ describe("Seller Combos Actions Suite (Phase 4 — Etapa 3)", () => {
           productIds: ["prod-1", "prod-2"],
           price: 50.00,
         })
-      ).rejects.toThrow("Já existe um combo com este slug na sua loja.");
+      ).rejects.toThrow("Já existe uma promoção com este slug na sua loja.");
     });
   });
 
@@ -299,7 +299,7 @@ describe("Seller Combos Actions Suite (Phase 4 — Etapa 3)", () => {
         updateComboAction("combo-other-store", {
           title: "Tentativa Maliciosa",
         })
-      ).rejects.toThrow("Combo não encontrado ou não pertence a esta loja.");
+      ).rejects.toThrow("Promoção não encontrada ou não pertence a esta loja.");
     });
   });
 

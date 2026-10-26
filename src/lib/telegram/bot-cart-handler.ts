@@ -1,9 +1,10 @@
 import { TelegramBotService } from "./bot";
 import { CartService, CartDTO } from "@/lib/cart/cart-service";
-import { ComboService, ActiveComboDTO } from "@/lib/combos/combo-service";
+import { ComboService, ActiveComboDTO, ActiveProgressivePromotionDTO } from "@/lib/combos/combo-service";
 import { db } from "@/db";
 import { products } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, inArray } from "drizzle-orm";
+import { isDuplicateTelegramCallback } from "./update-dedup";
 
 interface BotCartContext {
   store: {
@@ -28,7 +29,7 @@ export function formatCartMessage(
     const emptyText =
       `🛒 *Seu Carrinho está vazio!*\n\n` +
       `Você ainda não adicionou nenhum produto ao carrinho desta loja.\n\n` +
-      `Explore nosso catálogo no Mini App ou veja os destaques aqui pelo chat!`;
+      `Explore nosso catálogo no Mini App ou aproveite nossas ofertas com desconto progressivo!`;
 
     const emptyKeyboard = {
       inline_keyboard: [
@@ -40,9 +41,15 @@ export function formatCartMessage(
         ],
         [
           {
+            text: "🔥 Ofertas Progressivas",
+            callback_data: "prog_view",
+          },
+          {
             text: "🎁 Ver Combos com Desconto",
             callback_data: "combo_list",
           },
+        ],
+        [
           {
             text: "📦 Ver Produtos",
             callback_data: "cart_cat",
@@ -72,8 +79,37 @@ export function formatCartMessage(
 
   text += `\n━━━━━━━━━━━━━━━━━━━━\n`;
   text += `💰 *Subtotal:* R$ ${cart.subtotal.toFixed(2).replace(".", ",")}\n`;
-  text += `📦 *Total de Itens:* ${cart.itemCount}\n\n`;
-  text += `_Dica: Você pode alterar quantidades ou finalizar sua compra pelo Mini App a qualquer momento._`;
+
+  if (cart.progressiveDiscount && cart.progressiveDiscount > 0) {
+    const discountFormatted = `R$ ${cart.progressiveDiscount.toFixed(2).replace(".", ",")}`;
+    const pct = cart.progressivePromotion?.savingsPercentage || 0;
+    const pctText = pct > 0 ? ` (${pct}% OFF)` : "";
+    text += `🎉 *Desconto Progressivo:* -${discountFormatted}${pctText}\n`;
+    text += `💵 *Total:* *R$ ${cart.total.toFixed(2).replace(".", ",")}*\n`;
+    text += `✨ *Você economizou:* ${discountFormatted}!\n`;
+
+    if (cart.progressivePromotion?.appliedTiers && cart.progressivePromotion.appliedTiers.length > 0) {
+      const tiersSummary = cart.progressivePromotion.appliedTiers
+        .map((t) => `${t.count}x (${t.minQuantity} un por R$ ${(t.priceCents / 100).toFixed(2).replace(".", ",")})`)
+        .join(", ");
+      text += `🏷️ *Faixa aplicada:* ${tiersSummary}\n`;
+    }
+  } else {
+    text += `💵 *Total:* *R$ ${cart.total.toFixed(2).replace(".", ",")}*\n`;
+  }
+
+  text += `📦 *Total de Itens:* ${cart.itemCount}\n`;
+
+  // Display next tier progress message if available
+  const nextTier = cart.progressivePromotion?.nextTierProgress;
+  if (nextTier && nextTier.unitsRemaining > 0) {
+    const targetPriceFormatted = `R$ ${(nextTier.targetTierPriceCents / 100).toFixed(2).replace(".", ",")}`;
+    const verb = nextTier.unitsRemaining === 1 ? "Falta" : "Faltam";
+    const unitsWord = nextTier.unitsRemaining === 1 ? "produto" : "produtos";
+    text += `\n🚀 *Oferta:* ${verb} *${nextTier.unitsRemaining} ${unitsWord}* para desbloquear *${nextTier.targetQuantity} por ${targetPriceFormatted}*!\n`;
+  }
+
+  text += `\n_Dica: Você pode alterar quantidades ou finalizar sua compra pelo Mini App a qualquer momento._`;
 
   const inlineKeyboardRows: any[][] = [];
 
@@ -110,9 +146,16 @@ export function formatCartMessage(
 
   inlineKeyboardRows.push([
     {
+      text: "🔥 Ver Ofertas",
+      callback_data: "prog_view",
+    },
+    {
       text: "🎁 Ver Combos",
       callback_data: "combo_list",
     },
+  ]);
+
+  inlineKeyboardRows.push([
     {
       text: "📦 Mais Produtos",
       callback_data: "cart_cat",
@@ -179,6 +222,10 @@ export async function formatCatalogMessage(
 
   inlineKeyboardRows.push([
     {
+      text: "🔥 Ver Ofertas Progressivas",
+      callback_data: "prog_view",
+    },
+    {
       text: "🎁 Ver Combos Promocionais",
       callback_data: "combo_list",
     },
@@ -225,6 +272,12 @@ export async function formatCombosMessage(
               web_app: { url: miniAppUrl },
             },
           ],
+          [
+            {
+              text: "🔥 Ver Ofertas Progressivas",
+              callback_data: "prog_view",
+            },
+          ],
         ],
       },
     };
@@ -256,6 +309,13 @@ export async function formatCombosMessage(
 
   inlineKeyboardRows.push([
     {
+      text: "🔥 Ver Ofertas Progressivas",
+      callback_data: "prog_view",
+    },
+  ]);
+
+  inlineKeyboardRows.push([
+    {
       text: "🛒 Ver Carrinho",
       callback_data: "cart_view",
     },
@@ -266,6 +326,196 @@ export async function formatCombosMessage(
   ]);
 
   inlineKeyboardRows.push([
+    {
+      text: "🛍️ Abrir Loja no Mini App",
+      web_app: { url: miniAppUrl },
+    },
+  ]);
+
+  return {
+    text,
+    replyMarkup: { inline_keyboard: inlineKeyboardRows },
+  };
+}
+
+/**
+ * Formats the active progressive offer details and tier table for Telegram chat.
+ */
+export async function formatProgressiveOfferMessage(
+  storeId: string,
+  miniAppUrl: string
+): Promise<{ text: string; replyMarkup: any }> {
+  const promotion = await ComboService.getActiveProgressivePromotion(storeId);
+
+  if (!promotion || !promotion.tiers || promotion.tiers.length === 0) {
+    return {
+      text: `🔥 *Ofertas Progressivas*\n\nNenhuma oferta progressiva por quantidade está ativa no momento nesta loja.\n\nConfira nosso catálogo de produtos ou combos promocionais!`,
+      replyMarkup: {
+        inline_keyboard: [
+          [
+            {
+              text: "📦 Ver Produtos",
+              callback_data: "cart_cat",
+            },
+            {
+              text: "🎁 Ver Combos",
+              callback_data: "combo_list",
+            },
+          ],
+          [
+            {
+              text: "🛍️ Abrir Loja no Mini App",
+              web_app: { url: miniAppUrl },
+            },
+          ],
+        ],
+      },
+    };
+  }
+
+  const sortedTiers = [...promotion.tiers].sort((a, b) => a.minQuantity - b.minQuantity);
+
+  let text = `🔥 *${promotion.title}*\n`;
+  if (promotion.description) {
+    text += `_${promotion.description}_\n`;
+  }
+  text += `\nCompre mais e pague menos! Adicione produtos elegíveis ao seu carrinho e ganhe descontos automáticos por quantidade.\n\n`;
+  text += `📊 *Tabela de Faixas & Preços:*\n`;
+
+  for (const tier of sortedTiers) {
+    const totalPriceFormatted = `R$ ${(tier.priceCents / 100).toFixed(2).replace(".", ",")}`;
+    const unitPriceFormatted = `R$ ${(tier.priceCents / 100 / tier.minQuantity).toFixed(2).replace(".", ",")}`;
+    text += `• *${tier.minQuantity} itens* por *${totalPriceFormatted}* (${unitPriceFormatted}/un)\n`;
+  }
+
+  text += `\n🏷️ *Regra:* `;
+  if (promotion.eligibilityMode === "specific_products") {
+    text += `Válido para produtos selecionados da loja.\n`;
+  } else {
+    text += `Válido para *todos* os produtos da loja!\n`;
+  }
+  text += `\n_Os descontos são calculados automaticamente no carrinho e você pode misturar produtos elegíveis!_`;
+
+  const inlineKeyboard = [
+    [
+      {
+        text: "🛍️ Ver Produtos Elegíveis",
+        callback_data: "prog_prods",
+      },
+    ],
+    [
+      {
+        text: "🛒 Ver Carrinho",
+        callback_data: "cart_view",
+      },
+      {
+        text: "📦 Ver Catálogo",
+        callback_data: "cart_cat",
+      },
+    ],
+    [
+      {
+        text: "🛍️ Abrir Loja no Mini App",
+        web_app: { url: miniAppUrl },
+      },
+    ],
+  ];
+
+  return {
+    text,
+    replyMarkup: { inline_keyboard: inlineKeyboard },
+  };
+}
+
+/**
+ * Formats the list of products eligible for the active progressive offer.
+ */
+export async function formatProgressiveProductsMessage(
+  storeId: string,
+  miniAppUrl: string
+): Promise<{ text: string; replyMarkup: any }> {
+  const promotion = await ComboService.getActiveProgressivePromotion(storeId);
+
+  if (!promotion) {
+    return formatCatalogMessage(storeId, miniAppUrl);
+  }
+
+  let eligibleProducts: any[] = [];
+
+  if (promotion.eligibilityMode === "specific_products") {
+    if (promotion.eligibleProductIds && promotion.eligibleProductIds.length > 0) {
+      eligibleProducts = await db.query.products.findMany({
+        where: and(
+          eq(products.storeId, storeId),
+          inArray(products.id, promotion.eligibleProductIds),
+          eq(products.status, "active")
+        ),
+        limit: 10,
+        orderBy: [desc(products.createdAt)],
+      });
+    }
+  } else {
+    eligibleProducts = await db.query.products.findMany({
+      where: and(eq(products.storeId, storeId), eq(products.status, "active")),
+      limit: 10,
+      orderBy: [desc(products.createdAt)],
+    });
+  }
+
+  if (!eligibleProducts || eligibleProducts.length === 0) {
+    return {
+      text: `🛍️ *Produtos Elegíveis*\n\nNenhum produto elegível encontrado no momento.\nExplore outros produtos no nosso catálogo!`,
+      replyMarkup: {
+        inline_keyboard: [
+          [
+            {
+              text: "📊 Ver Regras da Oferta",
+              callback_data: "prog_view",
+            },
+            {
+              text: "📦 Ver Catálogo",
+              callback_data: "cart_cat",
+            },
+          ],
+          [
+            {
+              text: "🛍️ Abrir Loja",
+              web_app: { url: miniAppUrl },
+            },
+          ],
+        ],
+      },
+    };
+  }
+
+  let text = `🛍️ *Produtos Elegíveis — ${promotion.title}*\n\n`;
+  text += `Escolha os produtos abaixo para montar seu pacote com desconto progressivo:\n`;
+
+  const inlineKeyboardRows: any[][] = [];
+
+  for (const prod of eligibleProducts) {
+    const priceVal = Number(prod.price) || 0;
+    const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
+    inlineKeyboardRows.push([
+      {
+        text: `➕ ${prod.title} — ${priceFormatted}`,
+        callback_data: `cart_add:${prod.id}`,
+      },
+    ]);
+  }
+
+  inlineKeyboardRows.push([
+    {
+      text: "📊 Ver Tabela de Faixas",
+      callback_data: "prog_view",
+    },
+  ]);
+
+  inlineKeyboardRows.push([
+    {
+      text: "🛒 Ver Carrinho",
+      callback_data: "cart_view",
+    },
     {
       text: "🛍️ Abrir Loja no Mini App",
       web_app: { url: miniAppUrl },
@@ -344,7 +594,26 @@ export async function handleCombosCommand(
 }
 
 /**
- * Handles interactive callback queries for cart and combo operations.
+ * Handles the /ofertas or /promocao command.
+ */
+export async function handleProgressiveOffersCommand(
+  ctx: BotCartContext,
+  chatId: number | string
+) {
+  try {
+    const { text, replyMarkup } = await formatProgressiveOfferMessage(ctx.store.id, ctx.miniAppUrl);
+    await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+  } catch (error: any) {
+    console.error("[BOT CART] Error handling /ofertas command:", error);
+    await ctx.botService.sendMessage(
+      chatId,
+      "⚠️ Ocorreu um erro ao consultar as ofertas. Tente novamente em instantes."
+    );
+  }
+}
+
+/**
+ * Handles interactive callback queries for cart, combo and progressive offer operations.
  */
 export async function handleCartCallbackQuery(
   ctx: BotCartContext,
@@ -359,8 +628,15 @@ export async function handleCartCallbackQuery(
     username?: string | null;
   }
 ) {
-  if (!cbData.startsWith("cart_") && !cbData.startsWith("combo_")) {
+  if (!cbData.startsWith("cart_") && !cbData.startsWith("combo_") && !cbData.startsWith("prog_")) {
     return false;
+  }
+
+  // Deduplicate repeated callback clicks to prevent duplicate actions
+  if (isDuplicateTelegramCallback(cbId)) {
+    console.log(`[BOT CART] Skipping duplicate callback_query_id=${cbId}`);
+    await ctx.botService.answerCallbackQuery(cbId);
+    return true;
   }
 
   // No-op click on item label
@@ -390,6 +666,26 @@ export async function handleCartCallbackQuery(
       return true;
     }
 
+    // 2.1 Show progressive offers view
+    if (cbData === "prog_view") {
+      const { text, replyMarkup } = await formatProgressiveOfferMessage(ctx.store.id, ctx.miniAppUrl);
+      await ctx.botService.answerCallbackQuery(cbId);
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      }
+      return true;
+    }
+
+    // 2.2 Show progressive eligible products
+    if (cbData === "prog_prods") {
+      const { text, replyMarkup } = await formatProgressiveProductsMessage(ctx.store.id, ctx.miniAppUrl);
+      await ctx.botService.answerCallbackQuery(cbId);
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      }
+      return true;
+    }
+
     // 3. View current cart
     if (cbData === "cart_view") {
       const cart = await CartService.getCartByTelegramUser(ctx.store.id, telegramUser.id);
@@ -412,9 +708,9 @@ export async function handleCartCallbackQuery(
       return true;
     }
 
-    // 5. Add product
-    if (cbData.startsWith("cart_add:")) {
-      const productId = cbData.replace("cart_add:", "").trim();
+    // 5. Add product (supports cart_add: and prog_add:)
+    if (cbData.startsWith("cart_add:") || cbData.startsWith("prog_add:")) {
+      const productId = cbData.replace(/^(cart_add:|prog_add:)/, "").trim();
       if (!productId) {
         await ctx.botService.answerCallbackQuery(cbId, "⚠️ Produto inválido.", true);
         return true;
@@ -427,7 +723,17 @@ export async function handleCartCallbackQuery(
         1
       );
       const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
-      await ctx.botService.answerCallbackQuery(cbId, "✅ Produto adicionado ao carrinho!");
+
+      let toast = "✅ Produto adicionado ao carrinho!";
+      if (cart.progressiveDiscount && cart.progressiveDiscount > 0) {
+        toast = `🎉 Desconto ativado! Economia de R$ ${cart.progressiveDiscount.toFixed(2).replace(".", ",")}`;
+      } else if (cart.progressivePromotion?.nextTierProgress?.unitsRemaining) {
+        const remaining = cart.progressivePromotion.nextTierProgress.unitsRemaining;
+        const targetQty = cart.progressivePromotion.nextTierProgress.targetQuantity;
+        toast = `✅ Adicionado! Falta(m) ${remaining} para ${targetQty} com desconto!`;
+      }
+
+      await ctx.botService.answerCallbackQuery(cbId, toast);
       if (chatId && messageId) {
         await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
       }
@@ -466,7 +772,12 @@ export async function handleCartCallbackQuery(
         1
       );
       const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
-      await ctx.botService.answerCallbackQuery(cbId, "➕ Quantidade aumentada!");
+
+      let toast = "➕ Quantidade aumentada!";
+      if (cart.progressiveDiscount && cart.progressiveDiscount > 0) {
+        toast = `🎉 Desconto ativo! Economia de R$ ${cart.progressiveDiscount.toFixed(2).replace(".", ",")}`;
+      }
+      await ctx.botService.answerCallbackQuery(cbId, toast);
       if (chatId && messageId) {
         await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
       }

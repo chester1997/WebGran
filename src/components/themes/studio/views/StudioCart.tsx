@@ -14,7 +14,10 @@ import {
   Tag,
   ChevronRight,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  TrendingUp,
+  Percent
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,9 +27,18 @@ import { useRouter } from "next/navigation";
 import { PixPaymentModal } from "@/components/payments/PixPaymentModal";
 
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
-  const { items, updateQuantity, removeFromCart, subtotal, total, clearCart } = useCart();
+  const {
+    items,
+    updateQuantity,
+    removeFromCart,
+    subtotal,
+    progressiveDiscount,
+    progressivePromotion,
+    total,
+    clearCart
+  } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   // Coupon States
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -53,8 +65,10 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
 
-  const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
-  const displayTotal = Math.max(0, subtotal - discount);
+  // Price calculations
+  const progDiscount = Number(progressiveDiscount) || 0;
+  const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const displayTotal = Math.max(0, subtotal - progDiscount - couponDiscount);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -62,13 +76,14 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     setCouponError(null);
 
     try {
+      const baseForCoupon = Math.max(0, subtotal - progDiscount);
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storeSlug,
           code: couponCode,
-          cartTotal: subtotal,
+          cartTotal: baseForCoupon,
         }),
       });
 
@@ -169,13 +184,6 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     return () => clearInterval(interval);
   }, [pixState?.orderId, isPaid, storeSlug]);
 
-  const handleCopyPix = () => {
-    if (!pixState?.qrCode) return;
-    navigator.clipboard.writeText(pixState.qrCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
   /* ── Paid state ── */
   if (isPaid) {
     const isVideo = paidDeliveryType === "product_video";
@@ -220,8 +228,6 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     );
   }
 
-
-
   /* ── Empty state ── */
   if (items.length === 0) {
     return (
@@ -244,8 +250,95 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   }
 
   /* ── Main cart ── */
+  const nextTier = progressivePromotion?.nextTierProgress;
+  const appliedTiers = progressivePromotion?.appliedTiers || [];
+
   return (
     <div className="p-4 pt-4 text-zinc-900 dark:text-white w-full">
+
+      {/* BANNER DINÂMICO DE OFERTA PROGRESSIVA / VOLUME TIERS */}
+      {progressivePromotion && (
+        <div className="mb-4 space-y-2">
+          {/* Faixa Desbloqueada com Sucesso */}
+          {progDiscount > 0 && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-purple-600/10 to-indigo-600/15 border border-purple-500/30 text-white shadow-lg shadow-purple-950/20">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-purple-300 tracking-tight truncate">
+                      {progressivePromotion.title}
+                    </p>
+                    <p className="text-[11px] text-zinc-300">
+                      Oferta por volume aplicada com sucesso!
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Economizou R$ {progDiscount.toFixed(2).replace(".", ",")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Detalhes dos Tiers Aplicados */}
+              {appliedTiers.length > 0 && (
+                <div className="mt-2.5 pt-2 border-t border-purple-500/20 flex flex-wrap gap-1.5">
+                  {appliedTiers.map((at, idx) => (
+                    <span
+                      key={idx}
+                      className="text-[10px] font-semibold bg-purple-950/50 text-purple-200 border border-purple-500/20 px-2 py-0.5 rounded-md"
+                    >
+                      {at.appliedCount > 1 ? `${at.appliedCount}x ` : ""}
+                      {at.minQuantity} un por R$ {(at.tierPriceCents / 100).toFixed(2).replace(".", ",")}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Próxima Faixa a Desbloquear (Mensagem Dinâmica & Barra de Progresso) */}
+          {nextTier && (
+            <div className="p-3.5 rounded-2xl bg-[#181824] border border-white/10 text-white shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-zinc-300">
+                  <TrendingUp className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span>
+                    Faltam <strong className="text-purple-400 font-extrabold">{nextTier.unitsNeeded}</strong> produto{nextTier.unitsNeeded > 1 ? "s" : ""} para desbloquear{" "}
+                    <strong className="text-white font-extrabold">
+                      {nextTier.nextTier.minQuantity} por R$ {(nextTier.nextTier.tierPriceCents / 100).toFixed(2).replace(".", ",")}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra de Progresso Visual */}
+              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, Math.round((nextTier.currentUnits / nextTier.targetUnits) * 100))}%`,
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-0.5">
+                <span>{nextTier.currentUnits} de {nextTier.targetUnits} itens elegíveis</span>
+                <Link
+                  href={`/miniapp/${storeSlug}`}
+                  className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-0.5"
+                >
+                  <span>Adicionar mais</span>
+                  <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Product list */}
       <div className="space-y-3 mb-5">
@@ -274,9 +367,16 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
             {/* Info + controls */}
             <div className="flex-1 flex flex-col justify-between min-w-0">
               <div>
-                <h3 className="font-semibold text-[14px] text-zinc-900 dark:text-white leading-snug line-clamp-2">
-                  {item.title}
-                </h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-semibold text-[14px] text-zinc-900 dark:text-white leading-snug line-clamp-2">
+                    {item.title}
+                  </h3>
+                  {item.isCombo && (
+                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      Combo
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between mt-2">
@@ -390,17 +490,38 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       <div className="mb-5">
         <p className="text-[13px] font-semibold text-zinc-900 dark:text-white mb-3">Resumo do pedido</p>
         <div className="space-y-2">
+          {/* Subtotal */}
           <div className="flex justify-between text-[13px] text-zinc-600 dark:text-zinc-400">
             <span>Subtotal</span>
             <span>R$ {Number(subtotal || 0).toFixed(2).replace(".", ",")}</span>
           </div>
-          <div className="flex justify-between text-[13px] text-zinc-600 dark:text-zinc-400">
-            <span>Desconto</span>
-            <span className={discount > 0 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-              - R$ {discount.toFixed(2).replace(".", ",")}
-            </span>
-          </div>
+
+          {/* Desconto Progressivo por Quantidade */}
+          {progDiscount > 0 && (
+            <div className="flex justify-between text-[13px] text-purple-400 font-medium">
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Desconto Progressivo</span>
+              </span>
+              <span className="font-bold text-emerald-400">
+                - R$ {progDiscount.toFixed(2).replace(".", ",")}
+              </span>
+            </div>
+          )}
+
+          {/* Cupom */}
+          {couponDiscount > 0 && (
+            <div className="flex justify-between text-[13px] text-emerald-600 dark:text-emerald-400 font-medium">
+              <span>Cupom de desconto</span>
+              <span className="font-semibold">
+                - R$ {couponDiscount.toFixed(2).replace(".", ",")}
+              </span>
+            </div>
+          )}
+
           <div className="h-px bg-zinc-200 dark:bg-white/6 my-1" />
+
+          {/* Total */}
           <div className="flex justify-between text-[16px] font-bold">
             <span>Total</span>
             <span className="text-red-600 dark:text-red-500">

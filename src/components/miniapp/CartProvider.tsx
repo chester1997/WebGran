@@ -22,6 +22,38 @@ export interface CartItem {
   comboId?: string | null;
 }
 
+export interface AppliedTierSummary {
+  tierId: string;
+  minQuantity: number;
+  tierPriceCents: number;
+  appliedCount: number;
+  totalUnitsInTier: number;
+  totalCostCents: number;
+}
+
+export interface NextTierProgress {
+  nextTier: {
+    tierId: string;
+    minQuantity: number;
+    tierPriceCents: number;
+  };
+  currentUnits: number;
+  targetUnits: number;
+  unitsNeeded: number;
+  potentialSavingsCents: number;
+  potentialTotalCents: number;
+}
+
+export interface CartPromotionProgress {
+  id: string;
+  title: string;
+  slug: string;
+  savings: number;
+  savingsPercentage: number;
+  appliedTiers: AppliedTierSummary[];
+  nextTierProgress: NextTierProgress | null;
+}
+
 interface CartContextType {
   items: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -29,6 +61,8 @@ interface CartContextType {
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   subtotal: number;
+  progressiveDiscount: number;
+  progressivePromotion: CartPromotionProgress | null;
   total: number;
   itemCount: number;
   isSyncing: boolean;
@@ -108,6 +142,8 @@ export function CartProvider({
   storeSlug: string;
 }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [progressiveDiscount, setProgressiveDiscount] = useState<number>(0);
+  const [progressivePromotion, setProgressivePromotion] = useState<CartPromotionProgress | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -148,6 +184,8 @@ export function CartProvider({
                 : 1,
             coverUrl: item.coverUrl || null,
             storeId: String(item.storeId || ""),
+            isCombo: Boolean(item.isCombo || item.comboId),
+            comboId: item.comboId || null,
           })).filter((item) => Boolean(item.id));
           setItems(localItems);
         }
@@ -212,6 +250,8 @@ export function CartProvider({
                   localStorage.setItem(migrationKey, "true");
                   const merged = (syncData.cart.items || []).map(mapServerItemToCartItem);
                   setItems(merged);
+                  setProgressiveDiscount(syncData.cart.progressiveDiscount || 0);
+                  setProgressivePromotion(syncData.cart.progressivePromotion || null);
                   persistToLocalStorage(merged);
                   return;
                 }
@@ -221,10 +261,12 @@ export function CartProvider({
             }
           }
 
-          // Adopt the authoritative server cart (reflecting any additions/removals done via bot)
+          // Adopt the authoritative server cart
           localStorage.setItem(migrationKey, "true");
           const canonical = serverItems.map(mapServerItemToCartItem);
           setItems(canonical);
+          setProgressiveDiscount(data.cart.progressiveDiscount || 0);
+          setProgressivePromotion(data.cart.progressivePromotion || null);
           persistToLocalStorage(canonical);
         }
       } catch (err) {
@@ -249,6 +291,11 @@ export function CartProvider({
       // Optimistic UI update
       setItems(optimisticItems);
       persistToLocalStorage(optimisticItems);
+
+      if (optimisticItems.length === 0) {
+        setProgressiveDiscount(0);
+        setProgressivePromotion(null);
+      }
 
       // If user is definitely not authenticated, keep local only
       if (isAuthenticated === false) {
@@ -280,6 +327,8 @@ export function CartProvider({
           setIsAuthenticated(true);
           const serverCanonical = (data.cart.items || []).map(mapServerItemToCartItem);
           setItems(serverCanonical);
+          setProgressiveDiscount(data.cart.progressiveDiscount || 0);
+          setProgressivePromotion(data.cart.progressivePromotion || null);
           persistToLocalStorage(serverCanonical);
         }
       } catch (error) {
@@ -386,7 +435,9 @@ export function CartProvider({
     }, 0);
   }, [items]);
 
-  const total = subtotal;
+  const total = useMemo(() => {
+    return Math.max(0, subtotal - progressiveDiscount);
+  }, [subtotal, progressiveDiscount]);
 
   const itemCount = useMemo(() => {
     return items.reduce(
@@ -403,6 +454,8 @@ export function CartProvider({
       updateQuantity,
       clearCart,
       subtotal,
+      progressiveDiscount,
+      progressivePromotion,
       total,
       itemCount,
       isSyncing,
@@ -415,6 +468,8 @@ export function CartProvider({
       updateQuantity,
       clearCart,
       subtotal,
+      progressiveDiscount,
+      progressivePromotion,
       total,
       itemCount,
       isSyncing,

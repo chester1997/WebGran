@@ -8,6 +8,7 @@ const mockResolveFromSecretToken = vi.fn();
 const mockResolveFromBotId = vi.fn();
 const mockHandleCartCommand = vi.fn();
 const mockHandleCatalogCommand = vi.fn();
+const mockHandleProgressiveOffersCommand = vi.fn();
 const mockHandleCartCallbackQuery = vi.fn();
 
 vi.mock("@/lib/telegram/resolver", () => ({
@@ -33,6 +34,7 @@ vi.mock("@/lib/telegram/bot", () => ({
 vi.mock("@/lib/telegram/bot-cart-handler", () => ({
   handleCartCommand: (...args: any[]) => mockHandleCartCommand(...args),
   handleCatalogCommand: (...args: any[]) => mockHandleCatalogCommand(...args),
+  handleProgressiveOffersCommand: (...args: any[]) => mockHandleProgressiveOffersCommand(...args),
   handleCartCallbackQuery: (...args: any[]) => mockHandleCartCallbackQuery(...args),
 }));
 
@@ -204,5 +206,78 @@ describe("Telegram Webhook Cart Integration Suite (Phase 3)", () => {
     expect(json2.duplicate).toBe(true);
     // Did NOT execute handler again
     expect(mockHandleCartCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("should process /ofertas message and delegate to handleProgressiveOffersCommand", async () => {
+    mockResolveFromSecretToken.mockResolvedValueOnce(validResolved);
+
+    const updatePayload = {
+      update_id: 10005,
+      message: {
+        message_id: 60,
+        chat: { id: 12345, type: "private" },
+        from: { id: 98765, first_name: "Comprador" },
+        text: "/ofertas",
+      },
+    };
+
+    const req = new NextRequest("http://localhost:3000/api/telegram/webhook", {
+      method: "POST",
+      headers: {
+        "x-telegram-bot-api-secret-token": "valid-secret-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatePayload),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    expect(mockHandleProgressiveOffersCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        store: validResolved.store,
+      }),
+      12345
+    );
+  });
+
+  it("should process prog_ callback and delegate to handleCartCallbackQuery", async () => {
+    mockResolveFromSecretToken.mockResolvedValueOnce(validResolved);
+
+    const updatePayload = {
+      update_id: 10006,
+      callback_query: {
+        id: "cb-prog-123",
+        data: "prog_view",
+        message: {
+          message_id: 102,
+          chat: { id: 12345 },
+        },
+        from: { id: 98765, first_name: "Comprador" },
+      },
+    };
+
+    const req = new NextRequest("http://localhost:3000/api/telegram/webhook", {
+      method: "POST",
+      headers: {
+        "x-telegram-bot-api-secret-token": "valid-secret-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatePayload),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    expect(mockHandleCartCallbackQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        store: validResolved.store,
+      }),
+      "cb-prog-123",
+      12345,
+      102,
+      "prog_view",
+      expect.objectContaining({ id: 98765 })
+    );
   });
 });

@@ -31,6 +31,34 @@ export function isDuplicateTelegramUpdate(updateId?: number | null): boolean {
   return false;
 }
 
+const processedCallbacks = new Map<string, number>();
+
+export function isDuplicateTelegramCallback(callbackQueryId?: string | null): boolean {
+  if (!callbackQueryId || typeof callbackQueryId !== "string") {
+    return false;
+  }
+
+  const now = Date.now();
+
+  // Prune entries older than the window if map gets large
+  if (processedCallbacks.size > 2000) {
+    for (const [id, timestamp] of processedCallbacks.entries()) {
+      if (now - timestamp > DEDUP_WINDOW_MS) {
+        processedCallbacks.delete(id);
+      }
+    }
+  }
+
+  const lastSeen = processedCallbacks.get(callbackQueryId);
+  if (lastSeen && now - lastSeen < DEDUP_WINDOW_MS) {
+    return true;
+  }
+
+  processedCallbacks.set(callbackQueryId, now);
+  return false;
+}
+
 export function clearProcessedTelegramUpdatesForTest(): void {
   processedUpdates.clear();
+  processedCallbacks.clear();
 }

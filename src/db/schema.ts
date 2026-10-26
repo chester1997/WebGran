@@ -158,6 +158,8 @@ export const combos = pgTable('combos', {
   description: text('description'),
   coverUrl: text('cover_url'),
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  type: text('type').notNull().default('curated'), // 'curated' | 'progressive'
+  eligibilityMode: text('eligibility_mode').notNull().default('all_products'), // 'all_products' | 'specific_products'
   status: text('status').notNull().default('active'), // 'active' | 'inactive' | 'archived'
   position: integer('position').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -178,6 +180,20 @@ export const comboProducts = pgTable('combo_products', {
   comboProductUnique: unique('combo_products_combo_product_unique').on(t.comboId, t.productId),
   comboIdx: index('combo_products_combo_idx').on(t.comboId),
   productIdx: index('combo_products_product_idx').on(t.productId),
+}));
+
+export const comboTiers = pgTable('combo_tiers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  comboId: uuid('combo_id').notNull().references(() => combos.id, { onDelete: 'cascade' }),
+  minQuantity: integer('min_quantity').notNull(),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  comboQuantityUnique: uniqueIndex('combo_tiers_combo_quantity_uidx').on(t.comboId, t.minQuantity),
+  comboIdx: index('combo_tiers_combo_idx').on(t.comboId),
+  minQuantityCheck: check('combo_tiers_min_quantity_check', sql`"min_quantity" >= 2`),
+  priceCheck: check('combo_tiers_price_check', sql`"price" > 0`),
 }));
 
 export const telegramCustomers = pgTable('telegram_customers', {
@@ -224,12 +240,16 @@ export const orders = pgTable('orders', {
   splitConfirmedAt: timestamp('split_confirmed_at'),
   splitError: text('split_error'),
   splitDetails: jsonb('split_details'),
+  progressiveComboId: uuid('progressive_combo_id').references(() => combos.id, { onDelete: 'set null' }),
+  progressiveComboDiscount: decimal('progressive_combo_discount', { precision: 10, scale: 2 }).default('0'),
+  progressiveComboSnapshot: jsonb('progressive_combo_snapshot'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
   storeStatusCreatedIdx: index('orders_store_status_created_idx').on(t.storeId, t.status, t.createdAt),
   customerIdx: index('orders_customer_idx').on(t.customerId),
-  sessionIdx: index('orders_session_idx').on(t.sessionId)
+  sessionIdx: index('orders_session_idx').on(t.sessionId),
+  progressiveComboIdx: index('orders_progressive_combo_idx').on(t.progressiveComboId),
 }));
 
 export const orderItems = pgTable('order_items', {
@@ -508,6 +528,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.sessionId],
     references: [storeSessions.id],
   }),
+  progressiveCombo: one(combos, {
+    fields: [orders.progressiveComboId],
+    references: [combos.id],
+  }),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -558,8 +582,17 @@ export const combosRelations = relations(combos, ({ one, many }) => ({
     references: [stores.id],
   }),
   products: many(comboProducts),
+  tiers: many(comboTiers),
   orderItems: many(orderItems),
   cartItems: many(cartItems),
+  progressiveOrders: many(orders),
+}));
+
+export const comboTiersRelations = relations(comboTiers, ({ one }) => ({
+  combo: one(combos, {
+    fields: [comboTiers.comboId],
+    references: [combos.id],
+  }),
 }));
 
 export const comboProductsRelations = relations(comboProducts, ({ one }) => ({

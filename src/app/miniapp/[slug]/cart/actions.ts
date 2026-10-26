@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { getMiniAppSession } from "@/lib/telegram/session";
 import { AccessService } from "@/lib/orders/access-service";
 import { paymentService } from "@/lib/payments/payment-service";
+import { ComboService } from "@/lib/combos/combo-service";
 
 export interface CheckoutItemInput {
   id: string;
@@ -224,9 +225,34 @@ export async function createCheckoutSession(
       return { success: false, error: "Alguns produtos ou combos são inválidos ou estão indisponíveis" };
     }
 
+    // Avalia oferta progressiva server-side
+    let progressiveDiscount = 0;
+    let progressiveComboId: string | null = null;
+    let progressiveComboSnapshot: any = null;
+
+    try {
+      const progressiveEval = await ComboService.calculateProgressivePricingForCart(
+        storeId,
+        itemsToInsert.map(i => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          price: Number(i.unitPrice),
+        }))
+      );
+
+      if (progressiveEval.hasPromotion && progressiveEval.promotion && progressiveEval.pricingResult) {
+        progressiveDiscount = progressiveEval.discountAmount;
+        progressiveComboId = progressiveEval.promotion.id;
+        progressiveComboSnapshot = progressiveEval.snapshot;
+      }
+    } catch (err) {
+      console.warn("[Checkout] Falha ao calcular oferta progressiva:", err);
+    }
+
     // Process Coupon Validation & Discount
-    let discountAmount = 0;
+    let couponDiscount = 0;
     let appliedCouponCode: string | null = null;
+    const baseForCoupon = Math.max(0, subtotal - progressiveDiscount);
 
     if (couponCode && couponCode.trim()) {
       const cleanCode = couponCode.trim().toUpperCase();
@@ -246,14 +272,14 @@ export async function createCheckoutSession(
         const isLimitReached = c.maxUses !== null && c.usedCount >= c.maxUses;
         const minOrder = c.minOrderValue ? parseFloat(c.minOrderValue) : 0;
 
-        if (c.status === "active" && !isExpired && !isLimitReached && subtotal >= minOrder) {
+        if (c.status === "active" && !isExpired && !isLimitReached && baseForCoupon >= minOrder) {
           const discVal = parseFloat(c.discountValue);
           if (c.discountType === "percentage") {
-            discountAmount = (subtotal * discVal) / 100;
+            couponDiscount = (baseForCoupon * discVal) / 100;
           } else {
-            discountAmount = Math.min(subtotal, discVal);
+            couponDiscount = Math.min(baseForCoupon, discVal);
           }
-          discountAmount = Math.round(discountAmount * 100) / 100;
+          couponDiscount = Math.round(couponDiscount * 100) / 100;
           appliedCouponCode = c.code;
 
           // Increment usedCount
@@ -268,7 +294,8 @@ export async function createCheckoutSession(
       }
     }
 
-    const finalTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+    const totalDiscount = Math.round((progressiveDiscount + couponDiscount) * 100) / 100;
+    const finalTotal = Math.max(0, Math.round((subtotal - totalDiscount) * 100) / 100);
 
     // Idempotency: check if an active pending order exists for this store & customer with identical items
     const existingPendingOrders = db.query.orders?.findMany
@@ -328,11 +355,16 @@ export async function createCheckoutSession(
       customerId,
       status: 'pending', // PENDING, PAID, FAILED, CANCELLED, REFUNDED
       subtotal: subtotal.toFixed(2),
-      discount: discountAmount.toFixed(2),
+      discount: totalDiscount.toFixed(2),
       couponCode: appliedCouponCode,
+      progressiveComboId,
+      progressiveComboDiscount: progressiveDiscount.toFixed(2),
+      progressiveComboSnapshot,
       total: finalTotal.toFixed(2),
       currency: 'BRL',
       sessionId: sessionId || null,
+      splitAmountCents: 50,
+      splitStatus: 'PENDING',
     }).returning();
 
     const newOrder = newOrderArr[0];
