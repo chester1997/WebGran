@@ -11,11 +11,13 @@ import { isDuplicateTelegramUpdate, clearProcessedTelegramUpdatesForTest } from 
 
 // Mock DB
 const mockFindManyProducts = vi.fn();
+const mockFindFirstProduct = vi.fn();
 vi.mock("@/db", () => ({
   db: {
     query: {
       products: {
         findMany: (...args: any[]) => mockFindManyProducts(...args),
+        findFirst: (...args: any[]) => mockFindFirstProduct(...args),
       },
     },
   },
@@ -56,6 +58,13 @@ describe("Bot Cart Handler Suite (Phase 3)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearProcessedTelegramUpdatesForTest();
+    mockFindFirstProduct.mockResolvedValue({
+      id: "prod-1",
+      storeId: "store-alpha-id",
+      status: "active",
+      title: "Guia Completo",
+      price: "19.90",
+    });
   });
 
   describe("Update Deduplication", () => {
@@ -199,8 +208,12 @@ describe("Bot Cart Handler Suite (Phase 3)", () => {
           inline_keyboard: expect.arrayContaining([
             expect.arrayContaining([
               expect.objectContaining({
-                callback_data: "cart_add:prod-1",
+                callback_data: "prod_view:prod-1:1",
                 text: expect.stringContaining("Guia Completo"),
+              }),
+              expect.objectContaining({
+                callback_data: "cart_add:prod-1:1",
+                text: "🛒",
               }),
             ]),
           ]),

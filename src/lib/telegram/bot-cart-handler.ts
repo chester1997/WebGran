@@ -55,8 +55,14 @@ export function formatCartMessage(
         ],
         [
           {
-            text: "📦 Ver Produtos",
+            text: "📦 Ver Catálogo",
             callback_data: "cart_cat",
+          },
+        ],
+        [
+          {
+            text: "↩️ Voltar ao Menu",
+            callback_data: "start_menu",
           },
         ],
       ],
@@ -170,6 +176,13 @@ export function formatCartMessage(
     },
   ]);
 
+  inlineKeyboardRows.push([
+    {
+      text: "↩️ Voltar ao Menu",
+      callback_data: "start_menu",
+    },
+  ]);
+
   return {
     text,
     replyMarkup: { inline_keyboard: inlineKeyboardRows },
@@ -177,31 +190,36 @@ export function formatCartMessage(
 }
 
 /**
- * Formats a catalog list for quick item addition via Telegram chat.
+ * Formats a paginated catalog list (10 products per page) for quick item addition via Telegram chat.
+ * Each product has a compact title button and a direct '🛒' add button side-by-side.
  */
 export async function formatCatalogMessage(
   storeId: string,
-  miniAppUrl: string
+  miniAppUrl: string,
+  page: number = 1
 ): Promise<{ text: string; replyMarkup: any }> {
-  const activeProducts = await db.query.products.findMany({
+  const allActiveProducts = await db.query.products.findMany({
     where: and(eq(products.storeId, storeId), eq(products.status, "active")),
-    limit: 6,
     orderBy: [desc(products.createdAt)],
   });
 
-  if (!activeProducts || activeProducts.length === 0) {
+  const totalProducts = allActiveProducts ? allActiveProducts.length : 0;
+
+  if (totalProducts === 0) {
     return {
       text: `📦 *Nenhum produto disponível no momento.*\n\nFique de olho em nossas novidades!`,
       replyMarkup: {
         inline_keyboard: [
           [
             {
-              text: "🎁 Ver Combos",
-              callback_data: "combo_list",
-            },
-            {
-              text: "🛍️ Abrir Loja",
+              text: "🛍️ ABRIR LOJA",
               web_app: { url: miniAppUrl },
+            },
+          ],
+          [
+            {
+              text: "↩️ Voltar ao Menu",
+              callback_data: "start_menu",
             },
           ],
         ],
@@ -209,31 +227,66 @@ export async function formatCatalogMessage(
     };
   }
 
-  let text = `📦 *Catálogo de Produtos*\n\nEscolha um produto abaixo para adicionar ao seu carrinho:\n`;
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const pageProducts = allActiveProducts.slice(startIndex, startIndex + PAGE_SIZE);
+
+  let text = `📦 *Catálogo de Produtos*\n`;
+  text += `Página ${safePage} de ${totalPages} · ${totalProducts} ${totalProducts === 1 ? "produto" : "produtos"}\n\n`;
+
+  for (const prod of pageProducts) {
+    const priceVal = Number(prod.price) || 0;
+    const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
+    text += `• *${prod.title}* — ${priceFormatted}\n`;
+  }
+
+  text += `\n_Toque no produto para ver detalhes ou em 🛒 para adicionar ao carrinho._`;
 
   const inlineKeyboardRows: any[][] = [];
 
-  for (const prod of activeProducts) {
+  for (const prod of pageProducts) {
     const priceVal = Number(prod.price) || 0;
     const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
+    const MAX_TITLE_LEN = 20;
+    const shortTitle = prod.title.length > MAX_TITLE_LEN
+      ? `${prod.title.slice(0, MAX_TITLE_LEN - 3)}...`
+      : prod.title;
+
     inlineKeyboardRows.push([
       {
-        text: `➕ ${prod.title} — ${priceFormatted}`,
-        callback_data: `cart_add:${prod.id}`,
+        text: `${shortTitle} · ${priceFormatted}`,
+        callback_data: `prod_view:${prod.id}:${safePage}`,
+      },
+      {
+        text: `🛒`,
+        callback_data: `cart_add:${prod.id}:${safePage}`,
       },
     ]);
   }
 
-  inlineKeyboardRows.push([
-    {
-      text: "🔥 Ver Ofertas Progressivas",
-      callback_data: "prog_view",
-    },
-    {
-      text: "🎁 Ver Combos Promocionais",
-      callback_data: "combo_list",
-    },
-  ]);
+  // Controles de paginação se houver mais de uma página
+  if (totalPages > 1) {
+    const navRow: any[] = [];
+    if (safePage > 1) {
+      navRow.push({
+        text: "◀️ Anterior",
+        callback_data: `cat_p:${safePage - 1}`,
+      });
+    }
+    navRow.push({
+      text: `${safePage}/${totalPages}`,
+      callback_data: "cat_noop",
+    });
+    if (safePage < totalPages) {
+      navRow.push({
+        text: "Próxima ▶️",
+        callback_data: `cat_p:${safePage + 1}`,
+      });
+    }
+    inlineKeyboardRows.push(navRow);
+  }
 
   inlineKeyboardRows.push([
     {
@@ -241,10 +294,100 @@ export async function formatCatalogMessage(
       callback_data: "cart_view",
     },
     {
-      text: "🛍️ Abrir Loja Completa",
+      text: "🛍️ Abrir no Mini App",
       web_app: { url: miniAppUrl },
     },
   ]);
+
+  inlineKeyboardRows.push([
+    {
+      text: "↩️ Voltar ao Menu",
+      callback_data: "start_menu",
+    },
+  ]);
+
+  return {
+    text,
+    replyMarkup: { inline_keyboard: inlineKeyboardRows },
+  };
+}
+
+/**
+ * Formats a detailed view of a product with direct add-to-cart and navigation.
+ */
+export async function formatProductDetailMessage(
+  storeId: string,
+  productId: string,
+  page: number,
+  miniAppUrl: string
+): Promise<{ text: string; replyMarkup: any }> {
+  const product = await db.query.products.findFirst({
+    where: and(
+      eq(products.id, productId),
+      eq(products.storeId, storeId),
+      eq(products.status, "active")
+    ),
+  });
+
+  if (!product) {
+    return {
+      text: "⚠️ *Produto não encontrado ou indisponível.*",
+      replyMarkup: {
+        inline_keyboard: [
+          [
+            {
+              text: "◀️ Voltar ao Catálogo",
+              callback_data: `cat_p:${page}`,
+            },
+          ],
+          [
+            {
+              text: "↩️ Voltar ao Menu",
+              callback_data: "start_menu",
+            },
+          ],
+        ],
+      },
+    };
+  }
+
+  const priceVal = Number(product.price) || 0;
+  const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
+
+  let text = `📦 *${product.title}*\n\n`;
+  if (product.description && product.description.trim() !== "") {
+    text += `${product.description.trim()}\n\n`;
+  }
+  text += `💰 *Preço:* ${priceFormatted}\n`;
+
+  const inlineKeyboardRows: any[][] = [
+    [
+      {
+        text: "🛒 Adicionar ao Carrinho",
+        callback_data: `cart_add:${product.id}:${page}`,
+      },
+    ],
+    [
+      {
+        text: "🛍️ Ver no Mini App",
+        web_app: { url: `${miniAppUrl}/product/${product.slug || product.id}` },
+      },
+      {
+        text: "🛒 Ver Carrinho",
+        callback_data: "cart_view",
+      },
+    ],
+    [
+      {
+        text: "◀️ Voltar ao Catálogo",
+        callback_data: `cat_p:${page}`,
+      },
+      {
+        text: "↩️ Voltar ao Menu",
+        callback_data: "start_menu",
+      },
+    ],
+  ];
 
   return {
     text,
@@ -370,6 +513,12 @@ export async function formatProgressiveOfferMessage(
             {
               text: "🛍️ Abrir Loja no Mini App",
               web_app: { url: miniAppUrl },
+            },
+          ],
+          [
+            {
+              text: "↩️ Voltar ao Menu",
+              callback_data: "start_menu",
             },
           ],
         ],
@@ -703,6 +852,12 @@ export async function formatAccessesMessage(
             callback_data: "cart_cat",
           },
         ],
+        [
+          {
+            text: "↩️ Voltar ao Menu",
+            callback_data: "start_menu",
+          },
+        ],
       ],
     };
 
@@ -745,6 +900,13 @@ export async function formatAccessesMessage(
     {
       text: "🛒 Carrinho",
       callback_data: "cart_view",
+    },
+  ]);
+
+  inlineKeyboardRows.push([
+    {
+      text: "↩️ Voltar ao Menu",
+      callback_data: "start_menu",
     },
   ]);
 
@@ -844,6 +1006,8 @@ export async function handleCartCallbackQuery(
     !cbData.startsWith("cart_") &&
     !cbData.startsWith("combo_") &&
     !cbData.startsWith("prog_") &&
+    !cbData.startsWith("cat_") &&
+    !cbData.startsWith("prod_view:") &&
     cbData !== "my_accesses" &&
     cbData !== "support_info" &&
     cbData !== "start_menu"
@@ -858,19 +1022,51 @@ export async function handleCartCallbackQuery(
     return true;
   }
 
-  // No-op click on item label
-  if (cbData === "cart_noop") {
+  // No-op click on item label or page indicator
+  if (cbData === "cart_noop" || cbData === "cat_noop") {
     await ctx.botService.answerCallbackQuery(cbId);
     return true;
   }
 
   try {
-    // 1. Show catalog view
-    if (cbData === "cart_cat") {
-      const { text, replyMarkup } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl);
+    // 1. Show catalog view (page 1 or requested page)
+    if (cbData === "cart_cat" || cbData.startsWith("cat_p:")) {
+      let page = 1;
+      if (cbData.startsWith("cat_p:")) {
+        const rawPage = parseInt(cbData.replace("cat_p:", ""), 10);
+        if (!isNaN(rawPage) && rawPage > 0) {
+          page = rawPage;
+        }
+      }
+
+      const { text, replyMarkup } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl, page);
       await ctx.botService.answerCallbackQuery(cbId);
       if (chatId && messageId) {
         await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      } else if (chatId) {
+        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+      }
+      return true;
+    }
+
+    // 1.1 Show product details view
+    if (cbData.startsWith("prod_view:")) {
+      const parts = cbData.split(":");
+      const productId = parts[1];
+      const page = parseInt(parts[2], 10) || 1;
+
+      const { text, replyMarkup } = await formatProductDetailMessage(
+        ctx.store.id,
+        productId,
+        page,
+        ctx.miniAppUrl
+      );
+
+      await ctx.botService.answerCallbackQuery(cbId);
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+      } else if (chatId) {
+        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
       }
       return true;
     }
@@ -961,7 +1157,12 @@ export async function handleCartCallbackQuery(
 
     // 5. Add product (supports cart_add: and prog_add:)
     if (cbData.startsWith("cart_add:") || cbData.startsWith("prog_add:")) {
-      const productId = cbData.replace(/^(cart_add:|prog_add:)/, "").trim();
+      const rawPayload = cbData.replace(/^(cart_add:|prog_add:)/, "").trim();
+      const parts = rawPayload.split(":");
+      const productId = parts[0];
+      const pageStr = parts[1];
+      const page = pageStr ? parseInt(pageStr, 10) : undefined;
+
       if (!productId) {
         await ctx.botService.answerCallbackQuery(cbId, "⚠️ Produto inválido.", true);
         return true;
@@ -973,7 +1174,6 @@ export async function handleCartCallbackQuery(
         productId,
         1
       );
-      const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
 
       let toast = "✅ Produto adicionado ao carrinho!";
       if (cart.progressiveDiscount && cart.progressiveDiscount > 0) {
@@ -985,8 +1185,12 @@ export async function handleCartCallbackQuery(
       }
 
       await ctx.botService.answerCallbackQuery(cbId, toast);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+
+      if (page === undefined) {
+        const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
+        if (chatId && messageId) {
+          await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+        }
       }
       return true;
     }

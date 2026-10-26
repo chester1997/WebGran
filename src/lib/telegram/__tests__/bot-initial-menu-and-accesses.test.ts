@@ -303,7 +303,11 @@ describe("WebGran — Initial Bot Menu, Accesses and Progressive Offers Verifica
           expect.arrayContaining([
             expect.objectContaining({
               text: expect.stringContaining("Pack Stickers VIP"),
-              callback_data: "cart_add:prod-cat-1",
+              callback_data: "prod_view:prod-cat-1:1",
+            }),
+            expect.objectContaining({
+              text: "🛒",
+              callback_data: "cart_add:prod-cat-1:1",
             }),
           ]),
         ]),

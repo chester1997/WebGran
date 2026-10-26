@@ -86,6 +86,8 @@ export async function POST(req: NextRequest) {
         cbData.startsWith("cart_") ||
         cbData.startsWith("combo_") ||
         cbData.startsWith("prog_") ||
+        cbData.startsWith("cat_") ||
+        cbData.startsWith("prod_view:") ||
         cbData === "my_accesses" ||
         cbData === "support_info" ||
         cbData === "start_menu"
