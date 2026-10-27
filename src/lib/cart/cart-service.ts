@@ -608,6 +608,21 @@ export class CartService {
   /**
    * Resolves or registers a customer based on authenticated Telegram user metadata.
    */
+  static async getOrCreateCustomer(
+    storeId: string,
+    telegramUser: {
+      id: string | number;
+      firstName?: string | null;
+      first_name?: string | null;
+      lastName?: string | null;
+      last_name?: string | null;
+      username?: string | null;
+      photoUrl?: string | null;
+    }
+  ) {
+    return CartService.getOrCreateCustomerForTelegramUser(storeId, telegramUser);
+  }
+
   static async getOrCreateCustomerForTelegramUser(
     storeId: string,
     telegramUser: {

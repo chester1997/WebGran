@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
       const cbId = update.callback_query.id;
       const chatId = update.callback_query.message?.chat?.id;
 
-      if (cbData.startsWith("check_pay:")) {
-        const orderId = cbData.replace("check_pay:", "").trim();
+      if (cbData.startsWith("check_pay:") || cbData.startsWith("order_check:")) {
+        const orderId = cbData.replace(/^(check_pay:|order_check:)/, "").trim();
         const botService = new TelegramBotService(token);
 
         const { syncOrderWithMercadoPago } = await import("@/lib/payments/order-sync");
@@ -67,6 +67,43 @@ export async function POST(req: NextRequest) {
           // Re-trigger AccessDeliveryService to ensure delivery and confirmation message are processed
           const { AccessDeliveryService } = await import("@/lib/delivery/access-delivery-service");
           await AccessDeliveryService.processOrderDelivery(orderId);
+
+          const paidMsg =
+            `🎉 *Pagamento Confirmado!*\n\n` +
+            `O pagamento do pedido *#${orderId.slice(0, 8)}* foi aprovado com sucesso e seus acessos foram liberados!\n\n` +
+            `Toque no botão abaixo para acessar seus conteúdos:`;
+
+          const paidKeyboard = {
+            inline_keyboard: [
+              [
+                {
+                  text: "🔐 Meus Acessos",
+                  callback_data: "my_accesses",
+                },
+              ],
+              [
+                {
+                  text: "🛍️ Explorar Catálogo",
+                  callback_data: "cart_cat",
+                },
+                {
+                  text: "↩️ Menu Inicial",
+                  callback_data: "start_menu",
+                },
+              ],
+            ],
+          };
+
+          const messageId = update.callback_query.message?.message_id;
+          if (chatId && messageId) {
+            try {
+              await botService.editMessageText(chatId, messageId, paidMsg, paidKeyboard, "Markdown");
+            } catch {
+              await botService.sendMessage(chatId, paidMsg, paidKeyboard, "Markdown");
+            }
+          } else if (chatId) {
+            await botService.sendMessage(chatId, paidMsg, paidKeyboard, "Markdown");
+          }
         } else {
           await botService.answerCallbackQuery(
             cbId,

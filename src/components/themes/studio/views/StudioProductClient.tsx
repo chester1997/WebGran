@@ -224,7 +224,7 @@ export function StudioProductClient({
         [{ id: product.id, quantity: 1 }]
       );
 
-      if (result.success && result.pix) {
+      if (result.success && result.pix && result.orderId) {
         setPixState({
           orderId: result.orderId,
           qrCode: result.pix.qrCode,

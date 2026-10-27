@@ -668,9 +668,14 @@ describe("WebGran — Fase E: Ofertas Progressivas no Bot do Telegram", () => {
 
       const { replyMarkup } = formatCartMessage(cart, miniAppUrl);
 
-      // Botão de checkout/Mini App
+      // Botão de finalizar compra direto no Telegram
       const checkoutRow = replyMarkup.inline_keyboard[1];
-      expect(checkoutRow[0].web_app.url).toBe("https://webgran.online/miniapp/loja-alpha/cart");
+      expect(checkoutRow[0].text).toBe("💳 Finalizar compra");
+      expect(checkoutRow[0].callback_data).toBe("cart_checkout");
+
+      // Botão de checkout/Mini App
+      const miniAppRow = replyMarkup.inline_keyboard[2];
+      expect(miniAppRow[0].web_app.url).toBe("https://webgran.online/miniapp/loja-alpha/cart");
     });
   });
 

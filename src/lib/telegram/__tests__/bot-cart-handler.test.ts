@@ -136,11 +136,14 @@ describe("Bot Cart Handler Suite (Phase 3)", () => {
       expect(buttons[0][0].callback_data).toBe("cart_noop");
       expect(buttons[0][1].text).toContain("Remover");
       expect(buttons[0][1].callback_data).toBe("cart_rem:prod-1");
+      // Finalizar compra button
+      expect(buttons[1][0].text).toBe("💳 Finalizar compra");
+      expect(buttons[1][0].callback_data).toBe("cart_checkout");
       // Open Mini App button
-      expect(buttons[1][0].web_app.url).toBe("https://webgran.test/miniapp/loja-alpha/cart");
+      expect(buttons[2][0].web_app.url).toBe("https://webgran.test/miniapp/loja-alpha/cart");
       // Preserves Ver Ofertas and Ver Combos
-      expect(buttons[2][0].callback_data).toBe("prog_view");
-      expect(buttons[2][1].callback_data).toBe("combo_list");
+      expect(buttons[3][0].callback_data).toBe("prog_view");
+      expect(buttons[3][1].callback_data).toBe("combo_list");
     });
   });
 

@@ -129,7 +129,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         appliedCoupon?.code
       );
 
-      if (result.success && result.pix) {
+      if (result.success && result.pix && result.orderId) {
         clearCart();
         setPixState({
           orderId: result.orderId,
@@ -286,57 +286,71 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
               {/* Detalhes dos Tiers Aplicados */}
               {appliedTiers.length > 0 && (
                 <div className="mt-2.5 pt-2 border-t border-purple-500/20 flex flex-wrap gap-1.5">
-                  {appliedTiers.map((at, idx) => (
-                    <span
-                      key={idx}
-                      className="text-[10px] font-semibold bg-purple-950/50 text-purple-200 border border-purple-500/20 px-2 py-0.5 rounded-md"
-                    >
-                      {at.appliedCount > 1 ? `${at.appliedCount}x ` : ""}
-                      {at.minQuantity} un por R$ {(at.tierPriceCents / 100).toFixed(2).replace(".", ",")}
-                    </span>
-                  ))}
+                  {appliedTiers.map((at, idx) => {
+                    const count = at.count ?? at.appliedCount ?? 1;
+                    const priceCents = at.priceCents ?? at.tierPriceCents ?? 0;
+                    return (
+                      <span
+                        key={idx}
+                        className="text-[10px] font-semibold bg-purple-950/50 text-purple-200 border border-purple-500/20 px-2 py-0.5 rounded-md"
+                      >
+                        {count > 1 ? `${count}x ` : ""}
+                        {at.minQuantity} un por R$ {(priceCents / 100).toFixed(2).replace(".", ",")}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
 
           {/* Próxima Faixa a Desbloquear (Mensagem Dinâmica & Barra de Progresso) */}
-          {nextTier && (
-            <div className="p-3.5 rounded-2xl bg-[#181824] border border-white/10 text-white shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 font-semibold text-zinc-300">
-                  <TrendingUp className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span>
-                    Faltam <strong className="text-purple-400 font-extrabold">{nextTier.unitsNeeded}</strong> produto{nextTier.unitsNeeded > 1 ? "s" : ""} para desbloquear{" "}
-                    <strong className="text-white font-extrabold">
-                      {nextTier.nextTier.minQuantity} por R$ {(nextTier.nextTier.tierPriceCents / 100).toFixed(2).replace(".", ",")}
-                    </strong>
-                  </span>
+          {nextTier && (() => {
+            const unitsRemaining = nextTier.unitsRemaining ?? nextTier.unitsNeeded ?? 0;
+            const targetQty = nextTier.targetQuantity ?? nextTier.targetUnits ?? nextTier.nextTier?.minQuantity ?? 0;
+            const targetPriceCents = nextTier.targetTierPriceCents ?? nextTier.nextTier?.tierPriceCents ?? 0;
+            const currentUnits = nextTier.currentUnits ?? Math.max(0, targetQty - unitsRemaining);
+            const progressPercent = targetQty > 0 ? Math.min(100, Math.round((currentUnits / targetQty) * 100)) : 0;
+
+            if (unitsRemaining <= 0 || targetQty <= 0) return null;
+
+            return (
+              <div className="p-3.5 rounded-2xl bg-[#181824] border border-white/10 text-white shadow-sm space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-semibold text-zinc-300">
+                    <TrendingUp className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span>
+                      Faltam <strong className="text-purple-400 font-extrabold">{unitsRemaining}</strong> produto{unitsRemaining > 1 ? "s" : ""} para desbloquear{" "}
+                      <strong className="text-white font-extrabold">
+                        {targetQty} por R$ {(targetPriceCents / 100).toFixed(2).replace(".", ",")}
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Barra de Progresso Visual */}
+                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${progressPercent}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-0.5">
+                  <span>{currentUnits} de {targetQty} itens elegíveis</span>
+                  <Link
+                    href={`/miniapp/${storeSlug}`}
+                    className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-0.5"
+                  >
+                    <span>Adicionar mais</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </Link>
                 </div>
               </div>
-
-              {/* Barra de Progresso Visual */}
-              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(100, Math.round((nextTier.currentUnits / nextTier.targetUnits) * 100))}%`,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-0.5">
-                <span>{nextTier.currentUnits} de {nextTier.targetUnits} itens elegíveis</span>
-                <Link
-                  href={`/miniapp/${storeSlug}`}
-                  className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-0.5"
-                >
-                  <span>Adicionar mais</span>
-                  <ChevronRight className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

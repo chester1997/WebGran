@@ -23,25 +23,35 @@ export interface CartItem {
 }
 
 export interface AppliedTierSummary {
-  tierId: string;
+  tierId?: string;
   minQuantity: number;
-  tierPriceCents: number;
-  appliedCount: number;
-  totalUnitsInTier: number;
-  totalCostCents: number;
+  priceCents: number;
+  count: number;
+  totalCoveredUnits?: number;
+  totalPriceCents?: number;
+  // Optional aliases for view compatibility
+  tierPriceCents?: number;
+  appliedCount?: number;
+  totalUnitsInTier?: number;
+  totalCostCents?: number;
 }
 
 export interface NextTierProgress {
-  nextTier: {
-    tierId: string;
+  targetQuantity: number;
+  unitsRemaining: number;
+  targetTierPriceCents: number;
+  projectedAdditionalSavingsCents?: number;
+  // Optional aliases for view compatibility
+  nextTier?: {
+    tierId?: string;
     minQuantity: number;
     tierPriceCents: number;
   };
-  currentUnits: number;
-  targetUnits: number;
-  unitsNeeded: number;
-  potentialSavingsCents: number;
-  potentialTotalCents: number;
+  currentUnits?: number;
+  targetUnits?: number;
+  unitsNeeded?: number;
+  potentialSavingsCents?: number;
+  potentialTotalCents?: number;
 }
 
 export interface CartPromotionProgress {

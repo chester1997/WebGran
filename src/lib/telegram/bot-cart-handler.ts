@@ -7,6 +7,7 @@ import { and, eq, desc, asc, inArray } from "drizzle-orm";
 import { isDuplicateTelegramCallback } from "./update-dedup";
 import { parseSupportConfig } from "@/lib/support/support-helper";
 import { AccessService } from "@/lib/orders/access-service";
+import { CheckoutService } from "@/lib/orders/checkout-service";
 
 export interface BotCartContext {
   store: {
@@ -144,7 +145,7 @@ export function formatCartMessage(
     }
   }
 
-  text += `\n_Toque em 🗑️ Remover para retirar um item ou finalize pelo Mini App._`;
+  text += `\n_Toque em 💳 Finalizar compra para pagar via Pix ou abra o Mini App._`;
 
   const inlineKeyboardRows: any[][] = [];
 
@@ -173,6 +174,15 @@ export function formatCartMessage(
   }
 
   // Action buttons
+  if (cart.items.length > 0) {
+    inlineKeyboardRows.push([
+      {
+        text: "💳 Finalizar compra",
+        callback_data: "cart_checkout",
+      },
+    ]);
+  }
+
   inlineKeyboardRows.push([
     {
       text: "🛍️ Abrir Carrinho no Mini App",
@@ -1247,6 +1257,8 @@ export async function handleCartCallbackQuery(
     !cbData.startsWith("prod_view:") &&
     !cbData.startsWith("prod_toggle:") &&
     !cbData.startsWith("trailer_play:") &&
+    !cbData.startsWith("check_pay:") &&
+    !cbData.startsWith("order_check:") &&
     cbData !== "my_accesses" &&
     cbData !== "support_info" &&
     cbData !== "start_menu"
@@ -1485,6 +1497,176 @@ export async function handleCartCallbackQuery(
         await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
       }
       return true;
+    }
+
+    // 3.8 Checkout via Pix directly inside Telegram chat
+    if (cbData === "cart_checkout") {
+      const cart = await CartService.getCartByTelegramUser(ctx.store.id, telegramUser.id);
+      if (!cart || !cart.items || cart.items.length === 0) {
+        await ctx.botService.answerCallbackQuery(cbId, "⚠️ Seu carrinho está vazio.", true);
+        const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
+        if (chatId && messageId) {
+          await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+        }
+        return true;
+      }
+
+      await ctx.botService.answerCallbackQuery(cbId, "⏳ Gerando cobrança Pix...");
+
+      const customer = await CartService.getOrCreateCustomerForTelegramUser(ctx.store.id, telegramUser);
+      const checkoutRes = await CheckoutService.createCheckout({
+        storeId: ctx.store.id,
+        customerId: customer.id,
+        storeSlug: ctx.store.slug,
+        items: cart.items.map((i) => ({
+          id: i.id,
+          quantity: i.quantity,
+          isCombo: i.isCombo,
+          comboId: i.comboId,
+        })),
+      });
+
+      if (!checkoutRes.success || !checkoutRes.orderId) {
+        await ctx.botService.answerCallbackQuery(
+          cbId,
+          `⚠️ ${checkoutRes.error || "Não foi possível gerar a cobrança Pix no momento."}`,
+          true
+        );
+        return true;
+      }
+
+      // Empty cart on successful checkout session creation
+      await CartService.clearCartByTelegramUser(ctx.store.id, telegramUser.id);
+
+      const orderId = checkoutRes.orderId;
+      const totalFormatted = `R$ ${(checkoutRes.total ?? cart.total).toFixed(2).replace(".", ",")}`;
+      const pixCode = checkoutRes.pix?.qrCode || "";
+      const targetChatId = chatId || telegramUser.id;
+
+      let pixMsg = `💳 *Pedido #${orderId.slice(0, 8)}* — *Aguardando Pagamento*\n\n`;
+      pixMsg += `💵 *Total a pagar:* *${totalFormatted}*\n\n`;
+      if (pixCode) {
+        pixMsg += `👇 *Pix Copia e Cola* _(toque no código para copiar)_:\n\n`;
+        pixMsg += `\`${pixCode}\`\n\n`;
+      }
+      pixMsg += `⏳ *Status:* Aguardando confirmação do banco...\n`;
+      pixMsg += `_Assim que o pagamento for aprovado, seu acesso aos conteúdos será liberado automaticamente aqui na conversa!_`;
+
+      const pixKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "🔄 Verificar Pagamento",
+              callback_data: `check_pay:${orderId}`,
+            },
+          ],
+          [
+            {
+              text: "🛍️ Explorar Catálogo",
+              callback_data: "cart_cat",
+            },
+            {
+              text: "↩️ Menu Inicial",
+              callback_data: "start_menu",
+            },
+          ],
+        ],
+      };
+
+      let sentWithPhoto = false;
+      if (checkoutRes.pix?.qrCodeBase64) {
+        try {
+          let appBaseUrl = "https://www.webgran.online";
+          try {
+            appBaseUrl = new URL(ctx.miniAppUrl).origin;
+          } catch {
+            appBaseUrl =
+              process.env.NEXT_PUBLIC_APP_URL ||
+              (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.webgran.online");
+          }
+          const qrImageUrl = `${appBaseUrl}/api/telegram/order-qr/${orderId}`;
+          await ctx.botService.sendPhoto(targetChatId, qrImageUrl, pixMsg, pixKeyboard, "Markdown");
+          sentWithPhoto = true;
+        } catch (photoErr) {
+          console.warn("[BOT CART] sendPhoto failed for QR Code, falling back to sendMessage:", photoErr);
+        }
+      }
+
+      if (!sentWithPhoto) {
+        await ctx.botService.sendMessage(targetChatId, pixMsg, pixKeyboard, "Markdown");
+      }
+
+      return true;
+    }
+
+    // 3.9 Check payment status
+    if (cbData.startsWith("check_pay:") || cbData.startsWith("order_check:")) {
+      const orderId = cbData.replace(/^(check_pay:|order_check:)/, "").trim();
+      const targetChatId = chatId || telegramUser.id;
+
+      try {
+        const { syncOrderWithMercadoPago } = await import("@/lib/payments/order-sync");
+        const syncRes = await syncOrderWithMercadoPago(orderId);
+
+        if (syncRes.status === "paid") {
+          await ctx.botService.answerCallbackQuery(cbId, "🎉 Pagamento confirmado com sucesso!");
+
+          const { AccessDeliveryService } = await import("@/lib/delivery/access-delivery-service");
+          await AccessDeliveryService.processOrderDelivery(orderId);
+
+          const paidMsg =
+            `🎉 *Pagamento Confirmado!*\n\n` +
+            `O pagamento do pedido *#${orderId.slice(0, 8)}* foi aprovado com sucesso e seus acessos foram liberados!\n\n` +
+            `Toque no botão abaixo para acessar seus conteúdos:`;
+
+          const paidKeyboard = {
+            inline_keyboard: [
+              [
+                {
+                  text: "🔐 Meus Acessos",
+                  callback_data: "my_accesses",
+                },
+              ],
+              [
+                {
+                  text: "🛍️ Explorar Catálogo",
+                  callback_data: "cart_cat",
+                },
+                {
+                  text: "↩️ Menu Inicial",
+                  callback_data: "start_menu",
+                },
+              ],
+            ],
+          };
+
+          if (chatId && messageId) {
+            try {
+              await ctx.botService.editMessageText(chatId, messageId, paidMsg, paidKeyboard, "Markdown");
+            } catch {
+              await ctx.botService.sendMessage(targetChatId, paidMsg, paidKeyboard, "Markdown");
+            }
+          } else {
+            await ctx.botService.sendMessage(targetChatId, paidMsg, paidKeyboard, "Markdown");
+          }
+          return true;
+        } else {
+          await ctx.botService.answerCallbackQuery(
+            cbId,
+            "⏳ Pagamento ainda não identificado. Aguarde alguns instantes e tente novamente.",
+            true
+          );
+          return true;
+        }
+      } catch (checkErr: any) {
+        console.error("[BOT CART] Error checking payment:", checkErr);
+        await ctx.botService.answerCallbackQuery(
+          cbId,
+          "⚠️ Não foi possível verificar o status agora. Tente novamente em instantes.",
+          true
+        );
+        return true;
+      }
     }
 
     // 4. Clear cart
