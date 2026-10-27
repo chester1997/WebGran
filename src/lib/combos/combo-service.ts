@@ -273,7 +273,7 @@ export class ComboService {
     };
 
     return {
-      hasPromotion: discountAmount > 0,
+      hasPromotion: discountAmount > 0 || Boolean(pricingResult.nextTierProgress),
       discountAmount,
       pricingResult,
       promotion,

@@ -196,7 +196,7 @@ export class CartService {
         }))
       );
 
-      if (progressiveEval.hasPromotion && progressiveEval.promotion && progressiveEval.pricingResult) {
+      if (progressiveEval.promotion && progressiveEval.pricingResult) {
         progressiveDiscount = progressiveEval.discountAmount;
         progressivePromotion = {
           id: progressiveEval.promotion.id,

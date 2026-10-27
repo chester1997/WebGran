@@ -240,7 +240,7 @@ export async function createCheckoutSession(
         }))
       );
 
-      if (progressiveEval.hasPromotion && progressiveEval.promotion && progressiveEval.pricingResult) {
+      if (progressiveEval.discountAmount > 0 && progressiveEval.promotion && progressiveEval.pricingResult) {
         progressiveDiscount = progressiveEval.discountAmount;
         progressiveComboId = progressiveEval.promotion.id;
         progressiveComboSnapshot = progressiveEval.snapshot;

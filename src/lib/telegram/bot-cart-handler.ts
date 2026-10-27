@@ -30,10 +30,16 @@ export function formatCartMessage(
   const miniAppCartUrl = `${miniAppUrl}/cart`;
 
   if (!cart.items || cart.items.length === 0) {
-    const emptyText =
+    let emptyText =
       `🛒 *Seu Carrinho está vazio!*\n\n` +
       `Você ainda não adicionou nenhum produto ao carrinho desta loja.\n\n` +
       `Explore nosso catálogo no Mini App ou aproveite nossas ofertas com desconto progressivo!`;
+
+    if (cart.progressivePromotion?.nextTierProgress) {
+      const nextTier = cart.progressivePromotion.nextTierProgress;
+      const targetPriceFormatted = `R$ ${(nextTier.targetTierPriceCents / 100).toFixed(2).replace(".", ",")}`;
+      emptyText += `\n\n🔥 *Aproveite:* leve *${nextTier.targetQuantity} produtos* por apenas *${targetPriceFormatted}*!`;
+    }
 
     const emptyKeyboard = {
       inline_keyboard: [
@@ -101,6 +107,11 @@ export function formatCartMessage(
     text += `✨ *Você economizou:* ${discountFormatted}!\n`;
 
     if (cart.progressivePromotion?.appliedTiers && cart.progressivePromotion.appliedTiers.length > 0) {
+      const unlockedTiers = cart.progressivePromotion.appliedTiers
+        .map((t) => `${t.count > 1 ? `${t.count}x ` : ""}${t.minQuantity} produtos por R$ ${(t.priceCents / 100).toFixed(2).replace(".", ",")}`)
+        .join(", ");
+      text += `🎉 *Oferta desbloqueada:* ${unlockedTiers}! Você economizou ${discountFormatted}.\n`;
+
       const tiersSummary = cart.progressivePromotion.appliedTiers
         .map((t) => `${t.count}x (${t.minQuantity} un por R$ ${(t.priceCents / 100).toFixed(2).replace(".", ",")})`)
         .join(", ");
@@ -112,13 +123,25 @@ export function formatCartMessage(
 
   text += `📦 *Total de Itens:* ${cart.itemCount}\n`;
 
-  // Display next tier progress message if available
+  // Display progressive offer progress or next tier progress message if available
   const nextTier = cart.progressivePromotion?.nextTierProgress;
   if (nextTier && nextTier.unitsRemaining > 0) {
+    const isSingle = nextTier.unitsRemaining === 1;
+    const icon = isSingle ? "🔥" : "🚀";
+    const title = cart.progressiveDiscount && cart.progressiveDiscount > 0 ? "Próxima faixa:" : "Oferta progressiva:";
+    const verb = isSingle ? "Falta" : "Faltam";
+    const unitsWord = isSingle ? "produto" : "produtos";
     const targetPriceFormatted = `R$ ${(nextTier.targetTierPriceCents / 100).toFixed(2).replace(".", ",")}`;
-    const verb = nextTier.unitsRemaining === 1 ? "Falta" : "Faltam";
-    const unitsWord = nextTier.unitsRemaining === 1 ? "produto" : "produtos";
-    text += `\n🚀 *Oferta:* ${verb} *${nextTier.unitsRemaining} ${unitsWord}* para desbloquear *${nextTier.targetQuantity} por ${targetPriceFormatted}*!\n`;
+
+    text += `\n${icon} *${title}* ${verb} *${nextTier.unitsRemaining} ${unitsWord}* para desbloquear *${nextTier.targetQuantity} por ${targetPriceFormatted}*!\n`;
+
+    if (nextTier.projectedAdditionalSavingsCents && nextTier.projectedAdditionalSavingsCents > 0) {
+      const savingsFormatted = `R$ ${(nextTier.projectedAdditionalSavingsCents / 100).toFixed(2).replace(".", ",")}`;
+      const savingsLabel = cart.progressiveDiscount && cart.progressiveDiscount > 0
+        ? `Economia adicional estimada de ${savingsFormatted}!`
+        : `Economia estimada de ${savingsFormatted} ao completar a faixa!`;
+      text += `  ↳ _${savingsLabel}_\n`;
+    }
   }
 
   text += `\n_Toque em 🗑️ Remover para retirar um item ou finalize pelo Mini App._`;
@@ -1524,7 +1547,10 @@ export async function handleCartCallbackQuery(
           } else if (cart?.progressivePromotion?.nextTierProgress?.unitsRemaining) {
             const remaining = cart.progressivePromotion.nextTierProgress.unitsRemaining;
             const targetQty = cart.progressivePromotion.nextTierProgress.targetQuantity;
-            toast = `✅ Adicionado! Falta(m) ${remaining} para ${targetQty} com desconto!`;
+            const targetPriceFormatted = `R$ ${(cart.progressivePromotion.nextTierProgress.targetTierPriceCents / 100).toFixed(2).replace(".", ",")}`;
+            toast = remaining === 1
+              ? `🔥 Falta só 1 produto para desbloquear ${targetQty} por ${targetPriceFormatted}!`
+              : `🚀 Adicionado! Faltam ${remaining} para ${targetQty} com desconto!`;
           }
 
           await ctx.botService.answerCallbackQuery(cbId, toast);
@@ -1565,7 +1591,10 @@ export async function handleCartCallbackQuery(
       } else if (cart?.progressivePromotion?.nextTierProgress?.unitsRemaining) {
         const remaining = cart.progressivePromotion.nextTierProgress.unitsRemaining;
         const targetQty = cart.progressivePromotion.nextTierProgress.targetQuantity;
-        toast = `✅ Adicionado! Falta(m) ${remaining} para ${targetQty} com desconto!`;
+        const targetPriceFormatted = `R$ ${(cart.progressivePromotion.nextTierProgress.targetTierPriceCents / 100).toFixed(2).replace(".", ",")}`;
+        toast = remaining === 1
+          ? `🔥 Falta só 1 produto para desbloquear ${targetQty} por ${targetPriceFormatted}!`
+          : `🚀 Adicionado! Faltam ${remaining} para ${targetQty} com desconto!`;
       }
 
       await ctx.botService.answerCallbackQuery(cbId, toast);
