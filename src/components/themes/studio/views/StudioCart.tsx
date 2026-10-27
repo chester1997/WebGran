@@ -56,8 +56,14 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
     qrCodeBase64: string;
     expiresAt: string;
     amount: number;
+    subtotal?: number;
+    progressiveDiscount?: number;
+    couponDiscount?: number;
+    totalDiscount?: number;
+    paymentGateway?: string;
   } | null>(null);
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
@@ -130,13 +136,19 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       );
 
       if (result.success && result.pix && result.orderId) {
-        clearCart();
+        // PRESERVAÇÃO DO CARRINHO: NÃO esvaziar o carrinho antes da confirmação do pagamento!
+        // O carrinho só é limpo após confirmação positiva via webhook ou polling (status === 'paid').
         setPixState({
           orderId: result.orderId,
           qrCode: result.pix.qrCode,
           qrCodeBase64: result.pix.qrCodeBase64,
           expiresAt: result.pix.expiresAt,
-          amount: checkoutAmount,
+          amount: typeof result.total === "number" ? result.total : checkoutAmount,
+          subtotal: typeof result.subtotal === "number" ? result.subtotal : subtotal,
+          progressiveDiscount: typeof result.progressiveDiscount === "number" ? result.progressiveDiscount : progDiscount,
+          couponDiscount: typeof result.couponDiscount === "number" ? result.couponDiscount : couponDiscount,
+          totalDiscount: typeof result.discount === "number" ? result.discount : (progDiscount + couponDiscount),
+          paymentGateway: result.paymentGateway,
         });
         setIsPixModalOpen(true);
       } else {
@@ -152,6 +164,38 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const [paidDeliveryType, setPaidDeliveryType] = useState<string | null>(null);
   const [paidProductSlug, setPaidProductSlug] = useState<string | null>(null);
 
+  // Manual Check Order Status
+  const handleCheckStatus = async () => {
+    if (!pixState?.orderId) return;
+    setIsCheckingStatus(true);
+    try {
+      const res = await fetch(`/api/orders/${pixState.orderId}/status`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "paid") {
+          clearCart(); // Limpar carrinho apenas após confirmação do pagamento
+          setIsPaid(true);
+          setPixState(null);
+          setIsPixModalOpen(false);
+          const firstProd = data.items?.[0]?.product;
+          if (firstProd) {
+            setPaidDeliveryType(firstProd.deliveryType);
+            setPaidProductSlug(firstProd.slug);
+          }
+          if (data.accesses && data.accesses.length > 0) {
+            setAccessLink(
+              `/api/telegram/access/redirect?accessId=${data.accesses[0].id}&storeSlug=${storeSlug}`
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[StudioCart] Error checking status manually:", err);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
   // Poll Order Status when PIX is active
   useEffect(() => {
     if (!pixState?.orderId || isPaid) return;
@@ -161,6 +205,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         if (res.ok) {
           const data = await res.json();
           if (data.status === "paid") {
+            clearCart(); // Limpar carrinho apenas após confirmação do pagamento
             setIsPaid(true);
             setPixState(null);
             setIsPixModalOpen(false);
@@ -182,7 +227,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [pixState?.orderId, isPaid, storeSlug]);
+  }, [pixState?.orderId, isPaid, storeSlug, clearCart]);
 
   /* ── Paid state ── */
   if (isPaid) {
@@ -229,7 +274,7 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
   }
 
   /* ── Empty state ── */
-  if (items.length === 0) {
+  if (items.length === 0 && !isPaid && !pixState) {
     return (
       <div className="p-4 pt-12 flex flex-col items-center justify-center min-h-[60vh] text-center text-zinc-900 dark:text-white">
         <div className="w-20 h-20 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-6">
@@ -255,6 +300,26 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
 
   return (
     <div className="p-4 pt-4 text-zinc-900 dark:text-white w-full">
+
+      {/* BANNER DE PIX PENDENTE SE O MODAL TIVER SIDO FECHADO */}
+      {pixState && !isPixModalOpen && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <Loader2 className="w-4 h-4 animate-spin text-amber-400 shrink-0" />
+            <div className="text-xs">
+              <span className="font-bold text-amber-100 block">Pagamento Pix pendente ({pixState.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
+              <span className="text-[11px] text-zinc-400">Pedido #{pixState.orderId.slice(0, 8)}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsPixModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs hover:bg-amber-400 transition-colors shrink-0 cursor-pointer"
+          >
+            Ver QR Code
+          </button>
+        </div>
+      )}
 
       {/* BANNER DINÂMICO DE OFERTA PROGRESSIVA / VOLUME TIERS */}
       {progressivePromotion && (
@@ -610,9 +675,17 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
         pixCode={pixState?.qrCode}
         qrCodeBase64={pixState?.qrCodeBase64}
         amount={pixState?.amount}
+        subtotal={pixState?.subtotal}
+        progressiveDiscount={pixState?.progressiveDiscount}
+        couponDiscount={pixState?.couponDiscount}
+        totalDiscount={pixState?.totalDiscount}
+        itemsCount={items.reduce((acc, i) => acc + i.quantity, 0)}
         orderId={pixState?.orderId}
+        expiresAt={pixState?.expiresAt}
         productTitle="Carrinho de Compras"
         status="pending"
+        onCheckStatus={handleCheckStatus}
+        isCheckingStatus={isCheckingStatus}
       />
     </div>
   );

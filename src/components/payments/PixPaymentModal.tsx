@@ -10,6 +10,11 @@ export interface PixPaymentModalProps {
   pixCode?: string | null;
   qrCodeBase64?: string | null;
   amount?: number | string | null;
+  subtotal?: number | string | null;
+  progressiveDiscount?: number | string | null;
+  couponDiscount?: number | string | null;
+  totalDiscount?: number | string | null;
+  itemsCount?: number | null;
   orderId?: string | null;
   productTitle?: string | null;
   status?: "pending" | "paid" | "expired" | "failed";
@@ -17,6 +22,8 @@ export interface PixPaymentModalProps {
   paymentMethod?: string | null;
   onCopy?: () => void;
   onRetry?: () => void;
+  onCheckStatus?: () => void;
+  isCheckingStatus?: boolean;
 }
 
 export function PixPaymentModal({
@@ -25,12 +32,20 @@ export function PixPaymentModal({
   pixCode,
   qrCodeBase64,
   amount,
+  subtotal,
+  progressiveDiscount,
+  couponDiscount,
+  totalDiscount,
+  itemsCount,
   orderId,
   productTitle,
   status = "pending",
+  expiresAt,
   paymentMethod,
   onCopy,
   onRetry,
+  onCheckStatus,
+  isCheckingStatus,
 }: PixPaymentModalProps) {
   // ESC key listener & body scroll lock
   useEffect(() => {
@@ -104,13 +119,21 @@ export function PixPaymentModal({
             pixCode={pixCode}
             qrCodeBase64={qrCodeBase64}
             amount={amount}
+            subtotal={subtotal}
+            progressiveDiscount={progressiveDiscount}
+            couponDiscount={couponDiscount}
+            totalDiscount={totalDiscount}
+            itemsCount={itemsCount}
             orderId={orderId}
+            expiresAt={expiresAt}
             status={status}
             paymentMethod={paymentMethod}
             isEmbedded={true}
             onCopy={onCopy}
             onRetry={onRetry}
             onBack={onClose}
+            onCheckStatus={onCheckStatus}
+            isCheckingStatus={isCheckingStatus}
           />
         </div>
 

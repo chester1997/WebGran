@@ -180,122 +180,143 @@ describe("ProgressivePricingEngine — Domain Unit Tests", () => {
       ]);
     });
 
-    it("Q=11: Particiona otimamente em 2x Faixa 4 + 1x Faixa 3 (4+4+3=11 un por R$ 42,00)", () => {
+    it("Q=11: Para N > maxTier (10), aplica a faixa de 10 (R$ 35,00) + 1 unidade excedente a preço cheio (R$ 10,00) = R$ 45,00", () => {
       const items = makeUniformItems(11, 1000); // Subtotal: R$ 110,00
       const res = ProgressivePricingEngine.calculate(items, standardTiers);
 
       expect(res.totalUnits).toBe(11);
-      expect(res.coveredUnits).toBe(11);
-      expect(res.regularUnits).toBe(0);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(1);
       expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
       expect(res.regularSubtotalCents).toBe(11000);
-      // Comparação de opções para 11 un:
-      // Opção A: 2x 4un (R$ 30) + 1x 3un (R$ 12) = R$ 42,00 (11 cobertas)
-      // Opção B: 1x 10un (R$ 35) + 1 un cheia (R$ 10) = R$ 45,00
-      // Opção C: 2x 4un (R$ 30) + 3 un cheias (R$ 30) = R$ 60,00
-      // O motor escolhe a Opção A: R$ 42,00!
-      expect(res.finalPriceCents).toBe(4200);
-      expect(res.savingsCents).toBe(6800); // R$ 68,00 de economia
-      expect(res.appliedTiers).toHaveLength(2);
-
-      const tier4 = res.appliedTiers.find((t) => t.minQuantity === 4);
-      const tier3 = res.appliedTiers.find((t) => t.minQuantity === 3);
-      expect(tier4?.count).toBe(2);
-      expect(tier3?.count).toBe(1);
-    });
-
-    it("Q=12: Particiona otimamente em 3x Faixa 4 (3x R$ 15,00 = R$ 45,00)", () => {
-      const items = makeUniformItems(12, 1000); // Subtotal: R$ 120,00
-      const res = ProgressivePricingEngine.calculate(items, standardTiers);
-
-      expect(res.totalUnits).toBe(12);
-      expect(res.coveredUnits).toBe(12);
-      expect(res.regularUnits).toBe(0);
-      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
-      // 3x 4un = R$ 45,00
-      // 4x 3un = R$ 48,00
-      // 1x 10un + 2 un cheias = R$ 35 + R$ 20 = R$ 55,00
-      expect(res.finalPriceCents).toBe(4500);
-      expect(res.savingsCents).toBe(7500); // R$ 75,00 de economia
-      expect(res.appliedTiers).toEqual([
-        {
-          tierId: "tier-4",
-          minQuantity: 4,
-          priceCents: 1500,
-          count: 3,
-          totalCoveredUnits: 12,
-          totalPriceCents: 4500,
-        },
-      ]);
-    });
-
-    it("Q=13: Combina 1x Faixa 10 (R$ 35,00) + 1x Faixa 3 (R$ 12,00) = R$ 47,00", () => {
-      const items = makeUniformItems(13, 1000); // Subtotal: R$ 130,00
-      const res = ProgressivePricingEngine.calculate(items, standardTiers);
-
-      expect(res.totalUnits).toBe(13);
-      expect(res.coveredUnits).toBe(13);
-      expect(res.regularUnits).toBe(0);
-      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
-      expect(res.finalPriceCents).toBe(4700); // 3500 + 1200 = 4700
-      expect(res.savingsCents).toBe(8300); // R$ 83,00 de economia
-      expect(res.appliedTiers).toHaveLength(2);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 10)?.count).toBe(1);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 3)?.count).toBe(1);
-    });
-
-    it("Q=14: Combina 1x Faixa 10 (R$ 35,00) + 1x Faixa 4 (R$ 15,00) = R$ 50,00", () => {
-      const items = makeUniformItems(14, 1000); // Subtotal: R$ 140,00
-      const res = ProgressivePricingEngine.calculate(items, standardTiers);
-
-      expect(res.totalUnits).toBe(14);
-      expect(res.coveredUnits).toBe(14);
-      expect(res.regularUnits).toBe(0);
-      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
-      expect(res.finalPriceCents).toBe(5000); // 3500 + 1500 = 5000
-      expect(res.savingsCents).toBe(9000); // R$ 90,00 de economia
-      expect(res.appliedTiers).toHaveLength(2);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 10)?.count).toBe(1);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 4)?.count).toBe(1);
-    });
-
-    it("Q=20: Aplica 2x Faixa 10 (2x R$ 35,00 = R$ 70,00)", () => {
-      const items = makeUniformItems(20, 1000); // Subtotal: R$ 200,00
-      const res = ProgressivePricingEngine.calculate(items, standardTiers);
-
-      expect(res.totalUnits).toBe(20);
-      expect(res.coveredUnits).toBe(20);
-      expect(res.regularUnits).toBe(0);
-      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
-      expect(res.finalPriceCents).toBe(7000);
-      expect(res.savingsCents).toBe(13000); // R$ 130,00 de economia
+      expect(res.finalPriceCents).toBe(4500); // 3500 + 1000
+      expect(res.savingsCents).toBe(6500); // R$ 65,00 de economia
       expect(res.appliedTiers).toEqual([
         {
           tierId: "tier-10",
           minQuantity: 10,
           priceCents: 3500,
-          count: 2,
-          totalCoveredUnits: 20,
-          totalPriceCents: 7000,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 3500,
         },
       ]);
+      expect(res.nextTierProgress).toBeNull();
     });
 
-    it("Q=21: Combina 1x Faixa 10 + 2x Faixa 4 + 1x Faixa 3 (10+4+4+3=21 un por R$ 77,00)", () => {
+    it("Q=12: Para N > maxTier (10), aplica a faixa de 10 (R$ 35,00) + 2 unidades excedentes a preço cheio (R$ 20,00) = R$ 55,00", () => {
+      const items = makeUniformItems(12, 1000); // Subtotal: R$ 120,00
+      const res = ProgressivePricingEngine.calculate(items, standardTiers);
+
+      expect(res.totalUnits).toBe(12);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(2);
+      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
+      expect(res.finalPriceCents).toBe(5500); // 3500 + 2000
+      expect(res.savingsCents).toBe(6500);
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-10",
+          minQuantity: 10,
+          priceCents: 3500,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 3500,
+        },
+      ]);
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Q=13: Para N > maxTier (10), aplica 1x Faixa 10 (R$ 35,00) + 3 unidades excedentes a preço cheio (R$ 30,00) = R$ 65,00", () => {
+      const items = makeUniformItems(13, 1000); // Subtotal: R$ 130,00
+      const res = ProgressivePricingEngine.calculate(items, standardTiers);
+
+      expect(res.totalUnits).toBe(13);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(3);
+      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
+      expect(res.finalPriceCents).toBe(6500); // 3500 + 3000
+      expect(res.savingsCents).toBe(6500);
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-10",
+          minQuantity: 10,
+          priceCents: 3500,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 3500,
+        },
+      ]);
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Q=14: Para N > maxTier (10), aplica 1x Faixa 10 (R$ 35,00) + 4 unidades excedentes a preço cheio (R$ 40,00) = R$ 75,00", () => {
+      const items = makeUniformItems(14, 1000); // Subtotal: R$ 140,00
+      const res = ProgressivePricingEngine.calculate(items, standardTiers);
+
+      expect(res.totalUnits).toBe(14);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(4);
+      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
+      expect(res.finalPriceCents).toBe(7500); // 3500 + 4000
+      expect(res.savingsCents).toBe(6500);
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-10",
+          minQuantity: 10,
+          priceCents: 3500,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 3500,
+        },
+      ]);
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Q=20: Para N > maxTier (10), aplica 1x Faixa 10 (R$ 35,00) + 10 unidades excedentes a preço cheio (R$ 100,00) = R$ 135,00", () => {
+      const items = makeUniformItems(20, 1000); // Subtotal: R$ 200,00
+      const res = ProgressivePricingEngine.calculate(items, standardTiers);
+
+      expect(res.totalUnits).toBe(20);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(10);
+      expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
+      expect(res.finalPriceCents).toBe(13500); // 3500 + 10000
+      expect(res.savingsCents).toBe(6500);
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-10",
+          minQuantity: 10,
+          priceCents: 3500,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 3500,
+        },
+      ]);
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Q=21: Para N > maxTier (10), aplica 1x Faixa 10 (R$ 35,00) + 11 unidades excedentes a preço cheio (R$ 110,00) = R$ 145,00", () => {
       const items = makeUniformItems(21, 1000); // Subtotal: R$ 210,00
       const res = ProgressivePricingEngine.calculate(items, standardTiers);
 
       expect(res.totalUnits).toBe(21);
-      expect(res.coveredUnits).toBe(21);
-      expect(res.regularUnits).toBe(0);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(11);
       expect(res.coveredUnits + res.regularUnits).toBe(res.totalUnits);
-      // 1x 10 (R$ 35) + 2x 4 (R$ 30) + 1x 3 (R$ 12) = R$ 77,00
-      expect(res.finalPriceCents).toBe(7700);
-      expect(res.savingsCents).toBe(13300); // R$ 133,00 de economia
-      expect(res.appliedTiers).toHaveLength(3);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 10)?.count).toBe(1);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 4)?.count).toBe(2);
-      expect(res.appliedTiers.find((t) => t.minQuantity === 3)?.count).toBe(1);
+      expect(res.finalPriceCents).toBe(14500); // 3500 + 11000
+      expect(res.savingsCents).toBe(6500);
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-10",
+          minQuantity: 10,
+          priceCents: 3500,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 3500,
+        },
+      ]);
+      expect(res.nextTierProgress).toBeNull();
     });
   });
 
@@ -507,10 +528,150 @@ describe("ProgressivePricingEngine — Domain Unit Tests", () => {
       const duration = performance.now() - start;
 
       expect(res.totalUnits).toBe(100);
-      // 100 itens = 10x Faixa 10 (10x R$ 35,00 = R$ 350,00)
-      expect(res.finalPriceCents).toBe(35000);
-      expect(res.savingsCents).toBe(150000 - 35000); // Economia de R$ 1.150,00
+      // Para N > maxTier (10), aplica 1x faixa máxima de 10 (3500) + 90 excedentes regulares (90 x 1500 = 135000) = 138500
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(90);
+      expect(res.finalPriceCents).toBe(138500);
+      expect(res.savingsCents).toBe(150000 - 138500); // Economia da faixa 10 = R$ 115,00
       expect(duration).toBeLessThan(100);
+    });
+  });
+
+  describe("6. Regressão Estrita: Faixas Cadastradas e Limite Superior (Cenário do Vendedor: 3 por R$ 12, 5 por R$ 15, 10 por R$ 20)", () => {
+    const sellerTiers: ProgressiveTier[] = [
+      { id: "tier-3", minQuantity: 3, priceCents: 1200 },
+      { id: "tier-5", minQuantity: 5, priceCents: 1500 },
+      { id: "tier-10", minQuantity: 10, priceCents: 2000 },
+    ];
+    // Produto de R$ 5,00 cada (500 centavos)
+    const unitPrice = 500;
+
+    it("Quantidade 1: mostra próxima faixa cadastrada de 3 unidades (faltam 2)", () => {
+      const items = makeUniformItems(1, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(1);
+      expect(res.coveredUnits).toBe(0);
+      expect(res.regularUnits).toBe(1);
+      expect(res.finalPriceCents).toBe(500);
+      expect(res.savingsCents).toBe(0);
+      expect(res.nextTierProgress).toEqual({
+        targetQuantity: 3,
+        unitsRemaining: 2,
+        targetTierPriceCents: 1200,
+        projectedAdditionalSavingsCents: 300, // 3 x 500 = 1500 vs 1200 -> 300
+      });
+    });
+
+    it("Quantidade 3: atinge faixa de 3 e mostra próxima faixa cadastrada de 5 unidades (faltam 2)", () => {
+      const items = makeUniformItems(3, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(3);
+      expect(res.coveredUnits).toBe(3);
+      expect(res.regularUnits).toBe(0);
+      expect(res.finalPriceCents).toBe(1200);
+      expect(res.savingsCents).toBe(300); // 1500 - 1200 = 300
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-3",
+          minQuantity: 3,
+          priceCents: 1200,
+          count: 1,
+          totalCoveredUnits: 3,
+          totalPriceCents: 1200,
+        },
+      ]);
+      expect(res.nextTierProgress).toEqual({
+        targetQuantity: 5,
+        unitsRemaining: 2,
+        targetTierPriceCents: 1500,
+        projectedAdditionalSavingsCents: 700, // Faixa 5 economiza 1000 total - 300 já obtido = 700
+      });
+    });
+
+    it("Quantidade 5: atinge faixa de 5 e mostra próxima faixa cadastrada de 10 unidades (faltam 5)", () => {
+      const items = makeUniformItems(5, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(5);
+      expect(res.coveredUnits).toBe(5);
+      expect(res.regularUnits).toBe(0);
+      expect(res.finalPriceCents).toBe(1500);
+      expect(res.savingsCents).toBe(1000); // 2500 - 1500 = 1000
+      expect(res.appliedTiers).toHaveLength(1);
+      expect(res.appliedTiers[0].minQuantity).toBe(5);
+      expect(res.nextTierProgress).toEqual({
+        targetQuantity: 10,
+        unitsRemaining: 5,
+        targetTierPriceCents: 2000,
+        projectedAdditionalSavingsCents: 2000, // Faixa 10 economiza 3000 total - 1000 já obtido = 2000
+      });
+    });
+
+    it("Quantidade 10: atinge a última faixa (10 por R$ 20,00) e NÃO inventa faixa superior inexistente (nextTierProgress é null)", () => {
+      const items = makeUniformItems(10, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(10);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(0);
+      expect(res.finalPriceCents).toBe(2000);
+      expect(res.savingsCents).toBe(3000); // 5000 - 2000 = 3000
+      expect(res.appliedTiers).toHaveLength(1);
+      expect(res.appliedTiers[0].minQuantity).toBe(10);
+      expect(res.appliedTiers[0].priceCents).toBe(2000);
+      // PONTO CRÍTICO: Não deve existir progresso para faixa 13 ou qualquer outra além de 10
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Quantidade 11: 10 unidades na faixa de 10 + 1 excedente cobrado a preço regular, nextTierProgress é null", () => {
+      const items = makeUniformItems(11, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(11);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(1);
+      expect(res.finalPriceCents).toBe(2500); // 2000 + 500
+      expect(res.savingsCents).toBe(3000); // 5500 - 2500 = 3000
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Quantidade 13: SEM combinação automática de 10 + 3: aplica 1x faixa de 10 (R$ 20,00) + 3 unidades excedentes a preço normal (3x R$ 5,00 = R$ 15,00) = R$ 35,00 total", () => {
+      const items = makeUniformItems(13, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(13);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(3);
+      expect(res.finalPriceCents).toBe(3500); // 2000 (faixa 10) + 1500 (3 excedentes normais)
+      expect(res.savingsCents).toBe(3000); // 6500 - 3500 = 3000 (economia estrita da faixa 10)
+      expect(res.appliedTiers).toEqual([
+        {
+          tierId: "tier-10",
+          minQuantity: 10,
+          priceCents: 2000,
+          count: 1,
+          totalCoveredUnits: 10,
+          totalPriceCents: 2000,
+        },
+      ]);
+      // NUNCA deve inventar meta de 13 unidades por R$ 32,00 nem progresso
+      expect(res.nextTierProgress).toBeNull();
+    });
+
+    it("Quantidade 14: 10 unidades na faixa de 10 + 4 excedentes a preço normal (4x R$ 5,00 = R$ 20,00) = R$ 40,00 total, nextTierProgress é null", () => {
+      const items = makeUniformItems(14, unitPrice);
+      const res = ProgressivePricingEngine.calculate(items, sellerTiers);
+
+      expect(res.totalUnits).toBe(14);
+      expect(res.coveredUnits).toBe(10);
+      expect(res.regularUnits).toBe(4);
+      expect(res.finalPriceCents).toBe(4000); // 2000 + 2000
+      expect(res.savingsCents).toBe(3000); // 7000 - 4000 = 3000
+      expect(res.appliedTiers).toHaveLength(1);
+      expect(res.appliedTiers[0].minQuantity).toBe(10);
+      expect(res.nextTierProgress).toBeNull();
     });
   });
 });

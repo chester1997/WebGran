@@ -8,6 +8,11 @@ export interface PixPaymentCardProps {
   pixCode?: string | null;
   qrCodeBase64?: string | null;
   amount?: number | string | null;
+  subtotal?: number | string | null;
+  progressiveDiscount?: number | string | null;
+  couponDiscount?: number | string | null;
+  totalDiscount?: number | string | null;
+  itemsCount?: number | null;
   orderId?: string | null;
   status?: "pending" | "paid" | "expired" | "failed";
   expiresAt?: string | null;
@@ -16,6 +21,8 @@ export interface PixPaymentCardProps {
   onCopy?: () => void;
   onRetry?: () => void;
   onBack?: () => void;
+  onCheckStatus?: () => void;
+  isCheckingStatus?: boolean;
 }
 
 // Validate payload to prevent rendering empty/null/undefined QR Codes
@@ -33,12 +40,21 @@ export function PixPaymentCard({
   pixCode,
   qrCodeBase64,
   amount,
+  subtotal,
+  progressiveDiscount,
+  couponDiscount,
+  totalDiscount,
+  itemsCount,
+  orderId,
+  expiresAt,
   status = "pending",
   paymentMethod,
   isEmbedded = false,
   onCopy,
   onRetry,
   onBack,
+  onCheckStatus,
+  isCheckingStatus = false,
 }: PixPaymentCardProps) {
   const [copied, setCopied] = useState(false);
 
@@ -53,12 +69,30 @@ export function PixPaymentCard({
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const formatBRL = (val: number) =>
+    val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const numAmount = amount !== undefined && amount !== null ? Number(amount) : null;
+  const numSubtotal = subtotal !== undefined && subtotal !== null ? Number(subtotal) : null;
+  const numProgDiscount = progressiveDiscount !== undefined && progressiveDiscount !== null ? Number(progressiveDiscount) : 0;
+  const numCouponDiscount = couponDiscount !== undefined && couponDiscount !== null ? Number(couponDiscount) : 0;
+
   const formattedAmount =
-    amount !== undefined && amount !== null
-      ? typeof amount === "number"
-        ? amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-        : `R$ ${Number(amount).toFixed(2).replace(".", ",")}`
+    numAmount !== null
+      ? formatBRL(numAmount)
       : null;
+
+  const formattedExpiresAt = expiresAt
+    ? (() => {
+        try {
+          const d = new Date(expiresAt);
+          if (isNaN(d.getTime())) return null;
+          return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
   if (status === "expired" || status === "failed") {
     return (
@@ -156,23 +190,65 @@ export function PixPaymentCard({
         )}
       </div>
 
-      {/* Amount Display */}
-      {formattedAmount && (
-        <div className="text-center space-y-0.5">
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Valor Total</span>
-          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-            {formattedAmount}
+      {/* Financial Breakdown & Amount Display */}
+      <div className="w-full bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-2xl p-3.5 space-y-2">
+        {numSubtotal !== null && (
+          <div className="flex justify-between items-center text-xs text-zinc-600 dark:text-zinc-400">
+            <span>Subtotal dos itens {itemsCount ? `(${itemsCount} un)` : ""}:</span>
+            <span className="font-mono text-zinc-800 dark:text-zinc-200">{formatBRL(numSubtotal)}</span>
           </div>
+        )}
+
+        {numProgDiscount > 0 && (
+          <div className="flex justify-between items-center text-xs text-purple-600 dark:text-purple-400 font-medium">
+            <span>Desconto Oferta Progressiva:</span>
+            <span className="font-mono">- {formatBRL(numProgDiscount)}</span>
+          </div>
+        )}
+
+        {numCouponDiscount > 0 && (
+          <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            <span>Cupom de desconto:</span>
+            <span className="font-mono">- {formatBRL(numCouponDiscount)}</span>
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-zinc-200 dark:border-white/10 flex justify-between items-baseline">
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Total a pagar:</span>
+          <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+            {formattedAmount}
+          </span>
         </div>
-      )}
+
+        {(orderId || formattedExpiresAt) && (
+          <div className="pt-1 flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 border-t border-zinc-200/60 dark:border-white/5">
+            {orderId && <span>Pedido #{orderId.slice(0, 8)}</span>}
+            {formattedExpiresAt && <span>Válido até {formattedExpiresAt}</span>}
+          </div>
+        )}
+      </div>
 
       {/* Status Box */}
-      <div className="w-full bg-amber-500/10 dark:bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-center gap-3">
-        <Loader2 className="w-5 h-5 text-amber-600 dark:text-amber-400 animate-spin flex-shrink-0" />
-        <div className="text-xs">
-          <p className="font-bold text-amber-800 dark:text-amber-300">Aguardando pagamento</p>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-normal">A liberação ocorrerá automaticamente assim que pago.</p>
+      <div className="w-full bg-amber-500/10 dark:bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Loader2 className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-spin flex-shrink-0" />
+          <div className="text-xs">
+            <p className="font-bold text-amber-800 dark:text-amber-300">Aguardando pagamento</p>
+            <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-tight">Liberação automática após confirmação.</p>
+          </div>
         </div>
+
+        {onCheckStatus && (
+          <button
+            type="button"
+            onClick={onCheckStatus}
+            disabled={isCheckingStatus}
+            className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-semibold transition-colors disabled:opacity-50 shrink-0 flex items-center gap-1 cursor-pointer"
+          >
+            {isCheckingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Verificar
+          </button>
+        )}
       </div>
 
       {/* Pix Copia e Cola Input + Copy Button */}
@@ -212,6 +288,17 @@ export function PixPaymentCard({
         <div className="pt-2 text-[10px] text-zinc-500 dark:text-zinc-500 text-center leading-relaxed border-t border-zinc-200 dark:border-white/5">
           A PUSHIN PAY atua exclusivamente como processadora de pagamentos e não possui qualquer responsabilidade pela entrega, suporte, conteúdo, qualidade ou cumprimento das obrigações relacionadas aos produtos ou serviços oferecidos pelo vendedor.
         </div>
+      )}
+
+      {/* Action to return to cart without clearing */}
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white underline pt-1 font-medium cursor-pointer"
+        >
+          Voltar para o carrinho
+        </button>
       )}
 
       {/* Back link (Only if not embedded in modal) */}

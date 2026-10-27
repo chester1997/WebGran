@@ -25,6 +25,10 @@ export interface CheckoutResult {
   success: boolean;
   error?: string;
   orderId?: string;
+  subtotal?: number;
+  discount?: number;
+  progressiveDiscount?: number;
+  couponDiscount?: number;
   total?: number;
   paymentGateway?: "mercadopago" | "pushinpay" | "syncpay";
   pix?: {
@@ -363,6 +367,10 @@ export class CheckoutService {
         return {
           success: true,
           orderId: matchingExistingOrder.id,
+          subtotal: matchingExistingOrder.subtotal ? parseFloat(matchingExistingOrder.subtotal) : subtotal,
+          discount: matchingExistingOrder.discount ? parseFloat(matchingExistingOrder.discount) : totalDiscount,
+          progressiveDiscount: matchingExistingOrder.progressiveComboDiscount ? parseFloat(matchingExistingOrder.progressiveComboDiscount) : progressiveDiscount,
+          couponDiscount: 0,
           total: finalTotal,
           paymentGateway: (matchingExistingOrder.paymentMethod as any) || "pushinpay",
           pix: {
@@ -472,6 +480,10 @@ export class CheckoutService {
         return {
           success: true,
           orderId: newOrder.id,
+          subtotal,
+          discount: totalDiscount,
+          progressiveDiscount,
+          couponDiscount,
           total: finalTotal,
           paymentGateway: "pushinpay",
           pix: {
@@ -510,6 +522,10 @@ export class CheckoutService {
         return {
           success: true,
           orderId: newOrder.id,
+          subtotal,
+          discount: totalDiscount,
+          progressiveDiscount,
+          couponDiscount,
           total: finalTotal,
           paymentGateway: "syncpay",
           pix: {
@@ -547,6 +563,10 @@ export class CheckoutService {
         return {
           success: true,
           orderId: newOrder.id,
+          subtotal,
+          discount: totalDiscount,
+          progressiveDiscount,
+          couponDiscount,
           total: finalTotal,
           paymentGateway: "mercadopago",
           pix: {

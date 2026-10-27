@@ -146,6 +146,7 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
         const json = JSON.stringify(userObj);
         sessionStorage.setItem(`webgran_tg_user_${storeSlug}`, json);
         localStorage.setItem(`webgran_tg_user_${storeSlug}`, json);
+        window.dispatchEvent(new CustomEvent("webgran_tg_auth_success", { detail: { user: userObj } }));
       } catch (_e) {}
     }
   };

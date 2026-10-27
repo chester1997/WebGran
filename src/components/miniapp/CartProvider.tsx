@@ -92,22 +92,57 @@ export function useCart() {
 function getTelegramInitData(): string {
   if (typeof window === "undefined") return "";
   try {
+    // 1. Native Telegram.WebApp
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const wa = (window as any).Telegram?.WebApp;
+    if (wa?.initData && wa.initData.trim() !== "") {
+      return wa.initData;
+    }
+
+    // 2. Hash & Search params (tgWebAppData / initData)
+    const sources = [window.location.hash || "", window.location.search || ""];
+    for (const src of sources) {
+      if (!src) continue;
+      const clean = src.startsWith("#") || src.startsWith("?") ? src.slice(1) : src;
+      const tgIndex = clean.indexOf("tgWebAppData=");
+      if (tgIndex !== -1) {
+        let rawVal = clean.slice(tgIndex + "tgWebAppData=".length);
+        const nextTgParam = rawVal.search(/&tgWebApp[A-Z]/i);
+        if (nextTgParam !== -1) {
+          rawVal = rawVal.slice(0, nextTgParam);
+        }
+        if (rawVal.includes("%3D") || rawVal.includes("%26") || rawVal.includes("%7B")) {
+          try {
+            rawVal = decodeURIComponent(rawVal);
+          } catch (_e) {}
+        }
+        if (rawVal.includes("hash=") || rawVal.includes("user=") || rawVal.includes("query_id=")) {
+          return rawVal;
+        }
+      }
+
+      if (clean.includes("hash=") && (clean.includes("user=") || clean.includes("query_id="))) {
+        return clean.replace(/&tgWebApp[A-Za-z0-9]+=[^&]*/g, "");
+      }
+    }
+
     const searchParams = new URLSearchParams(window.location.search);
-    return wa?.initData || searchParams.get("tgWebAppData") || "";
+    return searchParams.get("tgWebAppData") || searchParams.get("initData") || "";
   } catch {
     return "";
   }
 }
 
-function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(storeSlug?: string): HeadersInit {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
   const initData = getTelegramInitData();
   if (initData) {
     headers["x-telegram-init-data"] = initData;
+  }
+  if (storeSlug) {
+    headers["x-store-slug"] = storeSlug;
   }
   return headers;
 }
@@ -206,20 +241,20 @@ export function CartProvider({
     setIsLoaded(true);
 
     // Initial server fetch / merge
-    const syncWithServer = async () => {
-      if (hasSyncedInitialRef.current) return;
+    const syncWithServer = async (isRetry = false) => {
+      if (hasSyncedInitialRef.current && !isRetry) return;
       setIsSyncing(true);
 
       try {
         const res = await fetch(`/api/miniapp/cart?storeSlug=${encodeURIComponent(storeSlug)}`, {
           method: "GET",
-          headers: getAuthHeaders(),
+          headers: getAuthHeaders(storeSlug),
         });
 
         if (res.status === 401) {
-          // Unauthenticated visitor: retain local storage behavior
+          // Unauthenticated visitor ou autenticação ainda em processamento:
+          // NÃO marcar hasSyncedInitialRef = true para permitir sincronizar assim que a auth completar.
           setIsAuthenticated(false);
-          hasSyncedInitialRef.current = true;
           return;
         }
 
@@ -242,7 +277,7 @@ export function CartProvider({
             try {
               const syncRes = await fetch(`/api/miniapp/cart?storeSlug=${encodeURIComponent(storeSlug)}`, {
                 method: "POST",
-                headers: getAuthHeaders(),
+                headers: getAuthHeaders(storeSlug),
                 body: JSON.stringify({
                   action: "sync",
                   items: localItems.map((item) => ({
@@ -287,6 +322,32 @@ export function CartProvider({
     };
 
     syncWithServer();
+
+    // Ouvinte para re-sincronizar imediatamente na primeira abertura quando o Telegram autenticar
+    const handleAuthSuccess = () => {
+      syncWithServer(true);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("webgran_tg_auth_success", handleAuthSuccess);
+    }
+
+    // Retentativas rápidas caso o script do Telegram WebApp demore milissegundos para injetar initData
+    const timer1 = setTimeout(() => {
+      if (!hasSyncedInitialRef.current) syncWithServer(true);
+    }, 400);
+
+    const timer2 = setTimeout(() => {
+      if (!hasSyncedInitialRef.current) syncWithServer(true);
+    }, 1200);
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("webgran_tg_auth_success", handleAuthSuccess);
+      }
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [storeSlug, storageKey, persistToLocalStorage]);
 
   // Execute server mutation with optimistic UI update and automatic rollback on failure
@@ -316,7 +377,7 @@ export function CartProvider({
       try {
         const res = await fetch(`/api/miniapp/cart?storeSlug=${encodeURIComponent(storeSlug)}`, {
           method: "POST",
-          headers: getAuthHeaders(),
+          headers: getAuthHeaders(storeSlug),
           body: JSON.stringify(apiPayload),
         });
 

@@ -219,7 +219,19 @@ export class ProgressivePricingEngine {
       return a.priceCents - b.priceCents;
     });
 
-    for (let k = 1; k <= N; k++) {
+    // Identificar a maior faixa cadastrada no banco de dados para a promoção
+    const maxTierQuantity = sortedTiers.reduce(
+      (max, t) => (t.minQuantity > max ? t.minQuantity : max),
+      0
+    );
+
+    // REGRA DE OURO DAS OFERTAS PROGRESSIVAS:
+    // Não combinar automaticamente faixas para quantidades superiores à faixa máxima cadastrada.
+    // Para N >= maxTierQuantity, a cobertura promocional é limitada à faixa máxima cadastrada,
+    // e todas as unidades excedentes (N - maxTierQuantity) são estritamente cobradas pelo preço regular normal.
+    const maxCoverableUnits = Math.min(N, maxTierQuantity);
+
+    for (let k = 1; k <= maxCoverableUnits; k++) {
       let bestForK: DpState | null = null;
 
       for (const tier of sortedTiers) {
@@ -244,13 +256,13 @@ export class ProgressivePricingEngine {
       dp[k] = bestForK;
     }
 
-    // Avaliar qual k (0 <= k <= N) produz o MENOR custo total final:
+    // Avaliar qual k (0 <= k <= maxCoverableUnits) produz o MENOR custo total final:
     // Custo Total = dp[k].cost + remainingCost[k]
     let bestK = 0;
     let bestFinalCost = regularSubtotalCents;
     let bestTiers: ProgressiveTier[] = [];
 
-    for (let k = 0; k <= N; k++) {
+    for (let k = 0; k <= maxCoverableUnits; k++) {
       const state = dp[k];
       if (state !== null) {
         const candidateTotal = state.cost + remainingCost[k];
@@ -324,28 +336,15 @@ export class ProgressivePricingEngine {
           projectedAdditionalSavingsCents: projSavings,
         };
       } else {
-        // Já atingiu ao menos uma faixa: procurar a próxima quantidade alvo que traz novo benefício
-        const candidates: number[] = [];
-        for (const t of sortedByMinQty) {
-          if (t.minQuantity > N) {
-            candidates.push(t.minQuantity);
-          }
-        }
+        // Já atingiu ao menos uma faixa: procurar a próxima faixa real cadastrada no banco
+        const realFutureTiers = sortedByMinQty.filter((t) => t.minQuantity > N);
 
-        // Também avaliar combinações aditivas imediatas (ex: se tem 3 e existe faixa 3 e 4, próximas metas: 4, 6 [3+3], 7 [3+4])
-        for (const t of sortedByMinQty) {
-          const nextComboTarget = bestK + t.minQuantity;
-          if (nextComboTarget > N) {
-            candidates.push(nextComboTarget);
-          }
-        }
-
-        if (candidates.length > 0) {
-          candidates.sort((a, b) => a - b);
-          const targetQuantity = candidates[0];
+        if (realFutureTiers.length > 0) {
+          const nextTier = realFutureTiers[0];
+          const targetQuantity = nextTier.minQuantity;
           const unitsRemaining = targetQuantity - N;
 
-          // Projeção simples de preço usando preço médio do carrinho
+          // Projeção simples de preço usando preço médio dos itens do carrinho
           const avgPriceCents = Math.round(regularSubtotalCents / N);
           const projectedItems: PricingItemInput[] = [
             ...sortedItems,
@@ -358,15 +357,15 @@ export class ProgressivePricingEngine {
           const projectedResult = ProgressivePricingEngine.calculate(projectedItems, tiers, true);
           const projectedAdditionalSavingsCents = Math.max(0, projectedResult.savingsCents - savingsCents);
 
-          // Encontrar preço da faixa mais relevante para essa meta
-          const matchingTier = sortedByMinQty.find((t) => t.minQuantity === targetQuantity);
-
           nextTierProgress = {
             targetQuantity,
             unitsRemaining,
-            targetTierPriceCents: matchingTier ? matchingTier.priceCents : projectedResult.finalPriceCents,
+            targetTierPriceCents: nextTier.priceCents,
             projectedAdditionalSavingsCents,
           };
+        } else {
+          // Atingiu ou ultrapassou a última faixa cadastrada: não inventar faixas superiores
+          nextTierProgress = null;
         }
       }
     }
