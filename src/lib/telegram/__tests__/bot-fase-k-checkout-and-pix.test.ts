@@ -504,4 +504,116 @@ describe("WebGran — Fase K: Checkout, Carrinho e Pix no Telegram", () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe("5. Navegação a partir da Mensagem de Pagamento Pix", () => {
+    it("deve navegar para 'cart_cat' (Explorar Catálogo) e enviar nova mensagem se editMessageText falhar", async () => {
+      // Mock de produtos para catálogo
+      mockDb.query.products.findMany.mockResolvedValueOnce([
+        {
+          id: "prod-cat-1",
+          storeId: "store-123",
+          title: "Produto Catálogo 1",
+          price: "15.00",
+          status: "active",
+        },
+      ]);
+
+      // Simula que a mensagem era uma foto (Pix QR Code) e editMessageText falha
+      mockBotService.editMessageText.mockRejectedValueOnce(
+        new Error("Telegram API: message to edit not found or is a photo caption")
+      );
+
+      const handled = await handleCartCallbackQuery(
+        mockContext,
+        "cb-nav-cat",
+        123456789,
+        999, // ID da mensagem da foto do Pix
+        "cart_cat",
+        mockTelegramUser
+      );
+
+      expect(handled).toBe(true);
+      expect(mockBotService.answerCallbackQuery).toHaveBeenCalledWith("cb-nav-cat");
+      // Tentou editar primeiro
+      expect(mockBotService.editMessageText).toHaveBeenCalledTimes(1);
+      // Como falhou, fez fallback para sendMessage
+      expect(mockBotService.sendMessage).toHaveBeenCalledTimes(1);
+      const [chatId, text] = mockBotService.sendMessage.mock.calls[0];
+      expect(chatId).toBe(123456789);
+      expect(text).toContain("Catálogo de Produtos");
+    });
+
+    it("deve navegar para 'start_menu' (Menu Inicial) e enviar nova mensagem se editMessageText falhar", async () => {
+      // Simula falha ao tentar editar mensagem de foto
+      mockBotService.editMessageText.mockRejectedValueOnce(
+        new Error("Telegram API: message can't be edited")
+      );
+
+      const handled = await handleCartCallbackQuery(
+        mockContext,
+        "cb-nav-menu",
+        123456789,
+        999,
+        "start_menu",
+        mockTelegramUser
+      );
+
+      expect(handled).toBe(true);
+      expect(mockBotService.answerCallbackQuery).toHaveBeenCalledWith("cb-nav-menu");
+      expect(mockBotService.editMessageText).toHaveBeenCalledTimes(1);
+      expect(mockBotService.sendMessage).toHaveBeenCalledTimes(1);
+      const [chatId, text, replyMarkup] = mockBotService.sendMessage.mock.calls[0];
+      expect(chatId).toBe(123456789);
+      expect(text).toContain("Menu Inicial");
+      expect(replyMarkup.inline_keyboard.length).toBeGreaterThan(0);
+    });
+
+    it("deve navegar para 'my_accesses' mesmo se mensagem for foto", async () => {
+      mockDb.query.orders.findMany.mockResolvedValueOnce([]);
+
+      mockBotService.editMessageText.mockRejectedValueOnce(
+        new Error("Telegram API: cannot edit photo message")
+      );
+
+      const handled = await handleCartCallbackQuery(
+        mockContext,
+        "cb-nav-accesses",
+        123456789,
+        999,
+        "my_accesses",
+        mockTelegramUser
+      );
+
+      expect(handled).toBe(true);
+      expect(mockBotService.answerCallbackQuery).toHaveBeenCalledWith("cb-nav-accesses");
+      expect(mockBotService.sendMessage).toHaveBeenCalled();
+    });
+
+    it("deve ignorar callbacks duplicados via dedup mantendo clique legítimo", async () => {
+      const { isDuplicateTelegramCallback } = await import("../update-dedup");
+      
+      // Primeiro clique
+      const firstHandled = await handleCartCallbackQuery(
+        mockContext,
+        "cb-dedup-1",
+        123456789,
+        999,
+        "start_menu",
+        mockTelegramUser
+      );
+      expect(firstHandled).toBe(true);
+
+      // Segundo clique com mesmo cbId deve ser deduped
+      const secondHandled = await handleCartCallbackQuery(
+        mockContext,
+        "cb-dedup-1",
+        123456789,
+        999,
+        "start_menu",
+        mockTelegramUser
+      );
+      expect(secondHandled).toBe(true);
+      expect(mockBotService.answerCallbackQuery).toHaveBeenCalledWith("cb-dedup-1");
+    });
+  });
 });

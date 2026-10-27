@@ -198,6 +198,30 @@ export class TelegramBotService {
     return telegramFetch(this.token, 'editMessageText', payload);
   }
 
+  async editMessageCaption(
+    chatId: string | number,
+    messageId: number,
+    caption?: string,
+    replyMarkup?: any,
+    parseMode?: string
+  ): Promise<unknown> {
+    const payload: any = {
+      chat_id: chatId,
+      message_id: messageId,
+      caption,
+      reply_markup: replyMarkup,
+    };
+    if (parseMode) payload.parse_mode = parseMode;
+    return telegramFetch(this.token, 'editMessageCaption', payload);
+  }
+
+  async deleteMessage(chatId: string | number, messageId: number): Promise<boolean> {
+    return telegramFetch<boolean>(this.token, 'deleteMessage', {
+      chat_id: chatId,
+      message_id: messageId,
+    });
+  }
+
   async editMessage(
     chatId: string | number,
     messageId: number,

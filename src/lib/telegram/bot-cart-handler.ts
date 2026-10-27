@@ -1234,6 +1234,44 @@ export async function handleSupportCommand(
 }
 
 /**
+ * Safely edits a message in-place or falls back to sending a new message if editing fails
+ * (e.g., when the original message is a photo, was deleted, or cannot be edited).
+ */
+export async function safeEditOrSendMessage(
+  botService: TelegramBotService,
+  chatId: string | number | undefined,
+  messageId: number | undefined,
+  text: string,
+  replyMarkup?: any,
+  parseMode: string = "Markdown",
+  linkPreviewOptions?: any
+): Promise<void> {
+  if (!chatId) return;
+
+  if (messageId) {
+    try {
+      if (linkPreviewOptions !== undefined) {
+        await botService.editMessageText(chatId, messageId, text, replyMarkup, parseMode, linkPreviewOptions);
+      } else {
+        await botService.editMessageText(chatId, messageId, text, replyMarkup, parseMode);
+      }
+      return;
+    } catch (editErr: any) {
+      console.warn(
+        `[BOT CART] editMessageText failed for chatId=${chatId} messageId=${messageId} (${editErr?.message || editErr}). Falling back to sendMessage.`
+      );
+    }
+  }
+
+  // Fallback to sending a new message
+  if (linkPreviewOptions !== undefined) {
+    await botService.sendMessage(chatId, text, replyMarkup, parseMode, linkPreviewOptions);
+  } else {
+    await botService.sendMessage(chatId, text, replyMarkup, parseMode);
+  }
+}
+
+/**
  * Handles interactive callback queries for cart, combo and progressive offer operations.
  */
 export async function handleCartCallbackQuery(
@@ -1297,11 +1335,15 @@ export async function handleCartCallbackQuery(
         telegramUser.id
       );
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown", linkPreviewOptions);
-      } else if (chatId) {
-        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
-      }
+      await safeEditOrSendMessage(
+        ctx.botService,
+        chatId || telegramUser.id,
+        messageId,
+        text,
+        replyMarkup,
+        "Markdown",
+        linkPreviewOptions
+      );
       return true;
     }
 
@@ -1320,11 +1362,15 @@ export async function handleCartCallbackQuery(
       );
 
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown", linkPreviewOptions);
-      } else if (chatId) {
-        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
-      }
+      await safeEditOrSendMessage(
+        ctx.botService,
+        chatId || telegramUser.id,
+        messageId,
+        text,
+        replyMarkup,
+        "Markdown",
+        linkPreviewOptions
+      );
       return true;
     }
 
@@ -1430,9 +1476,7 @@ export async function handleCartCallbackQuery(
     if (cbData === "combo_list") {
       const { text, replyMarkup } = await formatCombosMessage(ctx.store.id, ctx.miniAppUrl);
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-      }
+      await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");
       return true;
     }
 
@@ -1440,9 +1484,7 @@ export async function handleCartCallbackQuery(
     if (cbData === "prog_view") {
       const { text, replyMarkup } = await formatProgressiveOfferMessage(ctx.store.id, ctx.miniAppUrl);
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-      }
+      await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");
       return true;
     }
 
@@ -1450,9 +1492,7 @@ export async function handleCartCallbackQuery(
     if (cbData === "prog_prods") {
       const { text, replyMarkup } = await formatProgressiveProductsMessage(ctx.store.id, ctx.miniAppUrl);
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-      }
+      await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");
       return true;
     }
 
@@ -1461,9 +1501,7 @@ export async function handleCartCallbackQuery(
       const cart = await CartService.getCartByTelegramUser(ctx.store.id, telegramUser.id);
       const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-      }
+      await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");
       return true;
     }
 
@@ -1471,11 +1509,7 @@ export async function handleCartCallbackQuery(
     if (cbData === "my_accesses") {
       const { text, replyMarkup } = await formatAccessesMessage(ctx.store, telegramUser.id, ctx.miniAppUrl);
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-      } else if (chatId) {
-        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
-      }
+      await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");
       return true;
     }
 
@@ -1491,11 +1525,7 @@ export async function handleCartCallbackQuery(
       const replyMarkup = getInitialBotKeyboard(ctx.store, ctx.miniAppUrl);
       const text = `🛍️ *Menu Inicial — ${ctx.store.name}*\n\nSelecione uma opção abaixo para navegar:`;
       await ctx.botService.answerCallbackQuery(cbId);
-      if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-      } else if (chatId) {
-        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
-      }
+      await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");
       return true;
     }
 

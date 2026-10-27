@@ -125,6 +125,8 @@ export async function POST(req: NextRequest) {
         cbData.startsWith("prog_") ||
         cbData.startsWith("cat_") ||
         cbData.startsWith("prod_view:") ||
+        cbData.startsWith("prod_toggle:") ||
+        cbData.startsWith("trailer_play:") ||
         cbData === "my_accesses" ||
         cbData === "support_info" ||
         cbData === "start_menu"
