@@ -312,7 +312,8 @@ describe("WebGran — Initial Bot Menu, Accesses and Progressive Offers Verifica
           ]),
         ]),
       }),
-      "Markdown"
+      "Markdown",
+      expect.anything()
     );
   });
 

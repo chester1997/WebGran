@@ -230,11 +230,12 @@ describe("WebGran — Fase G: Catálogo Paginado, Botões Compactos e Navegaçã
 
     expect(prodRow).toHaveLength(2);
 
-    // Left button: title truncated with ellipsis
+    // Left button: numbered compact title truncated with ellipsis (price moved to body for mobile alignment)
     const titleBtn = prodRow[0];
-    expect(titleBtn.text).toContain("...");
-    expect(titleBtn.text).toContain("R$ 49,90");
+    expect(titleBtn.text).toBe("1. Nome de Produto...");
     expect(titleBtn.callback_data).toBe("prod_view:prod-99:1");
+    expect(res.text).toContain("Nome de Produto Extremamente Longo");
+    expect(res.text).toContain("R$ 49,90");
 
     // Right button: strictly "🛒"
     const cartBtn = prodRow[1];

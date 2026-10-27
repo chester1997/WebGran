@@ -32,13 +32,20 @@ export class TelegramBotService {
     return telegramFetch<boolean>(this.token, 'deleteWebhook');
   }
 
-  async sendMessage(chatId: string | number, text: string, replyMarkup?: any, parseMode?: string): Promise<unknown> {
+  async sendMessage(
+    chatId: string | number,
+    text: string,
+    replyMarkup?: any,
+    parseMode?: string,
+    linkPreviewOptions?: any
+  ): Promise<unknown> {
     const payload: any = {
       chat_id: chatId,
       text,
       reply_markup: replyMarkup
     };
     if (parseMode) payload.parse_mode = parseMode;
+    if (linkPreviewOptions) payload.link_preview_options = linkPreviewOptions;
     return telegramFetch(this.token, 'sendMessage', payload);
   }
 
@@ -162,7 +169,8 @@ export class TelegramBotService {
     messageId: number,
     text: string,
     replyMarkup?: any,
-    parseMode?: string
+    parseMode?: string,
+    linkPreviewOptions?: any
   ): Promise<unknown> {
     const payload: any = {
       chat_id: chatId,
@@ -171,6 +179,7 @@ export class TelegramBotService {
       reply_markup: replyMarkup,
     };
     if (parseMode) payload.parse_mode = parseMode;
+    if (linkPreviewOptions) payload.link_preview_options = linkPreviewOptions;
     return telegramFetch(this.token, 'editMessageText', payload);
   }
 

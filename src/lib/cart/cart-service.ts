@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { carts, cartItems, products, combos, telegramCustomers } from "@/db/schema";
-import { eq, and, or, inArray } from "drizzle-orm";
+import { eq, and, or, inArray, sql } from "drizzle-orm";
 import { ComboService } from "@/lib/combos/combo-service";
 import type { AppliedTierSummary, NextTierProgress } from "@/lib/combos/pricing-engine";
 
@@ -254,38 +254,21 @@ export class CartService {
 
     const cartRecord = await CartService.getOrCreateCartRecord(storeId, customerId);
 
-    const existingItem = await db.query.cartItems.findFirst({
-      where: and(
-        eq(cartItems.cartId, cartRecord.id),
-        eq(cartItems.productId, productId)
-      ),
-    });
-
-    if (existingItem) {
-      const newQuantity = Math.min(CartService.MAX_ITEM_QUANTITY, existingItem.quantity + validQty);
-      await db
-        .update(cartItems)
-        .set({
-          quantity: newQuantity,
+    await db
+      .insert(cartItems)
+      .values({
+        cartId: cartRecord.id,
+        productId: product.id,
+        quantity: validQty,
+      })
+      .onConflictDoUpdate({
+        target: [cartItems.cartId, cartItems.productId],
+        targetWhere: sql`${cartItems.productId} IS NOT NULL`,
+        set: {
+          quantity: sql`LEAST(${CartService.MAX_ITEM_QUANTITY}, ${cartItems.quantity} + ${validQty})`,
           updatedAt: new Date(),
-        })
-        .where(eq(cartItems.id, existingItem.id));
-    } else {
-      await db
-        .insert(cartItems)
-        .values({
-          cartId: cartRecord.id,
-          productId: product.id,
-          quantity: validQty,
-        })
-        .onConflictDoUpdate({
-          target: [cartItems.cartId, cartItems.productId],
-          set: {
-            quantity: validQty,
-            updatedAt: new Date(),
-          },
-        });
-    }
+        },
+      });
 
     await db
       .update(carts)
@@ -592,31 +575,21 @@ export class CartService {
         const prod = productMap.get(targetId);
         if (!prod) continue;
 
-        const existing = existingProductMap.get(prod.id);
-        if (existing) {
-          const mergedQty = Math.min(CartService.MAX_ITEM_QUANTITY, Math.max(existing.quantity, safeQty));
-          if (mergedQty !== existing.quantity) {
-            await db
-              .update(cartItems)
-              .set({ quantity: mergedQty, updatedAt: new Date() })
-              .where(eq(cartItems.id, existing.id));
-          }
-        } else {
-          await db
-            .insert(cartItems)
-            .values({
-              cartId: cartRecord.id,
-              productId: prod.id,
-              quantity: safeQty,
-            })
-            .onConflictDoUpdate({
-              target: [cartItems.cartId, cartItems.productId],
-              set: {
-                quantity: safeQty,
-                updatedAt: new Date(),
-              },
-            });
-        }
+        await db
+          .insert(cartItems)
+          .values({
+            cartId: cartRecord.id,
+            productId: prod.id,
+            quantity: safeQty,
+          })
+          .onConflictDoUpdate({
+            target: [cartItems.cartId, cartItems.productId],
+            targetWhere: sql`${cartItems.productId} IS NOT NULL`,
+            set: {
+              quantity: sql`LEAST(${CartService.MAX_ITEM_QUANTITY}, GREATEST(${cartItems.quantity}, ${safeQty}))`,
+              updatedAt: new Date(),
+            },
+          });
       }
     }
 

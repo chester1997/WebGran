@@ -218,7 +218,8 @@ describe("Bot Cart Handler Suite (Phase 3)", () => {
             ]),
           ]),
         }),
-        "Markdown"
+        "Markdown",
+        expect.anything()
       );
     });
   });

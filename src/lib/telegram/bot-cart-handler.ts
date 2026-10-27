@@ -3,12 +3,12 @@ import { CartService, CartDTO } from "@/lib/cart/cart-service";
 import { ComboService, ActiveComboDTO, ActiveProgressivePromotionDTO } from "@/lib/combos/combo-service";
 import { db } from "@/db";
 import { products, telegramCustomers } from "@/db/schema";
-import { and, eq, desc, inArray } from "drizzle-orm";
+import { and, eq, desc, asc, inArray } from "drizzle-orm";
 import { isDuplicateTelegramCallback } from "./update-dedup";
 import { parseSupportConfig } from "@/lib/support/support-helper";
 import { AccessService } from "@/lib/orders/access-service";
 
-interface BotCartContext {
+export interface BotCartContext {
   store: {
     id: string;
     name: string;
@@ -197,7 +197,7 @@ export async function formatCatalogMessage(
   storeId: string,
   miniAppUrl: string,
   page: number = 1
-): Promise<{ text: string; replyMarkup: any }> {
+): Promise<{ text: string; replyMarkup: any; linkPreviewOptions?: any }> {
   const allActiveProducts = await db.query.products.findMany({
     where: and(eq(products.storeId, storeId), eq(products.status, "active")),
     orderBy: [desc(products.createdAt)],
@@ -236,27 +236,28 @@ export async function formatCatalogMessage(
   let text = `📦 *Catálogo de Produtos*\n`;
   text += `Página ${safePage} de ${totalPages} · ${totalProducts} ${totalProducts === 1 ? "produto" : "produtos"}\n\n`;
 
+  let itemNum = startIndex + 1;
   for (const prod of pageProducts) {
     const priceVal = Number(prod.price) || 0;
     const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
-    text += `• *${prod.title}* — ${priceFormatted}\n`;
+    text += `*${itemNum}.* ${prod.title} — *${priceFormatted}*\n`;
+    itemNum++;
   }
 
-  text += `\n_Toque no produto para ver detalhes ou em 🛒 para adicionar ao carrinho._`;
+  text += `\n_Toque no produto para ver detalhes e fotos ou em 🛒 para adicionar ao carrinho._`;
 
   const inlineKeyboardRows: any[][] = [];
 
+  let btnNum = startIndex + 1;
   for (const prod of pageProducts) {
-    const priceVal = Number(prod.price) || 0;
-    const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
-    const MAX_TITLE_LEN = 20;
+    const MAX_TITLE_LEN = 18;
     const shortTitle = prod.title.length > MAX_TITLE_LEN
       ? `${prod.title.slice(0, MAX_TITLE_LEN - 3)}...`
       : prod.title;
 
     inlineKeyboardRows.push([
       {
-        text: `${shortTitle} · ${priceFormatted}`,
+        text: `${btnNum}. ${shortTitle}`,
         callback_data: `prod_view:${prod.id}:${safePage}`,
       },
       {
@@ -264,6 +265,7 @@ export async function formatCatalogMessage(
         callback_data: `cart_add:${prod.id}:${safePage}`,
       },
     ]);
+    btnNum++;
   }
 
   // Controles de paginação se houver mais de uma página
@@ -309,18 +311,90 @@ export async function formatCatalogMessage(
   return {
     text,
     replyMarkup: { inline_keyboard: inlineKeyboardRows },
+    linkPreviewOptions: { is_disabled: true },
   };
 }
 
 /**
- * Formats a detailed view of a product with direct add-to-cart and navigation.
+ * Resolves an active trailer URL for a given product if available.
+ * Checks assigned product videos (Bunny player in Mini App), Clips, or explicit trailer URL in description.
+ */
+export async function resolveProductTrailerUrl(
+  storeId: string,
+  product: { id: string; description?: string | null },
+  miniAppUrl: string
+): Promise<{ url: string; isWebApp: boolean } | null> {
+  // 1. Check ProductVideoService for assigned ready videos
+  try {
+    const { ProductVideoService } = await import("@/lib/videos/product-video-service");
+    const videos = await ProductVideoService.listProductVideos(storeId, product.id, true);
+    const readyVideo = videos.find((v: any) => v.status === "READY" && v.active);
+    if (readyVideo) {
+      return {
+        url: `${miniAppUrl}/video/${readyVideo.id}`,
+        isWebApp: true,
+      };
+    }
+  } catch (err) {
+    console.warn("[BOT CART] Error checking product videos for trailer:", err);
+  }
+
+  // 2. Check clips associated with this product
+  try {
+    const { clips } = await import("@/db/schema");
+    const clip = await db.query.clips.findFirst({
+      where: and(
+        eq(clips.storeId, storeId),
+        eq(clips.productId, product.id),
+        eq(clips.status, "READY"),
+        eq(clips.isActive, true)
+      ),
+      orderBy: [asc(clips.position)],
+    });
+    if (clip) {
+      return {
+        url: `${miniAppUrl}/clips?productId=${product.id}`,
+        isWebApp: true,
+      };
+    }
+  } catch (err) {
+    console.warn("[BOT CART] Error checking clips for trailer:", err);
+  }
+
+  // 3. Check for validated YouTube / Vimeo / direct video trailer link in description
+  if (product.description) {
+    const trailerMatch =
+      product.description.match(/(?:trailer|pr[ée]via|v[íi]deo):\s*(https?:\/\/[^\s]+)/i) ||
+      product.description.match(
+        /(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=[a-zA-Z0-9_-]+|youtu\.be\/[a-zA-Z0-9_-]+|vimeo\.com\/[0-9]+|[^\s]+\.(?:mp4|webm)))/i
+      );
+
+    if (trailerMatch && trailerMatch[1]) {
+      const candidateUrl = trailerMatch[1].trim();
+      try {
+        const parsed = new URL(candidateUrl);
+        if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+          return {
+            url: candidateUrl,
+            isWebApp: false,
+          };
+        }
+      } catch {}
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Formats a detailed view of a product with hero image preview, direct add-to-cart, trailer and navigation.
  */
 export async function formatProductDetailMessage(
   storeId: string,
   productId: string,
   page: number,
   miniAppUrl: string
-): Promise<{ text: string; replyMarkup: any }> {
+): Promise<{ text: string; replyMarkup: any; linkPreviewOptions?: any }> {
   const product = await db.query.products.findFirst({
     where: and(
       eq(products.id, productId),
@@ -348,17 +422,39 @@ export async function formatProductDetailMessage(
           ],
         ],
       },
+      linkPreviewOptions: { is_disabled: true },
     };
   }
 
   const priceVal = Number(product.price) || 0;
   const priceFormatted = `R$ ${priceVal.toFixed(2).replace(".", ",")}`;
 
-  let text = `📦 *${product.title}*\n\n`;
+  // Validate image URL (coverUrl with bannerUrl fallback)
+  const rawImageUrl = product.coverUrl || product.bannerUrl;
+  let validImageUrl: string | null = null;
+  if (rawImageUrl && typeof rawImageUrl === "string" && rawImageUrl.trim().startsWith("http")) {
+    try {
+      const parsed = new URL(rawImageUrl.trim());
+      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+        validImageUrl = rawImageUrl.trim();
+      }
+    } catch {}
+  }
+
+  let text = "";
+  if (validImageUrl) {
+    // Hidden zero-width anchor to render image preview in Telegram
+    text += `[\u200B](${validImageUrl})`;
+  }
+
+  text += `📦 *${product.title}*\n\n`;
   if (product.description && product.description.trim() !== "") {
     text += `${product.description.trim()}\n\n`;
   }
   text += `💰 *Preço:* ${priceFormatted}\n`;
+
+  // Resolve trailer if available
+  const trailerInfo = await resolveProductTrailerUrl(storeId, product, miniAppUrl);
 
   const inlineKeyboardRows: any[][] = [
     [
@@ -367,31 +463,56 @@ export async function formatProductDetailMessage(
         callback_data: `cart_add:${product.id}:${page}`,
       },
     ],
-    [
-      {
-        text: "🛍️ Ver no Mini App",
-        web_app: { url: `${miniAppUrl}/product/${product.slug || product.id}` },
-      },
-      {
-        text: "🛒 Ver Carrinho",
-        callback_data: "cart_view",
-      },
-    ],
-    [
-      {
-        text: "◀️ Voltar ao Catálogo",
-        callback_data: `cat_p:${page}`,
-      },
-      {
-        text: "↩️ Voltar ao Menu",
-        callback_data: "start_menu",
-      },
-    ],
   ];
+
+  if (trailerInfo) {
+    inlineKeyboardRows.push([
+      trailerInfo.isWebApp
+        ? {
+            text: "🎬 Ver trailer",
+            web_app: { url: trailerInfo.url },
+          }
+        : {
+            text: "🎬 Ver trailer",
+            url: trailerInfo.url,
+          },
+    ]);
+  }
+
+  inlineKeyboardRows.push([
+    {
+      text: "🛍️ Ver no Mini App",
+      web_app: { url: `${miniAppUrl}/product/${product.slug || product.id}` },
+    },
+    {
+      text: "🛒 Ver Carrinho",
+      callback_data: "cart_view",
+    },
+  ]);
+
+  inlineKeyboardRows.push([
+    {
+      text: "◀️ Voltar ao Catálogo",
+      callback_data: `cat_p:${page}`,
+    },
+    {
+      text: "↩️ Voltar ao Menu",
+      callback_data: "start_menu",
+    },
+  ]);
+
+  const linkPreviewOptions = validImageUrl
+    ? {
+        url: validImageUrl,
+        prefer_large_media: true,
+        show_above_text: true,
+      }
+    : { is_disabled: true };
 
   return {
     text,
     replyMarkup: { inline_keyboard: inlineKeyboardRows },
+    linkPreviewOptions,
   };
 }
 
@@ -716,8 +837,8 @@ export async function handleCatalogCommand(
   chatId: number | string
 ) {
   try {
-    const { text, replyMarkup } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl);
-    await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+    const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl);
+    await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
   } catch (error: any) {
     console.error("[BOT CART] Error handling /produtos command:", error);
     await ctx.botService.sendMessage(
@@ -1039,12 +1160,12 @@ export async function handleCartCallbackQuery(
         }
       }
 
-      const { text, replyMarkup } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl, page);
+      const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl, page);
       await ctx.botService.answerCallbackQuery(cbId);
       if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown", linkPreviewOptions);
       } else if (chatId) {
-        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
       }
       return true;
     }
@@ -1055,7 +1176,7 @@ export async function handleCartCallbackQuery(
       const productId = parts[1];
       const page = parseInt(parts[2], 10) || 1;
 
-      const { text, replyMarkup } = await formatProductDetailMessage(
+      const { text, replyMarkup, linkPreviewOptions } = await formatProductDetailMessage(
         ctx.store.id,
         productId,
         page,
@@ -1064,9 +1185,9 @@ export async function handleCartCallbackQuery(
 
       await ctx.botService.answerCallbackQuery(cbId);
       if (chatId && messageId) {
-        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown", linkPreviewOptions);
       } else if (chatId) {
-        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown");
+        await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
       }
       return true;
     }
@@ -1288,7 +1409,7 @@ export async function handleCartCallbackQuery(
 
     return false;
   } catch (error: any) {
-    console.error("[BOT CART] Error handling callback query:", error);
+    console.error(`[BOT CART] Error handling callback query ${cbData} for store ${ctx.store.id}:`, error);
     const friendlyMsg =
       error.message?.includes("não encontrado") || error.message?.includes("disponível")
         ? (error.message?.toLowerCase().includes("combo")
