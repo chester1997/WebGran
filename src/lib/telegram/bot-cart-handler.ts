@@ -73,6 +73,7 @@ export function formatCartMessage(
 
   let text = `🛒 *Seu Carrinho de Compras*\n\n`;
 
+  let itemNum = 1;
   for (const item of cart.items) {
     const itemPrice = Number(item.price) || 0;
     const lineTotal = itemPrice * item.quantity;
@@ -85,6 +86,7 @@ export function formatCartMessage(
     } else {
       text += `${prefix}*1x* ${item.title} — ${lineTotalFormatted}\n`;
     }
+    itemNum++;
   }
 
   text += `\n━━━━━━━━━━━━━━━━━━━━\n`;
@@ -119,31 +121,32 @@ export function formatCartMessage(
     text += `\n🚀 *Oferta:* ${verb} *${nextTier.unitsRemaining} ${unitsWord}* para desbloquear *${nextTier.targetQuantity} por ${targetPriceFormatted}*!\n`;
   }
 
-  text += `\n_Dica: Você pode alterar quantidades ou finalizar sua compra pelo Mini App a qualquer momento._`;
+  text += `\n_Toque em 🗑️ Remover para retirar um item ou finalize pelo Mini App._`;
 
   const inlineKeyboardRows: any[][] = [];
 
-  // Per-item action controls: [➖] [Qtd] [➕] [🗑️]
+  // Per-item action controls: clean 2-button row [ index. Qtd Title ] [ 🗑️ Remover ]
+  let itemIndex = 1;
   for (const item of cart.items) {
-    const titleSnippet = item.title.length > 15 ? `${item.title.slice(0, 15)}...` : item.title;
+    const MAX_ITEM_TITLE_LEN = 18;
+    const titleSnippet =
+      item.title.length > MAX_ITEM_TITLE_LEN
+        ? `${item.title.slice(0, MAX_ITEM_TITLE_LEN - 3)}...`
+        : item.title;
+    const qtyPrefix = item.quantity > 1 ? `${item.quantity}x ` : "";
+    const label = `${itemIndex}. ${qtyPrefix}${titleSnippet}`;
+
     inlineKeyboardRows.push([
       {
-        text: `➖`,
-        callback_data: `cart_dec:${item.id}`,
-      },
-      {
-        text: `${item.quantity}x ${titleSnippet}`,
+        text: label,
         callback_data: `cart_noop`,
       },
       {
-        text: `➕`,
-        callback_data: item.isCombo ? `combo_add:${item.id}` : `cart_inc:${item.id}`,
-      },
-      {
-        text: `🗑️`,
+        text: `🗑️ Remover`,
         callback_data: `cart_rem:${item.id}`,
       },
     ]);
+    itemIndex++;
   }
 
   // Action buttons
@@ -196,7 +199,8 @@ export function formatCartMessage(
 export async function formatCatalogMessage(
   storeId: string,
   miniAppUrl: string,
-  page: number = 1
+  page: number = 1,
+  telegramUserId?: number | string
 ): Promise<{ text: string; replyMarkup: any; linkPreviewOptions?: any }> {
   const allActiveProducts = await db.query.products.findMany({
     where: and(eq(products.storeId, storeId), eq(products.status, "active")),
@@ -227,6 +231,22 @@ export async function formatCatalogMessage(
     };
   }
 
+  // Load user's persisted cart to show real selection state
+  const cartItemProductIds = new Set<string>();
+  if (telegramUserId) {
+    try {
+      const cart = await CartService.getCartByTelegramUser(storeId, telegramUserId);
+      if (cart?.items) {
+        for (const item of cart.items) {
+          if (item.productId) cartItemProductIds.add(item.productId);
+          if (item.id) cartItemProductIds.add(item.id);
+        }
+      }
+    } catch (err) {
+      console.warn("[BOT CATALOG] Error loading user cart for selection indicators:", err);
+    }
+  }
+
   const PAGE_SIZE = 10;
   const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -244,15 +264,17 @@ export async function formatCatalogMessage(
     itemNum++;
   }
 
-  text += `\n_Toque no produto para ver detalhes e fotos ou em 🛒 para adicionar ao carrinho._`;
+  text += `\n_Toque no produto para ver detalhes ou no botão à direita para selecionar no carrinho._`;
 
   const inlineKeyboardRows: any[][] = [];
 
   let btnNum = startIndex + 1;
   for (const prod of pageProducts) {
+    const isSelected = cartItemProductIds.has(prod.id);
+    const cartBtnText = isSelected ? "✅ Adicionado" : "🛒";
     const MAX_TITLE_LEN = 18;
     const shortTitle = prod.title.length > MAX_TITLE_LEN
-      ? `${prod.title.slice(0, MAX_TITLE_LEN - 3)}...`
+      ? `${prod.title.slice(0, MAX_TITLE_LEN - 3).trim()}...`
       : prod.title;
 
     inlineKeyboardRows.push([
@@ -261,7 +283,7 @@ export async function formatCatalogMessage(
         callback_data: `prod_view:${prod.id}:${safePage}`,
       },
       {
-        text: `🛒`,
+        text: cartBtnText,
         callback_data: `cart_add:${prod.id}:${safePage}`,
       },
     ]);
@@ -393,7 +415,8 @@ export async function formatProductDetailMessage(
   storeId: string,
   productId: string,
   page: number,
-  miniAppUrl: string
+  miniAppUrl: string,
+  telegramUserId?: number | string
 ): Promise<{ text: string; replyMarkup: any; linkPreviewOptions?: any }> {
   const product = await db.query.products.findFirst({
     where: and(
@@ -453,13 +476,30 @@ export async function formatProductDetailMessage(
   }
   text += `💰 *Preço:* ${priceFormatted}\n`;
 
+  // Check if product is currently in customer's cart
+  let isProductInCart = false;
+  if (telegramUserId) {
+    try {
+      const cart = await CartService.getCartByTelegramUser(storeId, telegramUserId);
+      if (cart?.items) {
+        isProductInCart = cart.items.some(
+          (item) => item.productId === productId || item.id === productId
+        );
+      }
+    } catch (err) {
+      console.warn("[BOT CART] Error checking cart in formatProductDetailMessage:", err);
+    }
+  }
+
   // Resolve trailer if available
   const trailerInfo = await resolveProductTrailerUrl(storeId, product, miniAppUrl);
+
+  const cartBtnText = isProductInCart ? "✅ No Carrinho (Remover)" : "🛒 Adicionar ao Carrinho";
 
   const inlineKeyboardRows: any[][] = [
     [
       {
-        text: "🛒 Adicionar ao Carrinho",
+        text: cartBtnText,
         callback_data: `cart_add:${product.id}:${page}`,
       },
     ],
@@ -834,10 +874,16 @@ export async function handleCartCommand(
  */
 export async function handleCatalogCommand(
   ctx: BotCartContext,
-  chatId: number | string
+  chatId: number | string,
+  telegramUser?: { id: number | string }
 ) {
   try {
-    const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl);
+    const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(
+      ctx.store.id,
+      ctx.miniAppUrl,
+      1,
+      telegramUser?.id || chatId
+    );
     await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
   } catch (error: any) {
     console.error("[BOT CART] Error handling /produtos command:", error);
@@ -931,6 +977,7 @@ export function getInitialBotKeyboard(
 
 /**
  * Formats the customer's unlocked accesses into a friendly Telegram Markdown message.
+ * Differentiates between video products (direct playback in Mini App) and channels/groups (invite link).
  */
 export async function formatAccessesMessage(
   store: { id: string; name: string; slug: string },
@@ -953,7 +1000,7 @@ export async function formatAccessesMessage(
       `📺 *Meus Acessos — ${store.name}*\n\n` +
       `Você ainda não possui conteúdos liberados nesta loja.\n\n` +
       `💡 *Como funciona?*\n` +
-      `Assim que seu pagamento for confirmado via PIX ou cartão, seus links de acesso aos canais ou grupos VIP serão liberados aqui automaticamente!`;
+      `Assim que seu pagamento for confirmado via PIX ou cartão, seus links de acesso aos canais ou vídeos exclusivos serão liberados aqui automaticamente!`;
 
     const replyMarkup = {
       inline_keyboard: [
@@ -991,20 +1038,66 @@ export async function formatAccessesMessage(
 
   const inlineKeyboardRows: any[][] = [];
 
+  const { AccessLifecycleService } = await import("@/lib/orders/access-lifecycle-service");
+
   for (const acc of accessesList) {
     const prodTitle = acc.product?.title || "Produto";
     text += `• *${prodTitle}*\n`;
-    if (acc.inviteLink) {
-      inlineKeyboardRows.push([
-        {
-          text: `▶️ Acessar: ${prodTitle.length > 25 ? prodTitle.slice(0, 22) + "..." : prodTitle}`,
-          url: acc.inviteLink,
-        },
-      ]);
+    const shortTitle = prodTitle.length > 25 ? prodTitle.slice(0, 22) + "..." : prodTitle;
+
+    try {
+      const resolution = await AccessLifecycleService.resolveAccessDestination(
+        acc.id,
+        store.slug,
+        String(telegramUserId)
+      );
+
+      if (resolution.destinationType === "PRODUCT_VIDEO" && resolution.destinationUrl) {
+        // Direct video product -> opens dedicated video player inside Telegram Mini App
+        inlineKeyboardRows.push([
+          {
+            text: `▶️ Assistir: ${shortTitle}`,
+            web_app: { url: resolution.destinationUrl },
+          },
+        ]);
+      } else if (acc.inviteLink || resolution.destinationUrl) {
+        // Channel or group product -> redirects to authorized Telegram channel/group
+        inlineKeyboardRows.push([
+          {
+            text: `▶️ Acessar: ${shortTitle}`,
+            url: acc.inviteLink || resolution.destinationUrl,
+          },
+        ]);
+      } else {
+        // Safe fallback
+        inlineKeyboardRows.push([
+          {
+            text: `▶️ Acessar: ${shortTitle}`,
+            web_app: { url: `${miniAppUrl}/accesses` },
+          },
+        ]);
+      }
+    } catch (err) {
+      console.warn("[BOT CART] Error resolving access destination:", err);
+      if (acc.inviteLink) {
+        inlineKeyboardRows.push([
+          {
+            text: `▶️ Acessar: ${shortTitle}`,
+            url: acc.inviteLink,
+          },
+        ]);
+      } else {
+        inlineKeyboardRows.push([
+          {
+            text: `▶️ Acessar: ${shortTitle}`,
+            web_app: { url: `${miniAppUrl}/accesses` },
+          },
+        ]);
+      }
     }
   }
 
-  text += `\n_Toque no botão acima para acessar seu canal/conteúdo ou gerencie pelo Mini App._`;
+  text += `\n_Toque no botão acima para assistir ao vídeo ou acessar seu canal VIP._`;
 
   inlineKeyboardRows.push([
     {
@@ -1129,6 +1222,8 @@ export async function handleCartCallbackQuery(
     !cbData.startsWith("prog_") &&
     !cbData.startsWith("cat_") &&
     !cbData.startsWith("prod_view:") &&
+    !cbData.startsWith("prod_toggle:") &&
+    !cbData.startsWith("trailer_play:") &&
     cbData !== "my_accesses" &&
     cbData !== "support_info" &&
     cbData !== "start_menu"
@@ -1160,7 +1255,12 @@ export async function handleCartCallbackQuery(
         }
       }
 
-      const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(ctx.store.id, ctx.miniAppUrl, page);
+      const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(
+        ctx.store.id,
+        ctx.miniAppUrl,
+        page,
+        telegramUser.id
+      );
       await ctx.botService.answerCallbackQuery(cbId);
       if (chatId && messageId) {
         await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown", linkPreviewOptions);
@@ -1180,7 +1280,8 @@ export async function handleCartCallbackQuery(
         ctx.store.id,
         productId,
         page,
-        ctx.miniAppUrl
+        ctx.miniAppUrl,
+        telegramUser.id
       );
 
       await ctx.botService.answerCallbackQuery(cbId);
@@ -1189,6 +1290,104 @@ export async function handleCartCallbackQuery(
       } else if (chatId) {
         await ctx.botService.sendMessage(chatId, text, replyMarkup, "Markdown", linkPreviewOptions);
       }
+      return true;
+    }
+
+    // 1.2 Toggle product selection in details view
+    if (cbData.startsWith("prod_toggle:")) {
+      const parts = cbData.split(":");
+      const productId = parts[1];
+      const page = parseInt(parts[2], 10) || 1;
+
+      const currentCart = await CartService.getCartByTelegramUser(ctx.store.id, telegramUser.id);
+      const existingItem = currentCart.items.find(
+        (i) => i.productId === productId || i.id === productId
+      );
+
+      if (existingItem) {
+        await CartService.removeItemByTelegramUser(ctx.store.id, telegramUser.id, existingItem.id);
+        await ctx.botService.answerCallbackQuery(cbId, "🗑️ Produto removido do carrinho!");
+      } else {
+        await CartService.addItemByTelegramUser(ctx.store.id, telegramUser.id, productId, 1);
+        await ctx.botService.answerCallbackQuery(cbId, "✅ Produto adicionado ao carrinho!");
+      }
+
+      const { text, replyMarkup, linkPreviewOptions } = await formatProductDetailMessage(
+        ctx.store.id,
+        productId,
+        page,
+        ctx.miniAppUrl,
+        telegramUser.id
+      );
+
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown", linkPreviewOptions);
+      }
+      return true;
+    }
+
+    // 1.3 Play product trailer directly in chat
+    if (cbData.startsWith("trailer_play:")) {
+      const parts = cbData.split(":");
+      const productId = parts[1];
+      const page = parseInt(parts[2], 10) || 1;
+
+      const product = await db.query.products.findFirst({
+        where: and(
+          eq(products.id, productId),
+          eq(products.storeId, ctx.store.id),
+          eq(products.status, "active")
+        ),
+      });
+
+      if (!product) {
+        await ctx.botService.answerCallbackQuery(cbId, "⚠️ Produto não encontrado.", true);
+        return true;
+      }
+
+      const trailerInfo = await resolveProductTrailerUrl(ctx.store.id, product, ctx.miniAppUrl);
+      if (!trailerInfo) {
+        await ctx.botService.answerCallbackQuery(cbId, "⚠️ Trailer indisponível no momento.", true);
+        return true;
+      }
+
+      await ctx.botService.answerCallbackQuery(cbId, "🎬 Carregando trailer...");
+
+      const backButton = [
+        [
+          {
+            text: "◀️ Voltar ao Produto",
+            callback_data: `prod_view:${product.id}:${page}`,
+          },
+        ],
+      ];
+
+      const targetChatId = chatId || telegramUser.id;
+      const isDirectVideo = Boolean(trailerInfo.url.match(/\.(mp4|webm)(\?.*)?$/i));
+
+      if (isDirectVideo) {
+        try {
+          await ctx.botService.sendVideo(
+            targetChatId,
+            trailerInfo.url,
+            `🎬 *Trailer:* ${product.title}`,
+            { inline_keyboard: backButton },
+            "Markdown"
+          );
+          return true;
+        } catch (videoErr) {
+          console.warn("[BOT CART] sendVideo failed, falling back to message with preview:", videoErr);
+        }
+      }
+
+      const trailerMsgText = `🎬 *Trailer — ${product.title}*\n\n[▶️ Assistir Trailer na Conversa](${trailerInfo.url})`;
+      await ctx.botService.sendMessage(
+        targetChatId,
+        trailerMsgText,
+        { inline_keyboard: backButton },
+        "Markdown",
+        { url: trailerInfo.url, prefer_large_media: true }
+      );
       return true;
     }
 
@@ -1276,7 +1475,7 @@ export async function handleCartCallbackQuery(
       return true;
     }
 
-    // 5. Add product (supports cart_add: and prog_add:)
+    // 5. Add/Select product (supports cart_add: and prog_add: with toggle in catalog)
     if (cbData.startsWith("cart_add:") || cbData.startsWith("prog_add:")) {
       const rawPayload = cbData.replace(/^(cart_add:|prog_add:)/, "").trim();
       const parts = rawPayload.split(":");
@@ -1289,6 +1488,70 @@ export async function handleCartCallbackQuery(
         return true;
       }
 
+      // If called from paginated catalog or detail view (page is specified), toggle selection (add 1 or remove)
+      if (page !== undefined) {
+        let currentCart: any = null;
+        try {
+          currentCart = await CartService.getCartByTelegramUser(ctx.store.id, telegramUser.id);
+        } catch (err) {
+          console.warn("[BOT CART] Error reading user cart during toggle:", err);
+        }
+
+        const existingItem = currentCart?.items?.find(
+          (i: any) => i.productId === productId || i.id === productId
+        );
+
+        if (existingItem) {
+          // Deselect: remove from cart
+          await CartService.removeItemByTelegramUser(
+            ctx.store.id,
+            telegramUser.id,
+            existingItem.id
+          );
+          await ctx.botService.answerCallbackQuery(cbId, "🗑️ Removido do carrinho!");
+        } else {
+          // Select: add exactly 1 unit
+          const cart = await CartService.addItemByTelegramUser(
+            ctx.store.id,
+            telegramUser.id,
+            productId,
+            1
+          );
+
+          let toast = "✅ Adicionado ao carrinho!";
+          if (cart?.progressiveDiscount && cart.progressiveDiscount > 0) {
+            toast = `🎉 Desconto ativado! Economia de R$ ${cart.progressiveDiscount.toFixed(2).replace(".", ",")}`;
+          } else if (cart?.progressivePromotion?.nextTierProgress?.unitsRemaining) {
+            const remaining = cart.progressivePromotion.nextTierProgress.unitsRemaining;
+            const targetQty = cart.progressivePromotion.nextTierProgress.targetQuantity;
+            toast = `✅ Adicionado! Falta(m) ${remaining} para ${targetQty} com desconto!`;
+          }
+
+          await ctx.botService.answerCallbackQuery(cbId, toast);
+        }
+
+        // Re-render catalog page in-place without replacing screen
+        const { text, replyMarkup, linkPreviewOptions } = await formatCatalogMessage(
+          ctx.store.id,
+          ctx.miniAppUrl,
+          page,
+          telegramUser.id
+        );
+
+        if (chatId && messageId) {
+          await ctx.botService.editMessageText(
+            chatId,
+            messageId,
+            text,
+            replyMarkup,
+            "Markdown",
+            linkPreviewOptions
+          );
+        }
+        return true;
+      }
+
+      // When called without page (e.g. from progressive offers or external callback):
       const cart = await CartService.addItemByTelegramUser(
         ctx.store.id,
         telegramUser.id,
@@ -1297,9 +1560,9 @@ export async function handleCartCallbackQuery(
       );
 
       let toast = "✅ Produto adicionado ao carrinho!";
-      if (cart.progressiveDiscount && cart.progressiveDiscount > 0) {
+      if (cart?.progressiveDiscount && cart.progressiveDiscount > 0) {
         toast = `🎉 Desconto ativado! Economia de R$ ${cart.progressiveDiscount.toFixed(2).replace(".", ",")}`;
-      } else if (cart.progressivePromotion?.nextTierProgress?.unitsRemaining) {
+      } else if (cart?.progressivePromotion?.nextTierProgress?.unitsRemaining) {
         const remaining = cart.progressivePromotion.nextTierProgress.unitsRemaining;
         const targetQty = cart.progressivePromotion.nextTierProgress.targetQuantity;
         toast = `✅ Adicionado! Falta(m) ${remaining} para ${targetQty} com desconto!`;
@@ -1307,11 +1570,9 @@ export async function handleCartCallbackQuery(
 
       await ctx.botService.answerCallbackQuery(cbId, toast);
 
-      if (page === undefined) {
-        const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
-        if (chatId && messageId) {
-          await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
-        }
+      const { text, replyMarkup } = formatCartMessage(cart, ctx.miniAppUrl);
+      if (chatId && messageId) {
+        await ctx.botService.editMessageText(chatId, messageId, text, replyMarkup, "Markdown");
       }
       return true;
     }

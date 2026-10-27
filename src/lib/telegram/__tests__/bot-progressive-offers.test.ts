@@ -732,9 +732,10 @@ describe("WebGran — Fase E: Ofertas Progressivas no Bot do Telegram", () => {
       expect(text).toContain("🎉 *Desconto Progressivo:* -R$ 3,00");
       expect(text).toContain("💵 *Total:* *R$ 61,90*");
 
-      // Botões para combo tradicional e produtos
-      const comboRow = replyMarkup.inline_keyboard[1]; // Linha do segundo item
-      expect(comboRow[2].callback_data).toBe("combo_add:combo-pack-vip");
+      // Botões para combo tradicional e produtos (layout simplificado sem ➖ e ➕)
+      const comboRow = replyMarkup.inline_keyboard[1]; // Linha do segundo item: [ 2. Pack VIP Completo ] [ 🗑️ Remover ]
+      expect(comboRow[0].text).toContain("Pack VIP Completo");
+      expect(comboRow[1].callback_data).toBe("cart_rem:combo-pack-vip");
     });
   });
 });

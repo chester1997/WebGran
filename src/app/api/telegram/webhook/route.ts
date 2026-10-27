@@ -158,8 +158,9 @@ export async function POST(req: NextRequest) {
         cleanCmd === "/loja" ||
         cleanCmd === "/shop"
       ) {
+        const fromUser = update.message.from || { id: chatId };
         const { handleCatalogCommand } = await import("@/lib/telegram/bot-cart-handler");
-        await handleCatalogCommand({ store, botService, miniAppUrl }, chatId);
+        await handleCatalogCommand({ store, botService, miniAppUrl }, chatId, fromUser);
         return NextResponse.json({ ok: true });
       }
 

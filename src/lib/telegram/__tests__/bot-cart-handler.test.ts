@@ -129,15 +129,18 @@ describe("Bot Cart Handler Suite (Phase 3)", () => {
       expect(result.text).toContain("Subtotal:* R$ 59,80");
       expect(result.text).toContain("Total de Itens:* 2");
 
-      // Verify inline buttons
+      // Verify inline buttons: simplified 2-column layout without ➖ and ➕
       const buttons = result.replyMarkup.inline_keyboard;
-      // Item row
-      expect(buttons[0][0].callback_data).toBe("cart_dec:prod-1");
-      expect(buttons[0][1].text).toContain("2x");
-      expect(buttons[0][2].callback_data).toBe("cart_inc:prod-1");
-      expect(buttons[0][3].callback_data).toBe("cart_rem:prod-1");
+      // Item row: [ 1. 2x Pack VIP Exclusivo ] [ 🗑️ Remover ]
+      expect(buttons[0][0].text).toContain("2x");
+      expect(buttons[0][0].callback_data).toBe("cart_noop");
+      expect(buttons[0][1].text).toContain("Remover");
+      expect(buttons[0][1].callback_data).toBe("cart_rem:prod-1");
       // Open Mini App button
       expect(buttons[1][0].web_app.url).toBe("https://webgran.test/miniapp/loja-alpha/cart");
+      // Preserves Ver Ofertas and Ver Combos
+      expect(buttons[2][0].callback_data).toBe("prog_view");
+      expect(buttons[2][1].callback_data).toBe("combo_list");
     });
   });
 

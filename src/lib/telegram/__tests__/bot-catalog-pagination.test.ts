@@ -283,8 +283,15 @@ describe("WebGran — Fase G: Catálogo Paginado, Botões Compactos e Navegaçã
       expect.stringContaining("Desconto ativado! Economia de R$ 4,00")
     );
 
-    // Message is NOT overwritten away from catalog because page was specified!
-    expect(mockBotService.editMessageText).not.toHaveBeenCalled();
+    // Message is updated in-place on the same catalog page (showing updated selection indicator)
+    expect(mockBotService.editMessageText).toHaveBeenCalledWith(
+      12345,
+      100,
+      expect.stringContaining("Catálogo de Produtos"),
+      expect.any(Object),
+      "Markdown",
+      expect.any(Object)
+    );
   });
 
   // Test 7: Rejeição de produto de outra loja ou indisponível

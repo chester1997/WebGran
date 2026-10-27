@@ -135,7 +135,10 @@ describe("Telegram Webhook Cart Integration Suite (Phase 3)", () => {
       expect.objectContaining({
         store: validResolved.store,
       }),
-      12345
+      12345,
+      expect.objectContaining({
+        id: 98765,
+      })
     );
   });
 

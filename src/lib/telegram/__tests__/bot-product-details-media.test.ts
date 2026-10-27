@@ -30,6 +30,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/lib/cart/cart-service", () => ({
   CartService: {
     addItemByTelegramUser: vi.fn(),
+    removeItemByTelegramUser: vi.fn(),
     getCartByTelegramUser: vi.fn(),
   },
 }));
@@ -364,17 +365,21 @@ describe("WebGran — Fase H: Imagens, Trailers, Layout Mobile e Carrinho", () =
         status: "active",
       });
 
-      vi.mocked(CartService.addItemByTelegramUser)
-        .mockResolvedValueOnce({
-          items: [{ quantity: 1 }],
-          subtotal: 10,
-        } as any)
-        .mockResolvedValueOnce({
-          items: [{ quantity: 2 }],
-          subtotal: 20,
-        } as any);
+      vi.mocked(CartService.addItemByTelegramUser).mockResolvedValueOnce({
+        items: [{ id: "item-1", productId: "prod-add-1", quantity: 1 }],
+        subtotal: 10,
+      } as any);
 
-      // 1st addition
+      vi.mocked(CartService.removeItemByTelegramUser).mockResolvedValueOnce({
+        items: [],
+        subtotal: 0,
+      } as any);
+
+      // 1st click: adds product (selection)
+      vi.mocked(CartService.getCartByTelegramUser).mockResolvedValueOnce({
+        items: [],
+      } as any);
+
       const res1 = await handleCartCallbackQuery(
         defaultCtx,
         "cb-add-click-1",
@@ -386,10 +391,15 @@ describe("WebGran — Fase H: Imagens, Trailers, Layout Mobile e Carrinho", () =
       expect(res1).toBe(true);
       expect(defaultCtx.botService.answerCallbackQuery).toHaveBeenCalledWith(
         "cb-add-click-1",
-        expect.stringContaining("adicionado ao carrinho!")
+        expect.stringContaining("Adicionado ao carrinho!")
       );
+      expect(CartService.addItemByTelegramUser).toHaveBeenCalledTimes(1);
 
-      // 2nd legitimate addition
+      // 2nd legitimate click: deselects/removes product from cart
+      vi.mocked(CartService.getCartByTelegramUser).mockResolvedValueOnce({
+        items: [{ id: "item-1", productId: "prod-add-1", quantity: 1 }],
+      } as any);
+
       const res2 = await handleCartCallbackQuery(
         defaultCtx,
         "cb-add-click-2",
@@ -401,10 +411,9 @@ describe("WebGran — Fase H: Imagens, Trailers, Layout Mobile e Carrinho", () =
       expect(res2).toBe(true);
       expect(defaultCtx.botService.answerCallbackQuery).toHaveBeenCalledWith(
         "cb-add-click-2",
-        expect.stringContaining("adicionado ao carrinho!")
+        expect.stringContaining("Removido do carrinho!")
       );
-
-      expect(CartService.addItemByTelegramUser).toHaveBeenCalledTimes(2);
+      expect(CartService.removeItemByTelegramUser).toHaveBeenCalledTimes(1);
     });
   });
 });
