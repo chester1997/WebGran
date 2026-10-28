@@ -31,6 +31,7 @@ export class BotStartEventService {
     success: boolean;
     recorded: boolean;
     isDuplicate: boolean;
+    isFirstStart?: boolean;
     error?: string;
   }> {
     const {
@@ -82,7 +83,32 @@ export class BotStartEventService {
         console.warn("[BotStartEventService] Warning upserting customer:", custErr?.message);
       }
 
-      // 2. Insert event with idempotency constraint on (storeId, telegramUpdateId)
+      // 2. Check if this is the first /start for this user on this bot
+      let isFirstStart = true;
+      try {
+        if (typeof db.select === "function") {
+          const checkQuery = db
+            .select({ id: botStartEvents.id })
+            .from(botStartEvents)
+            .where(
+              and(
+                eq(botStartEvents.storeId, storeId),
+                botId ? eq(botStartEvents.botId, botId) : sql`${botStartEvents.botId} IS NULL`,
+                eq(botStartEvents.telegramUserId, telegramUserId)
+              )
+            );
+          if (checkQuery && typeof checkQuery.limit === "function") {
+            const existing = await checkQuery.limit(1);
+            if (Array.isArray(existing) && existing.length > 0) {
+              isFirstStart = false;
+            }
+          }
+        }
+      } catch (_e) {
+        isFirstStart = true;
+      }
+
+      // 3. Insert event with idempotency constraint on (storeId, telegramUpdateId)
       const insertResult = await db
         .insert(botStartEvents)
         .values({
@@ -93,7 +119,10 @@ export class BotStartEventService {
           telegramFirstName: telegramFirstName || null,
           telegramUpdateId,
           startPayload: startPayload ? String(startPayload).trim() : null,
-          metadata,
+          metadata: {
+            ...metadata,
+            isFirstStart,
+          },
         })
         .onConflictDoNothing({
           target: [botStartEvents.storeId, botStartEvents.telegramUpdateId],
@@ -105,6 +134,7 @@ export class BotStartEventService {
         success: true,
         recorded,
         isDuplicate: !recorded,
+        isFirstStart: recorded ? isFirstStart : false,
       };
     } catch (err: any) {
       console.error("[BotStartEventService] Error recording bot start event:", err?.message);
@@ -119,33 +149,112 @@ export class BotStartEventService {
 
   /**
    * Queries start metrics for a store within a given date range.
+   * Business Rule: Counts only the FIRST /start of each user on each bot.
+   * If a user started multiple times, only their earliest occurrence is considered.
+   * Unique identification is per combination of (botId, telegramUserId).
    * Strict tenant isolation via storeId.
    */
   static async getStartsMetrics(
     storeId: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
+    botId?: string | null
   ): Promise<StartsMetricsResult> {
     try {
-      const conditions = [eq(botStartEvents.storeId, storeId)];
+      let total = 0;
+      let unique = 0;
 
-      if (startDate) {
-        conditions.push(gte(botStartEvents.createdAt, startDate));
-      }
-      if (endDate) {
-        conditions.push(lte(botStartEvents.createdAt, endDate));
+      // 1. Primary execution via CTE (PostgreSQL native with MIN(created_at) per bot & user)
+      if (typeof db.execute === "function") {
+        const botClause = botId ? sql`AND bot_id = ${botId}` : sql``;
+        const dateClauses: any[] = [];
+        if (startDate) {
+          dateClauses.push(sql`first_start_at >= ${startDate}`);
+        }
+        if (endDate) {
+          dateClauses.push(sql`first_start_at <= ${endDate}`);
+        }
+        const periodFilter = dateClauses.length > 0 
+          ? sql`WHERE ${sql.join(dateClauses, sql` AND `)}` 
+          : sql``;
+
+        const result = await db.execute(sql`
+          WITH first_starts AS (
+            SELECT 
+              store_id,
+              bot_id,
+              telegram_user_id,
+              MIN(created_at) as first_start_at
+            FROM bot_start_events
+            WHERE store_id = ${storeId}
+            ${botClause}
+            GROUP BY store_id, bot_id, telegram_user_id
+          )
+          SELECT
+            cast(count(*) as integer) as "totalStarts",
+            cast(count(distinct telegram_user_id) as integer) as "uniqueUsers"
+          FROM first_starts
+          ${periodFilter}
+        `);
+
+        const row = (result as any)?.[0] ?? (result as any)?.rows?.[0];
+        if (row) {
+          total = Number(row?.totalStarts ?? row?.totalstarts ?? 0);
+          unique = Number(row?.uniqueUsers ?? row?.uniqueusers ?? 0);
+        }
+
+        return {
+          totalStarts: total,
+          uniqueUsers: unique,
+          isTelemetryAvailable: true,
+          statusMessage: total === 0 ? "Nenhum start registrado no período" : "Webhook operacional",
+        };
       }
 
-      const [counts] = await db
+      // 2. Query builder fallback for test environments without db.execute
+      const baseConditions = [eq(botStartEvents.storeId, storeId)];
+      if (botId) {
+        baseConditions.push(eq(botStartEvents.botId, botId));
+      }
+
+      const firstStarts = db
         .select({
-          totalStarts: sql<number>`cast(count(${botStartEvents.id}) as integer)`,
-          uniqueUsers: sql<number>`cast(count(distinct ${botStartEvents.telegramUserId}) as integer)`,
+          storeId: botStartEvents.storeId,
+          botId: botStartEvents.botId,
+          telegramUserId: botStartEvents.telegramUserId,
+          firstStartAt: sql<Date>`min(${botStartEvents.createdAt})`.as("first_start_at"),
         })
         .from(botStartEvents)
-        .where(and(...conditions));
+        .where(and(...baseConditions))
+        .groupBy(botStartEvents.storeId, botStartEvents.botId, botStartEvents.telegramUserId)
+        .as("first_starts");
 
-      const total = counts?.totalStarts ?? 0;
-      const unique = counts?.uniqueUsers ?? 0;
+      if (Array.isArray(firstStarts)) {
+        const row: any = firstStarts[0];
+        total = Number(row?.totalStarts ?? 0);
+        unique = Number(row?.uniqueUsers ?? 0);
+      } else {
+        const periodConditions = [];
+        if (startDate) {
+          periodConditions.push(gte(firstStarts.firstStartAt, startDate));
+        }
+        if (endDate) {
+          periodConditions.push(lte(firstStarts.firstStartAt, endDate));
+        }
+
+        const selectChain = db.select({
+          totalStarts: sql<number>`cast(count(*) as integer)`,
+          uniqueUsers: sql<number>`cast(count(distinct ${firstStarts.telegramUserId}) as integer)`,
+        });
+
+        if (selectChain && typeof selectChain.from === "function") {
+          const [counts] = await selectChain
+            .from(firstStarts)
+            .where(periodConditions.length > 0 ? and(...periodConditions) : undefined);
+          total = counts?.totalStarts ?? 0;
+          unique = counts?.uniqueUsers ?? 0;
+        }
+      }
 
       return {
         totalStarts: total,

@@ -9,12 +9,13 @@ import { AnalyticsService } from "@/lib/analytics/analytics-service";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 
-export async function getDashboardAnalyticsAction(period: string = "30D") {
+export async function getDashboardAnalyticsAction(period: string = "30D", botId?: string | null) {
   await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
 
-  return await AnalyticsService.getStoreAnalytics(store.id, period);
+  const targetBotId = (botId && botId !== "all") ? botId : undefined;
+  return await AnalyticsService.getStoreAnalytics(store.id, period, { botId: targetBotId });
 }
 
 export async function updateStoreSettings(formData: FormData) {

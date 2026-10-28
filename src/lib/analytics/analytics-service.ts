@@ -154,7 +154,11 @@ function formatCurrency(val: number): string {
 }
 
 export class AnalyticsService {
-  public static async getStoreAnalytics(storeId: string, period: string = "30D"): Promise<StoreAnalyticsData> {
+  public static async getStoreAnalytics(
+    storeId: string, 
+    period: string = "30D",
+    options?: { botId?: string | null }
+  ): Promise<StoreAnalyticsData> {
     const store = await db.query.stores.findFirst({
       where: eq(stores.id, storeId),
       with: {
@@ -637,7 +641,9 @@ export class AnalyticsService {
     };
 
     // 8. Commercial Metrics (4 Reference KPI Cards)
-    const commercialMetrics = await CommercialMetricsService.getCommercialMetrics(storeId, period);
+    const commercialMetrics = await CommercialMetricsService.getCommercialMetrics(storeId, period, {
+      botId: options?.botId,
+    });
 
     // 9. Activity Log (Tempo real / Acontecimentos da Loja: Novo Lead, Venda Aprovada, Pagamento Pendente)
     const formatEventDateTime = (rawDate: any) => {

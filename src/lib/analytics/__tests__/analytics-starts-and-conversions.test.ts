@@ -10,6 +10,7 @@ vi.mock("@/db", () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      execute: vi.fn(),
       query: {
         orders: {
           findMany: vi.fn(),
@@ -98,13 +99,9 @@ describe("WEBGRAN — Starts e Taxa de Conversão Test Suite (Fases 1 a 7)", () 
     it("filtra métricas estritamente pelo storeId", async () => {
       const { db } = await import("@/db");
 
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
-            { totalStarts: 15, uniqueUsers: 12 },
-          ]),
-        }),
-      });
+      (db.execute as any).mockResolvedValueOnce([
+        { totalStarts: 15, uniqueUsers: 12 },
+      ]);
 
       const metricsStoreAlpha = await BotStartEventService.getStartsMetrics("store-alpha");
 
@@ -309,6 +306,7 @@ describe("WEBGRAN — Starts e Taxa de Conversão Test Suite (Fases 1 a 7)", () 
     it("trata erro de conexão em BotStartEventService sem lançar unhandled rejection", async () => {
       const { db } = await import("@/db");
 
+      (db.execute as any).mockRejectedValueOnce(new Error("Connection timeout"));
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockRejectedValue(new Error("Connection timeout")),
@@ -357,11 +355,7 @@ describe("WEBGRAN — Starts e Taxa de Conversão Test Suite (Fases 1 a 7)", () 
       ]);
 
       // Mock BotStartEventService count
-      (db.select as any).mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ totalStarts: 50, uniqueUsers: 40 }]),
-        }),
-      });
+      (db.execute as any).mockResolvedValueOnce([{ totalStarts: 50, uniqueUsers: 40 }]);
 
       const result = await CommercialMetricsService.getCommercialMetrics("store-alpha", "7D");
 

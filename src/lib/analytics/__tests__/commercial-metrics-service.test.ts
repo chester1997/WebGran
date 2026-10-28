@@ -299,11 +299,11 @@ describe("CommercialMetricsService Suite", () => {
       expect(metrics.botStarts.statusMessage).toBe("Eventos de /start não registrados no banco");
     });
 
-    it("quando dados de start são fornecidos, contabiliza eventos e deduplica usuários", () => {
+    it("quando dados de start são fornecidos, contabiliza apenas o primeiro start por usuário em cada bot", () => {
       const simulatedStarts = [
         { id: "s-1", userId: "tg-user-1", botId: "bot-1", timestamp: new Date("2026-10-10T10:00:00.000Z") },
-        { id: "s-2", userId: "tg-user-1", botId: "bot-1", timestamp: new Date("2026-10-11T10:00:00.000Z") }, // same user started again
-        { id: "s-3", userId: "tg-user-2", botId: "bot-1", timestamp: new Date("2026-10-12T10:00:00.000Z") },
+        { id: "s-2", userId: "tg-user-1", botId: "bot-1", timestamp: new Date("2026-10-11T10:00:00.000Z") }, // mesmo usuário repetiu no bot-1 -> NÃO incrementa
+        { id: "s-3", userId: "tg-user-2", botId: "bot-1", timestamp: new Date("2026-10-12T10:00:00.000Z") }, // usuário diferente no bot-1 -> incrementa
       ];
 
       const metrics = CommercialMetricsService.calculateMetrics([], {
@@ -312,9 +312,24 @@ describe("CommercialMetricsService Suite", () => {
       });
 
       expect(metrics.botStarts.isTelemetryAvailable).toBe(true);
-      expect(metrics.botStarts.totalStarts).toBe(3);
+      // tg-user-1 (1) + tg-user-2 (1) = 2 starts únicos
+      expect(metrics.botStarts.totalStarts).toBe(2);
       expect(metrics.botStarts.uniqueUsers).toBe(2);
-      expect(metrics.botStarts.formatted).toBe("3");
+      expect(metrics.botStarts.formatted).toBe("2");
+
+      // Adicionando o tg-user-1 em outro bot (bot-2): contabiliza +1 start para o bot-2!
+      const multiBotStarts = [
+        ...simulatedStarts,
+        { id: "s-4", userId: "tg-user-1", botId: "bot-2", timestamp: new Date("2026-10-13T10:00:00.000Z") },
+      ];
+
+      const multiBotMetrics = CommercialMetricsService.calculateMetrics([], {
+        period: "30D",
+        simulatedBotStarts: multiBotStarts,
+      });
+
+      expect(multiBotMetrics.botStarts.totalStarts).toBe(3); // 2 no bot-1 + 1 no bot-2
+      expect(multiBotMetrics.botStarts.uniqueUsers).toBe(2); // tg-user-1 e tg-user-2
     });
   });
 

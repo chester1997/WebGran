@@ -146,19 +146,28 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
     y: number;
   } | null>(null);
 
-  const handlePeriodChange = (newPeriod: string) => {
-    if (newPeriod === period && !errorMsg) return;
-    setPeriod(newPeriod);
+  const fetchAnalytics = (targetPeriod: string, targetBot: string) => {
     setErrorMsg(null);
-
     startTransition(async () => {
       try {
-        const res = await getDashboardAnalyticsAction(newPeriod);
+        const botParam = targetBot !== "all" ? targetBot : undefined;
+        const res = await getDashboardAnalyticsAction(targetPeriod, botParam);
         setData(res);
       } catch (err: any) {
         setErrorMsg(err.message || "Não foi possível carregar este indicador.");
       }
     });
+  };
+
+  const handlePeriodChange = (newPeriod: string) => {
+    if (newPeriod === period && !errorMsg) return;
+    setPeriod(newPeriod);
+    fetchAnalytics(newPeriod, selectedBot);
+  };
+
+  const handleBotChange = (newBot: string) => {
+    setSelectedBot(newBot);
+    fetchAnalytics(period, newBot);
   };
 
   const handleDateChange = (dateStr: string) => {
@@ -223,7 +232,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             <Bot className="absolute left-2.5 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
             <select
               value={selectedBot}
-              onChange={(e) => setSelectedBot(e.target.value)}
+              onChange={(e) => handleBotChange(e.target.value)}
               className="bg-[#141418] hover:bg-white/[0.04] text-zinc-300 hover:text-white border border-white/10 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium focus:outline-none focus:border-rose-500/50 transition-all appearance-none cursor-pointer h-9 shadow-sm"
               aria-label="Selecionar Bot"
             >

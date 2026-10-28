@@ -79,6 +79,7 @@ export interface CommercialMetricsCalculationOptions {
   customTargetGoal?: number | null;
   simulatedVisits?: number | null;
   simulatedBotStarts?: Array<{ id: string; userId: string; botId: string; timestamp: Date }> | null;
+  botId?: string | null;
 }
 
 export function formatBRLCurrency(val: number): string {
@@ -439,23 +440,45 @@ export class CommercialMetricsService {
     }
 
     // 4. Metric: Total Bot Starts
-    // Rule: Telegram webhooks currently do not persist /start events into Neon database.
-    // Count only when real data is available, with de-duplication when supported.
+    // Business Rule: Count exclusively the FIRST /start of each user on each bot.
+    // If a user sent /start multiple times to the same bot, only the earliest occurrence is counted.
+    // Unique identification is strictly per (botId, userId) combination.
     let botStarts: CommercialBotStarts;
     if (simulatedBotStarts !== null && Array.isArray(simulatedBotStarts)) {
-      // Filter within period and de-duplicate by user ID
-      const startsInPeriod = simulatedBotStarts.filter((s) => {
-        const d = new Date(s.timestamp);
-        return d >= startDate && d <= endDate;
+      let candidateStarts = simulatedBotStarts;
+      if (options.botId) {
+        candidateStarts = candidateStarts.filter((s) => s.botId === options.botId);
+      }
+
+      // Group by (botId, userId) to find the absolute earliest start timestamp
+      const firstStartMap = new Map<string, { userId: string; botId: string; firstTimestamp: Date }>();
+      for (const start of candidateStarts) {
+        const key = `${start.botId || "global"}__${start.userId}`;
+        const d = new Date(start.timestamp);
+        const existing = firstStartMap.get(key);
+        if (!existing || d.getTime() < existing.firstTimestamp.getTime()) {
+          firstStartMap.set(key, {
+            userId: start.userId,
+            botId: start.botId,
+            firstTimestamp: d,
+          });
+        }
+      }
+
+      // Only count first starts whose earliest occurrence happened within [startDate, endDate]
+      const firstStartsInPeriod = Array.from(firstStartMap.values()).filter((item) => {
+        return item.firstTimestamp >= startDate && item.firstTimestamp <= endDate;
       });
-      const uniqueUsersSet = new Set(startsInPeriod.map((s) => s.userId));
-      const totalStarts = startsInPeriod.length;
+
+      const totalStarts = firstStartsInPeriod.length;
+      const uniqueUsersSet = new Set(firstStartsInPeriod.map((item) => item.userId));
+      const uniqueUsers = uniqueUsersSet.size;
 
       botStarts = {
         totalStarts,
         formatted: String(totalStarts),
         isTelemetryAvailable: true,
-        uniqueUsers: uniqueUsersSet.size,
+        uniqueUsers,
         statusMessage: `${totalStarts} início(s) de bot no período`,
       };
     } else {
@@ -546,6 +569,7 @@ export class CommercialMetricsService {
         customTargetGoal: options.customTargetGoal,
         simulatedVisits: options.simulatedVisits,
         simulatedBotStarts: options.simulatedBotStarts,
+        botId: options.botId,
       });
 
       // 1. Fetch real starts metrics from database if not simulated
@@ -553,7 +577,12 @@ export class CommercialMetricsService {
       if (options.simulatedBotStarts === undefined || options.simulatedBotStarts === null) {
         try {
           const { BotStartEventService } = await import("@/lib/analytics/bot-start-service");
-          const startsResult = await BotStartEventService.getStartsMetrics(storeId, startDate, endDate);
+          const startsResult = await BotStartEventService.getStartsMetrics(
+            storeId,
+            startDate,
+            endDate,
+            options.botId
+          );
           realStarts = {
             totalStarts: startsResult.totalStarts,
             formatted: String(startsResult.totalStarts),
