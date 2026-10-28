@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { 
   CommercialMetricsService, 
   resolvePeriodDateRange, 
+  generatePerformanceSeries,
   formatBRLCurrency 
 } from "../commercial-metrics-service";
 import { getBusinessParts } from "../timezone-utils";
@@ -704,6 +705,147 @@ describe("CommercialMetricsService Suite", () => {
       expect(result.conversionRate.isTelemetryAvailable).toBe(false);
       expect(result.conversionRate.statusMessage).toContain("Falha ao consultar banco");
       expect(result.conversionRate.formatted).toBe("—");
+    });
+  });
+
+  describe("11. Suporte Robusto a Novos Períodos Unificados e Intervalos Personalizados", () => {
+    it("resolve THIS_MONTH começando no dia 1 do mês corrente no fuso America/Recife", () => {
+      const ref = new Date("2026-10-28T14:00:00.000Z");
+      const { startDate, endDate } = resolvePeriodDateRange("THIS_MONTH", ref);
+
+      // Start of October 2026 in UTC-3 is 2026-10-01 03:00:00 UTC
+      expect(startDate.toISOString()).toBe("2026-10-01T03:00:00.000Z");
+      expect(endDate.getTime()).toBeGreaterThan(startDate.getTime());
+    });
+
+    it("resolve LAST_MONTH abrangendo exatamente do dia 1 do mês anterior ao final do mês anterior", () => {
+      const ref = new Date("2026-10-28T14:00:00.000Z");
+      const { startDate, endDate } = resolvePeriodDateRange("LAST_MONTH", ref);
+
+      // Start of September 2026: 2026-09-01 03:00:00 UTC
+      expect(startDate.toISOString()).toBe("2026-09-01T03:00:00.000Z");
+      // End of September 2026 (exclusive upper bound: 00:00:00 BRT of 2026-10-01): 2026-10-01 03:00:00 UTC
+      expect(endDate.toISOString()).toBe("2026-10-01T03:00:00.000Z");
+    });
+
+    it("resolve THIS_YEAR iniciando em 1 de janeiro do ano corrente", () => {
+      const ref = new Date("2026-10-28T14:00:00.000Z");
+      const { startDate } = resolvePeriodDateRange("THIS_YEAR", ref);
+
+      expect(startDate.toISOString()).toBe("2026-01-01T03:00:00.000Z");
+    });
+
+    it("resolve intervalo CUSTOM:YYYY-MM-DD:YYYY-MM-DD com início inclusivo e fim inclusivo no fuso", () => {
+      const { startDate, endDate } = resolvePeriodDateRange("CUSTOM:2026-10-10:2026-10-20");
+
+      expect(startDate.toISOString()).toBe("2026-10-10T03:00:00.000Z");
+      // Exclusive upper bound: midnight of day after 2026-10-20 -> 2026-10-21 03:00:00 UTC
+      expect(endDate.toISOString()).toBe("2026-10-21T03:00:00.000Z");
+    });
+
+    it("gera série temporal correta para THIS_MONTH com agrupamento diário", () => {
+      const ref = new Date("2026-10-28T14:00:00.000Z");
+      const orders = [
+        {
+          id: "ord-oct-1",
+          storeId: "store-1",
+          status: "paid",
+          total: "350.00",
+          paidAt: new Date("2026-10-15T15:00:00.000Z"),
+          createdAt: new Date("2026-10-15T15:00:00.000Z"),
+        },
+      ];
+
+      const series = generatePerformanceSeries(orders, "THIS_MONTH", ref);
+      expect(series.length).toBe(28); // 28 days elapsed in October
+      const day15 = series.find((p) => p.dateLabel === "15/10");
+      expect(day15).toBeDefined();
+      expect(day15?.revenue).toBe(350);
+      expect(day15?.salesCount).toBe(1);
+    });
+
+    it("calcula métricas comerciais com precisão no período personalizado", () => {
+      const orders = [
+        {
+          id: "ord-custom-1",
+          storeId: "store-1",
+          status: "paid",
+          total: "500.00",
+          paymentMethod: "pix",
+          paidAt: new Date("2026-10-12T12:00:00.000Z"),
+          createdAt: new Date("2026-10-12T12:00:00.000Z"),
+        },
+        {
+          id: "ord-out-of-range",
+          storeId: "store-1",
+          status: "paid",
+          total: "999.00",
+          paymentMethod: "pix",
+          paidAt: new Date("2026-09-01T12:00:00.000Z"),
+          createdAt: new Date("2026-09-01T12:00:00.000Z"),
+        },
+      ];
+
+      const metrics = CommercialMetricsService.calculateMetrics(orders, {
+        period: "CUSTOM:2026-10-10:2026-10-15",
+      });
+
+      expect(metrics.approvedSales.total).toBe(500);
+      expect(metrics.approvedSales.count).toBe(1);
+      expect(metrics.averageTicket.averageTicket).toBe(500);
+    });
+
+    it("filtra pedidos e performance estritamente pelo botId quando especificado", () => {
+      const ref = new Date("2026-10-28T14:00:00.000Z");
+      const orders = [
+        {
+          id: "ord-bot-a",
+          storeId: "store-1",
+          status: "paid",
+          total: "150.00",
+          paymentMethod: "pix",
+          paidAt: new Date("2026-10-25T12:00:00.000Z"),
+          createdAt: new Date("2026-10-25T12:00:00.000Z"),
+          items: [{ product: { botId: "bot-alpha" } }],
+        },
+        {
+          id: "ord-bot-b",
+          storeId: "store-1",
+          status: "paid",
+          total: "300.00",
+          paymentMethod: "pix",
+          paidAt: new Date("2026-10-25T14:00:00.000Z"),
+          createdAt: new Date("2026-10-25T14:00:00.000Z"),
+          items: [{ product: { botId: "bot-beta" } }],
+        },
+      ];
+
+      const metricsAlpha = CommercialMetricsService.calculateMetrics(orders, {
+        period: "7D",
+        referenceDate: ref,
+        botId: "bot-alpha",
+      });
+
+      expect(metricsAlpha.approvedSales.total).toBe(150);
+      expect(metricsAlpha.approvedSales.count).toBe(1);
+
+      const metricsBeta = CommercialMetricsService.calculateMetrics(orders, {
+        period: "7D",
+        referenceDate: ref,
+        botId: "bot-beta",
+      });
+
+      expect(metricsBeta.approvedSales.total).toBe(300);
+      expect(metricsBeta.approvedSales.count).toBe(1);
+
+      // Sem botId: agrega os dois bots
+      const metricsAll = CommercialMetricsService.calculateMetrics(orders, {
+        period: "7D",
+        referenceDate: ref,
+      });
+
+      expect(metricsAll.approvedSales.total).toBe(450);
+      expect(metricsAll.approvedSales.count).toBe(2);
     });
   });
 });

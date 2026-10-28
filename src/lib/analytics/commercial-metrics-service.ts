@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { orders, stores, telegramBots } from "@/db/schema";
-import { eq, and, gte, lte, desc, or } from "drizzle-orm";
+import { eq, and, gte, lt, lte, desc, or } from "drizzle-orm";
 import {
   BUSINESS_TIMEZONE,
   getSaoPauloParts,
@@ -11,6 +11,8 @@ import {
   getSaoPauloStartOfDay,
   getSaoPauloEndOfDay,
   getSaoPauloWeekdayShort,
+  parseCivilDate,
+  formatCivilDateToBR,
 } from "@/lib/analytics/timezone-utils";
 
 export interface CommercialApprovedSales {
@@ -94,11 +96,25 @@ export function resolvePeriodDateRange(
   const endOfToday = getSaoPauloEndOfDay(referenceDate);
   const startOfToday = getSaoPauloStartOfDay(referenceDate);
 
+  if (normalizedPeriod.startsWith("CUSTOM:")) {
+    const parts = normalizedPeriod.split(":");
+    const startStr = parts[1];
+    const endStr = parts[2];
+    const pStart = startStr ? parseCivilDate(startStr) : null;
+    const pEnd = endStr ? parseCivilDate(endStr) : null;
+    if (pStart && pEnd) {
+      const startDate = new Date(Date.UTC(pStart.year, pStart.month - 1, pStart.day, 3, 0, 0, 0));
+      // Exclusive upper bound: midnight of the next day (00:00:00 BRT of pEnd.day + 1)
+      const endDate = new Date(Date.UTC(pEnd.year, pEnd.month - 1, pEnd.day + 1, 3, 0, 0, 0));
+      return { startDate, endDate };
+    }
+  }
+
   switch (normalizedPeriod) {
     case "TODAY":
       return { startDate: startOfToday, endDate: endOfToday };
     case "7D":
-      // 7 calendar days ending today in America/Sao_Paulo (6 days prior + today)
+      // 7 calendar days ending today in America/Recife (6 days prior + today)
       return {
         startDate: new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000),
         endDate: endOfToday,
@@ -109,8 +125,31 @@ export function resolvePeriodDateRange(
         startDate: new Date(startOfToday.getTime() - 89 * 24 * 60 * 60 * 1000),
         endDate: endOfToday,
       };
+    case "THIS_MONTH": {
+      const { year, month } = getSaoPauloParts(referenceDate);
+      const startOfMonth = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0, 0));
+      return { startDate: startOfMonth, endDate: endOfToday };
+    }
+    case "LAST_MONTH": {
+      const { year, month } = getSaoPauloParts(referenceDate);
+      let targetYear = year;
+      let targetMonth = month - 1;
+      if (targetMonth <= 0) {
+        targetMonth = 12;
+        targetYear -= 1;
+      }
+      const startOfLastMonth = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 3, 0, 0, 0));
+      // Exclusive upper bound: start of current month (00:00:00 BRT of day 1)
+      const endOfLastMonth = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0, 0));
+      return { startDate: startOfLastMonth, endDate: endOfLastMonth };
+    }
+    case "THIS_YEAR": {
+      const { year } = getSaoPauloParts(referenceDate);
+      const startOfYear = new Date(Date.UTC(year, 0, 1, 3, 0, 0, 0));
+      return { startDate: startOfYear, endDate: endOfToday };
+    }
     case "12M": {
-      // 12 calendar months: start of 11 months ago in America/Sao_Paulo
+      // 12 calendar months: start of 11 months ago in America/Recife
       const { year, month } = getSaoPauloParts(referenceDate);
       let startYear = year;
       let startMonth = month - 11;
@@ -185,7 +224,7 @@ export function generatePerformanceSeries(
   }
 
   if (normalizedPeriod === "12M" || normalizedPeriod === "ALL") {
-    // Group by month (12 months ending in current month in America/Sao_Paulo)
+    // Group by month (12 months ending in current month in America/Recife)
     const { year, month } = getSaoPauloParts(referenceDate);
     for (let i = 11; i >= 0; i--) {
       let targetYear = year;
@@ -228,6 +267,150 @@ export function generatePerformanceSeries(
       });
     }
     return points;
+  }
+
+  if (normalizedPeriod === "THIS_YEAR") {
+    const { year, month } = getSaoPauloParts(referenceDate);
+    for (let m = 1; m <= month; m++) {
+      const startOfMonthUTC = new Date(Date.UTC(year, m - 1, 1, 3, 0, 0, 0));
+      const endOfMonthUTC = m === 12
+        ? new Date(Date.UTC(year + 1, 0, 1, 3, 0, 0, 0))
+        : new Date(Date.UTC(year, m, 1, 3, 0, 0, 0));
+
+      const monthKey = `${year}-${String(m).padStart(2, "0")}`;
+      const rawMonthLabel = getSaoPauloMonthLabel(startOfMonthUTC).replace(".", "");
+      const monthLabel = rawMonthLabel.charAt(0).toUpperCase() + rawMonthLabel.slice(1);
+
+      const matchingOrders = paidOrders.filter((o) => {
+        const orderDate = new Date(o.paidAt || o.createdAt);
+        return orderDate >= startOfMonthUTC && orderDate < endOfMonthUTC;
+      });
+
+      const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+      const roundedRev = Math.round(revenue * 100) / 100;
+
+      points.push({
+        dateStr: monthKey,
+        dateKey: monthKey,
+        dateLabel: monthLabel,
+        dayName: monthLabel,
+        fullDate: `${monthLabel} de ${year}`,
+        revenue: roundedRev,
+        formattedRevenue: formatBRLCurrency(roundedRev),
+        salesCount: matchingOrders.length,
+      });
+    }
+    return points;
+  }
+
+  if (normalizedPeriod === "THIS_MONTH") {
+    const { year, month, day } = getSaoPauloParts(referenceDate);
+    for (let d = 1; d <= day; d++) {
+      const dayStart = new Date(Date.UTC(year, month - 1, d, 3, 0, 0, 0));
+      const dayEnd = new Date(Date.UTC(year, month - 1, d + 1, 3, 0, 0, 0));
+
+      const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dateLabel = `${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}`;
+      const weekday = getSaoPauloWeekdayShort(dayStart);
+
+      const matchingOrders = paidOrders.filter((o) => {
+        const orderDate = new Date(o.paidAt || o.createdAt);
+        return orderDate >= dayStart && orderDate < dayEnd;
+      });
+
+      const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+      const roundedRev = Math.round(revenue * 100) / 100;
+
+      points.push({
+        dateStr: dateKey,
+        dateKey,
+        dateLabel,
+        dayName: weekday,
+        fullDate: `${weekday}, ${dateLabel}`,
+        revenue: roundedRev,
+        formattedRevenue: formatBRLCurrency(roundedRev),
+        salesCount: matchingOrders.length,
+      });
+    }
+    return points;
+  }
+
+  if (normalizedPeriod === "LAST_MONTH") {
+    const { year, month } = getSaoPauloParts(referenceDate);
+    let targetYear = year;
+    let targetMonth = month - 1;
+    if (targetMonth <= 0) {
+      targetMonth = 12;
+      targetYear -= 1;
+    }
+    // Days in targetMonth: day 0 of month after targetMonth
+    const totalDays = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+    for (let d = 1; d <= totalDays; d++) {
+      const dayStart = new Date(Date.UTC(targetYear, targetMonth - 1, d, 3, 0, 0, 0));
+      const dayEnd = new Date(Date.UTC(targetYear, targetMonth - 1, d + 1, 3, 0, 0, 0));
+
+      const dateKey = `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dateLabel = `${String(d).padStart(2, "0")}/${String(targetMonth).padStart(2, "0")}`;
+      const weekday = getSaoPauloWeekdayShort(dayStart);
+
+      const matchingOrders = paidOrders.filter((o) => {
+        const orderDate = new Date(o.paidAt || o.createdAt);
+        return orderDate >= dayStart && orderDate < dayEnd;
+      });
+
+      const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+      const roundedRev = Math.round(revenue * 100) / 100;
+
+      points.push({
+        dateStr: dateKey,
+        dateKey,
+        dateLabel,
+        dayName: weekday,
+        fullDate: `${weekday}, ${dateLabel}`,
+        revenue: roundedRev,
+        formattedRevenue: formatBRLCurrency(roundedRev),
+        salesCount: matchingOrders.length,
+      });
+    }
+    return points;
+  }
+
+  if (normalizedPeriod.startsWith("CUSTOM:")) {
+    const { startDate, endDate } = resolvePeriodDateRange(normalizedPeriod, referenceDate);
+    const msDiff = endDate.getTime() - startDate.getTime();
+    const totalDays = Math.max(1, Math.ceil(msDiff / (24 * 60 * 60 * 1000)));
+
+    if (totalDays <= 35) {
+      // Daily points
+      for (let i = 0; i < totalDays; i++) {
+        const dayStart = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+        const dateKey = getSaoPauloDateKey(dayStart);
+        const dateLabel = getSaoPauloDateLabel(dayStart);
+        const weekday = getSaoPauloWeekdayShort(dayStart);
+
+        const matchingOrders = paidOrders.filter((o) => {
+          const orderDate = new Date(o.paidAt || o.createdAt);
+          return orderDate >= dayStart && orderDate < dayEnd;
+        });
+
+        const revenue = matchingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+        const roundedRev = Math.round(revenue * 100) / 100;
+
+        points.push({
+          dateStr: dateKey,
+          dateKey,
+          dateLabel,
+          dayName: weekday,
+          fullDate: `${weekday}, ${dateLabel}`,
+          revenue: roundedRev,
+          formattedRevenue: formatBRLCurrency(roundedRev),
+          salesCount: matchingOrders.length,
+        });
+      }
+      return points;
+    }
   }
 
   // Daily grouping for 7D, 30D, 90D
@@ -310,16 +493,27 @@ export class CommercialMetricsService {
       referenceDate = new Date(), 
       customTargetGoal = null, 
       simulatedVisits = null, 
-      simulatedBotStarts = null 
+      simulatedBotStarts = null,
+      botId = null,
     } = options;
     const { startDate, endDate } = resolvePeriodDateRange(period, referenceDate);
 
+    // Apply bot-scoping if botId is specified
+    const scopedOrders = botId
+      ? ordersList.filter((o: any) => {
+          if (o.botId === botId) return true;
+          if (o.items && Array.isArray(o.items) && o.items.some((it: any) => it?.product?.botId === botId)) return true;
+          return false;
+        })
+      : ordersList;
+
     // 1. Exclude pending, cancelled, refunded or expired orders. Consider exclusively paid orders.
     // Date boundary uses paidAt, with fallback to createdAt if paidAt was not recorded.
-    const paidOrdersInPeriod = ordersList.filter((o) => {
+    // Standard business rule: start inclusive [startDate, endDate)
+    const paidOrdersInPeriod = scopedOrders.filter((o) => {
       if (o.status !== "paid") return false;
       const orderDate = new Date(o.paidAt || o.createdAt);
-      return orderDate >= startDate && orderDate <= endDate;
+      return orderDate >= startDate && orderDate < endDate;
     });
 
     // De-duplicate orders by unique id to avoid multiple counts
@@ -352,9 +546,9 @@ export class CommercialMetricsService {
     // 3. Metric: Conversion Rate (Pix Charges Conversion)
     // Business rule: taxaConversao = (totalPixPagos / totalPixGerados) * 100
     // Measures conversion of generated Pix charges into approved/paid Pix payments.
-    const allOrdersInPeriod = ordersList.filter((o) => {
+    const allOrdersInPeriod = scopedOrders.filter((o) => {
       const d = new Date(o.createdAt);
-      return d >= startDate && d <= endDate;
+      return d >= startDate && d < endDate;
     });
 
     const isPixCharge = (o: typeof ordersList[0]) => {
@@ -511,8 +705,8 @@ export class CommercialMetricsService {
     };
 
     // 6. Metric: Dynamic Performance Series for Period + Backward Compatibility 7D
-    const performanceSeries = generatePerformanceSeries(ordersList, period, referenceDate);
-    const last7DaysPerformance = generateLast7DaysPerformance(ordersList, referenceDate);
+    const performanceSeries = generatePerformanceSeries(scopedOrders, period, referenceDate);
+    const last7DaysPerformance = generateLast7DaysPerformance(scopedOrders, referenceDate);
 
     return {
       approvedSales,
@@ -538,27 +732,27 @@ export class CommercialMetricsService {
 
     try {
       // Fetch orders belonging strictly to the requested store
-      // Respect both createdAt and paidAt to ensure payments completed across midnight/period boundaries are captured
+      // Standard [startDate, endDate) bounds
       const storeOrders = await db.query.orders.findMany({
         where: normalizedPeriod === "ALL"
           ? eq(orders.storeId, storeId)
           : and(
               eq(orders.storeId, storeId),
               or(
-                and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate)),
-                and(gte(orders.paidAt, startDate), lte(orders.paidAt, endDate))
+                and(gte(orders.createdAt, startDate), lt(orders.createdAt, endDate)),
+                and(gte(orders.paidAt, startDate), lt(orders.paidAt, endDate))
               )
             ),
-        columns: {
-          id: true,
-          storeId: true,
-          status: true,
-          total: true,
-          paidAt: true,
-          createdAt: true,
-          paymentMethod: true,
-          paymentId: true,
-          pixQrCode: true,
+        with: {
+          items: {
+            with: {
+              product: {
+                columns: {
+                  botId: true,
+                },
+              },
+            },
+          },
         },
         orderBy: [desc(orders.createdAt)],
       });

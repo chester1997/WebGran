@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { 
   TrendingUp, 
   TrendingDown, 
   Minus, 
-  Wallet, 
   ShoppingBag, 
-  Users, 
   Package, 
   Clock, 
   CheckCircle2, 
@@ -17,28 +15,26 @@ import {
   Globe, 
   Sparkles,
   RefreshCw,
-  BarChart3,
   Activity,
-  ArrowUpRight,
   CreditCard,
-  Layers,
-  Tag,
   UserPlus,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Check,
+  X,
+  SlidersHorizontal,
+  ArrowRight,
+  Flame,
+  BarChart2
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer
-} from "recharts";
 import { StoreAnalyticsData } from "@/lib/analytics/analytics-service";
 import { CommercialMetricsCards } from "@/components/analytics/CommercialMetricsCards";
-import { BUSINESS_TIMEZONE, getBusinessParts, getBusinessDateKey } from "@/lib/analytics/timezone-utils";
+import { 
+  BUSINESS_TIMEZONE, 
+  getBusinessParts, 
+  getBusinessDateKey, 
+  formatCivilDateToBR 
+} from "@/lib/analytics/timezone-utils";
 import { getDashboardAnalyticsAction } from "./actions";
 
 export interface DashboardBot {
@@ -73,31 +69,39 @@ function getFormattedDateString(date: Date = new Date()): string {
   }
 }
 
-function CustomRechartsTooltip({ active, payload, label, chartMetric }: any) {
-  if (active && payload && payload.length) {
-    const item = payload[0].payload;
-    return (
-      <div className="bg-[#141418] border border-white/10 text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[150px]">
-        <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1.5 mb-1">
-          <span className="font-semibold text-zinc-300 text-[11px]">{item.fullDate || item.dateLabel || label}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-        </div>
-        <div className="flex items-center justify-between text-xs gap-3">
-          <span className="text-zinc-400">Faturamento:</span>
-          <span className="font-bold text-emerald-400 font-mono wg-tabular">
-            R$ {(item.revenue || 0).toFixed(2).replace(".", ",")}
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-xs gap-3">
-          <span className="text-zinc-400">Vendas:</span>
-          <span className="font-bold text-white font-mono wg-tabular">
-            {item.salesCount || 0} {(item.salesCount || 0) === 1 ? "pedido" : "pedidos"}
-          </span>
-        </div>
-      </div>
-    );
+interface PeriodOption {
+  key: string;
+  label: string;
+  badge?: string;
+}
+
+const PRESET_PERIODS: PeriodOption[] = [
+  { key: "TODAY", label: "Hoje", badge: "24h" },
+  { key: "7D", label: "Últimos 7 dias", badge: "7D" },
+  { key: "30D", label: "Últimos 30 dias", badge: "30D" },
+  { key: "90D", label: "Últimos 90 dias", badge: "90D" },
+  { key: "THIS_MONTH", label: "Este mês", badge: "Mês" },
+  { key: "LAST_MONTH", label: "Mês anterior", badge: "M-1" },
+  { key: "12M", label: "Últimos 12 meses", badge: "12M" },
+  { key: "THIS_YEAR", label: "Este ano", badge: "Ano" },
+  { key: "ALL", label: "Todo o período", badge: "Tudo" },
+];
+
+function getPeriodDisplayLabel(periodKey: string): string {
+  const preset = PRESET_PERIODS.find((p) => p.key === periodKey);
+  if (preset) return preset.label;
+
+  if (periodKey.startsWith("CUSTOM:")) {
+    const parts = periodKey.split(":");
+    const startStr = parts[1] || "";
+    const endStr = parts[2] || "";
+    if (startStr && endStr) {
+      return `${formatCivilDateToBR(startStr)} — ${formatCivilDateToBR(endStr)}`;
+    }
+    return "Personalizado";
   }
-  return null;
+
+  return "Últimos 30 dias";
 }
 
 function ChannelAvatarItem({ chan }: { chan: { channel: string; label: string; photoUrl?: string | null } }) {
@@ -109,22 +113,22 @@ function ChannelAvatarItem({ chan }: { chan: { channel: string; label: string; p
         src={chan.photoUrl}
         alt={chan.label || "Avatar do Bot"}
         onError={() => setHasError(true)}
-        className="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-white/10"
+        className="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-700/80 bg-slate-900"
       />
     );
   }
 
   if (chan.channel !== "web") {
     return (
-      <div className="w-4.5 h-4.5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-        <Bot className="w-2.5 h-2.5 text-blue-400" />
+      <div className="w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
+        <Bot className="w-3.5 h-3.5 text-blue-400" />
       </div>
     );
   }
 
   return (
-    <div className="w-4.5 h-4.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-      <Globe className="w-2.5 h-2.5 text-emerald-400" />
+    <div className="w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+      <Globe className="w-3.5 h-3.5 text-emerald-400" />
     </div>
   );
 }
@@ -133,18 +137,45 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
   const [data, setData] = useState<StoreAnalyticsData>(initialData);
   const [period, setPeriod] = useState<string>(initialData.period || "30D");
   const [selectedBot, setSelectedBot] = useState<string>("all");
-  const [selectedDate, setSelectedDate] = useState<string>(() => getBusinessDateKey(new Date()));
-  const [chartMetric, setChartMetric] = useState<"revenue" | "sales">("revenue");
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [hoveredPoint, setHoveredPoint] = useState<{
-    dateLabel: string;
-    revenue: number;
-    salesCount: number;
-    x: number;
-    y: number;
-  } | null>(null);
+  // Period Popover State
+  const [isPeriodOpen, setIsPeriodOpen] = useState(false);
+  const [customStart, setCustomStart] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return getBusinessDateKey(d);
+  });
+  const [customEnd, setCustomEnd] = useState<string>(() => getBusinessDateKey(new Date()));
+  const [customError, setCustomError] = useState<string | null>(null);
+  const periodPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close period popover
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (periodPopoverRef.current && !periodPopoverRef.current.contains(e.target as Node)) {
+        setIsPeriodOpen(false);
+      }
+    }
+    if (isPeriodOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isPeriodOpen]);
+
+  // Close on ESC
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIsPeriodOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const fetchAnalytics = (targetPeriod: string, targetBot: string) => {
     setErrorMsg(null);
@@ -154,28 +185,35 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
         const res = await getDashboardAnalyticsAction(targetPeriod, botParam);
         setData(res);
       } catch (err: any) {
-        setErrorMsg(err.message || "Não foi possível carregar este indicador.");
+        setErrorMsg(err.message || "Não foi possível carregar os dados deste período.");
       }
     });
   };
 
   const handlePeriodChange = (newPeriod: string) => {
+    setIsPeriodOpen(false);
     if (newPeriod === period && !errorMsg) return;
     setPeriod(newPeriod);
     fetchAnalytics(newPeriod, selectedBot);
   };
 
+  const handleApplyCustomPeriod = () => {
+    setCustomError(null);
+    if (!customStart || !customEnd) {
+      setCustomError("Preencha data inicial e final.");
+      return;
+    }
+    if (customStart > customEnd) {
+      setCustomError("Data inicial não pode ser posterior à final.");
+      return;
+    }
+    const customKey = `CUSTOM:${customStart}:${customEnd}`;
+    handlePeriodChange(customKey);
+  };
+
   const handleBotChange = (newBot: string) => {
     setSelectedBot(newBot);
     fetchAnalytics(period, newBot);
-  };
-
-  const handleDateChange = (dateStr: string) => {
-    setSelectedDate(dateStr);
-    const todayKey = getBusinessDateKey(new Date());
-    if (dateStr === todayKey) {
-      handlePeriodChange("TODAY");
-    }
   };
 
   const currentParts = getBusinessParts(new Date());
@@ -193,91 +231,200 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
           displayName: c.label,
         }));
 
-  const periodsList = [
-    { key: "TODAY", label: "Hoje" },
-    { key: "7D", label: "7D" },
-    { key: "30D", label: "30D" },
-    { key: "90D", label: "90D" },
-    { key: "12M", label: "12M" },
-    { key: "ALL", label: "Tudo" },
-  ];
+  const activePeriodLabel = getPeriodDisplayLabel(period);
 
   return (
     <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-20">
       
-      {/* 1. Header & Period Selector (WebGran Executive Header) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-4 sm:p-5 lg:px-6 lg:py-5 shadow-sm">
-        {/* Lado Esquerdo: Saudação Principal e Data Atual */}
-        <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl lg:text-[26px] font-bold text-white tracking-tight truncate">
-              {greeting}, {displayName}
-            </h1>
-            {isPending && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400 font-mono shrink-0">
-                <RefreshCw className="w-3 h-3 animate-spin text-rose-500" />
-                <span className="hidden sm:inline">Atualizando...</span>
-              </span>
-            )}
-          </div>
-          <p className="text-zinc-400 text-xs sm:text-sm font-normal">
-            {formattedDate}
-          </p>
-        </div>
-
-        {/* Lado Direito: Filtros em uma linha (Bot, Data, Período) */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0 max-w-full">
-          {/* Seletor de Bot */}
-          <div className="relative flex items-center">
-            <Bot className="absolute left-2.5 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            <select
-              value={selectedBot}
-              onChange={(e) => handleBotChange(e.target.value)}
-              className="bg-[#141418] hover:bg-white/[0.04] text-zinc-300 hover:text-white border border-white/10 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium focus:outline-none focus:border-rose-500/50 transition-all appearance-none cursor-pointer h-9 shadow-sm"
-              aria-label="Selecionar Bot"
-            >
-              <option value="all" className="bg-[#141418] text-white">Todos os bots</option>
-              {availableBots.map((b) => (
-                <option key={b.id} value={b.id} className="bg-[#141418] text-white">
-                  {b.displayName || (b.username ? `@${b.username}` : `Bot ${b.id.slice(0, 6)}`)}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+      {/* 1. Executive Dark Blue Header & Unified Filters */}
+      <div className="relative bg-[#111722] border border-slate-800/80 rounded-2xl p-4 sm:p-5 lg:px-6 lg:py-5 shadow-sm overflow-visible">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Lado Esquerdo: Saudação Principal e Data Atual */}
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
+                <span>{greeting}, </span>
+                <span className="text-blue-400 font-extrabold">{displayName}</span>
+              </h1>
+              {isPending && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-blue-400 font-mono shrink-0 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                  <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />
+                  <span className="hidden sm:inline">Atualizando...</span>
+                </span>
+              )}
+            </div>
+            <p className="text-slate-400 text-xs sm:text-sm font-normal flex items-center gap-1.5">
+              <span>{formattedDate}</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-500 text-xs font-mono">Fuso América/Recife</span>
+            </p>
           </div>
 
-          {/* Seletor de Data */}
-          <div className="relative flex items-center">
-            <Calendar className="absolute left-2.5 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="bg-[#141418] hover:bg-white/[0.04] text-zinc-300 hover:text-white border border-white/10 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-rose-500/50 transition-all cursor-pointer h-9 shadow-sm [color-scheme:dark]"
-              aria-label="Selecionar Data"
-            />
-          </div>
+          {/* Lado Direito: Controles Unificados (Bot + Período Único) */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5 shrink-0 max-w-full">
+            
+            {/* Seletor de Bot Integrado */}
+            <div className="relative flex items-center min-w-[150px] sm:min-w-[170px] max-w-full">
+              <Bot className="absolute left-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              <select
+                value={selectedBot}
+                onChange={(e) => handleBotChange(e.target.value)}
+                className="w-full bg-[#151D2B] hover:bg-slate-800/80 text-slate-200 hover:text-white border border-slate-800 hover:border-blue-500/40 rounded-xl pl-8 pr-8 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer h-9 shadow-sm"
+                aria-label="Selecionar Bot"
+              >
+                <option value="all" className="bg-[#111722] text-white">Todos os bots</option>
+                {availableBots.map((b) => (
+                  <option key={b.id} value={b.id} className="bg-[#111722] text-white">
+                    {b.displayName || (b.username ? `@${b.username}` : `Bot ${b.id.slice(0, 6)}`)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            </div>
 
-          {/* Seletor de Período (Segmented Control) */}
-          <div className="bg-[#141418] p-1 rounded-xl border border-white/[0.06] flex items-center gap-0.5 overflow-x-auto scrollbar-hide shrink-0 h-9 shadow-sm">
-            {periodsList.map((p) => {
-              const isActive = period === p.key;
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => handlePeriodChange(p.key)}
-                  disabled={isPending}
-                  className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? "bg-rose-600 text-white shadow-sm font-semibold"
-                      : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
+            {/* SELETOR DE PERÍODO ÚNICO COM POPOVER (Presets + Personalizado) */}
+            <div className="relative flex-1 sm:flex-initial" ref={periodPopoverRef}>
+              
+              {/* Botão Gatilho do Seletor */}
+              <button
+                type="button"
+                onClick={() => setIsPeriodOpen(!isPeriodOpen)}
+                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#151D2B] hover:bg-slate-800/90 text-slate-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-sm ${
+                  isPeriodOpen 
+                    ? "border-blue-500 ring-2 ring-blue-500/20 text-white" 
+                    : "border-slate-800 hover:border-blue-500/40"
+                }`}
+                aria-haspopup="dialog"
+                aria-expanded={isPeriodOpen}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="font-semibold text-white truncate max-w-[160px] sm:max-w-[200px]">
+                    {activePeriodLabel}
+                  </span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-blue-400" : ""}`} />
+              </button>
+
+              {/* Backdrop para telas pequenas */}
+              {isPeriodOpen && (
+                <div 
+                  className="fixed inset-0 bg-black/60 backdrop-blur-xs sm:hidden z-40" 
+                  onClick={() => setIsPeriodOpen(false)}
+                />
+              )}
+
+              {/* Painel Popover do Seletor */}
+              {isPeriodOpen && (
+                <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[360px] bg-[#111722] border border-slate-700/90 rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 animate-in fade-in-0 zoom-in-95">
+                  
+                  {/* Topo do Popover */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-1.5 text-white font-semibold text-xs">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Selecione o período de análise</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsPeriodOpen(false)}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                      aria-label="Fechar"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Grid de Presets */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                      Intervalos Rápidos
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {PRESET_PERIODS.map((p) => {
+                        const isSelected = period === p.key;
+                        return (
+                          <button
+                            key={p.key}
+                            type="button"
+                            onClick={() => handlePeriodChange(p.key)}
+                            disabled={isPending}
+                            className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border ${
+                              isSelected
+                                ? "bg-blue-600 text-white border-blue-500 shadow-sm font-semibold"
+                                : "bg-[#151D2B] text-slate-300 hover:text-white hover:bg-slate-800/80 border-slate-800/80"
+                            }`}
+                          >
+                            <span className="truncate leading-tight text-[11px]">{p.label}</span>
+                            <div className="flex items-center justify-between w-full pt-1">
+                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-800 text-slate-400'}`}>
+                                {p.badge}
+                              </span>
+                              {isSelected && <Check className="w-3 h-3 text-white shrink-0" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Seção Personalizada */}
+                  <div className="pt-2 border-t border-slate-800 space-y-2.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                      Intervalo Personalizado
+                    </span>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 block font-medium">Data Inicial</label>
+                        <input
+                          type="date"
+                          value={customStart}
+                          max={getBusinessDateKey(new Date())}
+                          onChange={(e) => {
+                            setCustomStart(e.target.value);
+                            setCustomError(null);
+                          }}
+                          className="w-full bg-[#151D2B] border border-slate-800 hover:border-slate-700 focus:border-blue-500 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 block font-medium">Data Final</label>
+                        <input
+                          type="date"
+                          value={customEnd}
+                          max={getBusinessDateKey(new Date())}
+                          onChange={(e) => {
+                            setCustomEnd(e.target.value);
+                            setCustomError(null);
+                          }}
+                          className="w-full bg-[#151D2B] border border-slate-800 hover:border-slate-700 focus:border-blue-500 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+
+                    {customError && (
+                      <p className="text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        {customError}
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleApplyCustomPeriod}
+                      disabled={isPending}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl py-2 text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                    >
+                      <span>Aplicar intervalo de datas</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
@@ -292,7 +439,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
           <button
             type="button"
             onClick={() => handlePeriodChange(period)}
-            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs"
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer"
           >
             <RefreshCw className="w-3 h-3 animate-spin-reverse" />
             Tentar novamente
@@ -300,24 +447,24 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
         </div>
       )}
 
-      {/* 2. Commercial Metrics Cards (Reference Grid) */}
+      {/* 2. Commercial Metrics Cards (Reference Grid: 4 Cards 2x2 + Seu Desempenho) */}
       <CommercialMetricsCards 
         metrics={data.commercialMetrics} 
         isPending={isPending} 
       />
 
-      {/* 3. Atividades, Mais Vendidos e Vendas por Canal (3 Cols Lado a Lado) */}
+      {/* 3. Atividades, Mais Vendidos e Desempenho por Bot (3 Cols Lado a Lado) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* 1. Log de Atividades (Esquerda) */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#111722] border border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <Activity className="w-5 h-5 text-rose-500 shrink-0" />
+                <Activity className="w-5 h-5 text-blue-400 shrink-0" />
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-tight">Log de Atividades</h3>
-                  <p className="text-xs text-zinc-400">Acompanhe os acontecimentos da loja</p>
+                  <p className="text-xs text-slate-400">Acontecimentos operacionais em tempo real</p>
                 </div>
               </div>
 
@@ -329,15 +476,15 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
             {isPending ? (
               <div className="space-y-2 py-2">
-                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
-                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
-                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
+                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
               </div>
             ) : (!data.activityLog || data.activityLog.length === 0) ? (
-              <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
-                <Activity className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
-                <p className="text-zinc-400 text-xs font-semibold">Nenhuma atividade recente registrada.</p>
-                <p className="text-zinc-500 text-[11px] max-w-xs mx-auto">
+              <div className="py-10 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-2">
+                <Activity className="w-7 h-7 text-slate-600 mx-auto opacity-50" />
+                <p className="text-slate-300 text-xs font-semibold">Nenhuma atividade recente registrada.</p>
+                <p className="text-slate-500 text-[11px] max-w-xs mx-auto">
                   Novos leads, pagamentos pendentes e vendas aprovadas aparecerão aqui automaticamente.
                 </p>
               </div>
@@ -349,15 +496,15 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   const isPendingPay = event.type === "payment_pending";
 
                   const iconContainerClass = isSale
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                     : isPendingPay
-                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                    : "bg-sky-500/10 text-sky-400 border-sky-500/20";
+                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                    : "bg-blue-500/15 text-blue-400 border-blue-500/30";
 
                   return (
                     <div
                       key={event.id}
-                      className="p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/[0.1] transition-all flex items-center justify-between gap-2.5"
+                      className="p-3 rounded-xl bg-[#151D2B] border border-slate-800/80 hover:border-slate-700 transition-all flex items-center justify-between gap-2.5"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
@@ -373,13 +520,20 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-white tracking-tight">
-                            {event.title}
-                          </p>
-                          <p className="text-[11px] text-zinc-400 font-medium truncate">
-                            <span className="text-zinc-200 font-medium">{event.targetName}</span>
-                            <span className="mx-1 text-zinc-600">—</span>
-                            <span className={isSale ? "text-emerald-400 font-semibold" : isPendingPay ? "text-amber-400 font-medium" : "text-zinc-400"}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-bold text-white tracking-tight">
+                              {event.title}
+                            </p>
+                            {event.botName && (
+                              <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.2 rounded shrink-0">
+                                {event.botName}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-medium truncate">
+                            <span className="text-slate-200 font-medium">{event.targetName}</span>
+                            <span className="mx-1 text-slate-600">—</span>
+                            <span className={isSale ? "text-emerald-400 font-semibold" : isPendingPay ? "text-amber-400 font-medium" : "text-slate-400"}>
                               {event.description}
                             </span>
                           </p>
@@ -387,7 +541,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-zinc-400 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/[0.05] wg-tabular">
+                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700/60 wg-tabular">
                           {event.dateFormatted} • {event.timeFormatted}
                         </span>
                       </div>
@@ -398,8 +552,8 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
-            <span>Histórico de acontecimentos:</span>
+          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+            <span>Histórico operacional:</span>
             <span className="font-bold text-white wg-tabular">
               {data.activityLog?.length || 0} {(data.activityLog?.length || 0) === 1 ? "registro" : "registros"}
             </span>
@@ -407,78 +561,96 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
         </div>
 
         {/* 2. Mais Vendidos (Meio) */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#111722] border border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
-                <p className="text-xs text-zinc-400">Ranking por receita no período</p>
+                <p className="text-xs text-slate-400">Ranking por receita aprovada no período</p>
               </div>
             </div>
 
             {isPending ? (
               <div className="space-y-3 py-3">
-                <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-                <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
+                <div className="h-12 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-12 bg-slate-800/40 rounded-xl animate-pulse" />
               </div>
             ) : data.topProducts.length === 0 ? (
-              <div className="py-10 text-center bg-[#141418]/50 rounded-xl border border-white/[0.04] space-y-2">
-                <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
-                <p className="text-zinc-400 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
+              <div className="py-10 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-2">
+                <ShoppingBag className="w-7 h-7 text-slate-600 mx-auto opacity-50" />
+                <p className="text-slate-300 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+              <div className="space-y-2.5 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
                 {data.topProducts.map((prod, idx) => (
                   <div
                     key={prod.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#141418] border border-white/[0.05] hover:border-white/10 transition-all duration-150 group"
+                    className="p-3 rounded-xl bg-[#151D2B] border border-slate-800/80 hover:border-slate-700 transition-all duration-150 group space-y-1.5"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {/* Rank Badge */}
-                      {idx === 0 ? (
-                        <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
-                      ) : idx === 1 ? (
-                        <div className="w-6 h-6 rounded-lg bg-zinc-300/15 border border-zinc-300/30 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
-                      ) : idx === 2 ? (
-                        <div className="w-6 h-6 rounded-lg bg-amber-700/15 border border-amber-700/30 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
-                      ) : (
-                        <div className="w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
-                      )}
-
-                      {/* Product Cover */}
-                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0 flex items-center justify-center text-zinc-500">
-                        {prod.coverUrl ? (
-                          <img
-                            src={prod.coverUrl}
-                            alt={prod.title}
-                            className="w-full h-full object-cover"
-                          />
+                    <div className="flex items-center justify-between gap-2.5 min-w-0">
+                      
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {/* Rank Badge */}
+                        {idx === 0 ? (
+                          <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
+                        ) : idx === 1 ? (
+                          <div className="w-6 h-6 rounded-lg bg-slate-300/15 border border-slate-300/30 text-slate-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
+                        ) : idx === 2 ? (
+                          <div className="w-6 h-6 rounded-lg bg-orange-700/15 border border-orange-700/30 text-orange-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
                         ) : (
-                          <Package className="w-4 h-4 text-zinc-600" />
+                          <div className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                        )}
+
+                        {/* Product Cover */}
+                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-900 border border-slate-800 shrink-0 flex items-center justify-center text-slate-500">
+                          {prod.coverUrl ? (
+                            <img
+                              src={prod.coverUrl}
+                              alt={prod.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Package className="w-4 h-4 text-slate-600" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate group-hover:text-blue-400 transition-colors">{prod.title}</p>
+                          <p className="text-[11px] text-slate-400 font-medium">
+                            {prod.salesCount} {prod.salesCount === 1 ? "unidade vendida" : "unidades vendidas"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
+                          R$ {prod.revenue.toFixed(2).replace(".", ",")}
+                        </p>
+                        {prod.percentage !== undefined && prod.percentage > 0 && (
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {prod.percentage}% do total
+                          </span>
                         )}
                       </div>
+                    </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-white truncate group-hover:text-rose-400 transition-colors">{prod.title}</p>
-                        <p className="text-[11px] text-zinc-400 font-medium">
-                          {prod.salesCount} {prod.salesCount === 1 ? "unidade" : "unidades"}
-                        </p>
+                    {/* Subtle Share Progress Bar */}
+                    {prod.percentage !== undefined && prod.percentage > 0 && (
+                      <div className="h-1 bg-slate-800/80 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500/80 rounded-full"
+                          style={{ width: `${Math.min(prod.percentage, 100)}%` }}
+                        />
                       </div>
-                    </div>
-
-                    <div className="text-right shrink-0 ml-2">
-                      <p className="text-xs font-bold text-emerald-400 font-mono wg-tabular">
-                        R$ {prod.revenue.toFixed(2).replace(".", ",")}
-                      </p>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
             <span>Ranking de produtos:</span>
             <span className="font-bold text-white wg-tabular">
               {data.topProducts?.length || 0} {(data.topProducts?.length || 0) === 1 ? "produto" : "produtos"}
@@ -486,61 +658,113 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
           </div>
         </div>
 
-        {/* 3. Vendas por Canal (Direita) */}
-        <div className="bg-[#0E0E11] border border-white/[0.06] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+        {/* 3. Desempenho por Bot (Direita) */}
+        <div className="bg-[#111722] border border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
           <div>
-            <div className="flex items-center gap-2.5 mb-4">
-              <Bot className="w-5 h-5 text-rose-500 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Vendas por Canal</h3>
-                <p className="text-xs text-zinc-400">Origem dos pedidos efetuados</p>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <Bot className="w-5 h-5 text-blue-400 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Desempenho por Bot</h3>
+                  <p className="text-xs text-slate-400">Métricas operacionais e conversão por canal</p>
+                </div>
+              </div>
+
+              <div className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono text-blue-400 font-medium">
+                {data.channels.length} {data.channels.length === 1 ? "canal" : "canais"}
               </div>
             </div>
 
             {isPending ? (
               <div className="space-y-3 py-3">
-                <div className="h-10 bg-white/5 rounded-lg animate-pulse" />
-                <div className="h-10 bg-white/5 rounded-lg animate-pulse" />
+                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
               </div>
             ) : data.channels.length === 0 ? (
-              <p className="text-zinc-500 text-xs py-10 text-center">Nenhum canal ativo registrado.</p>
+              <div className="py-10 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-2">
+                <Bot className="w-7 h-7 text-slate-600 mx-auto opacity-50" />
+                <p className="text-slate-300 text-xs font-semibold">Nenhum canal ativo registrado.</p>
+                <p className="text-slate-500 text-[11px] max-w-xs mx-auto">
+                  Vincule bots do Telegram em Configurações &gt; Loja.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-4 py-1 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
-                {data.channels.map((chan) => (
-                  <div key={chan.channel} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-white flex items-center gap-2 min-w-0">
-                        <ChannelAvatarItem chan={chan} />
-                        <span className="truncate">{chan.label}</span>
-                      </span>
-                      <span className="font-mono font-bold text-zinc-300 shrink-0 ml-2 wg-tabular">{chan.percentage}%</span>
-                    </div>
+              <div className="space-y-3 py-1 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+                {data.channels.map((chan) => {
+                  const isSelected = selectedBot === chan.channel;
+                  return (
+                    <div 
+                      key={chan.channel} 
+                      className={`p-3 rounded-xl bg-[#151D2B] border transition-all space-y-2 ${
+                        isSelected 
+                          ? "border-blue-500/80 ring-1 ring-blue-500/30" 
+                          : "border-slate-800/80 hover:border-slate-700"
+                      }`}
+                    >
+                      {/* Linha Superior: Avatar, Nome e Faturamento */}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-white flex items-center gap-2 min-w-0">
+                          <ChannelAvatarItem chan={chan} />
+                          <span className="truncate">{chan.label}</span>
+                          {chan.username && (
+                            <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
+                              @{chan.username.replace(/^@/, '')}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-mono font-bold text-emerald-400 shrink-0 ml-2 wg-tabular">
+                          R$ {chan.revenue.toFixed(2).replace(".", ",")}
+                        </span>
+                      </div>
 
-                    {/* Progress Bar in WebGran Red / Rose */}
-                    <div className="h-2 bg-[#141418] rounded-full overflow-hidden border border-white/[0.04]">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          chan.channel === "web" 
-                            ? "bg-emerald-500" 
-                            : "bg-rose-500"
-                        }`}
-                        style={{ width: `${Math.max(chan.percentage, 5)}%` }}
-                      />
-                    </div>
+                      {/* Métricas Operacionais: Starts, Vendas e Taxa de Conversão */}
+                      <div className="grid grid-cols-3 gap-1.5 py-0.5 text-center bg-[#111722] p-1.5 rounded-lg border border-slate-800">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Starts</span>
+                          <span className="text-xs font-bold font-mono text-blue-400 wg-tabular">
+                            {chan.uniqueStarts ?? "—"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Vendas</span>
+                          <span className="text-xs font-bold font-mono text-white wg-tabular">
+                            {chan.salesCount}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Conversão</span>
+                          <span className="text-xs font-bold font-mono text-slate-200 wg-tabular">
+                            {chan.conversionRate !== null && chan.conversionRate !== undefined ? `${chan.conversionRate}%` : "—"}
+                          </span>
+                        </div>
+                      </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
-                      <span>{chan.salesCount} {chan.salesCount === 1 ? "venda" : "vendas"}</span>
-                      <span className="font-bold text-white wg-tabular">R$ {chan.revenue.toFixed(2).replace(".", ",")}</span>
+                      {/* Barra de Participação no Faturamento Total */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span>Participação nas vendas</span>
+                          <span className="font-mono font-semibold text-slate-300">{chan.percentage}%</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-800">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              chan.channel === "web" ? "bg-emerald-500" : "bg-blue-500"
+                            }`}
+                            style={{ width: `${Math.max(chan.percentage, 4)}%` }}
+                          />
+                        </div>
+                      </div>
+
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          <div className="pt-3 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
             <span>Canal principal:</span>
-            <span className="font-bold text-white uppercase tracking-wider">
+            <span className="font-bold text-white uppercase tracking-wider font-mono">
               {data.channels[0]?.label || "Nenhum"}
             </span>
           </div>
@@ -548,61 +772,6 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
       </div>
 
-    </div>
-  );
-}
-
-// Sub-components: Trend Badge & Skeleton KPI
-function TrendBadge({
-  percent,
-  trend,
-}: {
-  percent: number | null;
-  trend: "up" | "down" | "neutral" | "none";
-}) {
-  if (percent === null || trend === "none") {
-    return (
-      <span className="text-[10px] text-zinc-500 font-medium">
-        Sem comparativo
-      </span>
-    );
-  }
-
-  if (trend === "up") {
-    return (
-      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1 wg-tabular">
-        <TrendingUp className="w-3 h-3" />
-        ↑ {percent}%
-      </span>
-    );
-  }
-
-  if (trend === "down") {
-    return (
-      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1 wg-tabular">
-        <TrendingDown className="w-3 h-3" />
-        ↓ {percent}%
-      </span>
-    );
-  }
-
-  return (
-    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-800/80 text-zinc-400 border border-white/10 inline-flex items-center gap-1 wg-tabular">
-      <Minus className="w-3 h-3" />
-      — 0%
-    </span>
-  );
-}
-
-function SkeletonKpi() {
-  return (
-    <div className="animate-pulse space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="h-3 bg-white/10 rounded w-20" />
-        <div className="w-8 h-8 bg-white/10 rounded-lg" />
-      </div>
-      <div className="h-7 bg-white/10 rounded-lg w-28" />
-      <div className="h-3 bg-white/10 rounded w-20" />
     </div>
   );
 }

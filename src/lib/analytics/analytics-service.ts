@@ -12,7 +12,7 @@ import {
 } from "@/db/schema";
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
-import { CommercialMetricsService, CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
+import { CommercialMetricsService, CommercialMetrics, resolvePeriodDateRange } from "@/lib/analytics/commercial-metrics-service";
 import {
   BUSINESS_TIMEZONE,
   getBusinessDateKey,
@@ -20,8 +20,9 @@ import {
   getBusinessStartOfDay,
   getBusinessEndOfDay,
   getBusinessParts,
+  parseCivilDate,
+  formatCivilDateToBR,
 } from "@/lib/analytics/timezone-utils";
-
 
 export interface KpiMetric {
   value: number;
@@ -46,6 +47,9 @@ export interface ChannelItem {
   percentage: number;
   photoUrl?: string | null;
   username?: string | null;
+  uniqueStarts?: number;
+  uniqueBuyers?: number;
+  conversionRate?: number | null;
 }
 
 export interface TopProductItem {
@@ -54,6 +58,7 @@ export interface TopProductItem {
   coverUrl: string | null;
   salesCount: number;
   revenue: number;
+  percentage?: number;
 }
 
 export interface RecentOrder {
@@ -101,6 +106,8 @@ export interface ActivityLogItem {
   timestamp: string;
   dateFormatted: string;
   timeFormatted: string;
+  botName?: string | null;
+  statusBadge?: 'success' | 'pending' | 'info';
 }
 
 export interface StoreAnalyticsData {
@@ -178,57 +185,93 @@ export class AnalyticsService {
 
     const now = new Date();
     const startOfToday = getBusinessStartOfDay(now);
+    const { startDate, endDate } = resolvePeriodDateRange(period, now);
+    const currentStart = startDate;
+    const currentEnd = endDate;
 
-    let currentStart: Date;
-    let currentEnd: Date = now;
     let prevStart: Date | null = null;
     let prevEnd: Date | null = null;
 
-    switch (period) {
-      case "TODAY": {
-        currentStart = startOfToday;
-        currentEnd = now;
-        prevStart = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
-        prevEnd = new Date(startOfToday.getTime() - 1);
-        break;
-      }
-      case "7D": {
-        currentStart = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
-        prevStart = new Date(currentStart.getTime() - 7 * 24 * 60 * 60 * 1000);
-        prevEnd = new Date(currentStart.getTime() - 1);
-        break;
-      }
-      case "90D": {
-        currentStart = new Date(startOfToday.getTime() - 89 * 24 * 60 * 60 * 1000);
-        prevStart = new Date(currentStart.getTime() - 90 * 24 * 60 * 60 * 1000);
-        prevEnd = new Date(currentStart.getTime() - 1);
-        break;
-      }
-      case "12M": {
-        const { year, month } = getBusinessParts(now);
-        let startYear = year;
-        let startMonth = month - 11;
-        while (startMonth <= 0) {
-          startMonth += 12;
-          startYear -= 1;
+    if (period.startsWith("CUSTOM:")) {
+      const duration = currentEnd.getTime() - currentStart.getTime();
+      prevEnd = currentStart;
+      prevStart = new Date(prevEnd.getTime() - duration);
+    } else {
+      switch (period) {
+        case "TODAY": {
+          prevStart = new Date(currentStart.getTime() - 24 * 60 * 60 * 1000);
+          prevEnd = currentStart;
+          break;
         }
-        currentStart = new Date(Date.UTC(startYear, startMonth - 1, 1, 3, 0, 0, 0));
-        prevStart = new Date(Date.UTC(startYear - 1, startMonth - 1, 1, 3, 0, 0, 0));
-        prevEnd = new Date(currentStart.getTime() - 1);
-        break;
-      }
-      case "ALL": {
-        currentStart = new Date(0);
-        prevStart = null;
-        prevEnd = null;
-        break;
-      }
-      case "30D":
-      default: {
-        currentStart = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
-        prevStart = new Date(currentStart.getTime() - 30 * 24 * 60 * 60 * 1000);
-        prevEnd = new Date(currentStart.getTime() - 1);
-        break;
+        case "7D": {
+          prevStart = new Date(currentStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+          prevEnd = currentStart;
+          break;
+        }
+        case "90D": {
+          prevStart = new Date(currentStart.getTime() - 90 * 24 * 60 * 60 * 1000);
+          prevEnd = currentStart;
+          break;
+        }
+        case "THIS_MONTH": {
+          const { year, month } = getBusinessParts(now);
+          let pYear = year;
+          let pMonth = month - 1;
+          if (pMonth <= 0) {
+            pMonth = 12;
+            pYear -= 1;
+          }
+          prevStart = new Date(Date.UTC(pYear, pMonth - 1, 1, 3, 0, 0, 0));
+          prevEnd = currentStart;
+          break;
+        }
+        case "LAST_MONTH": {
+          const { year, month } = getBusinessParts(now);
+          let targetYear = year;
+          let targetMonth = month - 1;
+          if (targetMonth <= 0) {
+            targetMonth = 12;
+            targetYear -= 1;
+          }
+          let pYear = targetYear;
+          let pMonth = targetMonth - 1;
+          if (pMonth <= 0) {
+            pMonth = 12;
+            pYear -= 1;
+          }
+          prevStart = new Date(Date.UTC(pYear, pMonth - 1, 1, 3, 0, 0, 0));
+          prevEnd = currentStart;
+          break;
+        }
+        case "THIS_YEAR": {
+          const { year } = getBusinessParts(now);
+          prevStart = new Date(Date.UTC(year - 1, 0, 1, 3, 0, 0, 0));
+          prevEnd = currentStart;
+          break;
+        }
+        case "12M": {
+          const { year, month } = getBusinessParts(now);
+          let startYear = year;
+          let startMonth = month - 11;
+          while (startMonth <= 0) {
+            startMonth += 12;
+            startYear -= 1;
+          }
+          prevStart = new Date(Date.UTC(startYear - 1, startMonth - 1, 1, 3, 0, 0, 0));
+          prevEnd = currentStart;
+          break;
+        }
+        case "ALL": {
+          prevStart = null;
+          prevEnd = null;
+          break;
+        }
+        case "30D":
+        default: {
+          prevStart = new Date(currentStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+          prevEnd = currentStart;
+          break;
+        }
       }
     }
 
@@ -245,6 +288,14 @@ export class AnalyticsService {
             where: period === "ALL"
               ? eq(botStartEvents.storeId, storeId)
               : and(eq(botStartEvents.storeId, storeId), gte(botStartEvents.createdAt, oldestDate)),
+            columns: {
+              id: true,
+              botId: true,
+              telegramUserId: true,
+              telegramUsername: true,
+              telegramFirstName: true,
+              createdAt: true,
+            },
             orderBy: [desc(botStartEvents.createdAt)],
             limit: 40,
           });
@@ -253,6 +304,7 @@ export class AnalyticsService {
           return await db
             .select({
               id: botStartEvents.id,
+              botId: botStartEvents.botId,
               telegramUserId: botStartEvents.telegramUserId,
               telegramUsername: botStartEvents.telegramUsername,
               telegramFirstName: botStartEvents.telegramFirstName,
@@ -274,7 +326,7 @@ export class AnalyticsService {
       }
     };
 
-    const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories, botStarts] = await Promise.all([
+    const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories, botStarts, storeBots] = await Promise.all([
       db.query.orders.findMany({
         where: orderWhere,
         with: {
@@ -301,20 +353,36 @@ export class AnalyticsService {
         columns: { id: true }
       }),
       fetchBotStarts(),
+      db.query.telegramBots.findMany({
+        where: eq(telegramBots.storeId, storeId),
+      }),
     ]);
 
-    const paidOrders = allOrders.filter(o => o.status === 'paid');
-    const pendingOrders = allOrders.filter(o => o.status === 'pending');
+    // Apply bot-scoping if options.botId is provided (strictly based on explicit product.botId linkage)
+    const selectedBotId = options?.botId;
+    const orderMatchesBot = (o: typeof allOrders[0]) => {
+      if (!selectedBotId) return true;
+      if (o.items && o.items.some(it => it.product?.botId === selectedBotId)) return true;
+      return false;
+    };
 
-    // Filter paid orders for current vs previous periods
+    const scopedOrders = selectedBotId ? allOrders.filter(orderMatchesBot) : allOrders;
+    const scopedBotStarts = selectedBotId
+      ? (botStarts || []).filter(bs => (bs as any).botId === selectedBotId)
+      : (botStarts || []);
+
+    const paidOrders = scopedOrders.filter(o => o.status === 'paid');
+    const pendingOrders = scopedOrders.filter(o => o.status === 'pending');
+
+    // Filter paid orders for current vs previous periods (start inclusive, end exclusive)
     const currentPaidOrders = paidOrders.filter(o => {
       const d = new Date(o.paidAt || o.createdAt);
-      return d >= currentStart && d <= currentEnd;
+      return d >= currentStart && d < currentEnd;
     });
 
     const prevPaidOrders = prevStart && prevEnd ? paidOrders.filter(o => {
       const d = new Date(o.paidAt || o.createdAt);
-      return d >= prevStart! && d <= prevEnd!;
+      return d >= prevStart! && d < prevEnd!;
     }) : [];
 
     // Current KPIs
@@ -337,11 +405,11 @@ export class AnalyticsService {
 
     const currCustomersList = allCustomers.filter(c => {
       const d = new Date(c.createdAt);
-      return d >= currentStart && d <= currentEnd;
+      return d >= currentStart && d < currentEnd;
     });
     const prevCustomersList = prevStart && prevEnd ? allCustomers.filter(c => {
       const d = new Date(c.createdAt);
-      return d >= prevStart! && d <= prevEnd!;
+      return d >= prevStart! && d < prevEnd!;
     }) : [];
 
     const currCustCount = currCustomersList.length;
@@ -349,7 +417,13 @@ export class AnalyticsService {
     const custChange = prevStart ? calcChange(currCustCount, prevCustCount) : { changePercent: null, trend: 'none' as const };
 
     // Format Period Label for Subtitle
-    const periodLabel = period === "TODAY" ? "vs ontem" : period === "ALL" ? "todo o período" : `vs ${period} anteriores`;
+    let periodLabel = `vs ${period} anteriores`;
+    if (period === "TODAY") periodLabel = "vs ontem";
+    else if (period === "THIS_MONTH") periodLabel = "vs mês anterior";
+    else if (period === "LAST_MONTH") periodLabel = "vs 2 meses atrás";
+    else if (period === "THIS_YEAR") periodLabel = "vs ano anterior";
+    else if (period === "ALL") periodLabel = "todo o período";
+    else if (period.startsWith("CUSTOM:")) periodLabel = "vs período anterior";
 
     // 1. Chart Series Generation (Grouped by Day or Month)
     const chartMap = new Map<string, { fullDate: string; revenue: number; salesCount: number }>();
@@ -427,10 +501,6 @@ export class AnalyticsService {
     }));
 
     // 2. Channels Breakdown (Registered Telegram Bots Only)
-    const storeBots = await db.query.telegramBots.findMany({
-      where: eq(telegramBots.storeId, storeId)
-    });
-
     const botStatsMap = new Map<string, {
       id: string;
       label: string;
@@ -438,6 +508,8 @@ export class AnalyticsService {
       photoUrl: string | null;
       revenue: number;
       salesCount: number;
+      uniqueBuyers: Set<string>;
+      uniqueStarts: number;
     }>();
 
     storeBots.forEach(b => {
@@ -452,7 +524,9 @@ export class AnalyticsService {
         username: cleanUser,
         photoUrl: b.photoUrl,
         revenue: 0,
-        salesCount: 0
+        salesCount: 0,
+        uniqueBuyers: new Set<string>(),
+        uniqueStarts: 0,
       });
     });
 
@@ -476,15 +550,18 @@ export class AnalyticsService {
         const stats = botStatsMap.get(matchedBotId)!;
         stats.revenue += orderTotal;
         stats.salesCount += 1;
+        if (o.customerId) stats.uniqueBuyers.add(o.customerId);
       } else {
-        if (storeBots.length === 1 && botStatsMap.has(storeBots[0].id)) {
-          const stats = botStatsMap.get(storeBots[0].id)!;
-          stats.revenue += orderTotal;
-          stats.salesCount += 1;
-        } else {
-          fallbackTelegramRevenue += orderTotal;
-          fallbackTelegramCount += 1;
-        }
+        fallbackTelegramRevenue += orderTotal;
+        fallbackTelegramCount += 1;
+      }
+    });
+
+    // Calculate unique starts per bot in period from botStarts
+    (botStarts || []).forEach(bs => {
+      const bId = (bs as any).botId;
+      if (bId && botStatsMap.has(bId)) {
+        botStatsMap.get(bId)!.uniqueStarts += 1;
       }
     });
 
@@ -497,6 +574,10 @@ export class AnalyticsService {
 
     botStatsMap.forEach(stats => {
       const avatarUrl = stats.id ? `/api/telegram/bot-avatar?botId=${stats.id}` : (stats.photoUrl || null);
+      const conversionRate = stats.uniqueStarts > 0
+        ? Math.round((stats.salesCount / stats.uniqueStarts) * 1000) / 10
+        : (stats.salesCount > 0 ? 100 : null);
+
       channels.push({
         channel: stats.id,
         label: stats.label,
@@ -504,7 +585,10 @@ export class AnalyticsService {
         salesCount: stats.salesCount,
         percentage: Math.round((stats.revenue / totalBotRev) * 100),
         photoUrl: avatarUrl,
-        username: stats.username
+        username: stats.username,
+        uniqueStarts: stats.uniqueStarts,
+        uniqueBuyers: stats.uniqueBuyers.size,
+        conversionRate,
       });
     });
 
@@ -514,7 +598,10 @@ export class AnalyticsService {
         label: "Bot Telegram",
         revenue: Math.round(fallbackTelegramRevenue * 100) / 100,
         salesCount: fallbackTelegramCount,
-        percentage: Math.round((fallbackTelegramRevenue / totalBotRev) * 100)
+        percentage: Math.round((fallbackTelegramRevenue / totalBotRev) * 100),
+        uniqueStarts: 0,
+        uniqueBuyers: fallbackTelegramCount,
+        conversionRate: null,
       });
     }
 
@@ -548,7 +635,11 @@ export class AnalyticsService {
 
     const topProducts: TopProductItem[] = Array.from(productStatsMap.values())
       .sort((a, b) => b.revenue - a.revenue || b.salesCount - a.salesCount)
-      .slice(0, 5);
+      .slice(0, 5)
+      .map(p => ({
+        ...p,
+        percentage: currRevenue > 0 ? Math.round((p.revenue / currRevenue) * 100) : 0,
+      }));
 
     // 4. Recent Orders (Latest 10)
     const recentOrders: RecentOrder[] = allOrders.slice(0, 10).map(o => {
@@ -657,13 +748,22 @@ export class AnalyticsService {
       };
     };
 
-    const leadEvents: ActivityLogItem[] = (botStarts || []).map((bs) => {
+    const botNameLookup = new Map<string, string>();
+    storeBots.forEach(b => {
+      const name = b.displayName || (b.username ? `@${b.username.replace(/^@/, '')}` : 'Bot');
+      botNameLookup.set(b.id, name);
+    });
+
+    const leadEvents: ActivityLogItem[] = scopedBotStarts.map((bs) => {
       const dt = formatEventDateTime(bs.createdAt);
       const targetName = bs.telegramFirstName?.trim()
         ? bs.telegramFirstName.trim()
         : bs.telegramUsername?.trim()
         ? `@${bs.telegramUsername.trim()}`
         : "Novo Lead";
+
+      const bId = (bs as any).botId || null;
+      const botName = bId ? botNameLookup.get(bId) || null : null;
 
       return {
         id: `lead-${bs.id}`,
@@ -674,6 +774,8 @@ export class AnalyticsService {
         timestamp: dt.isoString,
         dateFormatted: dt.dateFormatted,
         timeFormatted: dt.timeFormatted,
+        botName,
+        statusBadge: "info" as const,
       };
     });
 
@@ -691,6 +793,17 @@ export class AnalyticsService {
         maximumFractionDigits: 2,
       });
 
+      let bId: string | null = null;
+      if (o.items && o.items.length > 0) {
+        for (const it of o.items) {
+          if (it.product?.botId) {
+            bId = it.product.botId;
+            break;
+          }
+        }
+      }
+      const botName = bId ? botNameLookup.get(bId) || null : null;
+
       return {
         id: `sale-${o.id}`,
         type: "sale_approved" as const,
@@ -700,6 +813,8 @@ export class AnalyticsService {
         timestamp: dt.isoString,
         dateFormatted: dt.dateFormatted,
         timeFormatted: dt.timeFormatted,
+        botName,
+        statusBadge: "success" as const,
       };
     });
 
@@ -712,6 +827,17 @@ export class AnalyticsService {
           : firstProduct
         : "Produto Digital";
 
+      let bId: string | null = null;
+      if (o.items && o.items.length > 0) {
+        for (const it of o.items) {
+          if (it.product?.botId) {
+            bId = it.product.botId;
+            break;
+          }
+        }
+      }
+      const botName = bId ? botNameLookup.get(bId) || null : null;
+
       return {
         id: `pending-${o.id}`,
         type: "payment_pending" as const,
@@ -721,6 +847,8 @@ export class AnalyticsService {
         timestamp: dt.isoString,
         dateFormatted: dt.dateFormatted,
         timeFormatted: dt.timeFormatted,
+        botName,
+        statusBadge: "pending" as const,
       };
     });
 

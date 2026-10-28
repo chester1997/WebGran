@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { botStartEvents, telegramCustomers } from "@/db/schema";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, lte, lt, sql } from "drizzle-orm";
 
 export interface RecordStartEventParams {
   storeId: string;
@@ -172,7 +172,7 @@ export class BotStartEventService {
           dateClauses.push(sql`first_start_at >= ${startDate}`);
         }
         if (endDate) {
-          dateClauses.push(sql`first_start_at <= ${endDate}`);
+          dateClauses.push(sql`first_start_at < ${endDate}`);
         }
         const periodFilter = dateClauses.length > 0 
           ? sql`WHERE ${sql.join(dateClauses, sql` AND `)}` 
@@ -239,7 +239,7 @@ export class BotStartEventService {
           periodConditions.push(gte(firstStarts.firstStartAt, startDate));
         }
         if (endDate) {
-          periodConditions.push(lte(firstStarts.firstStartAt, endDate));
+          periodConditions.push(lt(firstStarts.firstStartAt, endDate));
         }
 
         const selectChain = db.select({

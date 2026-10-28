@@ -2,8 +2,8 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { stores, products, categories } from "@/db/schema";
-import { eq, count } from "drizzle-orm";
+import { stores, products, categories, telegramBots } from "@/db/schema";
+import { and, eq, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { AnalyticsService } from "@/lib/analytics/analytics-service";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
@@ -14,7 +14,18 @@ export async function getDashboardAnalyticsAction(period: string = "30D", botId?
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada.");
 
-  const targetBotId = (botId && botId !== "all") ? botId : undefined;
+  let targetBotId: string | undefined = undefined;
+  if (botId && botId !== "all") {
+    const bot = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
+      columns: { id: true },
+    });
+    if (!bot) {
+      throw new Error("Bot não encontrado para esta loja.");
+    }
+    targetBotId = bot.id;
+  }
+
   return await AnalyticsService.getStoreAnalytics(store.id, period, { botId: targetBotId });
 }
 
