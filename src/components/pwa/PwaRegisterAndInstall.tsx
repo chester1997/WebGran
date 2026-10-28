@@ -30,6 +30,9 @@ export function PwaRegisterAndInstall() {
         navigator.serviceWorker
           .register("/sw.js")
           .then((reg) => {
+            // Force immediate check for SW update (bypasses 24h stale window)
+            reg.update().catch(() => {});
+
             // Check for updates periodically
             reg.addEventListener("updatefound", () => {
               const installingWorker = reg.installing;
@@ -152,13 +155,14 @@ export function PwaRegisterAndInstall() {
       className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-sm w-full bg-[#16161a]/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl text-white animate-in slide-in-from-bottom duration-300"
     >
       <div className="flex items-start gap-3">
-        <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0 shadow-md">
+        <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#121214] border border-white/10 shrink-0 shadow-md">
           <Image
             src="/icons/icon-192x192.png"
+            unoptimized
             alt="WebGran Logo"
             width={48}
             height={48}
-            className="w-full h-full object-contain p-1"
+            className="w-full h-full object-cover"
           />
         </div>
 

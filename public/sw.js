@@ -1,5 +1,5 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v5';
+const CACHE_NAME = 'webgran-static-v6';
 
 // Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
@@ -19,10 +19,19 @@ self.addEventListener('install', (event) => {
   // Activate immediately without waiting for existing tabs to close
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('[SW] Precache skipped for some assets:', err);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        PRECACHE_ASSETS.map(async (asset) => {
+          try {
+            const res = await fetch(asset, { cache: 'reload' });
+            if (res.ok) {
+              await cache.put(asset, res);
+            }
+          } catch (err) {
+            console.warn('[SW] Precache skipped for asset:', asset, err);
+          }
+        })
+      );
     })
   );
 });
