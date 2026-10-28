@@ -428,24 +428,14 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
 
     expect(cards.length).toBe(4);
 
-    // Todos os 4 cards possuem alturas mínimas harmônicas e padding proporcional
+    // Todos os 4 cards possuem superfícies escuras neutras, bordas #25272B, alturas mínimas harmônicas e padding proporcional
     cards.forEach((card: any) => {
       expect(card.props.className).toContain("min-h-[145px]");
       expect(card.props.className).toContain("p-3");
       expect(card.props.className).toContain("h-full");
+      expect(card.props.className).toContain("bg-[#111214]");
+      expect(card.props.className).toContain("border-[#25272B]");
     });
-
-    // Card 1: Vendas Aprovadas (Gradiente Esmeralda)
-    expect(cards[0].props.style.background).toContain("rgba(16, 185, 129");
-
-    // Card 2: Taxa de Conversão (Gradiente Sky)
-    expect(cards[1].props.style.background).toContain("rgba(14, 165, 233");
-
-    // Card 3: Total de Starts (Gradiente Roxo)
-    expect(cards[2].props.style.background).toContain("rgba(168, 85, 247");
-
-    // Card 4: Ticket Médio (Gradiente Âmbar)
-    expect(cards[3].props.style.background).toContain("rgba(245, 158, 11");
   });
 });
 

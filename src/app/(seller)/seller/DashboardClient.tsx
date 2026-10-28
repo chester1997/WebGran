@@ -236,16 +236,16 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
   return (
     <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-20">
       
-      {/* 1. Executive Dark Blue Header & Unified Filters */}
-      <div className="relative bg-[#111722] border border-slate-800/80 rounded-2xl p-4 sm:p-5 lg:px-6 lg:py-5 shadow-sm overflow-visible">
+      {/* 1. Executive Neutral Dark Header & Unified Filters */}
+      <div className="relative bg-[#111214] border border-[#25272B] rounded-2xl p-4 sm:p-5 lg:px-6 lg:py-4.5 shadow-xs overflow-visible">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
           {/* Lado Esquerdo: Saudação Principal e Data Atual */}
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
-                <span>{greeting}, </span>
-                <span className="text-blue-400 font-extrabold">{displayName}</span>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#F3F4F6] truncate">
+                <span className="text-zinc-400 font-normal">{greeting}, </span>
+                <span>{displayName}</span>
               </h1>
               {isPending && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-blue-400 font-mono shrink-0 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
@@ -254,10 +254,10 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                 </span>
               )}
             </div>
-            <p className="text-slate-400 text-xs sm:text-sm font-normal flex items-center gap-1.5">
+            <p className="text-[#9CA3AF] text-xs font-normal flex items-center gap-1.5 mt-0.5">
               <span>{formattedDate}</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-500 text-xs font-mono">Fuso América/Recife</span>
+              <span className="text-zinc-600">•</span>
+              <span className="text-zinc-500 text-[11px] font-mono">Fuso América/Recife</span>
             </p>
           </div>
 
@@ -266,21 +266,21 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             
             {/* Seletor de Bot Integrado */}
             <div className="relative flex items-center min-w-[150px] sm:min-w-[170px] max-w-full">
-              <Bot className="absolute left-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Bot className="absolute left-2.5 w-4 h-4 text-zinc-400 pointer-events-none" />
               <select
                 value={selectedBot}
                 onChange={(e) => handleBotChange(e.target.value)}
-                className="w-full bg-[#151D2B] hover:bg-slate-800/80 text-slate-200 hover:text-white border border-slate-800 hover:border-blue-500/40 rounded-xl pl-8 pr-8 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer h-9 shadow-sm"
+                className="w-full bg-[#151619] hover:bg-[#1A1C20] text-zinc-200 hover:text-white border border-[#25272B] hover:border-zinc-700 rounded-xl pl-8 pr-8 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer h-9 shadow-xs"
                 aria-label="Selecionar Bot"
               >
-                <option value="all" className="bg-[#111722] text-white">Todos os bots</option>
+                <option value="all" className="bg-[#111214] text-white">Todos os bots</option>
                 {availableBots.map((b) => (
-                  <option key={b.id} value={b.id} className="bg-[#111722] text-white">
+                  <option key={b.id} value={b.id} className="bg-[#111214] text-white">
                     {b.displayName || (b.username ? `@${b.username}` : `Bot ${b.id.slice(0, 6)}`)}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
             </div>
 
             {/* SELETOR DE PERÍODO ÚNICO COM POPOVER (Presets + Personalizado) */}
@@ -290,21 +290,21 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
               <button
                 type="button"
                 onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#151D2B] hover:bg-slate-800/90 text-slate-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-sm ${
+                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#151619] hover:bg-[#1A1C20] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
                   isPeriodOpen 
-                    ? "border-blue-500 ring-2 ring-blue-500/20 text-white" 
-                    : "border-slate-800 hover:border-blue-500/40"
+                    ? "border-blue-500/80 ring-1 ring-blue-500/30 text-white" 
+                    : "border-[#25272B] hover:border-zinc-700"
                 }`}
                 aria-haspopup="dialog"
                 aria-expanded={isPeriodOpen}
               >
                 <div className="flex items-center gap-2 truncate">
-                  <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span className="font-semibold text-white truncate max-w-[160px] sm:max-w-[200px]">
+                  <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="font-semibold text-[#F3F4F6] truncate max-w-[160px] sm:max-w-[200px]">
                     {activePeriodLabel}
                   </span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-blue-400" : ""}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-blue-400" : ""}`} />
               </button>
 
               {/* Backdrop para telas pequenas */}
@@ -317,18 +317,18 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
               {/* Painel Popover do Seletor */}
               {isPeriodOpen && (
-                <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[360px] bg-[#111722] border border-slate-700/90 rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 animate-in fade-in-0 zoom-in-95">
+                <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[360px] bg-[#111214] border border-[#25272B] rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 animate-in fade-in-0 zoom-in-95">
                   
                   {/* Topo do Popover */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                    <div className="flex items-center gap-1.5 text-white font-semibold text-xs">
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-blue-400" />
+                  <div className="flex items-center justify-between border-b border-[#25272B] pb-2.5">
+                    <div className="flex items-center gap-1.5 text-[#F3F4F6] font-semibold text-xs">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-blue-500" />
                       <span>Selecione o período de análise</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsPeriodOpen(false)}
-                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                      className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#151619] transition-colors"
                       aria-label="Fechar"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -337,7 +337,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
                   {/* Grid de Presets */}
                   <div className="space-y-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
                       Intervalos Rápidos
                     </span>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -351,16 +351,16 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                             disabled={isPending}
                             className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border ${
                               isSelected
-                                ? "bg-blue-600 text-white border-blue-500 shadow-sm font-semibold"
-                                : "bg-[#151D2B] text-slate-300 hover:text-white hover:bg-slate-800/80 border-slate-800/80"
+                                ? "bg-[#181A20] text-white border-blue-500/80 shadow-xs font-semibold ring-1 ring-blue-500/20"
+                                : "bg-[#151619] text-zinc-300 hover:text-white hover:bg-[#1A1C20] border-[#25272B]"
                             }`}
                           >
                             <span className="truncate leading-tight text-[11px]">{p.label}</span>
                             <div className="flex items-center justify-between w-full pt-1">
-                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-800 text-slate-400'}`}>
+                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#111214] text-zinc-400'}`}>
                                 {p.badge}
                               </span>
-                              {isSelected && <Check className="w-3 h-3 text-white shrink-0" />}
+                              {isSelected && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
                             </div>
                           </button>
                         );
@@ -369,14 +369,14 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   </div>
 
                   {/* Seção Personalizada */}
-                  <div className="pt-2 border-t border-slate-800 space-y-2.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                  <div className="pt-2 border-t border-[#25272B] space-y-2.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
                       Intervalo Personalizado
                     </span>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <label className="text-[10px] text-slate-400 block font-medium">Data Inicial</label>
+                        <label className="text-[10px] text-zinc-400 block font-medium">Data Inicial</label>
                         <input
                           type="date"
                           value={customStart}
@@ -385,11 +385,11 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                             setCustomStart(e.target.value);
                             setCustomError(null);
                           }}
-                          className="w-full bg-[#151D2B] border border-slate-800 hover:border-slate-700 focus:border-blue-500 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                          className="w-full bg-[#151619] border border-[#25272B] hover:border-zinc-700 focus:border-blue-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] text-slate-400 block font-medium">Data Final</label>
+                        <label className="text-[10px] text-zinc-400 block font-medium">Data Final</label>
                         <input
                           type="date"
                           value={customEnd}
@@ -398,7 +398,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                             setCustomEnd(e.target.value);
                             setCustomError(null);
                           }}
-                          className="w-full bg-[#151D2B] border border-slate-800 hover:border-slate-700 focus:border-blue-500 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                          className="w-full bg-[#151619] border border-[#25272B] hover:border-zinc-700 focus:border-blue-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
                         />
                       </div>
                     </div>
@@ -414,7 +414,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                       type="button"
                       onClick={handleApplyCustomPeriod}
                       disabled={isPending}
-                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl py-2 text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl py-2 text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
                     >
                       <span>Aplicar intervalo de datas</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -457,14 +457,14 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* 1. Log de Atividades (Esquerda) */}
-        <div className="bg-[#111722] border border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <Activity className="w-5 h-5 text-blue-400 shrink-0" />
+                <Activity className="w-5 h-5 text-blue-500 shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">Log de Atividades</h3>
-                  <p className="text-xs text-slate-400">Acontecimentos operacionais em tempo real</p>
+                  <h3 className="text-sm font-bold text-[#F3F4F6] tracking-tight">Log de Atividades</h3>
+                  <p className="text-xs text-[#9CA3AF]">Acontecimentos operacionais em tempo real</p>
                 </div>
               </div>
 
@@ -476,15 +476,15 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
             {isPending ? (
               <div className="space-y-2 py-2">
-                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
-                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
-                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
               </div>
             ) : (!data.activityLog || data.activityLog.length === 0) ? (
-              <div className="py-10 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-2">
-                <Activity className="w-7 h-7 text-slate-600 mx-auto opacity-50" />
-                <p className="text-slate-300 text-xs font-semibold">Nenhuma atividade recente registrada.</p>
-                <p className="text-slate-500 text-[11px] max-w-xs mx-auto">
+              <div className="py-10 text-center bg-[#151619]/50 rounded-xl border border-[#25272B] space-y-2">
+                <Activity className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
+                <p className="text-zinc-300 text-xs font-semibold">Nenhuma atividade recente registrada.</p>
+                <p className="text-zinc-500 text-[11px] max-w-xs mx-auto">
                   Novos leads, pagamentos pendentes e vendas aprovadas aparecerão aqui automaticamente.
                 </p>
               </div>
@@ -496,15 +496,15 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   const isPendingPay = event.type === "payment_pending";
 
                   const iconContainerClass = isSale
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     : isPendingPay
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                    : "bg-blue-500/15 text-blue-400 border-blue-500/30";
+                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    : "bg-blue-500/10 text-blue-400 border-blue-500/20";
 
                   return (
                     <div
                       key={event.id}
-                      className="p-3 rounded-xl bg-[#151D2B] border border-slate-800/80 hover:border-slate-700 transition-all flex items-center justify-between gap-2.5"
+                      className="p-3 rounded-xl bg-[#151619] border border-[#25272B] hover:border-zinc-700 transition-all flex items-center justify-between gap-2.5"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
@@ -521,7 +521,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-xs font-bold text-white tracking-tight">
+                            <p className="text-xs font-bold text-[#F3F4F6] tracking-tight">
                               {event.title}
                             </p>
                             {event.botName && (
@@ -530,10 +530,10 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-400 font-medium truncate">
-                            <span className="text-slate-200 font-medium">{event.targetName}</span>
-                            <span className="mx-1 text-slate-600">—</span>
-                            <span className={isSale ? "text-emerald-400 font-semibold" : isPendingPay ? "text-amber-400 font-medium" : "text-slate-400"}>
+                          <p className="text-[11px] text-[#9CA3AF] font-medium truncate">
+                            <span className="text-zinc-200 font-medium">{event.targetName}</span>
+                            <span className="mx-1 text-zinc-600">—</span>
+                            <span className={isSale ? "text-emerald-400 font-semibold" : isPendingPay ? "text-amber-400 font-medium" : "text-zinc-400"}>
                               {event.description}
                             </span>
                           </p>
@@ -541,7 +541,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700/60 wg-tabular">
+                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-zinc-400 bg-[#111214] px-2 py-0.5 rounded-md border border-[#25272B] wg-tabular">
                           {event.dateFormatted} • {event.timeFormatted}
                         </span>
                       </div>
@@ -552,58 +552,58 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+          <div className="pt-3 border-t border-[#25272B] text-[11px] text-[#9CA3AF] flex items-center justify-between">
             <span>Histórico operacional:</span>
-            <span className="font-bold text-white wg-tabular">
+            <span className="font-bold text-[#F3F4F6] wg-tabular">
               {data.activityLog?.length || 0} {(data.activityLog?.length || 0) === 1 ? "registro" : "registros"}
             </span>
           </div>
         </div>
 
         {/* 2. Mais Vendidos (Meio) */}
-        <div className="bg-[#111722] border border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Mais Vendidos</h3>
-                <p className="text-xs text-slate-400">Ranking por receita aprovada no período</p>
+                <h3 className="text-sm font-bold text-[#F3F4F6] tracking-tight">Mais Vendidos</h3>
+                <p className="text-xs text-[#9CA3AF]">Ranking por receita aprovada no período</p>
               </div>
             </div>
 
             {isPending ? (
               <div className="space-y-3 py-3">
-                <div className="h-12 bg-slate-800/40 rounded-xl animate-pulse" />
-                <div className="h-12 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-12 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-12 bg-[#151619] rounded-xl animate-pulse" />
               </div>
             ) : data.topProducts.length === 0 ? (
-              <div className="py-10 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-2">
-                <ShoppingBag className="w-7 h-7 text-slate-600 mx-auto opacity-50" />
-                <p className="text-slate-300 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
+              <div className="py-10 text-center bg-[#151619]/50 rounded-xl border border-[#25272B] space-y-2">
+                <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
+                <p className="text-zinc-300 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
               </div>
             ) : (
               <div className="space-y-2.5 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
                 {data.topProducts.map((prod, idx) => (
                   <div
                     key={prod.id}
-                    className="p-3 rounded-xl bg-[#151D2B] border border-slate-800/80 hover:border-slate-700 transition-all duration-150 group space-y-1.5"
+                    className="p-3 rounded-xl bg-[#151619] border border-[#25272B] hover:border-zinc-700 transition-all duration-150 group space-y-1.5"
                   >
                     <div className="flex items-center justify-between gap-2.5 min-w-0">
                       
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         {/* Rank Badge */}
                         {idx === 0 ? (
-                          <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
+                          <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">1</div>
                         ) : idx === 1 ? (
-                          <div className="w-6 h-6 rounded-lg bg-slate-300/15 border border-slate-300/30 text-slate-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
+                          <div className="w-6 h-6 rounded-lg bg-zinc-300/10 border border-zinc-300/20 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">2</div>
                         ) : idx === 2 ? (
-                          <div className="w-6 h-6 rounded-lg bg-orange-700/15 border border-orange-700/30 text-orange-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
+                          <div className="w-6 h-6 rounded-lg bg-amber-700/10 border border-amber-700/20 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
                         ) : (
-                          <div className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                          <div className="w-6 h-6 rounded-lg bg-[#111214] border border-[#25272B] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
                         )}
 
                         {/* Product Cover */}
-                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-900 border border-slate-800 shrink-0 flex items-center justify-center text-slate-500">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#111214] border border-[#25272B] shrink-0 flex items-center justify-center text-zinc-500">
                           {prod.coverUrl ? (
                             <img
                               src={prod.coverUrl}
@@ -611,13 +611,13 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <Package className="w-4 h-4 text-slate-600" />
+                            <Package className="w-4 h-4 text-zinc-600" />
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-white truncate group-hover:text-blue-400 transition-colors">{prod.title}</p>
-                          <p className="text-[11px] text-slate-400 font-medium">
+                          <p className="text-xs font-bold text-[#F3F4F6] truncate group-hover:text-blue-400 transition-colors">{prod.title}</p>
+                          <p className="text-[11px] text-[#9CA3AF] font-medium">
                             {prod.salesCount} {prod.salesCount === 1 ? "unidade vendida" : "unidades vendidas"}
                           </p>
                         </div>
@@ -628,7 +628,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                           R$ {prod.revenue.toFixed(2).replace(".", ",")}
                         </p>
                         {prod.percentage !== undefined && prod.percentage > 0 && (
-                          <span className="text-[10px] font-mono text-slate-400">
+                          <span className="text-[10px] font-mono text-[#9CA3AF]">
                             {prod.percentage}% do total
                           </span>
                         )}
@@ -637,7 +637,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
                     {/* Subtle Share Progress Bar */}
                     {prod.percentage !== undefined && prod.percentage > 0 && (
-                      <div className="h-1 bg-slate-800/80 rounded-full overflow-hidden">
+                      <div className="h-1 bg-[#1E2024] rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-500/80 rounded-full"
                           style={{ width: `${Math.min(prod.percentage, 100)}%` }}
@@ -650,41 +650,41 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+          <div className="pt-3 border-t border-[#25272B] text-[11px] text-[#9CA3AF] flex items-center justify-between">
             <span>Ranking de produtos:</span>
-            <span className="font-bold text-white wg-tabular">
+            <span className="font-bold text-[#F3F4F6] wg-tabular">
               {data.topProducts?.length || 0} {(data.topProducts?.length || 0) === 1 ? "produto" : "produtos"}
             </span>
           </div>
         </div>
 
         {/* 3. Desempenho por Bot (Direita) */}
-        <div className="bg-[#111722] border border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <Bot className="w-5 h-5 text-blue-400 shrink-0" />
+                <Bot className="w-5 h-5 text-blue-500 shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">Desempenho por Bot</h3>
-                  <p className="text-xs text-slate-400">Métricas operacionais e conversão por canal</p>
+                  <h3 className="text-sm font-bold text-[#F3F4F6] tracking-tight">Desempenho por Bot</h3>
+                  <p className="text-xs text-[#9CA3AF]">Métricas operacionais e conversão por canal</p>
                 </div>
               </div>
 
-              <div className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono text-blue-400 font-medium">
+              <div className="px-2 py-0.5 rounded-full bg-[#151619] border border-[#25272B] text-[10px] font-mono text-zinc-300 font-medium">
                 {data.channels.length} {data.channels.length === 1 ? "canal" : "canais"}
               </div>
             </div>
 
             {isPending ? (
               <div className="space-y-3 py-3">
-                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
-                <div className="h-14 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
               </div>
             ) : data.channels.length === 0 ? (
-              <div className="py-10 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-2">
-                <Bot className="w-7 h-7 text-slate-600 mx-auto opacity-50" />
-                <p className="text-slate-300 text-xs font-semibold">Nenhum canal ativo registrado.</p>
-                <p className="text-slate-500 text-[11px] max-w-xs mx-auto">
+              <div className="py-10 text-center bg-[#151619]/50 rounded-xl border border-[#25272B] space-y-2">
+                <Bot className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
+                <p className="text-zinc-300 text-xs font-semibold">Nenhum canal ativo registrado.</p>
+                <p className="text-zinc-500 text-[11px] max-w-xs mx-auto">
                   Vincule bots do Telegram em Configurações &gt; Loja.
                 </p>
               </div>
@@ -695,19 +695,19 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   return (
                     <div 
                       key={chan.channel} 
-                      className={`p-3 rounded-xl bg-[#151D2B] border transition-all space-y-2 ${
+                      className={`p-3 rounded-xl bg-[#151619] border transition-all space-y-2 ${
                         isSelected 
-                          ? "border-blue-500/80 ring-1 ring-blue-500/30" 
-                          : "border-slate-800/80 hover:border-slate-700"
+                          ? "border-blue-500/80 ring-1 ring-blue-500/20" 
+                          : "border-[#25272B] hover:border-zinc-700"
                       }`}
                     >
                       {/* Linha Superior: Avatar, Nome e Faturamento */}
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-white flex items-center gap-2 min-w-0">
+                        <span className="font-semibold text-[#F3F4F6] flex items-center gap-2 min-w-0">
                           <ChannelAvatarItem chan={chan} />
                           <span className="truncate">{chan.label}</span>
                           {chan.username && (
-                            <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
+                            <span className="text-[10px] font-mono text-zinc-400 hidden sm:inline">
                               @{chan.username.replace(/^@/, '')}
                             </span>
                           )}
@@ -718,22 +718,22 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                       </div>
 
                       {/* Métricas Operacionais: Starts, Vendas e Taxa de Conversão */}
-                      <div className="grid grid-cols-3 gap-1.5 py-0.5 text-center bg-[#111722] p-1.5 rounded-lg border border-slate-800">
+                      <div className="grid grid-cols-3 gap-1.5 py-0.5 text-center bg-[#111214] p-1.5 rounded-lg border border-[#25272B]">
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Starts</span>
+                          <span className="text-[9px] uppercase tracking-wider text-zinc-400 block font-medium">Starts</span>
                           <span className="text-xs font-bold font-mono text-blue-400 wg-tabular">
                             {chan.uniqueStarts ?? "—"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Vendas</span>
-                          <span className="text-xs font-bold font-mono text-white wg-tabular">
+                          <span className="text-[9px] uppercase tracking-wider text-zinc-400 block font-medium">Vendas</span>
+                          <span className="text-xs font-bold font-mono text-[#F3F4F6] wg-tabular">
                             {chan.salesCount}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Conversão</span>
-                          <span className="text-xs font-bold font-mono text-slate-200 wg-tabular">
+                          <span className="text-[9px] uppercase tracking-wider text-zinc-400 block font-medium">Conversão</span>
+                          <span className="text-xs font-bold font-mono text-zinc-200 wg-tabular">
                             {chan.conversionRate !== null && chan.conversionRate !== undefined ? `${chan.conversionRate}%` : "—"}
                           </span>
                         </div>
@@ -741,11 +741,11 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
                       {/* Barra de Participação no Faturamento Total */}
                       <div className="space-y-1">
-                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <div className="flex items-center justify-between text-[10px] text-zinc-400">
                           <span>Participação nas vendas</span>
-                          <span className="font-mono font-semibold text-slate-300">{chan.percentage}%</span>
+                          <span className="font-mono font-semibold text-zinc-300">{chan.percentage}%</span>
                         </div>
-                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-800">
+                        <div className="h-1.5 bg-[#1E2024] rounded-full overflow-hidden border border-[#25272B]">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
                               chan.channel === "web" ? "bg-emerald-500" : "bg-blue-500"
@@ -762,9 +762,9 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+          <div className="pt-3 border-t border-[#25272B] text-[11px] text-[#9CA3AF] flex items-center justify-between">
             <span>Canal principal:</span>
-            <span className="font-bold text-white uppercase tracking-wider font-mono">
+            <span className="font-bold text-[#F3F4F6] uppercase tracking-wider font-mono">
               {data.channels[0]?.label || "Nenhum"}
             </span>
           </div>

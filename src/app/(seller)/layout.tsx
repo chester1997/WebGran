@@ -198,14 +198,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             title={!isExpanded ? dashboardItem.name : undefined}
             className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative ${
               pathname === dashboardItem.href 
-                ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
-                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                ? "bg-[#151619] text-zinc-100 border border-[#25272B] font-semibold" 
+                : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
             }`}
           >
             {pathname === dashboardItem.href && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[16px] bg-blue-500 rounded-r-full" />
             )}
-            <LayoutDashboard className={`w-4 h-4 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+            <LayoutDashboard className={`w-4 h-4 shrink-0 transition-colors ${pathname === dashboardItem.href ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
             {isExpanded && <span className="truncate">{dashboardItem.name}</span>}
           </Link>
 
@@ -218,12 +218,12 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
                     isBotChildActive
-                      ? "text-white font-bold bg-[#14141A]"
-                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                      ? "text-zinc-200 font-semibold bg-[#151619]/60"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Bot className={`w-4 h-4 shrink-0 transition-colors ${isBotChildActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <Bot className={`w-4 h-4 shrink-0 transition-colors ${isBotChildActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">Bot Telegram</span>
                   </div>
                   {botGroupOpen ? (
@@ -272,14 +272,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                             onClick={() => isMobile && setMobileDrawerOpen(false)}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                               isSubActive
-                                ? "bg-[#1A1A22] text-white font-bold border border-white/10 shadow-md"
-                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                                ? "bg-[#151619] text-zinc-100 font-semibold border border-[#25272B]"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                             }`}
                           >
                             {isSubActive && (
-                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[14px] bg-blue-500 rounded-r-full" />
                             )}
-                            <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                             <span className="truncate flex-1">{subItem.name}</span>
                           </Link>
                         </div>
@@ -300,14 +300,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     title={`Bot Telegram - ${subItem.name}`}
                     className={`flex items-center justify-center p-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                       isSubActive
-                        ? "bg-[#1A1A22] text-white border border-white/10 shadow-md"
-                        : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                        ? "bg-[#151619] text-zinc-100 border border-[#25272B]"
+                        : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                     }`}
                   >
                     {isSubActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-md" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[16px] bg-blue-500 rounded-r-full" />
                     )}
-                    <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                   </Link>
                 );
               })
@@ -321,14 +321,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             title={!isExpanded ? "Pedidos" : undefined}
             className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative ${
               pathname === "/seller/orders"
-                ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
-                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                ? "bg-[#151619] text-zinc-100 border border-[#25272B] font-semibold" 
+                : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
             }`}
           >
             {pathname === "/seller/orders" && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[16px] bg-blue-500 rounded-r-full" />
             )}
-            <ShoppingCart className={`w-4 h-4 shrink-0 transition-colors ${pathname === "/seller/orders" ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+            <ShoppingCart className={`w-4 h-4 shrink-0 transition-colors ${pathname === "/seller/orders" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
             {isExpanded && <span className="truncate">Pedidos</span>}
           </Link>
 
@@ -341,12 +341,12 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   onClick={() => setUserManuallyToggledFinance(!financeGroupOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
                     isFinanceChildActive
-                      ? "text-white font-bold bg-[#14141A]"
-                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                      ? "text-zinc-200 font-semibold bg-[#151619]/60"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <DollarSign className={`w-4 h-4 shrink-0 transition-colors ${isFinanceChildActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <DollarSign className={`w-4 h-4 shrink-0 transition-colors ${isFinanceChildActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">Financeiro</span>
                   </div>
                   {financeGroupOpen ? (
@@ -391,14 +391,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                             onClick={() => isMobile && setMobileDrawerOpen(false)}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                               isSubActive
-                                ? "bg-[#1A1A22] text-white font-bold border border-white/10 shadow-md"
-                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                                ? "bg-[#151619] text-zinc-100 font-semibold border border-[#25272B]"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                             }`}
                           >
                             {isSubActive && (
-                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[14px] bg-blue-500 rounded-r-full" />
                             )}
-                            <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isSubActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                             <span className="truncate flex-1">{subItem.name}</span>
                           </Link>
                         </div>
@@ -419,14 +419,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                     title={`Financeiro - ${subItem.name}`}
                     className={`flex items-center justify-center p-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                       isSubActive
-                        ? "bg-[#1A1A22] text-white border border-white/10 shadow-md"
-                        : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                        ? "bg-[#151619] text-zinc-100 border border-[#25272B]"
+                        : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                     }`}
                   >
                     {isSubActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-rose-500 rounded-r-md" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[16px] bg-blue-500 rounded-r-full" />
                     )}
-                    <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <SubIcon className={`w-4 h-4 shrink-0 transition-colors ${isSubActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                   </Link>
                 );
               })
@@ -446,15 +446,15 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 title={!isExpanded ? item.name : undefined}
                 className={`flex items-center ${!isExpanded ? "justify-center" : "justify-start"} gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                   isActive 
-                    ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
-                    : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                    ? "bg-[#151619] text-zinc-100 border border-[#25272B] font-semibold" 
+                    : "bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-[16px] bg-blue-500 rounded-r-full" />
                 )}
 
-                <ItemIcon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                <ItemIcon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                 
                 {isExpanded && (
                   <span className="truncate">{item.name}</span>
@@ -497,10 +497,10 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         </nav>
 
         {/* User Footer */}
-        <div className="border-t border-white/[0.06] p-2.5">
-          <div className={`flex items-center ${!isExpanded ? "justify-center" : "justify-between"} p-2 rounded-xl bg-[#141418] border border-white/[0.06]`}>
+        <div className="border-t border-[#25272B] p-2.5">
+          <div className={`flex items-center ${!isExpanded ? "justify-center" : "justify-between"} p-2 rounded-xl bg-[#151619] border border-[#25272B]`}>
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-rose-700 flex items-center justify-center border border-white/20 shrink-0 font-bold text-[11px] text-white overflow-hidden">
+              <div className="w-7 h-7 rounded-full bg-[#1A1C20] flex items-center justify-center border border-[#25272B] shrink-0 font-bold text-[11px] text-zinc-200 overflow-hidden">
                 {sellerProfile?.avatarUrl ? (
                   <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -522,7 +522,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                   if (isMobile) setMobileDrawerOpen(false);
                   signOut({ callbackUrl: "/login" });
                 }} 
-                className="text-zinc-400 hover:text-white p-1 rounded-md hover:bg-white/10 transition-colors cursor-pointer" 
+                className="text-zinc-400 hover:text-white p-1 rounded-md hover:bg-[#1A1C20] transition-colors cursor-pointer" 
                 title="Sair"
               >
                 <LogOut className="w-3.5 h-3.5" strokeWidth={1.8} />
@@ -535,14 +535,14 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090B] text-zinc-100 font-sans selection:bg-rose-500/30 overflow-x-hidden max-w-full">
+    <div className="min-h-screen bg-[#09090B] text-zinc-100 font-sans selection:bg-blue-500/20 overflow-x-hidden max-w-full">
       
       {/* Mobile Top Header (Sticky / Fixed) */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-[#0E0E11] border-b border-white/[0.07] z-40 px-4 flex items-center justify-between shadow-md">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-[#0D0D0F] border-b border-[#25272B] z-40 px-4 flex items-center justify-between shadow-xs">
         <button
           type="button"
           onClick={() => setMobileDrawerOpen(true)}
-          className="p-1.5 text-zinc-300 hover:text-white bg-[#141418] hover:bg-white/10 rounded-lg border border-white/[0.06] transition-all cursor-pointer"
+          className="p-1.5 text-zinc-300 hover:text-white bg-[#151619] hover:bg-zinc-800 rounded-lg border border-[#25272B] transition-all cursor-pointer"
           title="Abrir menu"
         >
           <Menu className="w-5 h-5" />
@@ -556,7 +556,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           />
         </Link>
 
-        <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 shrink-0 font-bold text-[11px] text-white overflow-hidden">
+        <div className="w-7 h-7 rounded-full bg-[#1A1C20] flex items-center justify-center border border-[#25272B] shrink-0 font-bold text-[11px] text-zinc-200 overflow-hidden">
           {sellerProfile?.avatarUrl ? (
             <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
@@ -569,17 +569,17 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
       {mobileDrawerOpen && (
         <div 
           onClick={() => setMobileDrawerOpen(false)}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 transition-opacity duration-200 md:hidden"
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 transition-opacity duration-200 md:hidden"
         />
       )}
 
       {/* Mobile Drawer Side-Over Panel */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[280px] bg-[#0E0E11] border-r border-white/[0.07] shadow-2xl flex flex-col transition-all duration-200 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[280px] bg-[#0D0D0F] border-r border-[#25272B] shadow-2xl flex flex-col transition-all duration-200 ease-in-out md:hidden ${
           mobileDrawerOpen ? "translate-x-0 opacity-100 pointer-events-auto visible" : "-translate-x-full opacity-0 pointer-events-none invisible"
         }`}
       >
-        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.07]">
+        <div className="h-14 px-4 flex items-center justify-between border-b border-[#25272B]">
           <Link href="/seller" className="flex items-center" onClick={() => setMobileDrawerOpen(false)}>
             <img 
               src="/logo-expanded.png" 
@@ -590,7 +590,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           <button 
             type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="p-1.5 text-zinc-400 hover:text-white bg-[#141418] rounded-lg border border-white/[0.06] cursor-pointer"
+            className="p-1.5 text-zinc-400 hover:text-white bg-[#151619] rounded-lg border border-[#25272B] cursor-pointer"
             title="Fechar menu"
           >
             <X className="w-4 h-4" />
@@ -604,12 +604,12 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         
         {/* Desktop Sidebar */}
         <aside 
-          className={`bg-[#0E0E11] border-r border-white/[0.06] flex-shrink-0 hidden md:flex flex-col relative z-30 transition-all duration-200 ease-in-out shadow-sm ${
+          className={`bg-[#0D0D0F] border-r border-[#25272B] flex-shrink-0 hidden md:flex flex-col relative z-30 transition-all duration-200 ease-in-out shadow-xs ${
             collapsed ? "w-16" : "w-60"
           }`}
         >
           {/* Desktop Sidebar Header: Logo Area & Collapse Toggle */}
-          <div className="h-14 px-3.5 flex items-center justify-between border-b border-white/[0.06]">
+          <div className="h-14 px-3.5 flex items-center justify-between border-b border-[#25272B]">
             {!collapsed ? (
               <>
                 <Link href="/seller" className="flex items-center">
@@ -622,7 +622,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 <button 
                   onClick={() => setCollapsed(!collapsed)}
                   title="Recolher menu"
-                  className="p-1 text-zinc-400 hover:text-white bg-[#141418] hover:bg-white/10 rounded-lg border border-white/[0.06] transition-all cursor-pointer shrink-0 ml-1"
+                  className="p-1 text-zinc-400 hover:text-white bg-[#151619] hover:bg-zinc-800 rounded-lg border border-[#25272B] transition-all cursor-pointer shrink-0 ml-1"
                 >
                   <PanelLeftClose className="w-4 h-4" strokeWidth={1.8} />
                 </button>

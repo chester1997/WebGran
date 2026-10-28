@@ -27,7 +27,7 @@ interface CommercialMetricsCardsProps {
 
 /**
  * Semicircular Velocímetro for Pix Conversion Rate.
- * Built with pure SVG, dark theme, gray track (#27272A), and purple gradient progress.
+ * Built with pure SVG, dark theme, neutral track (#25272B), and subtle blue progress.
  */
 function SemicircleGauge({ 
   percentage, 
@@ -43,7 +43,7 @@ function SemicircleGauge({
   totalGenerated?: number;
 }) {
   const radius = 42;
-  const strokeWidth = 8;
+  const strokeWidth = 7;
   const cx = 55;
   const cy = 50;
   const arcLength = Math.PI * radius; // ~131.95px
@@ -71,36 +71,25 @@ function SemicircleGauge({
           role="img"
           aria-label={`Medidor de conversão: ${hasValidData ? formattedPct : (hasError ? "erro na consulta" : "sem dados")}`}
         >
-          <defs>
-            <linearGradient id="blueGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#2563EB" />
-              <stop offset="100%" stopColor="#38BDF8" />
-            </linearGradient>
-            <filter id="blueGaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#38BDF8" floodOpacity="0.4" />
-            </filter>
-          </defs>
-
-          {/* Background Track (Gray) */}
+          {/* Background Track (Dark Neutral) */}
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
             fill="none"
-            stroke="#27272A"
+            stroke="#25272B"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />
 
-          {/* Foreground Progress (Blue) */}
+          {/* Foreground Progress (Subtle Electric Blue) */}
           {hasValidData && validPct > 0 && (
             <path
               d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
               fill="none"
-              stroke="url(#blueGaugeGrad)"
+              stroke="#3B82F6"
               strokeWidth={strokeWidth}
               strokeDasharray={`${arcLength} ${arcLength}`}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              filter="url(#blueGaugeGlow)"
               className="transition-all duration-700 ease-out"
             />
           )}
@@ -108,14 +97,14 @@ function SemicircleGauge({
 
         {/* Center Percentage / Status Label */}
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center text-center">
-          <span className={`font-mono font-extrabold text-white tracking-tight leading-none wg-tabular ${hasValidData ? "text-base sm:text-xl" : "text-[10px] sm:text-xs text-zinc-400 font-semibold"}`}>
+          <span className={`font-mono font-bold text-[#F3F4F6] tracking-tight leading-none wg-tabular ${hasValidData ? "text-base sm:text-xl" : "text-[10px] sm:text-xs text-zinc-400"}`}>
             {formattedPct}
           </span>
         </div>
       </div>
 
       {/* Subtitle below speedometer: "X pagos de Y Pix" */}
-      <span className="text-[9px] xs:text-[10px] sm:text-xs font-medium text-zinc-400 mt-1 sm:mt-1.5 text-center tracking-tight truncate max-w-full">
+      <span className="text-[9px] xs:text-[10px] sm:text-xs font-normal text-zinc-400 mt-1 sm:mt-1.5 text-center tracking-tight truncate max-w-full">
         {subText}
       </span>
     </div>
@@ -123,7 +112,7 @@ function SemicircleGauge({
 }
 
 /**
- * Custom dark tooltip for the performance chart with Dark Blue / Electric Blue highlights.
+ * Custom dark tooltip for the performance chart with neutral surfaces and high legibility.
  */
 function PerformanceTooltip({ active, payload }: any) {
   if (active && payload && payload.length) {
@@ -132,20 +121,20 @@ function PerformanceTooltip({ active, payload }: any) {
     const count = Number(item.salesCount || 0);
 
     return (
-      <div className="bg-[#111722] border border-slate-700/80 text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[140px] backdrop-blur-md">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5 mb-1">
-          <span className="font-semibold text-slate-300 text-[11px]">{item.fullDate || item.dateLabel}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.8)]" />
+      <div className="bg-[#151619] border border-[#25272B] text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[140px]">
+        <div className="flex items-center justify-between gap-2 border-b border-[#25272B] pb-1.5 mb-1">
+          <span className="font-medium text-zinc-300 text-[11px]">{item.fullDate || item.dateLabel}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
         </div>
         <div className="flex items-center justify-between text-xs gap-3">
-          <span className="text-slate-400">Receita:</span>
-          <span className="font-bold text-blue-400 font-mono wg-tabular">
+          <span className="text-zinc-400">Receita:</span>
+          <span className="font-bold text-[#F3F4F6] font-mono wg-tabular">
             R$ {rev.toFixed(2).replace(".", ",")}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs gap-3">
-          <span className="text-slate-400">Pedidos:</span>
-          <span className="font-bold text-white font-mono wg-tabular">
+          <span className="text-zinc-400">Pedidos:</span>
+          <span className="font-medium text-zinc-300 font-mono wg-tabular">
             {count} {count === 1 ? "pedido" : "pedidos"}
           </span>
         </div>
@@ -245,12 +234,12 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
-          <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">
+          <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-zinc-300">
             Métricas Comerciais
           </h2>
         </div>
-        <span className="text-[11px] text-slate-500 font-medium">
+        <span className="text-[11px] text-zinc-500 font-normal">
           Isolamento por loja autenticada
         </span>
       </div>
@@ -268,12 +257,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
           <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 sm:gap-4 h-full">
 
             {/* CARD 1: VENDAS APROVADAS (Superior Esquerdo) */}
-            <div 
-              className="relative bg-[#111722] border border-slate-800/80 hover:border-emerald-500/40 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 80%), #111722`
-              }}
-            >
+            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -283,38 +267,38 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <>
                   <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 block truncate leading-tight">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#9CA3AF] block truncate leading-tight">
                         Vendas Aprovadas
                       </span>
-                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-500 leading-tight line-clamp-2">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Exclusivamente pagamentos confirmados
                       </p>
                     </div>
-                    <div className="shrink-0 text-emerald-400 mt-0.5">
-                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="shrink-0 text-blue-400 mt-0.5">
+                      <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
                   <div className="my-auto py-0.5 sm:py-1">
-                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
+                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-bold text-[#F3F4F6] tracking-tight font-mono wg-tabular truncate">
                       {approvedSales?.formatted || "R$ 0,00"}
                     </div>
-                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
+                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 truncate">
                       {approvedSales?.count || 0} {(approvedSales?.count || 0) === 1 ? "venda confirmada" : "vendas confirmadas"}
                     </p>
                   </div>
 
                   {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
-                    <div className="pt-1.5 sm:pt-2 mt-auto border-t border-slate-800 space-y-1 sm:space-y-1.5">
+                    <div className="pt-1.5 sm:pt-2 mt-auto border-t border-[#25272B] space-y-1 sm:space-y-1.5">
                       <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                        <span className="text-slate-400 font-medium truncate">Meta</span>
-                        <span className="text-emerald-400 font-bold font-mono">
+                        <span className="text-zinc-400 font-medium truncate">Meta</span>
+                        <span className="text-blue-400 font-bold font-mono">
                           {approvedSales.targetProgressPercent}%
                         </span>
                       </div>
-                      <div className="h-1 sm:h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-1 sm:h-1.5 w-full bg-[#151619] rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
+                          className="h-full bg-blue-500 rounded-full transition-all duration-500"
                           style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
                         />
                       </div>
@@ -325,12 +309,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* CARD 2: TAXA DE CONVERSÃO (Superior Direito) */}
-            <div 
-              className="relative bg-[#111722] border border-slate-800/80 hover:border-sky-500/40 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 80%), #111722`
-              }}
-            >
+            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -340,15 +319,15 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <>
                   <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1 sm:mb-1.5">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 block truncate leading-tight">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#9CA3AF] block truncate leading-tight">
                         Taxa de Conversão
                       </span>
-                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-500 leading-tight line-clamp-2">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Cobranças Pix vs pagamentos aprovados
                       </p>
                     </div>
-                    <div className="shrink-0 text-sky-400 mt-0.5">
-                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="shrink-0 text-blue-400 mt-0.5">
+                      <TrendingUp className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
@@ -366,12 +345,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* CARD 3: TOTAL DE STARTS (Inferior Esquerdo) */}
-            <div 
-              className="relative bg-[#111722] border border-slate-800/80 hover:border-blue-500/40 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #111722`
-              }}
-            >
+            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -381,23 +355,23 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <>
                   <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 block truncate leading-tight">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#9CA3AF] block truncate leading-tight">
                         Total de Starts
                       </span>
-                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-500 leading-tight line-clamp-2">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Inícios de conversa nos bots da loja
                       </p>
                     </div>
                     <div className="shrink-0 text-blue-400 mt-0.5">
-                      <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
                   <div className="my-auto py-0.5 sm:py-1">
-                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
+                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-bold text-[#F3F4F6] tracking-tight font-mono wg-tabular truncate">
                       {botStarts?.formatted || "0"}
                     </div>
-                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
+                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 truncate">
                       {botStarts?.isTelemetryAvailable 
                         ? ((botStarts.totalStarts || 0) === 0 
                             ? "Nenhum start registrado" 
@@ -410,12 +384,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* CARD 4: TICKET MÉDIO (Inferior Direito) */}
-            <div 
-              className="relative bg-[#111722] border border-slate-800/80 hover:border-amber-500/40 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 50%, transparent 80%), #111722`
-              }}
-            >
+            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -425,23 +394,23 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                 <>
                   <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 block truncate leading-tight">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#9CA3AF] block truncate leading-tight">
                         Ticket Médio
                       </span>
-                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-500 leading-tight line-clamp-2">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Receita aprovada / pedidos pagos
                       </p>
                     </div>
-                    <div className="shrink-0 text-amber-400 mt-0.5">
-                      <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="shrink-0 text-blue-400 mt-0.5">
+                      <CreditCard className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                     </div>
                   </div>
 
                   <div className="my-auto py-0.5 sm:py-1">
-                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
+                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-bold text-[#F3F4F6] tracking-tight font-mono wg-tabular truncate">
                       {averageTicket?.formatted || "R$ 0,00"}
                     </div>
-                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
+                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 truncate">
                       {averageTicket?.consideredSalesCount
                         ? `${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? 'venda considerada' : 'vendas consideradas'}`
                         : "Média por pedido aprovado"}
@@ -458,27 +427,22 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (60% da largura)
            ========================================================================= */}
         <div className="lg:col-span-3 flex flex-col h-full">
-          <div 
-            className="bg-[#111722] border border-slate-800/80 hover:border-blue-500/30 rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm transition-all flex flex-col justify-between h-full relative overflow-hidden min-h-[320px] sm:min-h-[340px]"
-            style={{
-              background: `radial-gradient(ellipse 80% 60% at 95% 8%, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.02) 50%, transparent 80%), #111722`
-            }}
-          >
+          <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-4 sm:p-5 md:p-6 shadow-xs flex flex-col justify-between h-full relative overflow-hidden min-h-[320px] sm:min-h-[340px]">
             {/* Header: Title + Subtitle + Total Badge */}
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <BarChart3 className="w-5 h-5 text-blue-500 shrink-0" />
+                <BarChart3 className="w-4.5 h-4.5 text-blue-500 shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">Seu Desempenho</h3>
-                  <p className="text-xs text-slate-400">{periodConfig.subtitle}</p>
+                  <h3 className="text-sm font-semibold text-[#F3F4F6] tracking-tight">Seu Desempenho</h3>
+                  <p className="text-xs text-[#9CA3AF]">{periodConfig.subtitle}</p>
                 </div>
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                <span className="text-[10px] uppercase font-semibold text-zinc-500 block tracking-wider">
                   {periodConfig.badge}
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-blue-400 font-mono wg-tabular">
+                <span className="text-xs sm:text-sm font-bold text-[#F3F4F6] font-mono wg-tabular">
                   R$ {totalPeriodRevenue.toFixed(2).replace(".", ",")}
                 </span>
               </div>
@@ -487,16 +451,16 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             {/* Performance Area Chart */}
             <div className="flex-1 min-h-[190px] sm:min-h-[210px] w-full flex items-center justify-center py-1 sm:py-2">
               {isPending ? (
-                <div className="h-full w-full bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-slate-500 text-xs">
+                <div className="h-full w-full bg-white/[0.02] rounded-xl animate-pulse flex items-center justify-center text-zinc-500 text-xs">
                   Carregando desempenho...
                 </div>
               ) : !hasSeriesSales ? (
-                <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#151D2B]/50 rounded-xl border border-slate-800/80 space-y-1.5 my-auto">
-                  <div className="w-8 h-8 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400">
+                <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#151619] rounded-xl border border-[#25272B] space-y-1.5 my-auto">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800/60 border border-[#25272B] flex items-center justify-center text-zinc-400">
                     <BarChart3 className="w-4 h-4 opacity-70 text-blue-400" />
                   </div>
-                  <p className="text-slate-200 text-xs font-semibold">{periodConfig.emptyText}</p>
-                  <p className="text-slate-400 text-[11px] max-w-xs leading-relaxed">
+                  <p className="text-zinc-200 text-xs font-semibold">{periodConfig.emptyText}</p>
+                  <p className="text-zinc-400 text-[11px] max-w-xs leading-relaxed">
                     Quando novos pedidos forem aprovados, a curva de receita aparecerá aqui.
                   </p>
                 </div>
@@ -509,21 +473,21 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                     >
                       <defs>
                         <linearGradient id="bluePerformanceGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.22} />
-                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                          <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.14} />
+                          <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1F2126" vertical={false} />
                       <XAxis
                         dataKey="dateLabel"
-                        stroke="#64748B"
+                        stroke="#71717A"
                         fontSize={11}
                         tickLine={false}
                         axisLine={false}
                         dy={5}
                       />
                       <YAxis
-                        stroke="#64748B"
+                        stroke="#71717A"
                         fontSize={10}
                         tickLine={false}
                         axisLine={false}
@@ -536,12 +500,12 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         type="monotone"
                         dataKey="revenue"
                         stroke="#3B82F6"
-                        strokeWidth={2.5}
+                        strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#bluePerformanceGrad)"
-                        dot={{ r: 3, fill: "#3B82F6", stroke: "#111722", strokeWidth: 1.5 }}
+                        dot={{ r: 2.5, fill: "#3B82F6", stroke: "#111214", strokeWidth: 1.5 }}
                         activeDot={{
-                          r: 5,
+                          r: 4.5,
                           stroke: "#FFFFFF",
                           strokeWidth: 2,
                           fill: "#3B82F6"
@@ -554,12 +518,12 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* Footer Summary */}
-            <div className="pt-2.5 mt-auto border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="pt-2.5 mt-auto border-t border-[#25272B] flex items-center justify-between text-[11px] text-zinc-400">
               <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.8)]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                 Receita confirmada
               </span>
-              <span className="font-mono text-slate-400">
+              <span className="font-mono text-zinc-500">
                 {periodConfig.footer}
               </span>
             </div>
