@@ -1,6 +1,9 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { AnalyticsService } from "@/lib/analytics/analytics-service";
+import { db } from "@/db";
+import { telegramBots } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { DashboardClient } from "./DashboardClient";
 import SetupStoreClient from "./SetupStoreClient";
 
@@ -11,6 +14,16 @@ export default async function SellerDashboardPage() {
 
   if (!store) {
     return <SetupStoreClient />;
+  }
+
+  let storeBots: { id: string; username: string; displayName: string | null }[] = [];
+  try {
+    storeBots = await db.query.telegramBots.findMany({
+      where: eq(telegramBots.storeId, store.id),
+      columns: { id: true, username: true, displayName: true },
+    });
+  } catch (_e) {
+    // Non-blocking fallback
   }
 
   let initialData;
@@ -50,5 +63,5 @@ export default async function SellerDashboardPage() {
     };
   }
 
-  return <DashboardClient initialData={initialData} />;
+  return <DashboardClient initialData={initialData} bots={storeBots} />;
 }
