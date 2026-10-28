@@ -422,34 +422,26 @@ export class CheckoutService {
       // 11. Resolve Payment Gateway Connections
       const sellerId = storeRecord.ownerId;
 
-      const mpConn = sellerId ? await paymentService.getSellerConnection(sellerId) : null;
-      const isMpActive = Boolean(mpConn && mpConn.status === "active");
-
-      const syncPayConn = sellerId
-        ? await paymentService["syncPayProvider"].getSyncPayConnection(sellerId, storeId)
-        : null;
-      const isSyncPayActive = Boolean(syncPayConn);
+      if (paymentGateway && paymentGateway !== "pushinpay") {
+        return {
+          success: false,
+          error: "O gateway de pagamento selecionado está temporariamente indisponível para esta loja. Utilize o Pix via PushinPay.",
+        };
+      }
 
       const pushinPayConn = sellerId
         ? await paymentService["pushinPayProvider"].getPushinPayConnection(sellerId, storeId)
         : null;
       const isPushinPayActive = Boolean(pushinPayConn);
 
-      // Determine target gateway
-      let targetGateway: "mercadopago" | "syncpay" | "pushinpay" | null = null;
+      // Mercado Pago and SyncPay are temporarily disabled for seller store checkouts; only PushinPay is active.
+      const targetGateway: "mercadopago" | "syncpay" | "pushinpay" | null = isPushinPayActive ? "pushinpay" : null;
 
-      if (paymentGateway === "pushinpay" && isPushinPayActive) {
-        targetGateway = "pushinpay";
-      } else if (paymentGateway === "syncpay" && isSyncPayActive) {
-        targetGateway = "syncpay";
-      } else if (paymentGateway === "mercadopago" && isMpActive) {
-        targetGateway = "mercadopago";
-      } else if (isPushinPayActive) {
-        targetGateway = "pushinpay";
-      } else if (isSyncPayActive) {
-        targetGateway = "syncpay";
-      } else if (isMpActive) {
-        targetGateway = "mercadopago";
+      if (!targetGateway) {
+        return {
+          success: false,
+          error: "Esta loja não possui nenhum meio de pagamento ativo configurado no momento (PushinPay).",
+        };
       }
 
       // 1. Process PushinPay PIX

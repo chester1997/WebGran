@@ -32,13 +32,13 @@ describe('Mercado Pago OAuth Seller Connect API Route Suite', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://webgran.online';
   });
 
-  it('1. POST autenticado retorna HTTP 200 com JSON contendo success: true e url OAuth', async () => {
+  it('1. POST com admin autenticado retorna HTTP 200 com JSON contendo success: true e url OAuth', async () => {
     const { getCurrentUser, getCurrentStore } = await import('@/lib/auth');
     const { hasFeature } = await import('@/lib/entitlements/entitlement-service');
     const { paymentService } = await import('@/lib/payments/payment-service');
     const { POST } = await import('@/app/api/payments/mercadopago/connect/route');
 
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller', email: 'seller@test.com' });
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'admin-123', role: 'admin', email: 'admin@test.com' });
     vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-123', name: 'Minha Loja' } as any);
     vi.mocked(hasFeature).mockResolvedValue(true);
     vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com.br/authorization?client_id=test_app_id');
@@ -57,7 +57,30 @@ describe('Mercado Pago OAuth Seller Connect API Route Suite', () => {
     expect(body.url).toContain('https://auth.mercadopago.com.br/authorization');
   });
 
-  it('2. POST com seller não autenticado é rejeitado com HTTP 401', async () => {
+  it('2. POST com seller é bloqueado com HTTP 403 e mensagem orientando uso da PushinPay', async () => {
+    const { getCurrentUser, getCurrentStore } = await import('@/lib/auth');
+    const { hasFeature } = await import('@/lib/entitlements/entitlement-service');
+    const { POST } = await import('@/app/api/payments/mercadopago/connect/route');
+
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller', email: 'seller@test.com' });
+    vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-123', name: 'Minha Loja' } as any);
+    vi.mocked(hasFeature).mockResolvedValue(true);
+
+    const req = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ redirectUri: 'https://webgran.online/api/payments/mercadopago/callback' }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+
+    const body = await res.json();
+    expect(body.error).toContain('temporariamente indisponível para lojistas');
+    expect(body.error).toContain('PushinPay');
+  });
+
+  it('3. POST com usuário não autenticado é rejeitado com HTTP 401', async () => {
     const { getCurrentUser } = await import('@/lib/auth');
     const { POST } = await import('@/app/api/payments/mercadopago/connect/route');
 
@@ -74,36 +97,40 @@ describe('Mercado Pago OAuth Seller Connect API Route Suite', () => {
     expect(body.error).toBe('Não autorizado');
   });
 
-  it('3. GET continua funcionando e retorna Redirect 307/302 para a mesma URL OAuth', async () => {
+  it('4. GET com admin retorna Redirect para URL OAuth, enquanto GET com seller redireciona com erro', async () => {
     const { getCurrentUser, getCurrentStore } = await import('@/lib/auth');
     const { hasFeature } = await import('@/lib/entitlements/entitlement-service');
     const { paymentService } = await import('@/lib/payments/payment-service');
-    const { GET, POST } = await import('@/app/api/payments/mercadopago/connect/route');
+    const { GET } = await import('@/app/api/payments/mercadopago/connect/route');
 
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller' });
+    // Admin flow
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'admin-123', role: 'admin' });
     vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-123' } as any);
     vi.mocked(hasFeature).mockResolvedValue(true);
     vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com.br/authorization?client_id=test_app_id&state=xyz');
 
-    const getReq = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'GET' });
-    const getRes = await GET(getReq);
+    const adminGetReq = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'GET' });
+    const adminGetRes = await GET(adminGetReq);
 
-    expect(getRes.status).toBe(307); // NextResponse.redirect default
-    expect(getRes.headers.get('location')).toBe('https://auth.mercadopago.com.br/authorization?client_id=test_app_id&state=xyz');
+    expect(adminGetRes.status).toBe(307);
+    expect(adminGetRes.headers.get('location')).toBe('https://auth.mercadopago.com.br/authorization?client_id=test_app_id&state=xyz');
 
-    const postReq = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'POST' });
-    const postRes = await POST(postReq);
-    const postBody = await postRes.json();
+    // Seller flow (blocked)
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller' });
+    const sellerGetReq = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'GET' });
+    const sellerGetRes = await GET(sellerGetReq);
 
-    expect(postBody.url).toBe(getRes.headers.get('location'));
+    expect(sellerGetRes.status).toBe(307);
+    expect(sellerGetRes.headers.get('location')).toContain('seller/recebimentos?error=');
+    expect(sellerGetRes.headers.get('location')).toContain('PushinPay');
   });
 
-  it('4. POST sem feature entitlement de gateway retorna HTTP 403', async () => {
+  it('5. POST com admin sem feature entitlement de gateway retorna HTTP 403', async () => {
     const { getCurrentUser } = await import('@/lib/auth');
     const { hasFeature } = await import('@/lib/entitlements/entitlement-service');
     const { POST } = await import('@/app/api/payments/mercadopago/connect/route');
 
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-123', role: 'seller' });
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'admin-123', role: 'admin' });
     vi.mocked(hasFeature).mockResolvedValue(false);
 
     const req = new NextRequest('https://webgran.online/api/payments/mercadopago/connect', { method: 'POST' });
