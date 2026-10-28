@@ -62,8 +62,8 @@ function SemicircleGauge({
     : (totalGenerated > 0 ? `0 pagos de ${totalGenerated} Pix` : "0 pagos de 0 Pix");
 
   return (
-    <div className="relative flex flex-col items-center justify-center shrink-0 select-none py-1 max-w-full">
-      <div className="relative flex flex-col items-center justify-center w-[115px] sm:w-[120px] h-[60px] sm:h-[65px]">
+    <div className="relative flex flex-col items-center justify-center shrink-0 select-none py-0.5 sm:py-1 max-w-full">
+      <div className="relative flex flex-col items-center justify-center w-[92px] xs:w-[105px] sm:w-[120px] h-[50px] xs:h-[57px] sm:h-[65px]">
         <svg 
           viewBox="0 0 110 58" 
           className="w-full h-full overflow-visible"
@@ -107,14 +107,14 @@ function SemicircleGauge({
 
         {/* Center Percentage / Status Label */}
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center text-center">
-          <span className={`font-mono font-extrabold text-white tracking-tight leading-none wg-tabular ${hasValidData ? "text-lg sm:text-xl" : "text-xs text-zinc-400 font-semibold"}`}>
+          <span className={`font-mono font-extrabold text-white tracking-tight leading-none wg-tabular ${hasValidData ? "text-base sm:text-xl" : "text-[10px] sm:text-xs text-zinc-400 font-semibold"}`}>
             {formattedPct}
           </span>
         </div>
       </div>
 
       {/* Subtitle below speedometer: "X pagos de Y Pix" */}
-      <span className="text-[11px] sm:text-xs font-medium text-zinc-400 mt-1.5 text-center tracking-tight truncate max-w-full">
+      <span className="text-[9px] xs:text-[10px] sm:text-xs font-medium text-zinc-400 mt-1 sm:mt-1.5 text-center tracking-tight truncate max-w-full">
         {subText}
       </span>
     </div>
@@ -227,57 +227,57 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
           - Left (Desktop lg:col-span-2 / 40% width): 4 Cards in 2x2 Grid (2fr)
           - Right (Desktop lg:col-span-3 / 60% width): "Seu Desempenho" Performance Chart matching full height (3fr) 
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5 w-full max-w-full items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3.5 sm:gap-5 w-full max-w-full items-stretch">
 
         {/* =========================================================================
             COLUNA ESQUERDA: 4 CARDS (2 colunas x 2 linhas - 40% da largura)
            ========================================================================= */}
         <div className="lg:col-span-2 flex flex-col justify-between">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 h-full">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 sm:gap-4 h-full">
 
             {/* CARD 1: VENDAS APROVADAS (Superior Esquerdo) */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px] sm:min-h-[160px] h-full"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-emerald-500/30 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                <div className="space-y-2 sm:space-y-3 animate-pulse">
+                  <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
+                  <div className="h-6 sm:h-8 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate leading-tight">
                         Vendas Aprovadas
                       </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Exclusivamente pagamentos confirmados
                       </p>
                     </div>
                     <div className="shrink-0 text-emerald-400 mt-0.5">
-                      <CheckCircle2 className="w-5 h-5" />
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
-                  <div className="my-auto py-1">
-                    <div className="text-2xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  <div className="my-auto py-0.5 sm:py-1">
+                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
                       {approvedSales?.formatted || "R$ 0,00"}
                     </div>
                   </div>
 
                   {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
-                    <div className="pt-2 mt-auto border-t border-white/[0.04] space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400 font-medium">Meta comercial</span>
+                    <div className="pt-1.5 sm:pt-2 mt-auto border-t border-white/[0.04] space-y-1 sm:space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                        <span className="text-zinc-400 font-medium truncate">Meta</span>
                         <span className="text-emerald-400 font-bold font-mono">
                           {approvedSales.targetProgressPercent}%
                         </span>
                       </div>
-                      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-1 sm:h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
                           style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
@@ -291,33 +291,33 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 2: TAXA DE CONVERSÃO (Superior Direito) */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px] sm:min-h-[160px] h-full"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-sky-500/30 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                <div className="space-y-2 sm:space-y-3 animate-pulse">
+                  <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
+                  <div className="h-6 sm:h-8 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1 sm:mb-1.5">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate leading-tight">
                         Taxa de Conversão
                       </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Cobranças Pix vs pagamentos aprovados
                       </p>
                     </div>
                     <div className="shrink-0 text-sky-400 mt-0.5">
-                      <TrendingUp className="w-5 h-5" />
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
-                  <div className="my-auto py-1 flex flex-col items-center justify-center">
+                  <div className="my-auto py-0.5 sm:py-1 flex flex-col items-center justify-center">
                     <SemicircleGauge 
                       percentage={conversionRate?.ratePercent ?? null} 
                       isAvailable={Boolean(conversionRate?.isTelemetryAvailable && !conversionRate?.hasError)}
@@ -332,37 +332,37 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 3: TOTAL DE STARTS (Inferior Esquerdo) */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px] sm:min-h-[160px] h-full"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-purple-500/30 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                <div className="space-y-2 sm:space-y-3 animate-pulse">
+                  <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
+                  <div className="h-6 sm:h-8 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate leading-tight">
                         Total de Starts
                       </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Inícios de conversa nos bots da loja
                       </p>
                     </div>
                     <div className="shrink-0 text-purple-400 mt-0.5">
-                      <Bot className="w-5 h-5" />
+                      <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
-                  <div className="my-auto py-1">
-                    <div className="text-2xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  <div className="my-auto py-0.5 sm:py-1">
+                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
                       {botStarts?.formatted || "0"}
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 truncate">
                       {botStarts?.isTelemetryAvailable 
                         ? ((botStarts.totalStarts || 0) === 0 
                             ? "Nenhum start registrado" 
@@ -376,37 +376,37 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
 
             {/* CARD 4: TICKET MÉDIO (Inferior Direito) */}
             <div 
-              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[155px] sm:min-h-[160px] h-full"
+              className="relative bg-[#0E0E11] border border-white/[0.06] hover:border-amber-500/30 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm transition-all flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full"
               style={{
                 background: `radial-gradient(ellipse 70% 60% at 95% 10%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 50%, transparent 80%), #0E0E11`
               }}
             >
               {isPending ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/5 rounded w-1/3" />
-                  <div className="h-8 bg-white/5 rounded w-2/3" />
+                <div className="space-y-2 sm:space-y-3 animate-pulse">
+                  <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
+                  <div className="h-6 sm:h-8 bg-white/5 rounded w-2/3" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate">
+                      <span className="text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 block truncate leading-tight">
                         Ticket Médio
                       </span>
-                      <p className="text-[11px] text-zinc-500 leading-tight">
+                      <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-500 leading-tight line-clamp-2">
                         Receita aprovada / pedidos pagos
                       </p>
                     </div>
                     <div className="shrink-0 text-amber-400 mt-0.5">
-                      <CreditCard className="w-5 h-5" />
+                      <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
-                  <div className="my-auto py-1">
-                    <div className="text-2xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular">
+                  <div className="my-auto py-0.5 sm:py-1">
+                    <div className="text-base xs:text-lg sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight font-mono wg-tabular truncate">
                       {averageTicket?.formatted || "R$ 0,00"}
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 truncate">
                       {averageTicket?.consideredSalesCount
                         ? `${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? 'venda considerada' : 'vendas consideradas'}`
                         : "Média por pedido aprovado"}

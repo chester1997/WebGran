@@ -8,7 +8,7 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     expect(typeof CommercialMetricsCards).toBe("function");
   });
 
-  it("2. Responsive layout specification guarantees 2 columns on larger screens and 1 column on mobile", () => {
+  it("2. Responsive layout specification guarantees 2x2 grid layout on mobile and larger screens", () => {
     // We verify the JSX structure pattern of CommercialMetricsCards
     const sampleMetrics: CommercialMetrics = {
       period: "30D",
@@ -394,8 +394,9 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     const leftCol: any = columns[0];
     expect(leftCol.props.className).toContain("lg:col-span-2");
 
-    // Dentro da coluna esquerda: grade 2x2 com os 4 cards
+    // Dentro da coluna esquerda: grade 2x2 com os 4 cards (2 colunas no mobile e no desktop)
     const grid2x2: any = React.Children.toArray(leftCol.props.children)[0];
+    expect(grid2x2.props.className).toContain("grid-cols-2");
     expect(grid2x2.props.className).toContain("sm:grid-cols-2");
     const cards = React.Children.toArray(grid2x2.props.children);
     expect(cards.length).toBe(4);
@@ -406,5 +407,46 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
     const chartCard: any = React.Children.toArray(rightCol.props.children)[0];
     expect(chartCard.props.className).toContain("min-h-[320px]");
   });
+
+  it("13. Valida consistência visual, gradientes e padding proporcional dos 4 cards na grade 2x2", () => {
+    const metrics: CommercialMetrics = {
+      period: "30D",
+      storeId: "store-mobile-2x2",
+      approvedSales: { total: 5420.5, formatted: "R$ 5.420,50", count: 22, targetGoal: 10000, targetProgressPercent: 54, hasTargetGoal: true },
+      conversionRate: { ratePercent: 88, formatted: "88%", isTelemetryAvailable: true, totalVisits: 25, convertedOrders: 22, totalPixGerados: 25, totalPixPagos: 22, statusMessage: "22 pagos de 25 Pix", hasError: false },
+      botStarts: { totalStarts: 130, formatted: "130", isTelemetryAvailable: true, uniqueUsers: 95, statusMessage: "130 inícios" },
+      averageTicket: { averageTicket: 246.38, formatted: "R$ 246,38", consideredSalesCount: 22, approvedPixCount: 22, generatedPixCount: 25, pixConversionRatePercent: 88 },
+      performanceSeries: [],
+      last7DaysPerformance: [],
+    };
+
+    const rendered: any = CommercialMetricsCards({ metrics, isPending: false });
+    const mainGrid: any = React.Children.toArray(rendered.props.children)[1];
+    const leftCol: any = React.Children.toArray(mainGrid.props.children)[0];
+    const grid2x2: any = React.Children.toArray(leftCol.props.children)[0];
+    const cards: any[] = React.Children.toArray(grid2x2.props.children);
+
+    expect(cards.length).toBe(4);
+
+    // Todos os 4 cards possuem alturas mínimas harmônicas e padding proporcional
+    cards.forEach((card: any) => {
+      expect(card.props.className).toContain("min-h-[145px]");
+      expect(card.props.className).toContain("p-3");
+      expect(card.props.className).toContain("h-full");
+    });
+
+    // Card 1: Vendas Aprovadas (Gradiente Esmeralda)
+    expect(cards[0].props.style.background).toContain("rgba(16, 185, 129");
+
+    // Card 2: Taxa de Conversão (Gradiente Sky)
+    expect(cards[1].props.style.background).toContain("rgba(14, 165, 233");
+
+    // Card 3: Total de Starts (Gradiente Roxo)
+    expect(cards[2].props.style.background).toContain("rgba(168, 85, 247");
+
+    // Card 4: Ticket Médio (Gradiente Âmbar)
+    expect(cards[3].props.style.background).toContain("rgba(245, 158, 11");
+  });
 });
+
 
