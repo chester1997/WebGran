@@ -1,10 +1,34 @@
 import { ReactNode, Suspense } from "react";
 import { requireAdmin } from "@/lib/auth";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import AdminSidebar from "./AdminSidebar";
 
 async function AdminSidebarWrapper() {
   const user = await requireAdmin();
-  return <AdminSidebar user={user} />;
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.id, user.id),
+    columns: {
+      id: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+      role: true,
+    },
+  });
+
+  return (
+    <AdminSidebar
+      user={{
+        id: user.id,
+        name: dbUser?.name || user.name || "Administrador",
+        email: dbUser?.email || user.email || "",
+        avatarUrl: dbUser?.avatarUrl || null,
+        role: dbUser?.role || user.role || "admin",
+      }}
+    />
+  );
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

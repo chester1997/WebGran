@@ -25,6 +25,8 @@ import {
   Calendar,
   Check,
   Zap,
+  ChevronDown,
+  X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type {
@@ -42,8 +44,15 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+const ADMIN_PERIOD_OPTIONS = [
+  { id: "7d", label: "Últimos 7 dias", shortLabel: "7 dias", badge: "7D" },
+  { id: "30d", label: "Últimos 30 dias", shortLabel: "30 dias", badge: "30D" },
+  { id: "90d", label: "Últimos 90 dias", shortLabel: "90 dias", badge: "90D" },
+] as const;
+
 export default function AdminDashboardClient() {
   const [period, setPeriod] = useState<AdminDashboardPeriod>("30d");
+  const [isPeriodOpen, setIsPeriodOpen] = useState<boolean>(false);
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -98,64 +107,131 @@ export default function AdminDashboardClient() {
     });
   }, [data?.sellerRanking, rankingSort]);
 
+  // Active period display object
+  const activePeriodObj = ADMIN_PERIOD_OPTIONS.find((p) => p.id === period) || ADMIN_PERIOD_OPTIONS[1];
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-12 text-gray-100 fade-in">
       {/* ==================================================== */}
-      {/* 1. HEADER SECTION (Dark Black + Azul Sutil) */}
+      {/* 1. HEADER SECTION (Integrado ao fundo, sem caixa card) */}
       {/* ==================================================== */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
               Dashboard Administrativo
             </h1>
-            <span className="px-2.5 py-0.5 text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1">
+            <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              Super Admin WebGran
+              Super Admin
             </span>
           </div>
-          <p className="text-gray-400 text-xs sm:text-sm mt-1">
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
             Visão estratégica em tempo real de vendas, pagamentos, ecossistema e taxas da plataforma
           </p>
         </div>
 
-        {/* PERIOD SELECTOR & REFRESH */}
+        {/* PERIOD SELECTOR (POPOVER PRESETS) & REFRESH */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center bg-[#16161D] p-1 rounded-xl border border-white/[0.08]">
-            {(
-              [
-                { id: "7d", label: "7 dias" },
-                { id: "30d", label: "30 dias" },
-                { id: "90d", label: "90 dias" },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setPeriod(item.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                  period === item.id
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+          {/* Period Popover */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsPeriodOpen(!isPeriodOpen)}
+              className={`inline-flex items-center justify-between gap-2 bg-[#151619] hover:bg-[#1A1C20] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
+                isPeriodOpen
+                  ? "border-blue-500/80 ring-1 ring-blue-500/30 text-white"
+                  : "border-white/[0.08] hover:border-zinc-700"
+              }`}
+              aria-haspopup="dialog"
+              aria-expanded={isPeriodOpen}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="font-semibold text-white truncate">
+                  {activePeriodObj.label}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-blue-400" : ""}`} />
+            </button>
+
+            {/* Backdrop for mobile */}
+            {isPeriodOpen && (
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs sm:hidden z-40"
+                onClick={() => setIsPeriodOpen(false)}
+              />
+            )}
+
+            {/* Popover panel */}
+            {isPeriodOpen && (
+              <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[320px] bg-[#111214] border border-[#25272B] rounded-2xl shadow-2xl p-4 space-y-3 animate-in fade-in-0 zoom-in-95">
+                <div className="flex items-center justify-between border-b border-[#25272B] pb-2">
+                  <div className="flex items-center gap-1.5 text-[#F3F4F6] font-semibold text-xs">
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Período de análise</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPeriodOpen(false)}
+                    className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#151619] transition-colors cursor-pointer"
+                    aria-label="Fechar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
+                    Intervalos Rápidos
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {ADMIN_PERIOD_OPTIONS.map((p) => {
+                      const isSelected = period === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setPeriod(p.id);
+                            setIsPeriodOpen(false);
+                          }}
+                          className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border cursor-pointer ${
+                            isSelected
+                              ? "bg-[#181A20] text-white border-blue-500/80 shadow-xs font-semibold ring-1 ring-blue-500/20"
+                              : "bg-[#151619] text-zinc-300 hover:text-white hover:bg-[#1A1C20] border-[#25272B]"
+                          }`}
+                        >
+                          <span className="truncate leading-tight text-[11px]">{p.shortLabel}</span>
+                          <div className="flex items-center justify-between w-full pt-1">
+                            <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#111214] text-zinc-400'}`}>
+                              {p.badge}
+                            </span>
+                            {isSelected && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Refresh Button */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => fetchDashboardStats(period, true)}
               disabled={refreshing || loading}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#16161D] hover:bg-white/5 border border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#16161D] hover:bg-white/5 border border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 h-9"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-400" : ""}`} />
               <span>Atualizar</span>
             </button>
 
             {data?.updatedAt && (
-              <span className="text-[11px] text-gray-500 font-mono hidden sm:flex items-center gap-1">
-                <Clock className="w-3 h-3 text-gray-500" />
+              <span className="text-[11px] text-zinc-400 font-mono hidden sm:flex items-center gap-1">
+                <Clock className="w-3 h-3 text-zinc-400" />
                 {data.updatedAt}
               </span>
             )}
@@ -184,7 +260,7 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       <div>
         <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-          <span>Indicadores Principais da Plataforma ({data?.periodLabel || "Últimos 30 dias"})</span>
+          <span>Indicadores Principais da Plataforma ({data?.periodLabel || activePeriodObj.label})</span>
           <span className="text-[10px] text-gray-500 normal-case font-mono">Fuso: America/Recife (UTC-3)</span>
         </div>
 
@@ -192,7 +268,7 @@ export default function AdminDashboardClient() {
           <KPISkeletonGrid />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* 1. Vendedores */}
+            {/* 1. Vendedores (Base total + novos no período selecionado) */}
             <KPICard
               title="Total Vendedores"
               value={data?.kpis.sellers.total.toLocaleString("pt-BR") || "0"}
@@ -203,7 +279,7 @@ export default function AdminDashboardClient() {
               hint="Lojistas cadastrados na plataforma"
             />
 
-            {/* 2. Lojas */}
+            {/* 2. Lojas (Base total + novas no período selecionado) */}
             <KPICard
               title="Total Lojas"
               value={data?.kpis.stores.total.toLocaleString("pt-BR") || "0"}
@@ -214,7 +290,7 @@ export default function AdminDashboardClient() {
               hint="Lojas criadas e configuradas"
             />
 
-            {/* 3. Bots Conectados */}
+            {/* 3. Bots Conectados (Base total + novos no período selecionado) */}
             <KPICard
               title="Bots Conectados"
               value={data?.kpis.bots.total.toLocaleString("pt-BR") || "0"}
@@ -225,7 +301,7 @@ export default function AdminDashboardClient() {
               hint="Bots do Telegram com status ativo"
             />
 
-            {/* 4. Produtos */}
+            {/* 4. Produtos (Base total + novos no período selecionado) */}
             <KPICard
               title="Total Produtos"
               value={data?.kpis.products.total.toLocaleString("pt-BR") || "0"}
@@ -236,7 +312,7 @@ export default function AdminDashboardClient() {
               hint="Produtos ativos no catálogo global"
             />
 
-            {/* 5. Clientes Telegram */}
+            {/* 5. Clientes Telegram (Base total + novos no período selecionado) */}
             <KPICard
               title="Clientes Telegram"
               value={data?.kpis.telegramCustomers.total.toLocaleString("pt-BR") || "0"}
@@ -247,38 +323,38 @@ export default function AdminDashboardClient() {
               hint="Compradores únicos via Telegram"
             />
 
-            {/* 6. Pedidos Pagos */}
+            {/* 6. Pedidos Pagos (Métrica temporal: valor no período + histórico de apoio) */}
             <KPICard
               title="Pedidos Pagos"
-              value={data?.kpis.paidOrders.total.toLocaleString("pt-BR") || "0"}
-              periodCount={data?.kpis.paidOrders.current}
+              value={(data?.kpis.paidOrders.current ?? 0).toLocaleString("pt-BR")}
+              historicalTotal={`Total acumulado: ${(data?.kpis.paidOrders.total ?? 0).toLocaleString("pt-BR")}`}
               changePercent={data?.kpis.paidOrders.changePercent}
               icon={ShoppingCart}
               accent="emerald"
-              hint="Vendas com pagamento confirmado"
+              hint="Vendas confirmadas no intervalo"
             />
 
-            {/* 7. GMV Aprovado */}
+            {/* 7. GMV Aprovado (Métrica financeira: valor no período + histórico de apoio) */}
             <KPICard
               title="Volume Bruto (GMV)"
-              value={formatCurrency(data?.kpis.gmv.total || 0)}
-              periodValue={formatCurrency(data?.kpis.gmv.current || 0)}
+              value={formatCurrency(data?.kpis.gmv.current ?? 0)}
+              historicalTotal={`Total acumulado: ${formatCurrency(data?.kpis.gmv.total ?? 0)}`}
               changePercent={data?.kpis.gmv.changePercent}
               icon={DollarSign}
               accent="blue"
               isFeatured={true}
-              hint="Faturamento bruto de pedidos pagos"
+              hint="Faturamento bruto no intervalo"
             />
 
-            {/* 8. Taxas Efetivamente Processadas */}
+            {/* 8. Taxas Efetivamente Processadas (Métrica financeira: valor no período + histórico de apoio) */}
             <KPICard
               title="Taxas Processadas"
-              value={formatCurrency(data?.kpis.processedFees.total || 0)}
-              periodValue={formatCurrency(data?.kpis.processedFees.current || 0)}
+              value={formatCurrency(data?.kpis.processedFees.current ?? 0)}
+              historicalTotal={`Total acumulado: ${formatCurrency(data?.kpis.processedFees.total ?? 0)}`}
               changePercent={data?.kpis.processedFees.changePercent}
               icon={Coins}
               accent="emerald"
-              hint="Taxas aceitas/confirmadas pelo gateway"
+              hint="Taxas da plataforma no intervalo"
             />
           </div>
         )}
@@ -739,6 +815,7 @@ interface KPICardProps {
   value: string;
   periodCount?: number;
   periodValue?: string;
+  historicalTotal?: string;
   changePercent?: number | null;
   icon: any;
   accent: "blue" | "emerald" | "purple" | "zinc";
@@ -751,6 +828,7 @@ function KPICard({
   value,
   periodCount,
   periodValue,
+  historicalTotal,
   changePercent,
   icon: Icon,
   accent,
@@ -786,6 +864,12 @@ function KPICard({
           {value}
         </span>
 
+        {historicalTotal && (
+          <span className="text-[10px] font-mono text-zinc-400 block truncate">
+            {historicalTotal}
+          </span>
+        )}
+
         {/* Period count / value badge & variation */}
         <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
           {periodCount !== undefined && (
@@ -818,7 +902,7 @@ function KPICard({
           )}
         </div>
 
-        {hint && <span className="text-[10px] text-gray-500 block truncate pt-0.5">{hint}</span>}
+        {hint && <span className="text-[10px] text-zinc-400 block truncate pt-0.5">{hint}</span>}
       </div>
     </div>
   );
