@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import { SellerGatewayControlService } from "@/lib/payments/seller-gateway-control-service";
 
 export async function GET() {
   try {
-    await requireAdmin();
+    await requirePlatformAdmin();
     const controls = await SellerGatewayControlService.getAllControls();
     return NextResponse.json({ success: true, controls });
   } catch (error: any) {
-    if (error?.message === "UNAUTHORIZED" || error?.message === "FORBIDDEN") {
+    if (error?.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+    if (error?.message === "FORBIDDEN") {
       return NextResponse.json({ error: "Acesso restrito a administradores." }, { status: 403 });
     }
     console.error("[ADMIN_SELLER_GATEWAYS_GET_ERROR]", error);
@@ -18,7 +21,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const adminUser = await requireAdmin();
+    const adminUser = await requirePlatformAdmin();
     const body = await req.json();
 
     const { gateway, allowNewConnections, allowNewPayments, notes } = body || {};
@@ -40,7 +43,10 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, control: updated });
   } catch (error: any) {
-    if (error?.message === "UNAUTHORIZED" || error?.message === "FORBIDDEN") {
+    if (error?.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+    if (error?.message === "FORBIDDEN") {
       return NextResponse.json({ error: "Acesso restrito a administradores." }, { status: 403 });
     }
     console.error("[ADMIN_SELLER_GATEWAYS_PATCH_ERROR]", error);

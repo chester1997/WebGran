@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import { AdminReportsService } from "@/lib/reports/admin-reports-service";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requirePlatformAdmin();
 
     const { searchParams } = new URL(req.url);
     const period = (searchParams.get("period") || "30d") as any;
@@ -25,7 +25,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
-    if (error?.message === "UNAUTHORIZED" || error?.message === "FORBIDDEN") {
+    if (error?.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+    if (error?.message === "FORBIDDEN") {
       return NextResponse.json({ error: "Acesso restrito a administradores." }, { status: 403 });
     }
     console.error("[ADMIN_REPORTS_GET_ERROR]", error);
