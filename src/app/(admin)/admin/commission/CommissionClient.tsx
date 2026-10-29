@@ -1,25 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Coins, 
-  Clock, 
-  User, 
-  Save, 
-  History, 
-  AlertCircle, 
-  CheckCircle2, 
-  ShieldCheck, 
+import {
+  Coins,
+  Clock,
+  User,
+  Save,
+  History,
+  AlertCircle,
+  CheckCircle2,
+  ShieldCheck,
   ArrowRight,
   TrendingUp,
   Info,
-  Volume2
+  Volume2,
+  Check
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { playCommissionChime, unlockAudioContext } from "@/lib/sound/notification-sound";
-import { 
-  CommissionSettingsResponse, 
-  CommissionAuditLogItem 
+import {
+  CommissionSettingsResponse,
+  CommissionAuditLogItem
 } from "@/lib/commission/platform-commission-service";
 
 interface CommissionClientProps {
@@ -126,80 +126,92 @@ export default function CommissionClient({
   };
 
   return (
-    <div className="space-y-8 max-w-6xl pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 pb-12 text-zinc-100 fade-in max-w-6xl">
+      {/* ==================================================== */}
+      {/* 1. HEADER (Integrado ao fundo, sem caixa card) */}
+      {/* ==================================================== */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400">
-              <Coins className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">Comissão da Plataforma</h1>
-              <p className="text-sm text-zinc-400">
-                Configure a taxa fixa retida por venda no split Pix da Pushin Pay.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+              Comissão da Plataforma
+            </h1>
+            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              Configuração Global
+            </span>
           </div>
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
+            Configure a taxa fixa retida por venda no split Pix automático da PushinPay
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <button
             type="button"
             onClick={handleTestSound}
             disabled={isPlayingSound}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#16161D] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
             title="Ouvir som de notificação de comissão"
           >
             <Volume2 className={`w-3.5 h-3.5 ${isPlayingSound ? "animate-bounce text-emerald-400" : "text-amber-400"}`} />
             <span>{isPlayingSound ? "Tocando..." : "Testar Som"}</span>
           </button>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
             <ShieldCheck className="w-4 h-4" />
-            Split Ativo & Seguro
+            <span>Split Ativo & Seguro</span>
           </div>
         </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* ==================================================== */}
+      {/* 2. OVERVIEW CARDS */}
+      {/* ==================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         {/* Card 1: Valor Vigente */}
-        <div className="bg-[#121217] border border-white/5 rounded-2xl p-5 relative overflow-hidden shadow-lg">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-white">
-            <Coins className="w-20 h-20" />
+        <div className="p-5 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 text-white pointer-events-none">
+            <Coins className="w-24 h-24" />
           </div>
-          <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Comissão Atual / Venda</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
+            Comissão Atual / Venda
+          </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl sm:text-4xl font-extrabold text-white">
+            <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
               {commission ? commission.formattedFee : "Indisponível"}
             </span>
             {commission && (
-              <span className="text-xs text-zinc-400 font-mono">({commission.feeCents} centavos)</span>
+              <span className="text-xs text-blue-400 font-mono">({commission.feeCents} centavos)</span>
             )}
           </div>
           <p className="mt-2 text-xs text-zinc-400 flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> Retido via split automático no Pix
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span>Retido via split automático no Pix</span>
           </p>
         </div>
 
         {/* Card 2: Última Atualização */}
-        <div className="bg-[#121217] border border-white/5 rounded-2xl p-5 relative overflow-hidden shadow-lg">
-          <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Última Alteração</span>
+        <div className="p-5 rounded-2xl bg-[#111116] border border-white/[0.08] relative overflow-hidden">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
+            Última Alteração
+          </span>
           <div className="mt-2 flex items-center gap-2 text-zinc-200">
-            <Clock className="w-4 h-4 text-rose-400" />
-            <span className="text-sm font-semibold">
+            <Clock className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-semibold font-mono">
               {commission ? formatDate(commission.updatedAt) : "—"}
             </span>
           </div>
           <div className="mt-2 text-xs text-zinc-400 flex items-center gap-1.5 truncate">
-            <User className="w-3.5 h-3.5 text-zinc-400" />
+            <User className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
             <span>Por: <strong className="text-zinc-300 font-medium">{commission?.updatedByName || "—"}</strong></span>
           </div>
         </div>
 
         {/* Card 3: Regra de Aplicação */}
-        <div className="bg-[#121217] border border-white/5 rounded-2xl p-5 relative overflow-hidden shadow-lg">
-          <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Regra de Negócio</span>
+        <div className="p-5 rounded-2xl bg-[#111116] border border-white/[0.08] relative overflow-hidden">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
+            Regra de Negócio
+          </span>
           <div className="mt-2 flex items-start gap-2">
             <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
             <p className="text-xs text-zinc-300 leading-relaxed">
@@ -211,33 +223,37 @@ export default function CommissionClient({
 
       {/* Alerts */}
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0" />
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-3 text-sm">
-          <CheckCircle2 className="w-5 h-5 shrink-0" />
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-3 text-xs">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
-      {/* Form Section */}
-      <div className="bg-[#121217] border border-white/5 rounded-2xl p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-white mb-2">Atualizar Valor da Comissão</h2>
-        <p className="text-xs text-zinc-400 mb-6">
-          Ao salvar, a nova comissão entrará em vigor imediatamente para todas as <strong>novas cobranças Pix</strong> geradas pelos lojistas. Pedidos já criados preservarão o valor da comissão registrado no momento da compra.
-        </p>
+      {/* ==================================================== */}
+      {/* 3. FORM SECTION */}
+      {/* ==================================================== */}
+      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-5">
+        <div>
+          <h2 className="text-base font-bold text-white">Atualizar Valor da Comissão</h2>
+          <p className="text-xs text-zinc-400 mt-1">
+            Ao salvar, a nova comissão entrará em vigor imediatamente para todas as <strong>novas cobranças Pix</strong> geradas pelos lojistas. Pedidos já criados preservarão o valor da comissão registrado no momento da compra.
+          </p>
+        </div>
 
         <form onSubmit={handleSave} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Valor da Comissão por Venda (R$)
+                Valor da Comissão por Venda (R$) <span className="text-blue-400">*</span>
               </label>
-              <div className="relative rounded-xl border border-white/10 bg-[#0C0C0E] focus-within:border-rose-500 transition-colors">
+              <div className="relative rounded-xl border border-white/[0.08] bg-[#16161D] focus-within:border-blue-500 transition-colors">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">
                   R$
                 </span>
@@ -250,7 +266,7 @@ export default function CommissionClient({
                   disabled={loading}
                 />
               </div>
-              <p className="mt-1.5 text-[11px] text-zinc-400">
+              <p className="mt-1.5 text-[11px] text-zinc-500">
                 Exemplo: 0,50 para R$ 0,50 (50 centavos) ou 1,00 para R$ 1,00 (100 centavos).
               </p>
             </div>
@@ -264,41 +280,45 @@ export default function CommissionClient({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Ex: Ajuste da taxa operacional da plataforma"
-                className="w-full rounded-xl border border-white/10 bg-[#0C0C0E] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors placeholder:text-zinc-600"
+                className="w-full rounded-xl border border-white/[0.08] bg-[#16161D] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600"
                 disabled={loading}
               />
-              <p className="mt-1.5 text-[11px] text-zinc-400">
+              <p className="mt-1.5 text-[11px] text-zinc-500">
                 Ficará registrado no log de auditoria com seu nome e data.
               </p>
             </div>
           </div>
 
           <div className="flex justify-end pt-2">
-            <Button
+            <button
               type="submit"
               disabled={loading}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl h-10 px-6 shadow-lg shadow-rose-600/20 inline-flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl h-10 px-6 shadow-md transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 text-xs"
             >
               <Save className="w-4 h-4" />
-              {loading ? "Salvando..." : "Salvar Alteração"}
-            </Button>
+              <span>{loading ? "Salvando..." : "Salvar Alteração"}</span>
+            </button>
           </div>
         </form>
       </div>
 
-      {/* Audit History Section */}
-      <div className="bg-[#121217] border border-white/5 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center gap-2.5 border-b border-white/5 pb-4">
-          <History className="w-5 h-5 text-rose-400" />
-          <h2 className="text-lg font-bold text-white">Histórico de Auditoria</h2>
+      {/* ==================================================== */}
+      {/* 4. AUDIT HISTORY SECTION */}
+      {/* ==================================================== */}
+      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
+        <div className="flex items-center gap-2.5 p-5 border-b border-white/[0.06]">
+          <History className="w-4 h-4 text-blue-400" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+            Histórico de Auditoria ({history.length})
+          </h2>
         </div>
 
         {history.length === 0 ? (
-          <p className="text-sm text-zinc-500 py-6 text-center">Nenhuma alteração registrada ainda.</p>
+          <p className="text-xs text-zinc-500 py-10 text-center">Nenhuma alteração registrada ainda.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#0C0C0E] text-zinc-400 font-semibold border-b border-white/5">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-white/[0.02] text-zinc-400 text-[11px] font-semibold uppercase tracking-wider border-b border-white/[0.06]">
                 <tr>
                   <th className="py-3 px-4">Data / Hora</th>
                   <th className="py-3 px-4">Responsável</th>
@@ -306,27 +326,31 @@ export default function CommissionClient({
                   <th className="py-3 px-4">Motivo / Justificativa</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-white/[0.04]">
                 {history.map((item) => (
                   <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3.5 px-4 font-mono text-zinc-300">
+                    <td className="py-3.5 px-4 font-mono text-zinc-300 text-[11px]">
                       {formatDate(item.createdAt)}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-medium text-white">{item.changedByName || "Administrador"}</div>
+                      <div className="font-semibold text-white">{item.changedByName || "Administrador"}</div>
                       {item.changedByEmail && (
-                        <div className="text-[11px] text-zinc-400">{item.changedByEmail}</div>
+                        <div className="text-[10px] text-zinc-400 font-mono">{item.changedByEmail}</div>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="inline-flex items-center gap-2 font-mono font-bold">
+                      <div className="inline-flex items-center gap-2 font-mono font-bold text-xs">
                         <span className="text-zinc-400">R$ {item.previousFeeReais.toFixed(2).replace('.', ',')}</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-rose-400" />
+                        <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
                         <span className="text-emerald-400">R$ {item.newFeeReais.toFixed(2).replace('.', ',')}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-zinc-300">
-                      {item.reason || <span className="text-zinc-600 italic">Sem observação</span>}
+                      {item.reason ? (
+                        <span>{item.reason}</span>
+                      ) : (
+                        <span className="text-zinc-600 italic">Sem observação</span>
+                      )}
                     </td>
                   </tr>
                 ))}

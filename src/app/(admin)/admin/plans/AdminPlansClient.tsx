@@ -1,22 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Package, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  CheckCircle2, 
-  XCircle, 
-  Sliders, 
-  Search, 
-  Layers, 
+import {
+  Package,
+  Plus,
+  Edit3,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  Sliders,
+  Layers,
   Info,
   Check,
   AlertCircle,
   Loader2,
   Sparkles,
-  InfinityIcon,
+  Users,
+  X
 } from "lucide-react";
 
 interface PlanItem {
@@ -306,23 +306,29 @@ export default function AdminPlansClient({ user }: { user: any }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141416] p-4 sm:p-6 rounded-2xl border border-[#27272A] shadow-xl">
+    <div className="space-y-6 pb-12 text-zinc-100 fade-in">
+      {/* ==================================================== */}
+      {/* 1. HEADER (Integrado ao fundo, sem caixa card) */}
+      {/* ==================================================== */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-2 text-red-400 font-semibold text-xs sm:text-sm mb-1">
-            <Package className="w-4 h-4" />
-            <span>Gestão Comercial</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+              Planos WebGran
+            </h1>
+            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              Planos Comerciais
+            </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Planos WebGran</h1>
           <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Configure os planos comerciais da plataforma WebGran, recursos inclusos, limites e permissões dos vendedores.
+            Configure os pacotes comerciais da plataforma, limites, recursos inclusos e regras de contratação
           </p>
         </div>
 
         <button
           onClick={handleOpenCreatePlan}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium text-xs sm:text-sm hover:from-red-500 hover:to-red-600 transition shadow-lg shadow-red-600/20 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-sm cursor-pointer h-9 shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Plano WebGran</span>
@@ -331,114 +337,170 @@ export default function AdminPlansClient({ user }: { user: any }) {
 
       {/* Alerts */}
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[#141416] border border-[#27272A] p-5 rounded-xl">
-          <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider">Total de Planos WebGran</div>
-          <div className="text-2xl font-bold text-white mt-1">{plans.length}</div>
-        </div>
-        <div className="bg-[#141416] border border-[#27272A] p-5 rounded-xl">
-          <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider">Planos Ativos</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">{plans.filter((p) => p.active).length}</div>
-        </div>
-        <div className="bg-[#141416] border border-[#27272A] p-5 rounded-xl">
-          <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider">Vendedores em Planos</div>
-          <div className="text-2xl font-bold text-blue-400 mt-1">
-            {plans.reduce((acc, curr) => acc + curr.activeSubscriptionsCount, 0)}
+      {/* ==================================================== */}
+      {/* 2. OVERVIEW CARDS */}
+      {/* ==================================================== */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        {/* Total de Planos */}
+        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
+              Total de Planos
+            </span>
+            <div className="p-2 rounded-xl border bg-white/5 border-white/[0.08] text-zinc-300 shrink-0">
+              <Package className="w-4 h-4" />
+            </div>
           </div>
+          <span className="text-xl sm:text-2xl font-black text-white tracking-tight block">
+            {plans.length}
+          </span>
+          <span className="text-[10px] text-zinc-500 block truncate pt-0.5">
+            Modelos cadastrados na plataforma
+          </span>
+        </div>
+
+        {/* Planos Ativos */}
+        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
+              Planos Ativos
+            </span>
+            <div className="p-2 rounded-xl border bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <span className="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight block">
+            {plans.filter((p) => p.active).length}
+          </span>
+          <span className="text-[10px] text-zinc-500 block truncate pt-0.5">
+            Disponíveis para contratação
+          </span>
+        </div>
+
+        {/* Vendedores em Planos */}
+        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
+              Vendedores em Planos
+            </span>
+            <div className="p-2 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-400 shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <span className="text-xl sm:text-2xl font-black text-white tracking-tight block">
+            {plans.reduce((acc, curr) => acc + curr.activeSubscriptionsCount, 0)}
+          </span>
+          <span className="text-[10px] text-zinc-500 block truncate pt-0.5">
+            Assinaturas ativas no total
+          </span>
         </div>
       </div>
 
-      {/* Plans Table */}
-      <div className="bg-[#141416] border border-[#27272A] rounded-2xl overflow-hidden shadow-xl">
+      {/* ==================================================== */}
+      {/* 3. PLANS TABLE */}
+      {/* ==================================================== */}
+      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
+        <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            Catálogo de Planos ({plans.length})
+          </h2>
+        </div>
+
         {loading ? (
-          <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3">
-            <Loader2 className="w-5 h-5 animate-spin text-red-500" />
+          <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3 text-xs">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
             <span>Carregando planos WebGran...</span>
           </div>
         ) : plans.length === 0 ? (
-          <div className="p-12 text-center text-zinc-400">Nenhum plano WebGran cadastrado.</div>
+          <div className="p-12 text-center text-zinc-500 text-xs">
+            Nenhum plano WebGran cadastrado.
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-zinc-300">
-              <thead className="bg-[#1C1C21] text-xs uppercase text-zinc-400 border-b border-[#27272A]">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-white/[0.02] text-[11px] uppercase tracking-wider text-zinc-400 border-b border-white/[0.06]">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Plano</th>
-                  <th className="px-6 py-4 font-semibold">Preço</th>
-                  <th className="px-6 py-4 font-semibold">Ciclo</th>
-                  <th className="px-6 py-4 font-semibold">Recursos</th>
-                  <th className="px-6 py-4 font-semibold">Vendedores</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold text-right">Ações</th>
+                  <th className="px-5 py-3 font-semibold">Plano</th>
+                  <th className="px-5 py-3 font-semibold">Preço</th>
+                  <th className="px-5 py-3 font-semibold">Ciclo</th>
+                  <th className="px-5 py-3 font-semibold">Recursos</th>
+                  <th className="px-5 py-3 font-semibold">Assinantes</th>
+                  <th className="px-5 py-3 font-semibold">Status</th>
+                  <th className="px-5 py-3 font-semibold text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#27272A]">
+              <tbody className="divide-y divide-white/[0.04]">
                 {plans.map((plan) => (
-                  <tr key={plan.id} className="hover:bg-[#18181C] transition">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{plan.name}</div>
-                      <div className="text-xs text-zinc-500 font-mono">slug: {plan.slug}</div>
+                  <tr key={plan.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="font-bold text-white text-xs">{plan.name}</div>
+                      <div className="text-[10px] text-zinc-500 font-mono">slug: {plan.slug}</div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-white">
-                      R$ {plan.price.toFixed(2)}
+                    <td className="px-5 py-3.5 font-bold text-emerald-400 font-mono">
+                      R$ {plan.price.toFixed(2).replace('.', ',')}
                     </td>
-                    <td className="px-6 py-4 text-zinc-400">
+                    <td className="px-5 py-3.5 text-zinc-300">
                       {plan.billingInterval === "year" ? "Anual" : "Mensal"}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                        <Sliders className="w-3.5 h-3.5" />
-                        {plan.configuredFeaturesCount} configurados
-                      </span>
+                    <td className="px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenConfigureFeatures(plan)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                        title="Clique para configurar recursos"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>{plan.configuredFeaturesCount} configurados</span>
+                      </button>
                     </td>
-                    <td className="px-6 py-4 text-zinc-400">
-                      {plan.activeSubscriptionsCount} assinantes
+                    <td className="px-5 py-3.5 text-zinc-300 font-mono text-[11px]">
+                      {plan.activeSubscriptionsCount} vendedor(es)
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       {plan.active ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Ativo
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle2 className="w-3 h-3" /> Ativo
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
-                          <XCircle className="w-3.5 h-3.5" /> Inativo
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                          <XCircle className="w-3 h-3" /> Inativo
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
+                    <td className="px-5 py-3.5 text-right space-x-1.5">
                       <button
                         onClick={() => handleOpenConfigureFeatures(plan)}
-                        className="p-2 rounded-lg bg-[#27272A] text-zinc-200 hover:text-white hover:bg-[#323238] transition cursor-pointer"
-                        title="Configurar Rápido os Recursos do Plano"
+                        className="p-1.5 rounded-lg bg-white/5 text-zinc-300 hover:text-white hover:bg-blue-600/20 transition cursor-pointer"
+                        title="Configurar Recursos do Plano"
                       >
-                        <Sliders className="w-4 h-4 text-red-400" />
+                        <Sliders className="w-3.5 h-3.5 text-blue-400" />
                       </button>
                       <button
                         onClick={() => handleOpenEditPlan(plan)}
-                        className="p-2 rounded-lg bg-[#27272A] text-zinc-200 hover:text-white hover:bg-[#323238] transition cursor-pointer"
+                        className="p-1.5 rounded-lg bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
                         title="Editar Plano WebGran"
                       >
-                        <Edit3 className="w-4 h-4" />
+                        <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeletePlan(plan)}
-                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition cursor-pointer"
+                        className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition cursor-pointer"
                         title="Excluir Plano"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -449,37 +511,43 @@ export default function AdminPlansClient({ user }: { user: any }) {
         )}
       </div>
 
-      {/* MODAL: CREATE / EDIT PLAN WEBGRAN (COMPREHENSIVE 2-PART FORM + PREVIEW) */}
+      {/* ==================================================== */}
+      {/* 4. MODAL: CREATE / EDIT PLAN WEBGRAN */}
+      {/* ==================================================== */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141416] border border-[#27272A] w-full max-w-4xl rounded-2xl p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+          <div className="bg-[#111116] border border-white/[0.08] w-full max-w-4xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95">
             {/* Header Modal */}
-            <div className="flex items-center justify-between border-b border-[#27272A] pb-4 flex-shrink-0">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Package className="w-5 h-5 text-red-400" />
-                  {editingPlan ? `Editar Plano WebGran: ${editingPlan.name}` : "Novo Plano WebGran"}
-                </h2>
-                <p className="text-xs text-zinc-400">
-                  Defina as informações comerciais e selecione os recursos do pacote.
-                </p>
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white">
+                    {editingPlan ? `Editar Plano: ${editingPlan.name}` : "Novo Plano WebGran"}
+                  </h2>
+                  <p className="text-[11px] text-zinc-400">
+                    Defina as informações comerciais e selecione os recursos do pacote
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsPlanModalOpen(false)}
-                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800"
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/10"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex border-b border-[#27272A] gap-4 flex-shrink-0">
+            <div className="flex border-b border-white/[0.08] gap-4 flex-shrink-0 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setActiveTab("info")}
-                className={`pb-3 text-sm font-bold transition-all relative border-b-2 ${
+                className={`pb-2.5 transition-all relative border-b-2 ${
                   activeTab === "info"
-                    ? "border-red-600 text-white"
+                    ? "border-blue-500 text-white"
                     : "border-transparent text-zinc-400 hover:text-zinc-200"
                 }`}
               >
@@ -488,27 +556,27 @@ export default function AdminPlansClient({ user }: { user: any }) {
               <button
                 type="button"
                 onClick={() => setActiveTab("features")}
-                className={`pb-3 text-sm font-bold transition-all relative border-b-2 flex items-center gap-2 ${
+                className={`pb-2.5 transition-all relative border-b-2 flex items-center gap-2 ${
                   activeTab === "features"
-                    ? "border-red-600 text-white"
+                    ? "border-blue-500 text-white"
                     : "border-transparent text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                <span>2. Recursos do Plano</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400 border border-red-500/30">
+                <span>2. Recursos do Pacote</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20">
                   {Object.keys(featureFormValues).length} recursos
                 </span>
               </button>
             </div>
 
-            <form onSubmit={handleSavePlan} className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+            <form onSubmit={handleSavePlan} className="flex-1 overflow-y-auto space-y-5 pr-2 custom-scrollbar text-xs">
               {/* TAB 1: INFORMAÇÕES DO PLANO */}
               {activeTab === "info" && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                        Nome do Plano WebGran *
+                        Nome do Plano <span className="text-blue-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -516,20 +584,20 @@ export default function AdminPlansClient({ user }: { user: any }) {
                         value={planForm.name}
                         onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
                         placeholder="Ex: Plano Pro, Plano Starter, Business"
-                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                        Slug (Identificador URL) *
+                        Slug (Identificador URL) <span className="text-blue-400">*</span>
                       </label>
                       <input
                         type="text"
                         value={planForm.slug}
                         onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })}
                         placeholder="ex: plano-pro"
-                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono"
+                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </div>
                   </div>
@@ -537,7 +605,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                        Preço Comercial (R$) *
+                        Preço Comercial (R$) <span className="text-blue-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -545,18 +613,18 @@ export default function AdminPlansClient({ user }: { user: any }) {
                         required
                         value={planForm.price}
                         onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono"
+                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-zinc-300 uppercase mb-1">
-                        Ciclo de Cobrança *
+                        Ciclo de Cobrança <span className="text-blue-400">*</span>
                       </label>
                       <select
                         value={planForm.billingInterval}
                         onChange={(e) => setPlanForm({ ...planForm, billingInterval: e.target.value })}
-                        className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                       >
                         <option value="month">Mensal</option>
                         <option value="year">Anual</option>
@@ -573,19 +641,19 @@ export default function AdminPlansClient({ user }: { user: any }) {
                       value={planForm.description}
                       onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
                       placeholder="Descrição dos benefícios e diferenciais do plano..."
-                      className="w-full bg-[#1A1A1E] border border-[#27272A] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
+                  <div className="flex items-center gap-2.5 pt-1">
                     <input
                       type="checkbox"
                       id="activePlanCheck"
                       checked={planForm.active}
                       onChange={(e) => setPlanForm({ ...planForm, active: e.target.checked })}
-                      className="w-4 h-4 rounded border-[#27272A] bg-[#1A1A1E] text-red-600 focus:ring-red-500 cursor-pointer"
+                      className="w-4 h-4 rounded border-white/[0.1] bg-[#16161D] text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
-                    <label htmlFor="activePlanCheck" className="text-sm font-medium text-zinc-200 cursor-pointer">
+                    <label htmlFor="activePlanCheck" className="text-xs text-zinc-300 cursor-pointer select-none">
                       Plano ativo para novas contratações pelos vendedores
                     </label>
                   </div>
@@ -594,49 +662,48 @@ export default function AdminPlansClient({ user }: { user: any }) {
 
               {/* TAB 2: RECURSOS DO PLANO */}
               {activeTab === "features" && (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {loadingModalFeatures ? (
                     <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3">
-                      <Loader2 className="w-5 h-5 animate-spin text-red-500" />
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
                       <span>Carregando recursos do catálogo...</span>
                     </div>
                   ) : Object.keys(groupedFeatures).length === 0 ? (
-                    <div className="p-8 text-center text-zinc-400">
+                    <div className="p-8 text-center text-zinc-500">
                       Nenhum recurso cadastrado no catálogo.
                     </div>
                   ) : (
                     Object.entries(groupedFeatures).map(([category, items]) => (
-                      <div key={category} className="bg-[#1A1A1E] border border-[#27272A] rounded-xl p-5 space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-red-400 border-b border-[#27272A] pb-2">
+                      <div key={category} className="bg-[#141418] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                        <h3 className="text-[11px] font-bold uppercase tracking-wider text-blue-400 border-b border-white/[0.06] pb-2">
                           {categoryLabels[category] || category}
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {items.map((feat) => {
                             const currentVal = featureFormValues[feat.id];
 
                             return (
-                              <div key={feat.id} className="bg-[#141416] border border-[#27272A] p-4 rounded-xl space-y-2">
+                              <div key={feat.id} className="bg-[#16161D] border border-white/[0.06] p-3 rounded-xl space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-sm text-white">{feat.name}</span>
-                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                                  <span className="font-bold text-xs text-white">{feat.name}</span>
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/[0.06]">
                                     {feat.type}
                                   </span>
                                 </div>
                                 {feat.description && (
-                                  <p className="text-xs text-zinc-400">{feat.description}</p>
+                                  <p className="text-[11px] text-zinc-400">{feat.description}</p>
                                 )}
 
-                                {/* CONTROLS ACCORDING TO FEATURE TYPE */}
                                 {feat.type === "BOOLEAN" && (
-                                  <div className="pt-2">
+                                  <div className="pt-1">
                                     <select
                                       value={currentVal ? "true" : "false"}
                                       onChange={(e) => setFeatureFormValues({
                                         ...featureFormValues,
                                         [feat.id]: e.target.value === "true",
                                       })}
-                                      className="w-full bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
+                                      className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                                     >
                                       <option value="true">Liberado (✓ Ativado)</option>
                                       <option value="false">Bloqueado (✕ Desativado)</option>
@@ -645,21 +712,19 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                 )}
 
                                 {feat.type === "LIMIT" && (
-                                  <div className="pt-2 space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="number"
-                                        disabled={currentVal === -1}
-                                        value={currentVal === -1 ? "" : currentVal}
-                                        onChange={(e) => setFeatureFormValues({
-                                          ...featureFormValues,
-                                          [feat.id]: parseInt(e.target.value) || 0,
-                                        })}
-                                        placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                        className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-50 font-mono"
-                                      />
-                                    </div>
-                                    <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                                  <div className="pt-1 space-y-1.5">
+                                    <input
+                                      type="number"
+                                      disabled={currentVal === -1}
+                                      value={currentVal === -1 ? "" : currentVal}
+                                      onChange={(e) => setFeatureFormValues({
+                                        ...featureFormValues,
+                                        [feat.id]: parseInt(e.target.value) || 0,
+                                      })}
+                                      placeholder={currentVal === -1 ? "Ilimitado" : "0"}
+                                      className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                                    />
+                                    <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
                                       <input
                                         type="checkbox"
                                         checked={currentVal === -1}
@@ -667,7 +732,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                           ...featureFormValues,
                                           [feat.id]: e.target.checked ? -1 : 100,
                                         })}
-                                        className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                        className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
                                       />
                                       <span>Ilimitado (-1)</span>
                                     </label>
@@ -675,7 +740,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                 )}
 
                                 {feat.type === "QUOTA" && (
-                                  <div className="pt-2 space-y-2">
+                                  <div className="pt-1 space-y-1.5">
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="number"
@@ -686,11 +751,11 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                           [feat.id]: parseInt(e.target.value) || 0,
                                         })}
                                         placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                        className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-50 font-mono"
+                                        className="flex-1 bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                                       />
-                                      <span className="text-xs text-zinc-400 font-bold">GB</span>
+                                      <span className="text-[11px] text-zinc-400 font-bold">GB</span>
                                     </div>
-                                    <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                                    <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
                                       <input
                                         type="checkbox"
                                         checked={currentVal === -1}
@@ -698,7 +763,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                           ...featureFormValues,
                                           [feat.id]: e.target.checked ? -1 : 50,
                                         })}
-                                        className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                        className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
                                       />
                                       <span>Ilimitado (-1 GB)</span>
                                     </label>
@@ -715,18 +780,18 @@ export default function AdminPlansClient({ user }: { user: any }) {
               )}
 
               {/* PREVISUALIZAÇÃO: RECURSOS INCLUÍDOS */}
-              <div className="bg-[#1A1A1E] border border-red-500/20 rounded-xl p-4 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-400">
-                  <Sparkles className="w-4 h-4 text-red-400" />
+              <div className="bg-[#141418] border border-blue-500/20 rounded-xl p-4 space-y-2.5">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-blue-400">
+                  <Sparkles className="w-3.5 h-3.5" />
                   <span>Recursos incluídos no plano (Pré-visualização)</span>
                 </div>
                 {getIncludedFeaturesPreview().length === 0 ? (
-                  <p className="text-xs text-zinc-500">Nenhum recurso ativo selecionado.</p>
+                  <p className="text-[11px] text-zinc-500">Nenhum recurso ativo selecionado.</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {getIncludedFeaturesPreview().map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-xs text-zinc-200 bg-[#141416] p-2 rounded-lg border border-[#27272A]">
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <div key={idx} className="flex items-center gap-1.5 text-[11px] text-zinc-200 bg-[#111116] p-2 rounded-lg border border-white/[0.06]">
+                        <Check className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span className="truncate">{item}</span>
                       </div>
                     ))}
@@ -735,20 +800,20 @@ export default function AdminPlansClient({ user }: { user: any }) {
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#27272A] flex-shrink-0">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.08] flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#27272A] text-zinc-300 text-sm font-medium hover:text-white cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-white/5 text-zinc-400 hover:text-white text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingPlan}
-                  className="px-5 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-lg shadow-red-600/20"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
-                  {savingPlan && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {savingPlan && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Salvar Plano WebGran</span>
                 </button>
               </div>
@@ -757,69 +822,76 @@ export default function AdminPlansClient({ user }: { user: any }) {
         </div>
       )}
 
-      {/* MODAL 2: STANDALONE FEATURE CONFIGURATION */}
+      {/* ==================================================== */}
+      {/* 5. MODAL: STANDALONE FEATURE CONFIGURATION */}
+      {/* ==================================================== */}
       {isFeatureModalOpen && selectedPlanForFeatures && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141416] border border-[#27272A] w-full max-w-3xl rounded-2xl p-6 shadow-2xl space-y-6 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-[#27272A] pb-4 flex-shrink-0">
-              <div>
-                <h2 className="text-lg font-bold text-white">
-                  Recursos do Plano: <span className="text-red-400">{selectedPlanForFeatures.name}</span>
-                </h2>
-                <p className="text-xs text-zinc-400">
-                  Defina os limites, permissões e quotas atreladas a este plano.
-                </p>
+          <div className="bg-[#111116] border border-white/[0.08] w-full max-w-3xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white">
+                    Recursos do Plano: <span className="text-blue-400">{selectedPlanForFeatures.name}</span>
+                  </h2>
+                  <p className="text-[11px] text-zinc-400">
+                    Defina os limites, permissões e quotas atreladas a este plano
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsFeatureModalOpen(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/10"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto space-y-5 pr-2 custom-scrollbar text-xs">
               {loadingModalFeatures ? (
                 <div className="p-12 text-center text-zinc-400 flex items-center justify-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-red-500" />
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
                   <span>Carregando recursos...</span>
                 </div>
               ) : Object.keys(groupedFeatures).length === 0 ? (
-                <div className="p-8 text-center text-zinc-400">
+                <div className="p-8 text-center text-zinc-500">
                   Nenhuma feature cadastrada no catálogo.
                 </div>
               ) : (
                 Object.entries(groupedFeatures).map(([category, items]) => (
-                  <div key={category} className="bg-[#1A1A1E] border border-[#27272A] rounded-xl p-5 space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-red-400 border-b border-[#27272A] pb-2">
+                  <div key={category} className="bg-[#141418] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-blue-400 border-b border-white/[0.06] pb-2">
                       {categoryLabels[category] || category}
                     </h3>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {items.map((feat) => {
                         const currentVal = featureFormValues[feat.id];
 
                         return (
-                          <div key={feat.id} className="bg-[#141416] border border-[#27272A] p-4 rounded-xl space-y-2">
+                          <div key={feat.id} className="bg-[#16161D] border border-white/[0.06] p-3 rounded-xl space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-sm text-white">{feat.name}</span>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                              <span className="font-bold text-xs text-white">{feat.name}</span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/[0.06]">
                                 {feat.type}
                               </span>
                             </div>
                             {feat.description && (
-                              <p className="text-xs text-zinc-400">{feat.description}</p>
+                              <p className="text-[11px] text-zinc-400">{feat.description}</p>
                             )}
 
                             {feat.type === "BOOLEAN" && (
-                              <div className="pt-2">
+                              <div className="pt-1">
                                 <select
                                   value={currentVal ? "true" : "false"}
                                   onChange={(e) => setFeatureFormValues({
                                     ...featureFormValues,
                                     [feat.id]: e.target.value === "true",
                                   })}
-                                  className="w-full bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
+                                  className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                                 >
                                   <option value="true">Liberado (✓ Ativado)</option>
                                   <option value="false">Bloqueado (✕ Desativado)</option>
@@ -828,21 +900,19 @@ export default function AdminPlansClient({ user }: { user: any }) {
                             )}
 
                             {feat.type === "LIMIT" && (
-                              <div className="pt-2 space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="number"
-                                    disabled={currentVal === -1}
-                                    value={currentVal === -1 ? "" : currentVal}
-                                    onChange={(e) => setFeatureFormValues({
-                                      ...featureFormValues,
-                                      [feat.id]: parseInt(e.target.value) || 0,
-                                    })}
-                                    placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                    className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-50 font-mono"
-                                  />
-                                </div>
-                                <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                              <div className="pt-1 space-y-1.5">
+                                <input
+                                  type="number"
+                                  disabled={currentVal === -1}
+                                  value={currentVal === -1 ? "" : currentVal}
+                                  onChange={(e) => setFeatureFormValues({
+                                    ...featureFormValues,
+                                    [feat.id]: parseInt(e.target.value) || 0,
+                                  })}
+                                  placeholder={currentVal === -1 ? "Ilimitado" : "0"}
+                                  className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                                />
+                                <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
                                   <input
                                     type="checkbox"
                                     checked={currentVal === -1}
@@ -850,7 +920,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                       ...featureFormValues,
                                       [feat.id]: e.target.checked ? -1 : 100,
                                     })}
-                                    className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                    className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
                                   />
                                   <span>Ilimitado (-1)</span>
                                 </label>
@@ -858,7 +928,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                             )}
 
                             {feat.type === "QUOTA" && (
-                              <div className="pt-2 space-y-2">
+                              <div className="pt-1 space-y-1.5">
                                 <div className="flex items-center gap-2">
                                   <input
                                     type="number"
@@ -869,11 +939,11 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                       [feat.id]: parseInt(e.target.value) || 0,
                                     })}
                                     placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                    className="flex-1 bg-[#1C1C21] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 font-mono disabled:opacity-50"
+                                    className="flex-1 bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50"
                                   />
-                                  <span className="text-xs text-zinc-400 font-bold">GB</span>
+                                  <span className="text-[11px] text-zinc-400 font-bold">GB</span>
                                 </div>
-                                <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                                <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
                                   <input
                                     type="checkbox"
                                     checked={currentVal === -1}
@@ -881,7 +951,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                       ...featureFormValues,
                                       [feat.id]: e.target.checked ? -1 : 50,
                                     })}
-                                    className="rounded border-[#27272A] bg-[#1C1C21] text-red-600 focus:ring-red-500"
+                                    className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
                                   />
                                   <span>Ilimitado (-1 GB)</span>
                                 </label>
@@ -896,20 +966,20 @@ export default function AdminPlansClient({ user }: { user: any }) {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#27272A] flex-shrink-0">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.08] flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsFeatureModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-[#27272A] text-zinc-300 text-sm font-medium hover:text-white cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-white/5 text-zinc-400 hover:text-white text-xs font-semibold cursor-pointer transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSavePlanFeatures}
                 disabled={savingPlanFeatures}
-                className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-lg shadow-red-600/20"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
-                {savingPlanFeatures && <Loader2 className="w-4 h-4 animate-spin" />}
+                {savingPlanFeatures && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>Salvar Recursos do Plano</span>
               </button>
             </div>
