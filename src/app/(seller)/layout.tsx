@@ -4,7 +4,6 @@ import { ReactNode, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { ExpiredPaywall } from "@/components/billing/ExpiredPaywall";
 import { 
   LayoutDashboard, 
   Bot,
@@ -462,19 +461,6 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
-
-          {/* Active Trial Badge */}
-          {isExpanded && subInfo?.isTrialActive && !subInfo?.isExempt && (
-            <div className="mx-1 my-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-              <div className="flex items-center gap-1.5 font-bold mb-0.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Teste Grátis Ativo</span>
-              </div>
-              <p className="text-[11px] text-amber-200/80">
-                Restam <strong className="text-white font-bold">{subInfo.trialDaysRemaining} dia(s)</strong> de uso livre.
-              </p>
-            </div>
-          )}
 
           {/* Back to Admin Button for Platform Owners */}
           {(sellerProfile?.role === "admin" || sellerProfile?.role === "super_admin") && (

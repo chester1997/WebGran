@@ -91,18 +91,18 @@ export async function getSellerSubscription(sellerId: string) {
 
   if (!sub) {
     const now = new Date();
-    // Default 3-day free trial period
-    const periodEnd = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    // Commercial Model: No 3-day trial limit. General platform access is perpetual upon registration.
+    const perpetualPeriodEnd = new Date(now.getTime() + 365 * 10 * 86400000);
 
     const created = await db
       .insert(subscriptions)
       .values({
         sellerId,
         planId: plan.id,
-        status: 'TRIAL',
+        status: userRecord?.role === 'suspended' ? 'SUSPENDED' : 'ACTIVE',
         startedAt: now,
         currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
+        currentPeriodEnd: perpetualPeriodEnd,
       })
       .returning();
 
@@ -114,42 +114,15 @@ export async function getSellerSubscription(sellerId: string) {
 
   const now = new Date();
   let status = sub.status;
-  const periodEndMs = new Date(sub.currentPeriodEnd).getTime();
+  const isSuspended = Boolean(userRecord?.role === 'suspended' || sub.status === 'SUSPENDED');
 
-  // Evaluate status against current date
-  if (status === 'TRIAL') {
-    if (periodEndMs <= now.getTime()) {
-      status = 'EXPIRED';
-      try {
-        await db
-          .update(subscriptions)
-          .set({ status: 'EXPIRED', updatedAt: now })
-          .where(eq(subscriptions.id, sub.id));
-      } catch (err) {
-        console.error('Error updating expired trial status:', err);
-      }
-    }
-  } else if (status === 'ACTIVE') {
-    if (periodEndMs <= now.getTime()) {
-      status = 'PAST_DUE';
-      try {
-        await db
-          .update(subscriptions)
-          .set({ status: 'PAST_DUE', updatedAt: now })
-          .where(eq(subscriptions.id, sub.id));
-      } catch (err) {
-        console.error('Error updating past due subscription status:', err);
-      }
-    }
-  }
-
-  // Commercial Model: No monthly fee for general WebGran platform usage.
-  // Sellers are always active without trial expiration or paywall blocks.
+  // Commercial Model: No monthly subscription required for general WebGran platform usage.
+  // Sellers are always active without trial expiration or paywall blocks, unless administratively suspended.
   const isTrialActive = false;
-  const isPaidActive = true;
-  const isSubscriptionActive = true;
+  const isPaidActive = !isSuspended;
+  const isSubscriptionActive = !isSuspended;
   const trialDaysRemaining = 0;
-  status = 'ACTIVE';
+  status = isSuspended ? 'SUSPENDED' : 'ACTIVE';
 
   const invoiceHistory = (await db.query.invoices.findMany({
     where: eq(invoices.sellerId, sellerId),

@@ -383,7 +383,23 @@ export class CheckoutService {
         };
       }
 
-      // 9. CREATE ORDER
+      // 9. Resolve effective seller commission fee at order creation (frozen immutable snapshot)
+      const sellerId = storeRecord.ownerId;
+      const { SellerCommissionService } = await import('@/lib/commission/seller-commission-service');
+      const feeResolution = await SellerCommissionService.resolveEffectiveFee(sellerId, new Date());
+      const snapshotSplitAmountCents = feeResolution.effectiveFeeCents;
+      let initialSplitStatus = 'PENDING';
+      let initialSplitError: string | null = null;
+
+      if (feeResolution.isExempt) {
+        initialSplitStatus = 'SKIPPED';
+        initialSplitError = 'ISENCAO_TEMPORARIA';
+      } else if (snapshotSplitAmountCents === 0) {
+        initialSplitStatus = 'SKIPPED';
+        initialSplitError = 'COMISSAO_ZERO';
+      }
+
+      // 10. CREATE ORDER
       const newOrderArr = await db
         .insert(orders)
         .values({
@@ -399,14 +415,15 @@ export class CheckoutService {
           total: finalTotal.toFixed(2),
           currency: "BRL",
           sessionId: sessionId || null,
-          splitAmountCents: 50,
-          splitStatus: "PENDING",
+          splitAmountCents: snapshotSplitAmountCents,
+          splitStatus: initialSplitStatus,
+          splitError: initialSplitError,
         })
         .returning();
 
       const newOrder = newOrderArr[0];
 
-      // 10. INSERT ITEMS
+      // 11. INSERT ITEMS
       await db.insert(orderItems).values(
         itemsToInsert.map((i) => ({
           orderId: newOrder.id,
@@ -419,9 +436,7 @@ export class CheckoutService {
         }))
       );
 
-      // 11. Resolve Payment Gateway Connections
-      const sellerId = storeRecord.ownerId;
-
+      // 12. Resolve Payment Gateway Connections
       if (paymentGateway && paymentGateway !== "pushinpay") {
         return {
           success: false,
@@ -448,6 +463,7 @@ export class CheckoutService {
       if (targetGateway === "pushinpay") {
         const pixPayment = await paymentService.createPushinPayPix({
           sellerId: sellerId!,
+          storeId: storeRecord.id,
           orderId: newOrder.id,
           amount: finalTotal,
           description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || "WebGran"}`,

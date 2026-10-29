@@ -186,20 +186,21 @@ export async function getSellerEntitlement<T = any>(
     orderBy: [desc(subscriptions.createdAt)],
   });
 
-  let statusUpper = (sub?.status || '').toUpperCase();
+  let statusUpper = (sub?.status || '').toUpperCase().trim();
   const periodEndMs = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd).getTime() : 0;
 
-  // Evaluate dynamic status transition based on period expiration
-  if (statusUpper === 'TRIAL' && periodEndMs > 0 && periodEndMs <= now.getTime()) {
-    statusUpper = 'EXPIRED';
-  } else if (statusUpper === 'ACTIVE' && periodEndMs > 0 && periodEndMs <= now.getTime()) {
-    statusUpper = 'PAST_DUE';
+  // Commercial Model (Phase 1):
+  // Eliminates 3-day free trial dynamic expiration.
+  // Sellers with TRIAL or ACTIVE subscriptions do NOT expire dynamically based on past timestamps.
+  // Administrative suspension check:
+  if (roleUpper === 'SUSPENDED') {
+    statusUpper = 'SUSPENDED';
   }
 
   const INACTIVE_STATUSES = ['PAST_DUE', 'EXPIRED', 'CANCELLED', 'SUSPENDED'];
   const isSubInactive = Boolean(sub && INACTIVE_STATUSES.includes(statusUpper));
 
-  // If subscription is NOT inactive (i.e. ACTIVE, TRIAL, or new seller), evaluate Overrides and Plan Features
+  // If subscription is NOT inactive (i.e. ACTIVE, TRIAL, or new seller without sub row), evaluate Overrides and Plan Features
   if (!isSubInactive) {
     // Check for Active Override
     const override = await db.query.sellerFeatureOverrides.findFirst({
@@ -229,10 +230,18 @@ export async function getSellerEntitlement<T = any>(
     }
 
     // Check Plan Feature via Seller Subscription
-    if (sub && sub.planId) {
+    let effectivePlanId = sub?.planId;
+    if (!effectivePlanId) {
+      const defaultPlan = await db.query.subscriptionPlans?.findFirst({
+        where: eq(subscriptionPlans.active, true),
+      });
+      effectivePlanId = defaultPlan?.id;
+    }
+
+    if (effectivePlanId) {
       const planFeat = await db.query.planFeatures.findFirst({
         where: and(
-          eq(planFeatures.planId, sub.planId),
+          eq(planFeatures.planId, effectivePlanId),
           eq(planFeatures.featureId, feature.id)
         ),
       });

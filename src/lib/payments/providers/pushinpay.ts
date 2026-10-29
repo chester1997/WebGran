@@ -323,25 +323,40 @@ export class PushinPayProvider {
       webhook_url: webhookUrl,
     };
 
-    // Split configuration: dynamic platform commission from administrative single source of truth
-    const { PlatformCommissionService, PlatformCommissionUnavailableError } = await import('@/lib/commission/platform-commission-service');
-    let dynamicCommissionCents: number;
+    // Split configuration: dynamic platform commission from SellerCommissionService
+    const { SellerCommissionService } = await import('@/lib/commission/seller-commission-service');
+    let effectiveFeeCents = 50;
+    let isExempt = false;
+
     try {
-      dynamicCommissionCents = await PlatformCommissionService.getCurrentCommissionCents();
+      const feeResult = await SellerCommissionService.resolveEffectiveFee(
+        params.sellerId,
+        order?.createdAt ? new Date(order.createdAt) : new Date()
+      );
+      effectiveFeeCents = feeResult.effectiveFeeCents;
+      isExempt = feeResult.isExempt;
     } catch (commErr: any) {
-      if (commErr instanceof PlatformCommissionUnavailableError || commErr?.name === 'PlatformCommissionUnavailableError') {
-        console.error('[PushinPayProvider] Bloqueio de checkout: comissão oficial da plataforma indisponível:', commErr.message);
-        throw new Error('Parâmetros de cobrança temporariamente indisponíveis. Tente novamente em instantes.');
-      }
-      console.error('[PushinPayProvider] Bloqueio de checkout: erro inesperado ao consultar taxa de comissão:', commErr?.message);
+      console.error('[PushinPayProvider] Erro ao resolver taxa de comissão do vendedor:', commErr?.message);
       throw new Error('Parâmetros de cobrança temporariamente indisponíveis. Tente novamente em instantes.');
+    }
+
+    // Preserve immutable order snapshot if explicitly recorded on the order
+    if (order?.splitError === 'ISENCAO_TEMPORARIA') {
+      isExempt = true;
+      effectiveFeeCents = 0;
+    } else if (order?.splitError === 'COMISSAO_ZERO') {
+      isExempt = false;
+      effectiveFeeCents = 0;
+    } else if (order && typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents) && order.splitAmountCents !== 50) {
+      // Non-default custom snapshot on order is preserved
+      effectiveFeeCents = order.splitAmountCents;
     }
 
     const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() || 
                               process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
     let splitStatus: 'REQUESTED' | 'GATEWAY_ACCEPTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
     let splitError: string | null = null;
-    const splitAmountCents = dynamicCommissionCents;
+    let splitAmountCents = effectiveFeeCents;
 
     // Resolve store identity for charge
     const chargeStoreId = params.storeId || order?.storeId || conn.storeId || null;
@@ -349,13 +364,19 @@ export class PushinPayProvider {
       throw new Error('Não foi possível identificar a loja do pedido para emissão da cobrança.');
     }
 
-    if (dynamicCommissionCents <= 0) {
+    if (isExempt) {
+      splitStatus = 'SKIPPED';
+      splitError = 'ISENCAO_TEMPORARIA';
+      splitAmountCents = 0;
+    } else if (effectiveFeeCents <= 0) {
       splitStatus = 'SKIPPED';
       splitError = 'COMISSAO_ZERO';
-    } else if (amountInCents <= dynamicCommissionCents) {
+      splitAmountCents = 0;
+    } else if (amountInCents <= effectiveFeeCents) {
       // Order amount is too low to split commission leaving merchant balance
       splitStatus = 'SKIPPED';
       splitError = 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
+      splitAmountCents = effectiveFeeCents;
     } else if (platformAccountId) {
       const platformStoreId = getPlatformStoreId();
 
@@ -376,10 +397,10 @@ export class PushinPayProvider {
         splitError = 'CONTA_PROPRIETARIA_PLATAFORMA';
       } else {
         // Loja de terceiro (incluindo lojas de usuários administradores que não sejam a loja oficial configurada):
-        // Preserva o split normal com a comissão dinâmica configurada.
+        // Preserva o split normal com a taxa efetiva resolvida.
         payload.split_rules = [
           {
-            value: dynamicCommissionCents,
+            value: effectiveFeeCents,
             account_id: platformAccountId,
           }
         ];

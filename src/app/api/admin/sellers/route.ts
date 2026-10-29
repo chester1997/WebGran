@@ -5,85 +5,13 @@ import { eq, desc } from "drizzle-orm";
 import { requirePlatformAdmin } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { getDefaultPlan } from "@/lib/billing/subscription-service";
+import { loadAdminSellersList } from "@/lib/commission/seller-admin-query";
 
 export async function GET() {
   try {
-    const adminUser = await requirePlatformAdmin();
-
-    const sellersData = await db.query.users.findMany({
-      where: eq(users.role, 'seller'),
-      with: {
-        stores: true
-      },
-      orderBy: [desc(users.createdAt)]
-    });
-
-    const sellersWithBilling = await Promise.all(
-      sellersData.map(async (seller) => {
-        const sub = await db.query.subscriptions.findFirst({
-          where: eq(subscriptions.sellerId, seller.id),
-          with: {
-            plan: true,
-            invoices: {
-              orderBy: [desc(invoices.createdAt)],
-              limit: 5
-            }
-          }
-        });
-
-        const store = seller.stores[0] || null;
-
-        const now = new Date();
-        const periodEnd = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
-        const isExpired = periodEnd ? periodEnd < now : false;
-
-        // Calculate seller status
-        let computedStatus = 'active';
-        if (store?.status === 'suspended' || sub?.status === 'SUSPENDED') {
-          computedStatus = 'suspended';
-        } else if (store?.status === 'inactive') {
-          computedStatus = 'inactive';
-        } else if (sub?.status === 'PAST_DUE' || sub?.status === 'EXPIRED' || isExpired) {
-          computedStatus = 'pending';
-        }
-
-        return {
-          id: seller.id,
-          name: seller.name,
-          email: seller.email,
-          role: seller.role,
-          createdAt: seller.createdAt ? new Date(seller.createdAt).toISOString() : new Date().toISOString(),
-          status: computedStatus,
-          store: store ? {
-            id: store.id,
-            name: store.name,
-            slug: store.slug,
-            status: store.status,
-            createdAt: store.createdAt ? new Date(store.createdAt).toISOString() : new Date().toISOString()
-          } : null,
-          subscription: sub ? {
-            id: sub.id,
-            planName: sub.plan?.name || 'WebGran SaaS',
-            price: sub.plan?.price ? Number(sub.plan.price) : 0,
-            status: sub.status,
-            currentPeriodStart: sub.currentPeriodStart ? new Date(sub.currentPeriodStart).toISOString() : null,
-            currentPeriodEnd: periodEnd ? periodEnd.toISOString() : null,
-            isExpired
-          } : null,
-          latestInvoice: sub?.invoices && sub.invoices.length > 0 ? {
-            id: sub.invoices[0].id,
-            amount: Number(sub.invoices[0].amount),
-            status: sub.invoices[0].status,
-            provider: sub.invoices[0].provider,
-            externalId: sub.invoices[0].externalId,
-            paidAt: sub.invoices[0].paidAt ? new Date(sub.invoices[0].paidAt).toISOString() : null,
-            dueDate: sub.invoices[0].dueDate ? new Date(sub.invoices[0].dueDate).toISOString() : null
-          } : null
-        };
-      })
-    );
-
-    return NextResponse.json({ sellers: sellersWithBilling });
+    await requirePlatformAdmin();
+    const sellers = await loadAdminSellersList();
+    return NextResponse.json({ sellers });
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });

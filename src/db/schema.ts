@@ -401,8 +401,10 @@ export const storeFloatingNotifications = pgTable('store_floating_notifications'
 
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   stores: many(stores),
+  commissionSettings: one(sellerCommissionSettings),
+  commissionAuditLogs: many(sellerCommissionAuditLogs),
 }));
 
 export const themesRelations = relations(themes, ({ many }) => ({
@@ -1304,6 +1306,71 @@ export const platformFinancialNotificationEventsRelations = relations(platformFi
   }),
   recipient: one(users, {
     fields: [platformFinancialNotificationEvents.recipientUserId],
+    references: [users.id],
+  }),
+}));
+
+// ==========================================
+// SELLER COMMISSION SETTINGS & AUDIT LOGS (FASE 2)
+// ==========================================
+
+export const sellerCommissionSettings = pgTable('seller_commission_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  customFeeCents: integer('custom_fee_cents'),
+  exemptionActive: boolean('exemption_active').notNull().default(false),
+  exemptionStart: timestamp('exemption_start'),
+  exemptionEnd: timestamp('exemption_end'),
+  exemptionReason: text('exemption_reason'),
+  version: integer('version').notNull().default(1),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedById: uuid('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
+  updatedByName: text('updated_by_name'),
+  updatedByEmail: text('updated_by_email'),
+}, (t) => ({
+  customFeeCheck: check('seller_comm_fee_check', sql`${t.customFeeCents} IS NULL OR (${t.customFeeCents} >= 0 AND ${t.customFeeCents} <= 50)`),
+  exemptionDatesCheck: check('seller_comm_exemption_dates_check', sql`${t.exemptionEnd} IS NULL OR ${t.exemptionStart} IS NULL OR ${t.exemptionEnd} > ${t.exemptionStart}`),
+}));
+
+export const sellerCommissionAuditLogs = pgTable('seller_commission_audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  previousFeeCents: integer('previous_fee_cents'),
+  newFeeCents: integer('new_fee_cents'),
+  previousExemptionActive: boolean('previous_exemption_active').notNull().default(false),
+  newExemptionActive: boolean('new_exemption_active').notNull().default(false),
+  previousExemptionStart: timestamp('previous_exemption_start'),
+  previousExemptionEnd: timestamp('previous_exemption_end'),
+  newExemptionStart: timestamp('new_exemption_start'),
+  newExemptionEnd: timestamp('new_exemption_end'),
+  reason: text('reason').notNull(),
+  changedById: uuid('changed_by_id').references(() => users.id, { onDelete: 'set null' }),
+  changedByName: text('changed_by_name'),
+  changedByEmail: text('changed_by_email'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  sellerIdx: index('seller_comm_audit_seller_idx').on(t.sellerId),
+  createdIdx: index('seller_comm_audit_created_idx').on(t.createdAt),
+}));
+
+export const sellerCommissionSettingsRelations = relations(sellerCommissionSettings, ({ one }) => ({
+  seller: one(users, {
+    fields: [sellerCommissionSettings.sellerId],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [sellerCommissionSettings.updatedById],
+    references: [users.id],
+  }),
+}));
+
+export const sellerCommissionAuditLogsRelations = relations(sellerCommissionAuditLogs, ({ one }) => ({
+  seller: one(users, {
+    fields: [sellerCommissionAuditLogs.sellerId],
+    references: [users.id],
+  }),
+  changedBy: one(users, {
+    fields: [sellerCommissionAuditLogs.changedById],
     references: [users.id],
   }),
 }));

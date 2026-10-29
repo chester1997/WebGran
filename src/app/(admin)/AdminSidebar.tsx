@@ -46,7 +46,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: CreditCard },
     { label: "Planos WebGran", href: "/admin/plans", icon: Package },
     { label: "Recursos & Features", href: "/admin/features", icon: Sliders },
-    { label: "Vendedores", href: "/admin/sellers", icon: Users },
+    { label: "Vendedores e Taxas", href: "/admin/sellers", icon: Users },
   ];
 
   // Group 2: Biblioteca de Vídeos
@@ -87,18 +87,18 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
   return (
     <>
       {/* Mobile Header Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0E0E11] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-md">
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0B0B0E] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-md">
         <div className="flex items-center gap-2 font-bold text-base tracking-tight">
-          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-white">WebGran</span>
-          <span className="text-[10px] bg-rose-500/10 text-rose-400 font-bold px-2 py-0.5 rounded border border-rose-500/20 tracking-wider">ADMIN</span>
+          <span className="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/20 tracking-wider">ADMIN</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Abrir menu de navegação"
           className="p-1.5 rounded-lg bg-[#141418] text-zinc-300 hover:text-white border border-white/[0.06] active:scale-95 transition-all"
         >
-          {mobileOpen ? <X className="w-5 h-5 text-rose-400" /> : <Menu className="w-5 h-5" />}
+          {mobileOpen ? <X className="w-5 h-5 text-blue-400" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
@@ -113,7 +113,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
       {/* Sidebar Container */}
       <aside className={`
         fixed md:static inset-y-0 left-0 z-50
-        w-60 bg-[#0E0E11] border-r border-white/[0.06] flex-shrink-0 flex flex-col
+        w-60 bg-[#0B0B0E] border-r border-white/[0.06] flex-shrink-0 flex flex-col
         transition-transform duration-200 ease-in-out shadow-2xl md:shadow-none
         ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       `}>
@@ -127,7 +127,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             />
           </Link>
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md tracking-wider uppercase">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md tracking-wider uppercase">
               ADMIN
             </span>
             <button
@@ -149,15 +149,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             className={`
               flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
               ${pathname === "/admin" 
-                ? "bg-[#1A1A22] text-white border border-white/10 shadow-md font-bold" 
+                ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold" 
                 : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
               }
             `}
           >
             {pathname === "/admin" && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-rose-500 shadow-sm shadow-rose-500/50" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
             )}
-            <LayoutDashboard className={`w-4 h-4 transition-colors ${pathname === "/admin" ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+            <LayoutDashboard className={`w-4 h-4 transition-colors ${pathname === "/admin" ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
             <span className="truncate">Dashboard</span>
           </Link>
 
@@ -167,11 +167,11 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               type="button"
               onClick={() => setUserCommercialToggled(!commercialOpen)}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
-                isCommercialActive ? "text-white font-bold bg-[#14141A]" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                isCommercialActive ? "text-white font-bold bg-[#14141B]" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Building2 className={`w-4 h-4 shrink-0 transition-colors ${isCommercialActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                <Building2 className={`w-4 h-4 shrink-0 transition-colors ${isCommercialActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
                 <span className="truncate">Gestão Comercial</span>
               </div>
               {commercialOpen ? (
@@ -200,14 +200,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                         onClick={() => setMobileOpen(false)}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                           isActive
-                            ? "bg-[#1A1A22] text-white font-bold border border-white/10 shadow-md"
+                            ? "bg-[#14141B] text-white font-bold border border-white/10 shadow-md"
                             : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                         }`}
                       >
                         {isActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-rose-500 rounded-r-md shadow-sm shadow-rose-500/50" />
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-blue-600 rounded-r-md shadow-sm shadow-blue-500/30" />
                         )}
-                        <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-rose-500" : "text-zinc-400"}`} strokeWidth={1.8} />
+                        <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
                         <span className="truncate flex-1">{item.label}</span>
                       </Link>
                     </div>

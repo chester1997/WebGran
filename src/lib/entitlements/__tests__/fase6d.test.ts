@@ -246,7 +246,7 @@ describe("FASE 6D — Entitlement System Closing Integrity Audit Suite", () => {
       }
     });
 
-    it("2.6. Dynamically expired TRIAL status triggers fallback to DEFAULT", async () => {
+    it("2.6. Legacy or expired trial timestamp does NOT degrade seller to DEFAULT (commercial model)", async () => {
       vi.spyOn(db.query.users, "findFirst").mockResolvedValue({ id: "seller-trial-exp", role: "SELLER" } as any);
       vi.spyOn(db.query.features, "findFirst").mockResolvedValue({
         id: "feat-products",
@@ -262,9 +262,16 @@ describe("FASE 6D — Entitlement System Closing Integrity Audit Suite", () => {
         status: "TRIAL",
         currentPeriodEnd: new Date(Date.now() - 3600000), // trial ended 1h ago
       } as any);
+      vi.spyOn(db.query.planFeatures, "findFirst").mockResolvedValue({
+        id: "pf-trial",
+        planId: "plan-pro",
+        featureId: "feat-products",
+        value: { value: 100 },
+      } as any);
 
       const res = await getSellerEntitlement("seller-trial-exp", "max_products");
-      expect(res.source).toBe("DEFAULT");
+      expect(res.source).toBe("PLAN");
+      expect(res.value).toBe(100);
     });
   });
 
