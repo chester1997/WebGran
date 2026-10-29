@@ -58,6 +58,10 @@ export default function AdminDashboardClient() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Split sync state
+  const [syncingSplits, setSyncingSplits] = useState<boolean>(false);
+  const [splitSyncResult, setSplitSyncResult] = useState<{ updated: number; skipped: number; divergence: number; errors: number; total: number; } | null>(null);
+
   // Chart view toggle: "gmv" | "pix" | "orders"
   const [chartView, setChartView] = useState<"gmv" | "pix" | "orders">("gmv");
 
@@ -91,6 +95,26 @@ export default function AdminDashboardClient() {
     },
     []
   );
+
+  const handleSyncSplits = useCallback(async () => {
+    setSyncingSplits(true);
+    setSplitSyncResult(null);
+    try {
+      const res = await fetch("/api/admin/splits/sync", { method: "POST" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || "Falha ao sincronizar splits.");
+      }
+      const json = await res.json();
+      setSplitSyncResult(json.summary);
+      await fetchDashboardStats(period, true);
+    } catch (err: any) {
+      console.error("Split sync error:", err);
+      alert("Erro ao sincronizar splits: " + String(err?.message || "Erro desconhecido"));
+    } finally {
+      setSyncingSplits(false);
+    }
+  }, [period, fetchDashboardStats]);
 
   useEffect(() => {
     fetchDashboardStats(period);
@@ -542,6 +566,24 @@ export default function AdminDashboardClient() {
             <p className="text-[11px] text-gray-500 leading-relaxed">
               Pedidos pagos aguardando processamento do split pelo gateway (`PENDING` ou `REQUESTED`).
             </p>
+            {/* Reconcile button */}
+            <button
+              type="button"
+              onClick={handleSyncSplits}
+              disabled={syncingSplits || loading}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {syncingSplits ? (
+                <><RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando...</>
+              ) : (
+                <><Zap className="w-3 h-3" /> Reconciliar Agora</>
+              )}
+            </button>
+            {splitSyncResult && (
+              <p className="text-[10px] text-emerald-400 mt-1 font-mono">
+                ✓ {splitSyncResult.updated} atualizado(s) · {splitSyncResult.skipped} sem mudança · {splitSyncResult.divergence} divergência · {splitSyncResult.errors} erro(s)
+              </p>
+            )}
           </div>
 
           {/* Card 5: Isenções Intencionais (SKIPPED) */}
