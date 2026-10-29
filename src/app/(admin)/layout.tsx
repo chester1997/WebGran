@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0B0B0D]">
-          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-[#0B0B0D]">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-[#0B0B0D] custom-admin-scrollbar">
             <div className="w-full space-y-6">
               <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse">Carregando painel admin...</div>}>
                 {children}

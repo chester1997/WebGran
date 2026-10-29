@@ -346,3 +346,29 @@ html.light .w-9.h-9.rounded-full.bg-white\/10 svg {
 html.light img.blur-2xl {
   opacity: 0.25 !important;
 }
+
+/* ==================================================== */
+/* 12. Custom Admin Scrollbar                          */
+/* ==================================================== */
+.custom-admin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2563eb #0B0B0D;
+}
+
+.custom-admin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-admin-scrollbar::-webkit-scrollbar-track {
+  background: #0B0B0D;
+}
+
+.custom-admin-scrollbar::-webkit-scrollbar-thumb {
+  background: #2563eb;
+  border-radius: 9999px;
+}
+
+.custom-admin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}

@@ -147,7 +147,7 @@ export default function AdminReportsClient({
   );
 
   return (
-    <div className="space-y-6 pb-12 text-zinc-100 max-w-7xl">
+    <div className="space-y-6 pb-12 text-zinc-100 w-full">
       {/* 1. HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
@@ -180,7 +180,7 @@ export default function AdminReportsClient({
       </div>
 
       {/* 2. FILTERS BAR */}
-      <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-lg space-y-4">
+      <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-lg space-y-4 w-full">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Seller Filter */}
           <div className="flex items-center gap-2 min-w-[260px]">
@@ -269,7 +269,7 @@ export default function AdminReportsClient({
       )}
 
       {/* 3. KPIS GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4 w-full">
         {/* KPI 1: Clientes Únicos */}
         <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
@@ -307,7 +307,7 @@ export default function AdminReportsClient({
         </div>
 
         {/* KPI 4: Faturamento Bruto (GMV) */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1 col-span-2 sm:col-span-1">
+        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Faturamento (GMV)</span>
             <DollarSign className="w-4 h-4 text-emerald-400" />
@@ -345,7 +345,7 @@ export default function AdminReportsClient({
         </div>
 
         {/* KPI 7: Taxas da Plataforma */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 space-y-1 col-span-2 sm:col-span-1">
+        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 space-y-1">
           <div className="flex items-center justify-between text-blue-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Taxas WebGran</span>
             <Receipt className="w-4 h-4 text-blue-400" />
@@ -358,9 +358,9 @@ export default function AdminReportsClient({
       </div>
 
       {/* 4. CHARTS & GATEWAY BREAKDOWN SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
         {/* Time Series Chart (Col-span 2) */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl space-y-4">
+        <div className="lg:col-span-2 p-5 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl space-y-4 w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-white tracking-tight">Evolução ao Longo do Tempo</h2>
@@ -529,7 +529,7 @@ export default function AdminReportsClient({
       </div>
 
       {/* 5. DETAILED ORDERS TABLE */}
-      <div className="rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl overflow-hidden space-y-4 p-5">
+      <div className="rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl overflow-hidden space-y-4 p-5 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-bold text-white tracking-tight">Detalhamento dos Pedidos</h2>
@@ -552,7 +552,7 @@ export default function AdminReportsClient({
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-admin-scrollbar">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-white/[0.08] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
