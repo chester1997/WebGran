@@ -17,7 +17,8 @@ import {
   Info,
   QrCode,
   Copy,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -116,6 +117,7 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
 
   // PushinPay Inputs & Data
   const [pushinPayToken, setPushinPayToken] = useState('');
+  const [loadingMpConnect, setLoadingMpConnect] = useState(false);
   const [pushinPayWebhookSecret, setPushinPayWebhookSecret] = useState('');
   const [pushinPayData, setPushinPayData] = useState<PushinPayConnectionInfo | null>(pushinPayConnection || null);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
@@ -130,11 +132,22 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
   const errorParam = searchParams.get('error');
 
   const handleConnectMp = async () => {
-    setFeedbackMsg({
-      provider: 'mercado_pago',
-      type: 'info',
-      text: 'O Mercado Pago está temporariamente indisponível para lojistas. Utilize a PushinPay para receber via Pix.',
-    });
+    setLoadingMpConnect(true);
+    setFeedbackMsg(null);
+    try {
+      const res = await fetch('/api/payments/mercadopago/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Erro ao iniciar conexão com Mercado Pago.');
+      }
+      window.location.href = data.url;
+    } catch (err: any) {
+      setFeedbackMsg({ provider: 'mercado_pago', type: 'error', text: err.message });
+      setLoadingMpConnect(false);
+    }
   };
 
   const handleDisconnectMp = async () => {
@@ -270,17 +283,24 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
   };
 
   const handleTestConnection = async (provider: 'mercado_pago' | 'syncpay' | 'pushinpay') => {
-    if (provider === 'mercado_pago' || provider === 'syncpay') {
+    if (provider === 'syncpay') {
       setFeedbackMsg({
         provider,
         type: 'info',
-        text: 'Este gateway está temporariamente indisponível para lojistas. Utilize a PushinPay.',
+        text: 'A SyncPay está temporariamente indisponível para lojistas. Utilize a PushinPay ou Mercado Pago.',
       });
       return;
     }
     setTestingGateway(provider);
     try {
-      if (provider === 'pushinpay') {
+      if (provider === 'mercado_pago') {
+        const res = await fetch('/api/seller/payments/mercadopago/test', {
+          method: 'POST',
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Falha na validação com o Mercado Pago.');
+        setFeedbackMsg({ provider: 'mercado_pago', type: 'success', text: `Mercado Pago: ${data.message || 'Token válido e conexão ativa!'}` });
+      } else if (provider === 'pushinpay') {
         const res = await fetch('/api/seller/payments/pushinpay', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -383,14 +403,24 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
                 </div>
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-1.5 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                Em breve
-              </span>
+              {isMpActive ? (
+                <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Conectado
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-zinc-800 border border-zinc-700/60 text-zinc-400 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-zinc-500" />
+                  Não conectado
+                </span>
+              )}
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Integração temporariamente indisponível para lojistas. Utilize a PushinPay para receber pagamentos via Pix na sua loja.
+              {isMpActive
+                ? "Integração oficial Mercado Pago ativa para sua loja via OAuth 2.0. Recebimento direto de vendas via Pix na sua conta."
+                : "Conecte sua conta do Mercado Pago de forma segura via OAuth oficial para receber pagamentos via Pix diretamente na sua conta bancária."
+              }
             </p>
 
             {feedbackMsg?.provider === 'mercado_pago' && (
@@ -410,16 +440,22 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
 
             {isMpActive && (
               <div className="bg-[#18181C]/90 p-3.5 rounded-xl border border-white/5 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span>Status da Conexão:</span>
+                  <strong className="text-emerald-400 font-medium">Ativo & Autenticado</strong>
+                </div>
                 {connection?.providerEmail && (
-                  <div className="flex items-center justify-between text-zinc-400">
+                  <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
                     <span>Conta vinculada:</span>
                     <strong className="text-white font-medium">{connection.providerEmail}</strong>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-zinc-400">
-                  <span>Status da Conexão:</span>
-                  <span className="text-amber-400 font-medium">Inativo para vendas</span>
-                </div>
+                {connection?.providerUserId && (
+                  <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
+                    <span>User ID:</span>
+                    <span className="font-mono text-zinc-300 font-semibold">{connection.providerUserId}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-zinc-400 border-t border-white/5 pt-2">
                   <span>Última sincronização:</span>
                   <span className="text-zinc-300 font-medium">{formatDate(connection?.updatedAt || null)}</span>
@@ -429,10 +465,47 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
           </div>
 
           <div className="pt-4 border-t border-white/5">
-            <div className="w-full bg-white/[0.03] border border-white/10 text-zinc-400 font-semibold rounded-xl text-xs h-11 px-6 flex items-center justify-center gap-2 select-none cursor-not-allowed">
-              <Lock className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Em breve</span>
-            </div>
+            {isMpActive ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  onClick={() => handleTestConnection('mercado_pago')}
+                  disabled={testingGateway === 'mercado_pago'}
+                  variant="outline"
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-zinc-200 border-white/10 rounded-xl text-xs h-10 font-semibold cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${testingGateway === 'mercado_pago' ? 'animate-spin' : ''}`} />
+                  {testingGateway === 'mercado_pago' ? 'Testando...' : 'Testar Conexão'}
+                </Button>
+
+                <Button
+                  onClick={() => setDisconnectModalGateway('mercado_pago')}
+                  variant="outline"
+                  className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20 rounded-xl text-xs h-10 px-3 font-semibold cursor-pointer"
+                  title="Desconectar Mercado Pago"
+                >
+                  <Unlink className="w-3.5 h-3.5 text-red-400" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleConnectMp}
+                disabled={loadingMpConnect}
+                className="w-full bg-[#009EE3] hover:bg-[#0082ba] text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-[#009EE3]/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {loadingMpConnect ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Conectando ao Mercado Pago...</span>
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Conectar Mercado Pago</span>
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
 

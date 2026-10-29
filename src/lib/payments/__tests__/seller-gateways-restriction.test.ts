@@ -87,19 +87,21 @@ vi.mock('next/server', async (importOriginal) => {
   };
 });
 
-describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojistas', () => {
+describe('WebGran — Disponibilidade de Gateways: Mercado Pago Desbloqueado e SyncPay Exclusivo da Plataforma', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     process.env.NEXT_PUBLIC_APP_URL = 'https://webgran.app';
   });
 
-  describe('1 & 2. Bloqueio no Backend para Lojistas (Mercado Pago e SyncPay)', () => {
-    it('Lojistas não conseguem iniciar OAuth do Mercado Pago (/api/payments/mercadopago/connect) e recebem 403', async () => {
+  describe('1 & 2. Gateways para Lojistas (Mercado Pago Desbloqueado e SyncPay Restrito)', () => {
+    it('Lojistas conseguem iniciar OAuth do Mercado Pago (/api/payments/mercadopago/connect) com 200', async () => {
       const { getCurrentUser, getCurrentStore } = await import('@/lib/auth');
+      const { paymentService } = await import('@/lib/payments/payment-service');
       const { POST } = await import('@/app/api/payments/mercadopago/connect/route');
 
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-abc', role: 'seller', email: 'lojista@loja.com' });
       vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-1', name: 'Loja Teste' } as any);
+      vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com.br/authorization?client_id=123');
 
       const req = new NextRequest('https://webgran.app/api/payments/mercadopago/connect', {
         method: 'POST',
@@ -108,40 +110,45 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
       });
 
       const res = await POST(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.error).toContain('temporariamente indisponível para lojistas');
-      expect(json.error).toContain('PushinPay');
+      expect(json.success).toBe(true);
+      expect(json.url).toContain('https://auth.mercadopago.com.br/authorization');
     });
 
-    it('GET do Mercado Pago connect por lojista redireciona para recebimentos com mensagem de erro', async () => {
+    it('GET do Mercado Pago connect por lojista redireciona para a URL de autorização do MP', async () => {
       const { getCurrentUser, getCurrentStore } = await import('@/lib/auth');
+      const { paymentService } = await import('@/lib/payments/payment-service');
       const { GET } = await import('@/app/api/payments/mercadopago/connect/route');
 
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 'seller-abc', role: 'seller' });
       vi.mocked(getCurrentStore).mockResolvedValue({ id: 'store-1' } as any);
+      vi.mocked(paymentService.getOAuthConnectUrl).mockResolvedValue('https://auth.mercadopago.com.br/authorization?client_id=123');
 
       const req = new NextRequest('https://webgran.app/api/payments/mercadopago/connect', { method: 'GET' });
       const res = await GET(req);
 
       expect(res.status).toBe(307);
-      expect(res.headers.get('location')).toContain('/seller/recebimentos?error=');
-      expect(res.headers.get('location')).toContain('PushinPay');
+      expect(res.headers.get('location')).toBe('https://auth.mercadopago.com.br/authorization?client_id=123');
     });
 
-    it('Lojistas não conseguem concluir OAuth callback do Mercado Pago (/api/payments/mercadopago/callback)', async () => {
+    it('Lojistas conseguem concluir OAuth callback do Mercado Pago (/api/payments/mercadopago/callback)', async () => {
       const { db } = await import('@/db');
+      const { paymentService } = await import('@/lib/payments/payment-service');
       const { GET } = await import('@/app/api/payments/mercadopago/callback/route');
 
       const statePayload = Buffer.from(JSON.stringify({ sellerId: 'seller-123' })).toString('base64url');
       vi.mocked(db.query.users.findFirst).mockResolvedValue({ id: 'seller-123', role: 'seller' } as any);
+      vi.mocked(paymentService.handleOAuthCallback).mockResolvedValue({
+        success: true,
+        sellerId: 'seller-123',
+      } as any);
 
       const req = new NextRequest(`https://webgran.app/api/payments/mercadopago/callback?code=mp-code-123&state=${statePayload}`);
       const res = await GET(req);
 
       expect(res.status).toBe(307);
-      expect(res.headers.get('location')).toContain('/seller/recebimentos?error=');
-      expect(res.headers.get('location')).toContain('PushinPay');
+      expect(res.headers.get('location')).toContain('/seller/recebimentos?success=connected');
     });
 
     it('Lojistas não conseguem conectar nem testar SyncPay (/api/seller/payments/syncpay) e recebem 403', async () => {
@@ -163,7 +170,7 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
       expect(json.error).toContain('PushinPay');
     });
 
-    it('Checkout direto legado de produto via Mercado Pago (/api/payments/checkout) é rejeitado com 400', async () => {
+    it('Checkout direto legado de produto via Mercado Pago (/api/payments/checkout) avisa quando loja não configurou MP', async () => {
       const { db } = await import('@/db');
       const { POST } = await import('@/app/api/payments/checkout/route');
 
@@ -172,6 +179,7 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
         ownerId: 'seller-123',
         slug: 'loja-teste',
       } as any);
+      vi.mocked(db.query.sellerPaymentConnections.findFirst).mockResolvedValue(null as any);
 
       const req = new NextRequest('https://webgran.app/api/payments/checkout', {
         method: 'POST',
@@ -186,13 +194,12 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
       const res = await POST(req);
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain('temporariamente desativado para lojistas');
-      expect(json.error).toContain('PushinPay');
+      expect(json.error).toContain('não configurou o recebimento via Mercado Pago');
     });
   });
 
-  describe('3. Checkout de Lojistas: PushinPay Disponível e Gateways Desativados Bloqueados', () => {
-    it('CheckoutService rejeita expressamente quando comprador seleciona Mercado Pago ou SyncPay', async () => {
+  describe('3. Checkout de Lojistas: PushinPay e Mercado Pago Disponíveis, SyncPay Restrito', () => {
+    it('CheckoutService rejeita SyncPay mas informa status correto quando Mercado Pago não está ativo', async () => {
       const { CheckoutService } = await import('@/lib/orders/checkout-service');
       const { db } = await import('@/db');
 
@@ -213,7 +220,7 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
         } as any,
       ]);
 
-      // Attempt checkout with Mercado Pago
+      // Attempt checkout with Mercado Pago when not connected
       const resMp = await CheckoutService.createCheckout({
         storeId: 'store-1',
         customerId: 'cust-1',
@@ -223,8 +230,7 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
       });
 
       expect(resMp.success).toBe(false);
-      expect(resMp.error).toContain('temporariamente indisponível para esta loja');
-      expect(resMp.error).toContain('PushinPay');
+      expect(resMp.error).toContain('O Mercado Pago não está conectado ou ativo para esta loja.');
 
       // Attempt checkout with SyncPay
       const resSync = await CheckoutService.createCheckout({
@@ -237,7 +243,7 @@ describe('WebGran — Restrição de Mercado Pago e SyncPay Exclusiva para Lojis
 
       expect(resSync.success).toBe(false);
       expect(resSync.error).toContain('temporariamente indisponível para esta loja');
-      expect(resSync.error).toContain('PushinPay');
+      expect(resSync.error).toContain('PushinPay ou Mercado Pago');
     });
 
     it('CheckoutService utiliza somente PushinPay quando a loja a possui ativa, mesmo que possua conexões prévias de MP ou SyncPay', async () => {

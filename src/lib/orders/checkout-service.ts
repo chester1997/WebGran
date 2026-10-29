@@ -437,25 +437,54 @@ export class CheckoutService {
       );
 
       // 12. Resolve Payment Gateway Connections
-      if (paymentGateway && paymentGateway !== "pushinpay") {
-        return {
-          success: false,
-          error: "O gateway de pagamento selecionado está temporariamente indisponível para esta loja. Utilize o Pix via PushinPay.",
-        };
-      }
-
       const pushinPayConn = sellerId
         ? await paymentService["pushinPayProvider"].getPushinPayConnection(sellerId, storeId)
         : null;
       const isPushinPayActive = Boolean(pushinPayConn);
 
-      // Mercado Pago and SyncPay are temporarily disabled for seller store checkouts; only PushinPay is active.
-      const targetGateway: "mercadopago" | "syncpay" | "pushinpay" | null = isPushinPayActive ? "pushinpay" : null;
+      const mpConn = sellerId
+        ? await paymentService.getSellerConnection(sellerId)
+        : null;
+      const isMpActive = Boolean(mpConn);
+
+      let targetGateway: "mercadopago" | "pushinpay" | "syncpay" | null = null;
+
+      if (paymentGateway) {
+        if (paymentGateway === "mercadopago") {
+          if (!isMpActive) {
+            return {
+              success: false,
+              error: "O Mercado Pago não está conectado ou ativo para esta loja.",
+            };
+          }
+          targetGateway = "mercadopago";
+        } else if (paymentGateway === "pushinpay") {
+          if (!isPushinPayActive) {
+            return {
+              success: false,
+              error: "A PushinPay não está configurada ou ativa para esta loja.",
+            };
+          }
+          targetGateway = "pushinpay";
+        } else if (paymentGateway === "syncpay") {
+          return {
+            success: false,
+            error: "A SyncPay está temporariamente indisponível para esta loja. Utilize o Pix via PushinPay ou Mercado Pago.",
+          };
+        }
+      } else {
+        // Auto-select: prioritize PushinPay if configured, otherwise Mercado Pago
+        if (isPushinPayActive) {
+          targetGateway = "pushinpay";
+        } else if (isMpActive) {
+          targetGateway = "mercadopago";
+        }
+      }
 
       if (!targetGateway) {
         return {
           success: false,
-          error: "Esta loja não possui nenhum meio de pagamento ativo configurado no momento (PushinPay).",
+          error: "Esta loja não possui nenhum meio de pagamento ativo configurado no momento (PushinPay ou Mercado Pago).",
         };
       }
 
@@ -502,8 +531,8 @@ export class CheckoutService {
         };
       }
 
-      // 2. Process SyncPay PIX
-      if (targetGateway === "syncpay") {
+      // 2. Process SyncPay PIX (if ever reactivated)
+      if ((targetGateway as any) === "syncpay") {
         const pixPayment = await paymentService.createSyncPayPix({
           sellerId: sellerId!,
           orderId: newOrder.id,

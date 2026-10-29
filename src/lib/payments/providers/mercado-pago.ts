@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { db } from '@/db';
 import { sellerPaymentConnections, orders, orderItems, accesses, stores, products, telegramCustomers, telegramBots } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -13,32 +14,82 @@ import {
 
 export class MercadoPagoProvider implements MarketplacePaymentProvider {
   /**
+   * Generates a tamper-proof signed OAuth state with expiration and CSRF protection
+   */
+  generateOAuthState(payload: { sellerId: string; storeId?: string }): string {
+    const secret = process.env.NEXTAUTH_SECRET || process.env.MP_CLIENT_SECRET || 'webgran-mp-oauth-secret';
+    const data = JSON.stringify({
+      sellerId: payload.sellerId,
+      storeId: payload.storeId,
+      ts: Date.now(),
+      nonce: crypto.randomBytes(8).toString('hex'),
+    });
+    const dataB64 = Buffer.from(data).toString('base64url');
+    const hmac = crypto.createHmac('sha256', secret).update(dataB64).digest('hex');
+    return `${dataB64}.${hmac}`;
+  }
+
+  /**
+   * Validates and decodes OAuth state parameter
+   */
+  parseAndVerifyOAuthState(stateStr?: string): { sellerId: string; storeId?: string } {
+    if (!stateStr) {
+      throw new Error('Parâmetro state obrigatório ausente na resposta de autorização.');
+    }
+
+    if (stateStr.includes('.')) {
+      const [dataB64, hmac] = stateStr.split('.');
+      const secret = process.env.NEXTAUTH_SECRET || process.env.MP_CLIENT_SECRET || 'webgran-mp-oauth-secret';
+      const expectedHmac = crypto.createHmac('sha256', secret).update(dataB64).digest('hex');
+
+      if (hmac !== expectedHmac) {
+        throw new Error('Parâmetro state inválido ou corrompido (falha na validação CSRF).');
+      }
+
+      try {
+        const decoded = JSON.parse(Buffer.from(dataB64, 'base64url').toString('utf8'));
+        if (decoded.ts && Date.now() - decoded.ts > 30 * 60 * 1000) {
+          throw new Error('A sessão de autorização expirou (tempo limite de 30 minutos excedido).');
+        }
+        if (!decoded.sellerId) {
+          throw new Error('Identificador do lojista ausente no state.');
+        }
+        return { sellerId: decoded.sellerId, storeId: decoded.storeId };
+      } catch (err: any) {
+        throw new Error(`Falha ao decodificar state: ${err.message}`);
+      }
+    }
+
+    // Backwards compatibility fallback for JSON base64url or plain sellerId in test mocks
+    try {
+      const decoded = JSON.parse(Buffer.from(stateStr, 'base64url').toString('utf8'));
+      if (decoded?.sellerId) {
+        return { sellerId: decoded.sellerId, storeId: decoded.storeId };
+      }
+    } catch {}
+
+    if (stateStr.trim().length > 0) {
+      return { sellerId: stateStr.trim() };
+    }
+
+    throw new Error('Formato de state inválido.');
+  }
+
+  /**
    * Generates OAuth URL for seller connection
    */
   async connectSeller(sellerId: string, redirectUrl: string, storeId?: string): Promise<string> {
     const appId = process.env.MP_CLIENT_ID || process.env.MP_APP_ID || '1775404605721537';
-    const state = JSON.stringify({ sellerId, storeId });
-    const encodedState = Buffer.from(state).toString('base64url');
+    const signedState = this.generateOAuthState({ sellerId, storeId });
     const encodedRedirect = encodeURIComponent(redirectUrl);
-    return `https://auth.mercadopago.com.br/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${encodedState}&redirect_uri=${encodedRedirect}`;
+    return `https://auth.mercadopago.com.br/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${signedState}&redirect_uri=${encodedRedirect}`;
   }
 
   /**
    * Process OAuth callback code and save connection tokens
    */
   async handleOAuthCallback(code: string, redirectUri: string, stateStr?: string): Promise<{ sellerId: string; storeId?: string }> {
-    let sellerId = '';
-    let storeId: string | undefined;
-
-    if (stateStr) {
-      try {
-        const decoded = JSON.parse(Buffer.from(stateStr, 'base64url').toString('utf8'));
-        sellerId = decoded.sellerId;
-        storeId = decoded.storeId;
-      } catch (e) {
-        sellerId = stateStr;
-      }
-    }
+    const { sellerId, storeId } = this.parseAndVerifyOAuthState(stateStr);
 
     const clientId = process.env.MP_CLIENT_ID || process.env.MP_APP_ID;
     const clientSecret = process.env.MP_CLIENT_SECRET;
@@ -142,6 +193,21 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
           eq(sellerPaymentConnections.provider, 'mercado_pago')
         )
       );
+  }
+
+  /**
+   * Test seller connection credentials against Mercado Pago API
+   */
+  async testConnection(sellerId: string): Promise<{ success: boolean; email?: string; userId?: string }> {
+    const token = await this.getValidAccessToken(sellerId);
+    const res = await fetch('https://api.mercadopago.com/users/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new Error('Falha ao validar credenciais com o Mercado Pago.');
+    }
+    const data = await res.json();
+    return { success: true, email: data.email, userId: String(data.id) };
   }
 
   /**

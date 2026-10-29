@@ -14,29 +14,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/seller/recebimentos?error=oauth_failed`);
   }
 
-  if (state) {
-    try {
-      const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
-      if (decoded?.sellerId) {
-        const { db } = await import('@/db');
-        const { users } = await import('@/db/schema');
-        const { eq } = await import('drizzle-orm');
-        const sellerUser = await db.query.users.findFirst({
-          where: eq(users.id, decoded.sellerId),
-        });
-        if (sellerUser && (sellerUser.role || '').toLowerCase() === 'seller') {
-          return NextResponse.redirect(
-            `${appUrl}/seller/recebimentos?error=${encodeURIComponent(
-              'A conexão com o Mercado Pago está temporariamente indisponível para lojistas. Utilize a PushinPay.'
-            )}`
-          );
-        }
-      }
-    } catch {
-      // Ignore JSON parse error and continue
-    }
-  }
-
   try {
     const redirectUri = `${appUrl}/api/payments/mercadopago/callback`;
     await paymentService.handleOAuthCallback(code, redirectUri, state || undefined);

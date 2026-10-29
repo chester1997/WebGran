@@ -30,6 +30,10 @@ export class PaymentService {
     return this.mercadoPagoProvider.disconnectSeller(sellerId);
   }
 
+  async testMercadoPagoConnection(sellerId: string) {
+    return this.mercadoPagoProvider.testConnection(sellerId);
+  }
+
   async createCheckoutPreference(params: CreateCheckoutParams): Promise<CheckoutResponse> {
     return this.mercadoPagoProvider.createCheckout(params);
   }

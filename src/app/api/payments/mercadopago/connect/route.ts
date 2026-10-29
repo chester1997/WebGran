@@ -11,14 +11,6 @@ async function buildMercadoPagoOAuthUrl(req: NextRequest, customRedirectUri?: st
     return { error: 'Não autorizado', status: 401 };
   }
 
-  // Mercado Pago connection is temporarily disabled for sellers
-  if (role === 'seller') {
-    return {
-      error: 'A conexão com o Mercado Pago está temporariamente indisponível para lojistas. Utilize a PushinPay.',
-      status: 403,
-    };
-  }
-
   const gatewayAllowed = await hasFeature(user.id, "payment_gateways_enabled");
   if (!gatewayAllowed) {
     return { error: 'Gateways de pagamento não estão disponíveis no seu plano. Faça upgrade.', status: 403 };
