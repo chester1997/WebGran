@@ -58,6 +58,7 @@ export async function GET(
         effectiveFee,
         setting,
         history,
+        version: setting?.version ?? 0,
       },
     });
   } catch (err: any) {
@@ -178,6 +179,13 @@ export async function PATCH(
       }
     }
 
+    const parsedExpectedVersion =
+      typeof expectedVersion === "number" && !isNaN(expectedVersion)
+        ? expectedVersion
+        : typeof expectedVersion === "string" && expectedVersion.trim() !== "" && !isNaN(Number(expectedVersion))
+        ? Number(expectedVersion)
+        : undefined;
+
     const updatedSetting = await SellerCommissionService.updateSellerCommission({
       sellerId,
       customFeeCents: targetCustomFeeCents,
@@ -185,7 +193,7 @@ export async function PATCH(
       exemptionStart: targetExemptionStart,
       exemptionEnd: targetExemptionEnd,
       exemptionReason: targetExemptionReason,
-      expectedVersion: typeof expectedVersion === "number" ? expectedVersion : undefined,
+      expectedVersion: parsedExpectedVersion,
       reason: reason.trim(),
       adminUser: {
         id: adminUser.id,
@@ -202,6 +210,7 @@ export async function PATCH(
       data: {
         setting: updatedSetting,
         effectiveFee: newEffectiveFee,
+        version: updatedSetting.version,
       },
     });
   } catch (err: any) {

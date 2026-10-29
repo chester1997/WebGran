@@ -81,7 +81,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
   const [exemptionEndInput, setExemptionEndInput] = useState<string>("");
   const [exemptionReasonInput, setExemptionReasonInput] = useState<string>("");
   const [changeReasonInput, setChangeReasonInput] = useState<string>("");
-  const [currentVersion, setCurrentVersion] = useState<number>(1);
+  const [currentVersion, setCurrentVersion] = useState<number>(0);
   const [currentEffectiveFeePreview, setCurrentEffectiveFeePreview] = useState<string>("R$ 0,50");
 
   // Selected Seller for action
@@ -126,6 +126,13 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
     router.refresh();
   };
 
+  const handleCloseCommissionModal = () => {
+    setIsManageCommissionOpen(false);
+    setCommissionFeedback(null);
+    setCommissionConcurrencyAlert(null);
+    setChangeReasonInput("");
+  };
+
   // Open Manage Commission Modal
   const handleOpenCommissionModal = async (seller: SellerItem) => {
     setSelectedSeller(seller);
@@ -143,7 +150,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
     
     setCustomFeeInput(customFee);
     setCommissionMode(source === "EXEMPTION" ? "EXEMPTION" : source === "CUSTOM" ? "CUSTOM" : "DEFAULT");
-    setCurrentVersion(seller.commission?.version ?? 1);
+    setCurrentVersion(seller.commission?.version ?? 0);
     setCurrentEffectiveFeePreview(seller.commission?.formattedFee || "R$ 0,50");
 
     if (seller.commission?.exemption) {
@@ -165,10 +172,11 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       if (res.ok) {
         const payload = await res.json();
         if (payload.success && payload.data) {
-          const { effectiveFee, setting, history } = payload.data;
+          const { effectiveFee, setting, history, version } = payload.data;
           setCommissionAuditHistory(history || []);
+          const resolvedVersion = setting?.version ?? version ?? 0;
+          setCurrentVersion(resolvedVersion);
           if (setting) {
-            setCurrentVersion(setting.version);
             if (setting.customFeeCents !== null && setting.customFeeCents !== undefined) {
               setCustomFeeInput(setting.customFeeCents / 100);
             }
@@ -186,6 +194,12 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
             } else {
               setCommissionMode("DEFAULT");
             }
+          } else {
+            setCommissionMode("DEFAULT");
+            setCustomFeeInput(0.5);
+            setExemptionStartInput("");
+            setExemptionEndInput("");
+            setExemptionReasonInput("");
           }
           if (effectiveFee) {
             setCurrentEffectiveFeePreview(effectiveFee.formattedFee);
@@ -279,13 +293,41 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         if (freshRes.ok) {
           const freshData = await freshRes.json();
           if (freshData.success && freshData.data) {
-            setCurrentVersion(freshData.data.setting?.version ?? (currentVersion + 1));
-            setCommissionAuditHistory(freshData.data.history || []);
-            if (freshData.data.effectiveFee) {
-              setCurrentEffectiveFeePreview(freshData.data.effectiveFee.formattedFee);
+            const { setting, effectiveFee, history, version } = freshData.data;
+            const updatedVersion = setting?.version ?? version ?? 0;
+            setCurrentVersion(updatedVersion);
+            setCommissionAuditHistory(history || []);
+            if (setting) {
+              if (setting.customFeeCents !== null && setting.customFeeCents !== undefined) {
+                setCustomFeeInput(setting.customFeeCents / 100);
+              }
+              if (setting.exemptionActive) {
+                setCommissionMode("EXEMPTION");
+                if (setting.exemptionStart) {
+                  setExemptionStartInput(new Date(setting.exemptionStart).toISOString().slice(0, 16));
+                }
+                if (setting.exemptionEnd) {
+                  setExemptionEndInput(new Date(setting.exemptionEnd).toISOString().slice(0, 16));
+                }
+                setExemptionReasonInput(setting.exemptionReason || "");
+              } else if (setting.customFeeCents !== null) {
+                setCommissionMode("CUSTOM");
+              } else {
+                setCommissionMode("DEFAULT");
+              }
+            } else {
+              setCommissionMode("DEFAULT");
+              setCustomFeeInput(0.5);
+              setExemptionStartInput("");
+              setExemptionEndInput("");
+              setExemptionReasonInput("");
+            }
+            if (effectiveFee) {
+              setCurrentEffectiveFeePreview(effectiveFee.formattedFee);
             }
           }
         }
+        await fetchSellers();
         return;
       }
 
@@ -300,6 +342,8 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
 
       if (data.data?.setting) {
         setCurrentVersion(data.data.setting.version);
+      } else if (typeof data.data?.version === "number") {
+        setCurrentVersion(data.data.version);
       }
       if (data.data?.effectiveFee) {
         setCurrentEffectiveFeePreview(data.data.effectiveFee.formattedFee);
@@ -311,6 +355,11 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         const histData = await histRes.json();
         if (histData.data?.history) {
           setCommissionAuditHistory(histData.data.history);
+        }
+        if (histData.data?.setting) {
+          setCurrentVersion(histData.data.setting.version);
+        } else if (typeof histData.data?.version === "number") {
+          setCurrentVersion(histData.data.version);
         }
       }
 
@@ -1148,7 +1197,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   <Coins className="w-5 h-5 text-blue-400" />
                   <h3 className="text-lg font-bold text-white">Gerenciar Taxa da Plataforma</h3>
                   <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                    v{currentVersion}
+                    {currentVersion === 0 ? "v0 (Padrão)" : `v${currentVersion}`}
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
@@ -1156,7 +1205,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                 </p>
               </div>
               <button
-                onClick={() => setIsManageCommissionOpen(false)}
+                onClick={handleCloseCommissionModal}
                 className="text-gray-400 hover:text-white cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
@@ -1448,7 +1497,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setIsManageCommissionOpen(false)}
+                    onClick={handleCloseCommissionModal}
                     className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                   >
                     Fechar

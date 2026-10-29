@@ -533,6 +533,155 @@ describe('SellerCommissionService — Fase 2: Motor de Resolução de Taxas e Au
       expect(history[1].id).toBe('log-1');
       expect(history[1].newFeeCents).toBe(50);
     });
+
+    it('5.5. Permite criação inicial com expectedVersion: 0 sem gerar falso conflito e grava versão 1', async () => {
+      const mockTx = {
+        query: {
+          sellerCommissionSettings: {
+            findFirst: vi.fn().mockResolvedValue(null), // Vendedor novo, sem registro prévio
+          },
+        },
+        insert: vi.fn().mockImplementation(() => ({
+          values: vi.fn().mockImplementation(() => ({
+            returning: vi.fn().mockResolvedValue([
+              {
+                id: 'new-cfg-1',
+                sellerId: 'seller-new',
+                customFeeCents: 20,
+                exemptionActive: false,
+                exemptionStart: null,
+                exemptionEnd: null,
+                exemptionReason: null,
+                version: 1,
+                updatedAt: new Date(),
+                updatedById: mockAdmin.id,
+                updatedByName: mockAdmin.name,
+                updatedByEmail: mockAdmin.email,
+              },
+            ]),
+          })),
+        })),
+      };
+
+      vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+      const created = await SellerCommissionService.updateSellerCommission({
+        sellerId: 'seller-new',
+        customFeeCents: 20,
+        expectedVersion: 0, // Versão 0 enviada para vendedor sem configuração prévia
+        reason: 'Primeira personalização da taxa do vendedor',
+        adminUser: mockAdmin,
+      });
+
+      expect(created.version).toBe(1);
+      expect(created.customFeeCents).toBe(20);
+      expect(mockTx.insert).toHaveBeenCalledTimes(2); // Inserção de settings + Inserção de audit log
+    });
+
+    it('5.6. Detecta conflito real quando expectedVersion: 0 é enviado mas outro admin já criou a configuração', async () => {
+      const mockTx = {
+        query: {
+          sellerCommissionSettings: {
+            // Outro administrador já inseriu concorrentemente enquanto este estava no formulário!
+            findFirst: vi.fn().mockResolvedValue({
+              id: 'cfg-already-created',
+              sellerId: 'seller-race-create',
+              customFeeCents: 15,
+              version: 1,
+            }),
+          },
+        },
+      };
+
+      vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+      await expect(
+        SellerCommissionService.updateSellerCommission({
+          sellerId: 'seller-race-create',
+          customFeeCents: 20,
+          expectedVersion: 0, // Esperava que não houvesse registro prévio
+          reason: 'Tentativa concorrente de criação',
+          adminUser: mockAdmin,
+        })
+      ).rejects.toThrow(SellerCommissionConcurrencyError);
+    });
+
+    it('5.7. Rejeita atualização quando versão enviada é desatualizada (expectedVersion: 1 quando atual é 2)', async () => {
+      const mockTx = {
+        query: {
+          sellerCommissionSettings: {
+            findFirst: vi.fn().mockResolvedValue({
+              id: 'cfg-stale',
+              sellerId: 'seller-stale',
+              customFeeCents: 30,
+              version: 2, // Versão atual no banco já é 2
+            }),
+          },
+        },
+      };
+
+      vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+      await expect(
+        SellerCommissionService.updateSellerCommission({
+          sellerId: 'seller-stale',
+          customFeeCents: 25,
+          expectedVersion: 1, // Enviou versão 1 antiga
+          reason: 'Tentativa de salvar com versão defasada',
+          adminUser: mockAdmin,
+        })
+      ).rejects.toThrow(SellerCommissionConcurrencyError);
+    });
+
+    it('5.8. Salva com sucesso após recarregar dados e enviar a versão correta (expectedVersion: 2)', async () => {
+      const mockTx = {
+        query: {
+          sellerCommissionSettings: {
+            findFirst: vi.fn().mockResolvedValue({
+              id: 'cfg-recovered',
+              sellerId: 'seller-recovered',
+              customFeeCents: 30,
+              version: 2,
+            }),
+          },
+        },
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: 'cfg-recovered',
+                  sellerId: 'seller-recovered',
+                  customFeeCents: 25,
+                  exemptionActive: false,
+                  version: 3,
+                  updatedAt: new Date(),
+                  updatedById: mockAdmin.id,
+                  updatedByName: mockAdmin.name,
+                  updatedByEmail: mockAdmin.email,
+                },
+              ]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({
+          values: vi.fn().mockResolvedValue([]),
+        })),
+      };
+
+      vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+      const updated = await SellerCommissionService.updateSellerCommission({
+        sellerId: 'seller-recovered',
+        customFeeCents: 25,
+        expectedVersion: 2, // Versão correta após recarregamento
+        reason: 'Atualização após revisão com dados mais recentes',
+        adminUser: mockAdmin,
+      });
+
+      expect(updated.version).toBe(3);
+      expect(updated.customFeeCents).toBe(25);
+    });
   });
 
   describe('6. Isolamento e Não Interferência com Outros Módulos', () => {

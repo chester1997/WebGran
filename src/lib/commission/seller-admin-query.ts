@@ -199,7 +199,7 @@ export async function loadAdminSellersList(): Promise<SellerItem[]> {
         isExempt: effectiveFee.isExempt,
         customFeeCents: effectiveFee.customFeeCents,
         platformDefaultFeeCents: effectiveFee.platformDefaultFeeCents,
-        version: setting?.version ?? 1,
+        version: setting?.version ?? 0,
         exemption: {
           status: effectiveFee.exemption.status,
           isActive: effectiveFee.exemption.isActive,

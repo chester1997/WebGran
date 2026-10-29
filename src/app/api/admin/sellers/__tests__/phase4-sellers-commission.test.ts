@@ -164,8 +164,30 @@ describe("Phase 4: Admin Seller Commission Management Endpoints", () => {
       expect(json.success).toBe(true);
       expect(json.data.effectiveFee.effectiveFeeCents).toBe(25);
       expect(json.data.setting.version).toBe(3);
+      expect(json.data.version).toBe(3);
       expect(json.data.history).toHaveLength(1);
       expect(json.data.history[0].reason).toBe("Acordo comercial VIP");
+    });
+
+    it("5.1. Returns version: 0 when seller has no custom setting yet", async () => {
+      vi.mocked(SellerCommissionService.resolveEffectiveFee as any).mockResolvedValue({
+        effectiveFeeCents: 50,
+        effectiveFeeReais: 0.5,
+        formattedFee: "R$ 0,50",
+        source: "PLATFORM_DEFAULT",
+        isExempt: false,
+      });
+      vi.mocked(SellerCommissionService.getSellerCommissionSetting as any).mockResolvedValue(null);
+      vi.mocked(SellerCommissionService.getSellerCommissionHistory as any).mockResolvedValue([]);
+
+      const req = new Request("http://localhost/api/admin/sellers/seller-uuid-10/commission");
+      const res = await GET(req, { params: Promise.resolve({ id: "seller-uuid-10" }) });
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.setting).toBeNull();
+      expect(json.data.version).toBe(0);
     });
   });
 
@@ -392,6 +414,133 @@ describe("Phase 4: Admin Seller Commission Management Endpoints", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.success).toBe(true);
+    });
+
+    it("14. Passes expectedVersion: 0 to service when configuring unconfigured seller", async () => {
+      vi.mocked(SellerCommissionService.updateSellerCommission as any).mockResolvedValue({
+        id: "setting-new",
+        sellerId: "seller-uuid-10",
+        customFeeCents: 20,
+        exemptionActive: false,
+        version: 1,
+      });
+      vi.mocked(SellerCommissionService.resolveEffectiveFee as any).mockResolvedValue({
+        effectiveFeeCents: 20,
+        effectiveFeeReais: 0.2,
+        formattedFee: "R$ 0,20",
+        source: "CUSTOM",
+      });
+
+      const req = new Request("http://localhost/api/admin/sellers/seller-uuid-10/commission", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "CUSTOM",
+          customFeeCents: 20,
+          expectedVersion: 0,
+          reason: "Primeira personalização de taxa",
+        }),
+      });
+
+      const res = await PATCH(req, { params: Promise.resolve({ id: "seller-uuid-10" }) });
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.version).toBe(1);
+      expect(SellerCommissionService.updateSellerCommission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sellerId: "seller-uuid-10",
+          expectedVersion: 0,
+        })
+      );
+    });
+
+    it("15. Converts string expectedVersion to number safely", async () => {
+      vi.mocked(SellerCommissionService.updateSellerCommission as any).mockResolvedValue({
+        id: "setting-1",
+        sellerId: "seller-uuid-10",
+        customFeeCents: 25,
+        version: 2,
+      });
+      vi.mocked(SellerCommissionService.resolveEffectiveFee as any).mockResolvedValue({
+        effectiveFeeCents: 25,
+        effectiveFeeReais: 0.25,
+        formattedFee: "R$ 0,25",
+        source: "CUSTOM",
+      });
+
+      const req = new Request("http://localhost/api/admin/sellers/seller-uuid-10/commission", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "CUSTOM",
+          customFeeCents: 25,
+          expectedVersion: "1", // Passado como string
+          reason: "Conversão de string para number",
+        }),
+      });
+
+      const res = await PATCH(req, { params: Promise.resolve({ id: "seller-uuid-10" }) });
+      expect(res.status).toBe(200);
+      expect(SellerCommissionService.updateSellerCommission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expectedVersion: 1, // Convertido para number
+        })
+      );
+    });
+
+    it("16. Full concurrency flow: 409 conflict on stale version, success after updating version", async () => {
+      // 1. First attempt with stale version 1 throws concurrency error
+      vi.mocked(SellerCommissionService.updateSellerCommission as any).mockRejectedValueOnce(
+        new SellerCommissionConcurrencyError("Conflito: versão esperada 1, atual 2.")
+      );
+
+      const reqConflict = new Request("http://localhost/api/admin/sellers/seller-uuid-10/commission", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "CUSTOM",
+          customFeeCents: 15,
+          expectedVersion: 1,
+          reason: "Tentativa concorrente",
+        }),
+      });
+
+      const resConflict = await PATCH(reqConflict, { params: Promise.resolve({ id: "seller-uuid-10" }) });
+      expect(resConflict.status).toBe(409);
+      const jsonConflict = await resConflict.json();
+      expect(jsonConflict.code).toBe("CONCURRENCY_CONFLICT");
+
+      // 2. Client reloads fresh state and retries with expectedVersion: 2
+      vi.mocked(SellerCommissionService.updateSellerCommission as any).mockResolvedValueOnce({
+        id: "setting-1",
+        sellerId: "seller-uuid-10",
+        customFeeCents: 15,
+        version: 3,
+      });
+      vi.mocked(SellerCommissionService.resolveEffectiveFee as any).mockResolvedValueOnce({
+        effectiveFeeCents: 15,
+        effectiveFeeReais: 0.15,
+        formattedFee: "R$ 0,15",
+        source: "CUSTOM",
+      });
+
+      const reqRetry = new Request("http://localhost/api/admin/sellers/seller-uuid-10/commission", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "CUSTOM",
+          customFeeCents: 15,
+          expectedVersion: 2, // Versão atualizada após recarregar
+          reason: "Tentativa após recarregar dados mais recentes",
+        }),
+      });
+
+      const resRetry = await PATCH(reqRetry, { params: Promise.resolve({ id: "seller-uuid-10" }) });
+      expect(resRetry.status).toBe(200);
+      const jsonRetry = await resRetry.json();
+      expect(jsonRetry.success).toBe(true);
+      expect(jsonRetry.data.version).toBe(3);
     });
   });
 });
