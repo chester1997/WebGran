@@ -29,7 +29,9 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  UserCog
+  UserCog,
+  BarChart3,
+  Wallet
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -66,6 +68,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     { label: "Clientes", href: "/admin/customers", icon: UserCheck },
     { label: "Vendedores e Taxas", href: "/admin/sellers", icon: Users },
     { label: "Comissão da Plataforma", href: "/admin/commission", icon: Coins },
+    { label: "Relatórios", href: "/admin/reports", icon: BarChart3 },
   ];
 
   // Section 3: PLATAFORMA
@@ -73,6 +76,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     { label: "Planos WebGran", href: "/admin/plans", icon: Package },
     { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: CreditCard },
     { label: "Recursos & Features", href: "/admin/features", icon: Sliders },
+    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", icon: Wallet },
   ];
 
   // Submenu: Biblioteca de Vídeos

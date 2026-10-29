@@ -1374,3 +1374,24 @@ export const sellerCommissionAuditLogsRelations = relations(sellerCommissionAudi
     references: [users.id],
   }),
 }));
+
+export const sellerGatewayControls = pgTable('seller_gateway_controls', {
+  gateway: text('gateway').primaryKey(), // 'pushinpay' | 'mercadopago' | 'syncpay'
+  name: text('name').notNull(),
+  allowNewConnections: boolean('allow_new_connections').notNull().default(true),
+  allowNewPayments: boolean('allow_new_payments').notNull().default(true),
+  notes: text('notes'),
+  updatedById: uuid('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
+  updatedByName: text('updated_by_name'),
+  updatedByEmail: text('updated_by_email'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const sellerGatewayControlsRelations = relations(sellerGatewayControls, ({ one }) => ({
+  updatedBy: one(users, {
+    fields: [sellerGatewayControls.updatedById],
+    references: [users.id],
+  }),
+}));
+

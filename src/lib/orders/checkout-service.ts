@@ -3,6 +3,7 @@ import { products, orders, orderItems, stores, coupons, combos, comboProducts } 
 import { eq, inArray, and, sql, asc, desc } from "drizzle-orm";
 import { paymentService } from "@/lib/payments/payment-service";
 import { ComboService } from "@/lib/combos/combo-service";
+import { SellerGatewayControlService } from "@/lib/payments/seller-gateway-control-service";
 
 export interface CheckoutItemInput {
   id: string;
@@ -447,10 +448,20 @@ export class CheckoutService {
         : null;
       const isMpActive = Boolean(mpConn);
 
+      // Check Administrative Gateway Controls
+      const isPushinPayPaymentAllowed = await SellerGatewayControlService.isPaymentAllowed("pushinpay");
+      const isMpPaymentAllowed = await SellerGatewayControlService.isPaymentAllowed("mercadopago");
+
       let targetGateway: "mercadopago" | "pushinpay" | "syncpay" | null = null;
 
       if (paymentGateway) {
         if (paymentGateway === "mercadopago") {
+          if (!isMpPaymentAllowed) {
+            return {
+              success: false,
+              error: "Os pagamentos via Mercado Pago foram desativados temporariamente pela administração da plataforma.",
+            };
+          }
           if (!isMpActive) {
             return {
               success: false,
@@ -459,6 +470,12 @@ export class CheckoutService {
           }
           targetGateway = "mercadopago";
         } else if (paymentGateway === "pushinpay") {
+          if (!isPushinPayPaymentAllowed) {
+            return {
+              success: false,
+              error: "Os pagamentos via PushinPay foram desativados temporariamente pela administração da plataforma.",
+            };
+          }
           if (!isPushinPayActive) {
             return {
               success: false,
@@ -473,15 +490,21 @@ export class CheckoutService {
           };
         }
       } else {
-        // Auto-select: prioritize PushinPay if configured, otherwise Mercado Pago
-        if (isPushinPayActive) {
+        // Auto-select: prioritize PushinPay if configured and allowed, otherwise Mercado Pago if allowed
+        if (isPushinPayActive && isPushinPayPaymentAllowed) {
           targetGateway = "pushinpay";
-        } else if (isMpActive) {
+        } else if (isMpActive && isMpPaymentAllowed) {
           targetGateway = "mercadopago";
         }
       }
 
       if (!targetGateway) {
+        if ((isPushinPayActive && !isPushinPayPaymentAllowed) || (isMpActive && !isMpPaymentAllowed)) {
+          return {
+            success: false,
+            error: "O processamento de novos pagamentos está temporariamente suspenso pela administração da plataforma.",
+          };
+        }
         return {
           success: false,
           error: "Esta loja não possui nenhum meio de pagamento ativo configurado no momento (PushinPay ou Mercado Pago).",

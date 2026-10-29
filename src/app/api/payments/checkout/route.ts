@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { stores, products, telegramCustomers, orders, orderItems } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { paymentService } from '@/lib/payments/payment-service';
+import { SellerGatewayControlService } from '@/lib/payments/seller-gateway-control-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Parâmetros storeId, productId e customerTelegramId são obrigatórios.' },
         { status: 400 }
+      );
+    }
+
+    // 0. Verify Admin Payment Gateway Control
+    const isPaymentAllowed = await SellerGatewayControlService.isPaymentAllowed('mercadopago');
+    if (!isPaymentAllowed) {
+      return NextResponse.json(
+        { error: 'Os pagamentos via Mercado Pago foram desativados temporariamente pela administração da plataforma.' },
+        { status: 403 }
       );
     }
 

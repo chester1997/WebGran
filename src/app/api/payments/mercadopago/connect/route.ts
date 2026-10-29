@@ -3,12 +3,18 @@ import { connection } from 'next/server';
 import { getCurrentUser, getCurrentStore } from '@/lib/auth';
 import { paymentService } from '@/lib/payments/payment-service';
 import { hasFeature } from '@/lib/entitlements/entitlement-service';
+import { SellerGatewayControlService } from '@/lib/payments/seller-gateway-control-service';
 
 async function buildMercadoPagoOAuthUrl(req: NextRequest, customRedirectUri?: string) {
   const user = await getCurrentUser();
   const role = (user?.role || '').toLowerCase();
   if (!user || (role !== 'seller' && role !== 'admin' && role !== 'super_admin')) {
     return { error: 'Não autorizado', status: 401 };
+  }
+
+  const isConnectionAllowed = await SellerGatewayControlService.isConnectionAllowed('mercadopago');
+  if (!isConnectionAllowed) {
+    return { error: 'Novas conexões via Mercado Pago foram desativadas temporariamente pela administração da plataforma.', status: 403 };
   }
 
   const gatewayAllowed = await hasFeature(user.id, "payment_gateways_enabled");

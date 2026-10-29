@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import RecebimentosClient from './RecebimentosClient';
 import SetupStoreClient from "../SetupStoreClient";
 import { ensurePaymentTables } from '@/db/ensure-payment-tables';
+import { SellerGatewayControlService } from '@/lib/payments/seller-gateway-control-service';
 
 export default async function RecebimentosPage() {
   const seller = await requireSeller();
@@ -20,6 +21,25 @@ export default async function RecebimentosPage() {
   let connection = null;
   let syncPayConn = null;
   let pushinPayConn = null;
+  let adminControls = {
+    pushinpay: { allowNewConnections: true, allowNewPayments: true },
+    mercadopago: { allowNewConnections: true, allowNewPayments: true },
+    syncpay: { allowNewConnections: false, allowNewPayments: false },
+  };
+
+  try {
+    const controls = await SellerGatewayControlService.getAllControls();
+    for (const c of controls) {
+      if (c.gateway === 'pushinpay' || c.gateway === 'mercadopago' || c.gateway === 'syncpay') {
+        adminControls[c.gateway] = {
+          allowNewConnections: c.allowNewConnections,
+          allowNewPayments: c.allowNewPayments,
+        };
+      }
+    }
+  } catch (err) {
+    console.error('[RecebimentosPage] Error fetching gateway controls:', err);
+  }
 
   try {
     // Fetch Mercado Pago Connection
@@ -76,6 +96,7 @@ export default async function RecebimentosPage() {
         status: pushinPayConn?.status || 'inactive',
         updatedAt: pushinPayConn?.updatedAt ? new Date(pushinPayConn.updatedAt).toISOString() : null,
       }}
+      adminControls={adminControls}
     />
   );
 }

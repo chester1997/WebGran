@@ -338,7 +338,11 @@ export async function ensureEntitlementTablesAndSeed() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+    `);
+    await db.execute(sql`
       ALTER TABLE video_library_plans ADD COLUMN IF NOT EXISTS sync_status TEXT NOT NULL DEFAULT 'SYNC_PENDING';
+    `);
+    await db.execute(sql`
       ALTER TABLE video_library_plans ADD COLUMN IF NOT EXISTS sync_error TEXT;
     `);
 

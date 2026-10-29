@@ -8,6 +8,7 @@ import { encrypt, decrypt } from '@/lib/encryption';
 import { pushinPayProvider } from '@/lib/payments/providers/pushinpay';
 import { hasFeature } from '@/lib/entitlements/entitlement-service';
 import { ensurePaymentTables } from '@/db/ensure-payment-tables';
+import { SellerGatewayControlService } from '@/lib/payments/seller-gateway-control-service';
 
 export async function GET() {
   try {
@@ -103,6 +104,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Action: Connect / Save Token
+    const isConnAllowed = await SellerGatewayControlService.isConnectionAllowed('pushinpay');
+    if (!isConnAllowed) {
+      return NextResponse.json(
+        { error: 'Novas conexões via PushinPay foram desativadas temporariamente pela administração da plataforma.' },
+        { status: 403 }
+      );
+    }
+
     let { token } = body;
 
     let conn = await db.query.sellerPaymentConnections.findFirst({

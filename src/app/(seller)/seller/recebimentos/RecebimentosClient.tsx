@@ -48,10 +48,17 @@ interface PushinPayConnectionInfo {
   updatedAt: string | null;
 }
 
+interface AdminGatewayControlMap {
+  pushinpay?: { allowNewConnections: boolean; allowNewPayments: boolean };
+  mercadopago?: { allowNewConnections: boolean; allowNewPayments: boolean };
+  syncpay?: { allowNewConnections: boolean; allowNewPayments: boolean };
+}
+
 interface Props {
   connection: ConnectionInfo | null;
   syncPayConnection?: SyncPayConnectionInfo | null;
   pushinPayConnection?: PushinPayConnectionInfo | null;
+  adminControls?: AdminGatewayControlMap;
 }
 
 /* =========================================================
@@ -94,7 +101,12 @@ function PushinPayLogo({ className = "w-7 h-7" }: { className?: string }) {
 }
 
 
-export default function RecebimentosClient({ connection, syncPayConnection, pushinPayConnection }: Props) {
+export default function RecebimentosClient({
+  connection,
+  syncPayConnection,
+  pushinPayConnection,
+  adminControls,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -423,6 +435,20 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
               }
             </p>
 
+            {adminControls?.mercadopago?.allowNewPayments === false && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2.5">
+                <Lock className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>Processamento de novos pagamentos via Mercado Pago pausado pela administração da plataforma.</span>
+              </div>
+            )}
+
+            {adminControls?.mercadopago?.allowNewConnections === false && !isMpActive && (
+              <div className="p-3 rounded-xl bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-zinc-400" />
+                <span>Novas conexões via Mercado Pago estão temporariamente suspensas pela administração da plataforma.</span>
+              </div>
+            )}
+
             {feedbackMsg?.provider === 'mercado_pago' && (
               <div className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 transition-all ${
                 feedbackMsg.type === 'success'
@@ -490,13 +516,18 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
               <Button
                 type="button"
                 onClick={handleConnectMp}
-                disabled={loadingMpConnect}
-                className="w-full bg-[#009EE3] hover:bg-[#0082ba] text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-[#009EE3]/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                disabled={loadingMpConnect || adminControls?.mercadopago?.allowNewConnections === false}
+                className="w-full bg-[#009EE3] hover:bg-[#0082ba] text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-[#009EE3]/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loadingMpConnect ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Conectando ao Mercado Pago...</span>
+                  </>
+                ) : adminControls?.mercadopago?.allowNewConnections === false ? (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>Conexões Suspensas pelo Admin</span>
                   </>
                 ) : (
                   <>
@@ -630,6 +661,20 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
               }
             </p>
 
+            {adminControls?.pushinpay?.allowNewPayments === false && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2.5">
+                <Lock className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>Processamento de novos pagamentos via PushinPay pausado pela administração da plataforma.</span>
+              </div>
+            )}
+
+            {adminControls?.pushinpay?.allowNewConnections === false && !isPushinPayActive && (
+              <div className="p-3 rounded-xl bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-zinc-400" />
+                <span>Novas conexões via PushinPay estão temporariamente suspensas pela administração da plataforma.</span>
+              </div>
+            )}
+
             {feedbackMsg?.provider === 'pushinpay' && (
               <div className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 transition-all ${
                 feedbackMsg.type === 'success'
@@ -716,10 +761,20 @@ export default function RecebimentosClient({ connection, syncPayConnection, push
               <Button
                 type="button"
                 onClick={handleOpenPushinPayModal}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                disabled={adminControls?.pushinpay?.allowNewConnections === false}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-11 px-6 shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
-                Conectar PushinPay
+                {adminControls?.pushinpay?.allowNewConnections === false ? (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>Conexões Suspensas pelo Admin</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Conectar PushinPay</span>
+                  </>
+                )}
               </Button>
             )}
           </div>
