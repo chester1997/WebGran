@@ -1,20 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit3, Check } from "lucide-react";
+import { Plus, Edit3, Sparkles } from "lucide-react";
 import { createCarouselAction, updateCarouselAction } from "./actions";
 import { IconPickerModal } from "./IconPickerModal";
 
-import { getProductBadge } from "@/lib/product-badge";
-
 interface CarouselModalProps {
-  products: Array<{ id: string; title: string; price: string | number; badge?: string | null }>;
+  products?: Array<{ id: string; title: string; price: string | number; badge?: string | null }>;
   carousel?: {
     id: string;
     name: string;
-    selectedProductIds: string[];
+    selectedProductIds?: string[];
     indicatorType?: "BAR" | "ICON" | "NONE";
     iconName?: string | null;
     iconColor?: string | null;
@@ -22,11 +20,10 @@ interface CarouselModalProps {
   triggerText?: string;
 }
 
-export function CarouselModal({ products, carousel, triggerText }: CarouselModalProps) {
+export function CarouselModal({ carousel, triggerText }: CarouselModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState(carousel?.name || "");
-  const [selectedIds, setSelectedIds] = useState<string[]>(carousel?.selectedProductIds || []);
 
   const [indicatorType, setIndicatorType] = useState<"BAR" | "ICON" | "NONE">(
     carousel?.indicatorType || "BAR"
@@ -36,11 +33,14 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
 
   const isEditing = !!carousel;
 
-  const toggleProduct = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+  useEffect(() => {
+    if (open) {
+      setName(carousel?.name || "");
+      setIndicatorType(carousel?.indicatorType || "BAR");
+      setIconName(carousel?.iconName || "Flame");
+      setIconColor(carousel?.iconColor || "#8B5CF6");
+    }
+  }, [open, carousel]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +51,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
         await updateCarouselAction(
           carousel.id,
           name,
-          selectedIds,
+          undefined, // Preserva produtos já associados
           indicatorType,
           iconName,
           iconColor
@@ -59,7 +59,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
       } else {
         await createCarouselAction(
           name,
-          selectedIds,
+          undefined, // Cria carrossel vazio sem exigir produtos prévios
           indicatorType,
           iconName,
           iconColor
@@ -68,7 +68,6 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
       setOpen(false);
       if (!isEditing) {
         setName("");
-        setSelectedIds([]);
         setIndicatorType("BAR");
         setIconName("Flame");
         setIconColor("#8B5CF6");
@@ -92,7 +91,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-[580px] w-full bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[85vh]">
+      <DialogContent className="sm:max-w-[500px] w-full bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[85vh]">
         <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
           <DialogTitle className="text-lg font-bold text-white">
             {isEditing ? "Editar Carrossel" : "Novo Carrossel"}
@@ -110,7 +109,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Ex: Lançamentos, Ofertas Especiais, Mais Vendidos"
+                placeholder="Ex: Lançamentos, Ofertas Especiais, Doramas"
                 required
                 className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
               />
@@ -126,57 +125,17 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
               onChangeIconColor={setIconColor}
             />
 
-            {/* Seleção de produtos */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                  Produtos ({selectedIds.length} selecionados)
-                </label>
-                <span className="text-[10px] text-zinc-500">
-                  Clique nos produtos para incluir neste carrossel
-                </span>
+            {/* Info Box: Product Association Clarification */}
+            <div className="bg-[#1A1A1E] rounded-xl p-4 border border-white/5 flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 shrink-0">
+                <Sparkles className="w-4 h-4" />
               </div>
-
-              {products.length === 0 ? (
-                <div className="py-8 text-center bg-[#1A1A1E] rounded-xl border border-white/5 text-zinc-500 text-xs">
-                  Nenhum produto cadastrado na sua loja ainda.
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                  {products.map(product => {
-                    const selected = selectedIds.includes(product.id);
-                    const badgeConfig = getProductBadge(product.badge);
-                    return (
-                      <div
-                        key={product.id}
-                        onClick={() => toggleProduct(product.id)}
-                        className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${
-                          selected
-                            ? "bg-blue-600/10 border-blue-500/50 text-white"
-                            : "bg-[#1A1A1E] border-white/5 text-zinc-400 hover:border-white/10 hover:text-zinc-200"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
-                          <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all shrink-0 ${
-                            selected ? "bg-blue-600 border-blue-600 text-white" : "border-white/20 bg-transparent"
-                          }`}>
-                            {selected && <Check className="w-3.5 h-3.5" />}
-                          </div>
-                          <span className="text-sm font-medium truncate">{product.title}</span>
-                          {badgeConfig && (
-                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badgeConfig.sellerBadgeClass}`}>
-                              {badgeConfig.label}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs font-semibold text-emerald-400 shrink-0">
-                          R$ {Number(product.price).toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="text-xs text-zinc-400 space-y-1">
+                <p className="font-semibold text-zinc-200">Como vincular produtos?</p>
+                <p className="leading-relaxed">
+                  Os produtos são vinculados diretamente no cadastro e edição de cada produto na tela de <strong className="text-zinc-300">Produtos</strong>. Você pode salvar este carrossel agora e associar os itens a qualquer momento.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -194,7 +153,7 @@ export function CarouselModal({ products, carousel, triggerText }: CarouselModal
               disabled={loading || !name.trim()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 shadow-lg shadow-blue-600/20"
             >
-              {loading ? "Salvando..." : "Salvar Carrossel"}
+              {loading ? "Salvando..." : isEditing ? "Salvar Alterações" : "Salvar Carrossel"}
             </Button>
           </div>
         </form>

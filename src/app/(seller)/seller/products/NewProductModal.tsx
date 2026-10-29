@@ -14,10 +14,19 @@ import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { createProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
 import { ProductVideosManager, PendingVideo } from "./ProductVideosManager";
+import { ProductCarouselsPicker, CarouselOption } from "./ProductCarouselsPicker";
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
 
-export function NewProductModal({ categories, bots }: { categories: any[]; bots: any[] }) {
+export function NewProductModal({
+  categories,
+  bots,
+  carousels = []
+}: {
+  categories: any[];
+  bots: any[];
+  carousels?: CarouselOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,6 +40,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
   const [pendingVideos, setPendingVideos] = useState<PendingVideo[]>([]);
   const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([]);
+  const [selectedCarouselIds, setSelectedCarouselIds] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +54,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
       setImageUrl("");
       setBannerUrl("");
       setSelectedBotId("");
+      setSelectedCarouselIds([]);
 
       // Cleanup pending Bunny videos if modal closed without saving
       if (pendingVideos.length > 0) {
@@ -148,6 +159,7 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
     formData.set("coverUrl", imageUrl);
     formData.set("bannerUrl", bannerUrl);
     formData.set("videoIds", JSON.stringify(selectedVideoIds));
+    formData.set("carouselIds", JSON.stringify(selectedCarouselIds));
 
     try {
       const res = await createProductAction(formData);
@@ -472,6 +484,13 @@ export function NewProductModal({ categories, bots }: { categories: any[]; bots:
                 </select>
               </div>
             </div>
+
+            {/* Carrosséis da Loja */}
+            <ProductCarouselsPicker
+              carousels={carousels}
+              selectedIds={selectedCarouselIds}
+              onChange={setSelectedCarouselIds}
+            />
 
             {/* Indicadores Visuais da Vitrine */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">

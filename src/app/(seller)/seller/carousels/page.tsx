@@ -217,7 +217,10 @@ export default async function SellerCarouselsPage() {
                             size={18} 
                           />
                         ) : c.indicatorType === "NONE" ? null : (
-                          <div className="w-1.5 h-4 bg-red-600 rounded-full shrink-0"></div>
+                          <div
+                            className="w-1.5 h-4 rounded-full shrink-0"
+                            style={{ backgroundColor: c.iconColor || "#8B5CF6" }}
+                          />
                         )}
                         <h4 className="font-bold text-white text-base uppercase tracking-tight">{c.name}</h4>
                       </div>
@@ -229,7 +232,10 @@ export default async function SellerCarouselsPage() {
                     {/* List of included products */}
                     <div className="bg-[#1A1A1E] rounded-xl p-3 space-y-1.5 border border-white/5">
                       {activeProducts.length === 0 ? (
-                        <p className="text-zinc-600 text-xs py-2 text-center">Nenhum produto vinculado</p>
+                        <div className="py-2.5 text-center space-y-1">
+                          <p className="text-zinc-500 text-xs font-medium">Nenhum produto vinculado ainda</p>
+                          <p className="text-[11px] text-zinc-600">Associe produtos a este carrossel na tela de Produtos.</p>
+                        </div>
                       ) : (
                         activeProducts.slice(0, 5).map((prod) => (
                           <div key={prod.id} className="flex items-center justify-between text-xs py-1 px-1">

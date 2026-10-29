@@ -2,9 +2,9 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { products, productVideos } from "@/db/schema";
+import { products, productVideos, productCarousels, carouselProducts } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, inArray } from "drizzle-orm";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
@@ -214,7 +214,54 @@ export async function createProductAction(formData: FormData) {
     }
   }
 
+  // Handle Carousel associations
+  const rawCarouselIds = (formData.get("carouselIds") as string) || null;
+  const hasCarouselSelection = formData.has("carouselIds") || formData.has("carouselIds_initialized");
+  let selectedCarouselIds: string[] = [];
+
+  if (rawCarouselIds) {
+    try {
+      const parsed = JSON.parse(rawCarouselIds);
+      if (Array.isArray(parsed)) {
+        selectedCarouselIds = parsed.filter((id) => typeof id === "string" && id.trim().length > 0);
+      } else if (typeof parsed === "string" && parsed.trim().length > 0) {
+        selectedCarouselIds = [parsed.trim()];
+      }
+    } catch {
+      selectedCarouselIds = formData.getAll("carouselIds").map(String).filter((id) => id.trim().length > 0);
+    }
+  } else if (hasCarouselSelection) {
+    selectedCarouselIds = formData.getAll("carouselIds").map(String).filter((id) => id.trim().length > 0);
+  }
+
+  // Deduplicate carousel IDs
+  selectedCarouselIds = Array.from(new Set(selectedCarouselIds));
+
+  if (selectedCarouselIds.length > 0) {
+    // Multi-tenant & security check: only non-ranking carousels belonging to the current store
+    const validCarousels = await db.query.productCarousels.findMany({
+      where: and(
+        eq(productCarousels.storeId, store.id),
+        eq(productCarousels.isRanking, false),
+        inArray(productCarousels.id, selectedCarouselIds)
+      ),
+      columns: { id: true },
+    });
+
+    if (validCarousels.length !== selectedCarouselIds.length) {
+      throw new Error("Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja.");
+    }
+
+    const recordsToInsert = selectedCarouselIds.map((cId, idx) => ({
+      carouselId: cId,
+      productId: createdProduct.id,
+      position: idx,
+    }));
+    await db.insert(carouselProducts).values(recordsToInsert);
+  }
+
   revalidatePath("/seller/products");
+  revalidatePath("/seller/carousels");
   revalidatePath("/miniapp/[slug]", "layout");
   return { success: true, product: { id: createdProduct.id, title: createdProduct.title } };
 }
@@ -372,7 +419,78 @@ export async function updateProductAction(productId: string, formData: FormData)
     }
   }
 
+  // Handle Carousel associations sync
+  const hasCarouselSelection = formData.has("carouselIds") || formData.has("carouselIds_initialized");
+  if (hasCarouselSelection) {
+    let selectedCarouselIds: string[] = [];
+    const rawCarouselIds = (formData.get("carouselIds") as string) || null;
+
+    if (rawCarouselIds) {
+      try {
+        const parsed = JSON.parse(rawCarouselIds);
+        if (Array.isArray(parsed)) {
+          selectedCarouselIds = parsed.filter((id) => typeof id === "string" && id.trim().length > 0);
+        } else if (typeof parsed === "string" && parsed.trim().length > 0) {
+          selectedCarouselIds = [parsed.trim()];
+        }
+      } catch {
+        selectedCarouselIds = formData.getAll("carouselIds").map(String).filter((id) => id.trim().length > 0);
+      }
+    } else {
+      selectedCarouselIds = formData.getAll("carouselIds").map(String).filter((id) => id.trim().length > 0);
+    }
+
+    selectedCarouselIds = Array.from(new Set(selectedCarouselIds));
+
+    // Multi-tenant check: all selected carousels must belong to this store and must NOT be ranking
+    if (selectedCarouselIds.length > 0) {
+      const validCarousels = await db.query.productCarousels.findMany({
+        where: and(
+          eq(productCarousels.storeId, store.id),
+          eq(productCarousels.isRanking, false),
+          inArray(productCarousels.id, selectedCarouselIds)
+        ),
+        columns: { id: true },
+      });
+
+      if (validCarousels.length !== selectedCarouselIds.length) {
+        throw new Error("Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja.");
+      }
+    }
+
+    // Retrieve all custom carousels of this store
+    const storeCustomCarousels = await db.query.productCarousels.findMany({
+      where: and(
+        eq(productCarousels.storeId, store.id),
+        eq(productCarousels.isRanking, false)
+      ),
+      columns: { id: true },
+    });
+    const customCarouselIds = storeCustomCarousels.map((c) => c.id);
+
+    // Delete existing custom carousel associations for this product (Top 15 ranking is strictly preserved!)
+    if (customCarouselIds.length > 0) {
+      await db.delete(carouselProducts).where(
+        and(
+          eq(carouselProducts.productId, productId),
+          inArray(carouselProducts.carouselId, customCarouselIds)
+        )
+      );
+    }
+
+    // Insert new custom carousel associations
+    if (selectedCarouselIds.length > 0) {
+      const recordsToInsert = selectedCarouselIds.map((cId, idx) => ({
+        carouselId: cId,
+        productId,
+        position: idx,
+      }));
+      await db.insert(carouselProducts).values(recordsToInsert);
+    }
+  }
+
   revalidatePath("/seller/products");
+  revalidatePath("/seller/carousels");
   revalidatePath("/miniapp/[slug]", "layout");
   return { success: true };
 }
@@ -402,6 +520,7 @@ export async function deleteProductAction(productId: string) {
   }
 
   revalidatePath("/seller/products");
+  revalidatePath("/seller/carousels");
   return { success: true };
 }
 

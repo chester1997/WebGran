@@ -13,11 +13,21 @@ import { Upload, X, Edit3, ImageIcon, AlertCircle } from "lucide-react";
 import { updateProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
 import { ProductVideosManager } from "./ProductVideosManager";
-
+import { ProductCarouselsPicker, CarouselOption } from "./ProductCarouselsPicker";
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
 
-export function EditProductModal({ categories, bots, product }: { categories: any[]; bots: any[]; product: any }) {
+export function EditProductModal({
+  categories,
+  bots,
+  product,
+  carousels = []
+}: {
+  categories: any[];
+  bots: any[];
+  product: any;
+  carousels?: CarouselOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,6 +43,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
   const [imageUrl, setImageUrl] = useState(product?.coverUrl || "");
   const [bannerUrl, setBannerUrl] = useState(product?.bannerUrl || "");
   const [selectedBotId, setSelectedBotId] = useState(product?.botId || "");
+  const [selectedCarouselIds, setSelectedCarouselIds] = useState<string[]>(product?.carouselIds || []);
   const [testingAccess, setTestingAccess] = useState(false);
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +65,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
       setImageUrl(product?.coverUrl || "");
       setBannerUrl(product?.bannerUrl || "");
       setSelectedBotId(product?.botId || "");
+      setSelectedCarouselIds(product?.carouselIds || []);
     }
   }, [open, product]);
 
@@ -140,6 +152,7 @@ export function EditProductModal({ categories, bots, product }: { categories: an
     formData.set("deliveryValue", deliveryType === "product_video" ? "" : deliveryValue.trim());
     formData.set("coverUrl", imageUrl);
     formData.set("bannerUrl", bannerUrl);
+    formData.set("carouselIds", JSON.stringify(selectedCarouselIds));
 
     try {
       const res = await updateProductAction(product.id, formData);
@@ -409,6 +422,13 @@ export function EditProductModal({ categories, bots, product }: { categories: an
                 </select>
               </div>
             </div>
+
+            {/* Carrosséis da Loja */}
+            <ProductCarouselsPicker
+              carousels={carousels}
+              selectedIds={selectedCarouselIds}
+              onChange={setSelectedCarouselIds}
+            />
 
             {/* Indicadores Visuais da Vitrine */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">

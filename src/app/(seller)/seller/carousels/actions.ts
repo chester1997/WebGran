@@ -113,13 +113,37 @@ export async function updateRankingCarouselAction(
   }
 
   revalidatePath("/seller/carousels");
+  revalidatePath("/seller/products");
   revalidatePath(`/miniapp/${store.slug}`);
   return { success: true };
 }
 
+export async function getStoreCarouselsAction() {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) return [];
+
+  return await db.query.productCarousels.findMany({
+    where: and(
+      eq(productCarousels.storeId, store.id),
+      eq(productCarousels.isRanking, false)
+    ),
+    orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
+    columns: {
+      id: true,
+      name: true,
+      indicatorType: true,
+      iconName: true,
+      iconColor: true,
+      position: true,
+      status: true,
+    }
+  });
+}
+
 export async function createCarouselAction(
   name: string, 
-  productIds: string[],
+  productIds?: string[],
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
   iconColor?: string
@@ -153,7 +177,7 @@ export async function createCarouselAction(
     isRanking: false,
   }).returning();
 
-  if (productIds.length > 0) {
+  if (Array.isArray(productIds) && productIds.length > 0) {
     await db.insert(carouselProducts).values(
       productIds.map((productId, idx) => ({
         carouselId: carousel.id,
@@ -164,13 +188,15 @@ export async function createCarouselAction(
   }
 
   revalidatePath("/seller/carousels");
+  revalidatePath("/seller/products");
   revalidatePath(`/miniapp/${store.slug}`);
+  return carousel;
 }
 
 export async function updateCarouselAction(
   carouselId: string, 
   name: string, 
-  productIds: string[],
+  productIds?: string[],
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
   iconColor?: string
@@ -195,20 +221,25 @@ export async function updateCarouselAction(
     updatedAt: new Date()
   }).where(eq(productCarousels.id, carouselId));
 
-  await db.delete(carouselProducts).where(eq(carouselProducts.carouselId, carouselId));
+  // Only synchronize products if an array was explicitly provided
+  if (Array.isArray(productIds)) {
+    await db.delete(carouselProducts).where(eq(carouselProducts.carouselId, carouselId));
 
-  if (productIds.length > 0) {
-    await db.insert(carouselProducts).values(
-      productIds.map((productId, idx) => ({
-        carouselId,
-        productId,
-        position: idx
-      }))
-    );
+    if (productIds.length > 0) {
+      await db.insert(carouselProducts).values(
+        productIds.map((productId, idx) => ({
+          carouselId,
+          productId,
+          position: idx
+        }))
+      );
+    }
   }
 
   revalidatePath("/seller/carousels");
+  revalidatePath("/seller/products");
   revalidatePath(`/miniapp/${store.slug}`);
+  return { success: true };
 }
 
 export async function deleteCarouselAction(carouselId: string) {
@@ -221,6 +252,7 @@ export async function deleteCarouselAction(carouselId: string) {
   );
 
   revalidatePath("/seller/carousels");
+  revalidatePath("/seller/products");
   revalidatePath(`/miniapp/${store.slug}`);
 }
 
@@ -256,6 +288,7 @@ export async function moveCarouselPositionAction(carouselId: string, direction: 
   }
 
   revalidatePath("/seller/carousels");
+  revalidatePath("/seller/products");
   revalidatePath(`/miniapp/${store.slug}`);
   return { success: true };
 }

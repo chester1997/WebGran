@@ -43,6 +43,7 @@ interface ProductItem {
   botId?: string | null;
   categoryId?: string | null;
   category?: { id: string; name: string } | null;
+  carouselIds?: string[];
 }
 
 interface Props {
@@ -51,6 +52,7 @@ interface Props {
   categories: { id: string; name: string }[];
   bots: { id: string; username: string; displayName?: string | null }[];
   userRole?: string | null;
+  carousels?: any[];
 }
 
 const durationMap: Record<string, string> = {
@@ -63,7 +65,7 @@ const durationMap: Record<string, string> = {
   annual: 'Anual'
 };
 
-export default function ProductsListClient({ storeName, products, categories, bots, userRole }: Props) {
+export default function ProductsListClient({ storeName, products, categories, bots, userRole, carousels = [] }: Props) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -162,7 +164,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
           </div>
         </div>
 
-        <NewProductModal categories={categories} bots={bots} />
+        <NewProductModal categories={categories} bots={bots} carousels={carousels} />
       </div>
 
       {/* Filter and Search Bar */}
@@ -259,7 +261,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
             }
           </p>
           {products.length === 0 && (
-            <NewProductModal categories={categories} bots={bots} />
+            <NewProductModal categories={categories} bots={bots} carousels={carousels} />
           )}
         </div>
       ) : viewMode === "grid" ? (
@@ -393,7 +395,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
                     )}
                   </Button>
                 )}
-                <EditProductModal product={prod} categories={categories} bots={bots} />
+                <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
                 <Button 
                   onClick={() => handleDelete(prod.id, prod.title)}
                   disabled={deletingId === prod.id}
@@ -489,7 +491,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
                         )}
                       </Button>
                     )}
-                    <EditProductModal product={prod} categories={categories} bots={bots} />
+                    <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
                     <Button 
                       onClick={() => handleDelete(prod.id, prod.title)}
                       disabled={deletingId === prod.id}
