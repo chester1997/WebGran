@@ -39,15 +39,19 @@ async function AdminSidebarWrapper() {
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#050608] text-white selection:bg-blue-500/30 selection:text-blue-200 antialiased">
-      <div className="flex flex-col md:flex-row h-screen overflow-hidden md:p-3.5 md:gap-3.5">
+      <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         {/* Modern Sidebar Component wrapped in Suspense */}
-        <Suspense fallback={<div className="w-64 bg-[#0A0C10] md:rounded-2xl h-full animate-pulse hidden md:block" />}>
+        <Suspense fallback={<div className="w-64 bg-[#0A0C10] h-full animate-pulse hidden md:block" />}>
           <AdminSidebarWrapper />
         </Suspense>
 
-        {/* Floating Main Content Canvas (Painel independente com separação real da sidebar) */}
-        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#0B0D13] md:rounded-2xl border-0 md:border md:border-white/[0.06] md:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] custom-admin-scrollbar relative">
+        {/* Content Canvas Wrapper */}
+        <div className="flex-1 min-h-0 flex flex-col min-w-0 md:pt-3 overflow-hidden relative bg-transparent">
+          <main
+            tabIndex={0}
+            aria-label="Conteúdo Principal"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#0B0D13] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-admin-scrollbar relative"
+          >
             <div className="w-full space-y-6">
               <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse">Carregando painel admin...</div>}>
                 {children}

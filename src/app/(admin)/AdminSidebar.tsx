@@ -53,9 +53,33 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AdminUser>(user);
 
+  const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const prevMobileOpenRef = useRef(mobileOpen);
+
   useEffect(() => {
     setCurrentUser(user);
   }, [user]);
+
+  // Drawer accessibility: manage focus and Escape key
+  useEffect(() => {
+    if (mobileOpen) {
+      const focusTarget = closeButtonRef.current || sidebarRef.current;
+      focusTarget?.focus();
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          setMobileOpen(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    } else if (prevMobileOpenRef.current && !mobileOpen) {
+      hamburgerButtonRef.current?.focus();
+    }
+    prevMobileOpenRef.current = mobileOpen;
+  }, [mobileOpen]);
 
   // Section 1: BOT
   const botItems = [
@@ -116,8 +140,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           </span>
         </div>
         <button
+          ref={hamburgerButtonRef}
+          id="admin-mobile-menu-trigger"
           onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Abrir menu de navegação"
+          aria-expanded={mobileOpen}
+          aria-controls="admin-sidebar-drawer"
+          aria-label={mobileOpen ? "Fechar menu de navegação" : "Abrir menu de navegação"}
           className="p-1.5 rounded-lg bg-[#15171D] text-zinc-300 hover:text-white border border-white/[0.06] active:scale-95 transition-all cursor-pointer"
         >
           {mobileOpen ? <X className="w-5 h-5 text-blue-500" /> : <Menu className="w-5 h-5" />}
@@ -127,21 +155,28 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
       {/* Backdrop for Mobile */}
       {mobileOpen && (
         <div
+          aria-hidden="true"
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden transition-opacity duration-200"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar Container */}
-      <aside className={`
-        fixed md:static inset-y-0 left-0 z-50
-        w-60 md:w-64 h-full bg-[#0B0B0E] md:bg-[#0A0C10]
-        border-r border-white/[0.06] md:border md:border-white/[0.06]
-        md:rounded-2xl md:shadow-[0_10px_30px_-5px_rgba(0,0,0,0.7)]
-        flex-shrink-0 flex flex-col overflow-hidden
-        transition-transform duration-200 ease-in-out shadow-2xl md:shadow-none
-        ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-      `}>
+      <aside
+        id="admin-sidebar-drawer"
+        ref={sidebarRef}
+        tabIndex={-1}
+        aria-label="Navegação Administrativa"
+        className={`
+          fixed md:static inset-y-0 left-0 z-50
+          w-60 md:w-64 h-full bg-[#0B0B0E] md:bg-[#0A0C10]
+          border-r border-white/[0.06] md:border-r-0 md:border-none
+          rounded-none md:rounded-none shadow-2xl md:shadow-none
+          flex-shrink-0 flex flex-col overflow-hidden
+          transition-transform duration-200 ease-in-out outline-none
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
         {/* Brand Header */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.06]">
           <Link href="/admin" className="flex items-center" onClick={() => setMobileOpen(false)}>
@@ -156,6 +191,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               ADMIN
             </span>
             <button
+              ref={closeButtonRef}
               onClick={() => setMobileOpen(false)}
               className="md:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
               aria-label="Fechar menu"
@@ -166,7 +202,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-1 custom-scrollbar">
+        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto py-3 px-2.5 space-y-1 custom-scrollbar">
           {/* Dashboard (Root Item) */}
           <Link
             href="/admin"
