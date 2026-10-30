@@ -25,6 +25,7 @@ import {
   Trophy,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import AdminPageHeader from "../AdminPageHeader";
 import type {
   AdminDashboardData,
   AdminDashboardPeriod,
@@ -161,70 +162,71 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       {/* 1. TOPBAR EXECUTIVA (Sóbria, Minimalista, Sem Caixas) */}
       {/* ==================================================== */}
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-white/[0.04]">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Dashboard Administrativo
-            </h1>
-            <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 bg-white/[0.04] rounded-full">
-              Super Admin
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-zinc-400 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Operacional
-            </span>
-          </div>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Visão estratégica em tempo real de vendas, conversão Pix, saúde do ecossistema e taxas da plataforma
-          </p>
-        </div>
-
-        {/* CONTROLES: SEGMENTED PERIOD & REFRESH */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Segmented Control Minimalista (Linear Style) */}
-          <div className="inline-flex items-center bg-[#07080B] p-0.5 rounded-lg border border-white/[0.05]">
-            {ADMIN_PERIOD_OPTIONS.map((p) => {
-              const isSelected = period === p.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPeriod(p.id)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-[#161820] text-white font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Botão Atualizar Minimalista */}
-          <button
-            type="button"
-            onClick={() => fetchDashboardStats(period, true)}
-            disabled={refreshing || loading}
-            title="Atualizar dados"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0C0E14] hover:bg-[#141720] text-zinc-400 hover:text-white rounded-lg text-xs font-medium transition-all cursor-pointer disabled:opacity-50 h-8"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-400" : "text-zinc-400"}`}
-            />
-            <span className="hidden sm:inline">Atualizar</span>
-          </button>
-
-          {data?.updatedAt && (
-            <div className="hidden xl:flex items-center gap-1 text-[11px] font-mono text-zinc-400">
-              <Clock className="w-3 h-3 text-zinc-400" />
-              <span>{data.updatedAt}</span>
+      <AdminPageHeader>
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+                Dashboard Administrativo
+              </h1>
+              <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 bg-white/[0.04] rounded-full">
+                Super Admin
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-zinc-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Operacional
+              </span>
             </div>
-          )}
-        </div>
-      </header>
+            <p className="text-zinc-400 text-xs sm:text-sm mt-1">
+              Visão estratégica em tempo real de vendas, conversão Pix, saúde do ecossistema e taxas da plataforma
+            </p>
+          </div>
+
+          {/* CONTROLES: SEGMENTED PERIOD & REFRESH */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Segmented Control Minimalista (Linear Style) */}
+            <div className="inline-flex items-center bg-[#07080B] p-0.5 rounded-lg border border-white/[0.05]">
+              {ADMIN_PERIOD_OPTIONS.map((p) => {
+                const isSelected = period === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPeriod(p.id)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${isSelected
+                        ? "bg-[#161820] text-white font-semibold shadow-xs"
+                        : "text-zinc-400 hover:text-zinc-200"
+                      }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Botão Atualizar Minimalista */}
+            <button
+              type="button"
+              onClick={() => fetchDashboardStats(period, true)}
+              disabled={refreshing || loading}
+              title="Atualizar dados"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0C0E14] hover:bg-[#141720] text-zinc-400 hover:text-white rounded-lg text-xs font-medium transition-all cursor-pointer disabled:opacity-50 h-8"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-400" : "text-zinc-400"}`}
+              />
+              <span className="hidden sm:inline">Atualizar</span>
+            </button>
+
+            {data?.updatedAt && (
+              <div className="hidden xl:flex items-center gap-1 text-[11px] font-mono text-zinc-400">
+                <Clock className="w-3 h-3 text-zinc-400" />
+                <span>{data.updatedAt}</span>
+              </div>
+            )}
+          </div>
+        </header>
+      </AdminPageHeader>
 
       {/* ERROR BANNER */}
       {errorMsg && (
@@ -283,13 +285,12 @@ export default function AdminDashboardClient() {
 
                 {data?.kpis.gmv.changePercent !== null && data?.kpis.gmv.changePercent !== undefined && (
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
-                      data.kpis.gmv.changePercent > 0
+                    className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${data.kpis.gmv.changePercent > 0
                         ? "text-emerald-400"
                         : data.kpis.gmv.changePercent < 0
-                        ? "text-red-400"
-                        : "text-zinc-400"
-                    }`}
+                          ? "text-red-400"
+                          : "text-zinc-400"
+                      }`}
                   >
                     {data.kpis.gmv.changePercent > 0 ? (
                       <TrendingUp className="w-3.5 h-3.5" />
@@ -353,13 +354,12 @@ export default function AdminDashboardClient() {
 
                 {data?.kpis.processedFees.changePercent !== null && data?.kpis.processedFees.changePercent !== undefined && (
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
-                      data.kpis.processedFees.changePercent > 0
+                    className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${data.kpis.processedFees.changePercent > 0
                         ? "text-emerald-400"
                         : data.kpis.processedFees.changePercent < 0
-                        ? "text-red-400"
-                        : "text-zinc-400"
-                    }`}
+                          ? "text-red-400"
+                          : "text-zinc-400"
+                      }`}
                   >
                     {data.kpis.processedFees.changePercent > 0 ? (
                       <TrendingUp className="w-3.5 h-3.5" />
@@ -494,33 +494,30 @@ export default function AdminDashboardClient() {
               <button
                 type="button"
                 onClick={() => setChartView("gmv")}
-                className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                  chartView === "gmv"
+                className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${chartView === "gmv"
                     ? "bg-[#161820] text-white font-semibold shadow-xs"
                     : "text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Volume (GMV)
               </button>
               <button
                 type="button"
                 onClick={() => setChartView("orders")}
-                className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                  chartView === "orders"
+                className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${chartView === "orders"
                     ? "bg-[#161820] text-white font-semibold shadow-xs"
                     : "text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Pedidos Pagos
               </button>
               <button
                 type="button"
                 onClick={() => setChartView("pix")}
-                className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                  chartView === "pix"
+                className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${chartView === "pix"
                     ? "bg-[#161820] text-white font-semibold shadow-xs"
                     : "text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Pix Gerado vs Pago
               </button>
@@ -559,7 +556,7 @@ export default function AdminDashboardClient() {
                 <span className="text-xs font-medium text-zinc-400">Taxa de Conversão</span>
                 <span className="text-2xl font-black text-emerald-400 font-mono tabular-nums">
                   {data?.salesAndPayments.pixConversionRate !== null &&
-                  data?.salesAndPayments.pixConversionRate !== undefined
+                    data?.salesAndPayments.pixConversionRate !== undefined
                     ? `${data.salesAndPayments.pixConversionRate}%`
                     : "0%"}
                 </span>
@@ -792,22 +789,20 @@ export default function AdminDashboardClient() {
             <button
               type="button"
               onClick={() => setRankingSort("gmv")}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                rankingSort === "gmv"
+              className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${rankingSort === "gmv"
                   ? "bg-[#161820] text-white font-semibold shadow-xs"
                   : "text-zinc-400 hover:text-white"
-              }`}
+                }`}
             >
               Maior GMV
             </button>
             <button
               type="button"
               onClick={() => setRankingSort("orders")}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                rankingSort === "orders"
+              className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${rankingSort === "orders"
                   ? "bg-[#161820] text-white font-semibold shadow-xs"
                   : "text-zinc-400 hover:text-white"
-              }`}
+                }`}
             >
               Mais Pedidos
             </button>
@@ -953,15 +948,14 @@ export default function AdminDashboardClient() {
                   </span>
                   <div className="flex items-center justify-end gap-1.5">
                     <span
-                      className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium font-mono ${
-                        sale.splitStatus === "PROCESSED" || sale.splitStatus === "GATEWAY_ACCEPTED"
+                      className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium font-mono ${sale.splitStatus === "PROCESSED" || sale.splitStatus === "GATEWAY_ACCEPTED"
                           ? "text-emerald-400 bg-emerald-500/10"
                           : sale.splitStatus === "SKIPPED"
-                          ? "text-zinc-400 bg-white/5"
-                          : sale.splitStatus === "FAILED"
-                          ? "text-red-400 bg-red-500/10"
-                          : "text-amber-400 bg-amber-500/10"
-                      }`}
+                            ? "text-zinc-400 bg-white/5"
+                            : sale.splitStatus === "FAILED"
+                              ? "text-red-400 bg-red-500/10"
+                              : "text-amber-400 bg-amber-500/10"
+                        }`}
                     >
                       {sale.splitStatus || "PENDING"}
                     </span>

@@ -46,7 +46,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </Suspense>
 
         {/* Content Canvas Wrapper */}
-        <div className="flex-1 min-h-0 flex flex-col min-w-0 md:pt-3 overflow-hidden relative bg-transparent">
+        <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-transparent">
+          {/* External Header Slot for Admin Pages (rendered via AdminPageHeader portal) */}
+          <div
+            id="admin-page-header-portal"
+            className="shrink-0 w-full px-4 sm:px-6 lg:px-8 md:pl-[25px] lg:pl-[33px] py-3.5 sm:py-4 bg-[#050608] min-h-[76px] md:min-h-[88px] empty:hidden empty:min-h-0 flex items-center"
+          />
+
           <main
             tabIndex={0}
             aria-label="Conteúdo Principal"
