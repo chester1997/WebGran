@@ -35,8 +35,7 @@ export async function POST(req: NextRequest) {
 
   // 1. Find paid orders whose splits genuinely require reconciliation.
   // Must be eligible for platform split:
-  // - Created on or after PLATFORM_SPLIT_EFFECTIVE_DATE (2026-10-22)
-  // - Or having an explicit splitAmountCents snapshot recorded.
+  // - Created on or after PLATFORM_SPLIT_EFFECTIVE_DATE (2026-10-22 00:00:00 Recife = 03:00:00 UTC).
   // Encompasses null, empty strings, 'PENDING', and 'REQUESTED' (case-insensitive).
   // Strictly filters out terminal states: SETTLED, CONFIRMED, PROCESSED, SKIPPED, FAILED.
   const pendingOrders = await db
@@ -54,10 +53,7 @@ export async function POST(req: NextRequest) {
     .where(
       and(
         eq(orders.status, 'paid'),
-        or(
-          gte(orders.createdAt, PLATFORM_SPLIT_EFFECTIVE_DATE),
-          isNotNull(orders.splitAmountCents)
-        ),
+        gte(orders.createdAt, PLATFORM_SPLIT_EFFECTIVE_DATE),
         or(
           isNull(orders.splitStatus),
           eq(orders.splitStatus, ''),
@@ -100,12 +96,8 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Guard: strictly ignore orders prior to effective date without explicit fee snapshot
-      const isEligible =
-        (typeof order.splitAmountCents === 'number' && order.splitAmountCents > 0) ||
-        new Date(order.createdAt) >= PLATFORM_SPLIT_EFFECTIVE_DATE;
-
-      if (!isEligible) {
+      // Guard: strictly ignore orders prior to effective date
+      if (new Date(order.createdAt) < PLATFORM_SPLIT_EFFECTIVE_DATE) {
         summary.skipped++;
         continue;
       }

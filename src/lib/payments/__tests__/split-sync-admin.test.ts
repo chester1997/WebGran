@@ -383,10 +383,10 @@ describe('Admin Split Sync — Comprehensive Verification & API Identifier Suite
       splitStatus?: string | null;
     }): boolean => {
       if (order.status !== 'paid') return false;
-      const hasExplicitSnapshot = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents);
-      const hasExplicitStatus = Boolean(order.splitStatus) && order.splitStatus!.trim() !== '' && order.splitStatus!.toUpperCase() !== 'PENDING';
       const isPostEffectiveDate = order.createdAt >= PLATFORM_SPLIT_EFFECTIVE_DATE;
-      return hasExplicitSnapshot || hasExplicitStatus || isPostEffectiveDate;
+      const st = (order.splitStatus || 'PENDING').trim().toUpperCase();
+      const isProcessedOrTerminal = ['SETTLED', 'PROCESSED', 'CONFIRMED', 'GATEWAY_ACCEPTED', 'SKIPPED', 'FAILED'].includes(st);
+      return isPostEffectiveDate || isProcessedOrTerminal;
     };
 
     const isPendingSplit = (order: {
@@ -396,6 +396,8 @@ describe('Admin Split Sync — Comprehensive Verification & API Identifier Suite
       splitStatus?: string | null;
     }): boolean => {
       if (!isEligibleForSplit(order)) return false;
+      const isPostEffectiveDate = order.createdAt >= PLATFORM_SPLIT_EFFECTIVE_DATE;
+      if (!isPostEffectiveDate) return false;
       const st = (order.splitStatus || 'PENDING').trim().toUpperCase();
       const TERMINAL_STATUSES = ['SETTLED', 'CONFIRMED', 'PROCESSED', 'SKIPPED', 'FAILED'];
       if (TERMINAL_STATUSES.includes(st)) return false;
@@ -406,7 +408,7 @@ describe('Admin Split Sync — Comprehensive Verification & API Identifier Suite
       expect(PLATFORM_SPLIT_EFFECTIVE_DATE.toISOString()).toBe('2026-10-22T03:00:00.000Z');
     });
 
-    it('1. Pedidos de 21/10 às 23:59 em Recife (2026-10-22T02:59:59Z) são tratados como anteriores à vigência, salvo snapshot explícito', () => {
+    it('1. Pedidos de 21/10 às 23:59 em Recife (2026-10-22T02:59:59Z) são tratados como anteriores à vigência, salvo confirmação explícita', () => {
       // 21/10/2026 23:59:59 em Recife (UTC-3) = 2026-10-22T02:59:59.000Z
       const orderAt2359WithoutSnapshot = {
         id: 'ord-21-2359-no-snap',
@@ -419,29 +421,29 @@ describe('Admin Split Sync — Comprehensive Verification & API Identifier Suite
       expect(isEligibleForSplit(orderAt2359WithoutSnapshot)).toBe(false);
       expect(isPendingSplit(orderAt2359WithoutSnapshot)).toBe(false);
 
-      // Com status PENDING default legado mas sem snapshot: não elegível
+      // Com status PENDING legado (mesmo com default 50 centavos da migração 0007): não entra na pendência
       const orderAt2359PendingDefault = {
         id: 'ord-21-2359-pending-default',
-        status: 'paid',
-        createdAt: new Date('2026-10-22T02:59:59.000Z'),
-        splitStatus: 'PENDING',
-        splitAmountCents: null,
-      };
-
-      expect(isEligibleForSplit(orderAt2359PendingDefault)).toBe(false);
-      expect(isPendingSplit(orderAt2359PendingDefault)).toBe(false);
-
-      // Se possuir snapshot explícito (ex: comissão fixada de 50 centavos): respeita o snapshot
-      const orderAt2359WithSnapshot = {
-        id: 'ord-21-2359-with-snap',
         status: 'paid',
         createdAt: new Date('2026-10-22T02:59:59.000Z'),
         splitStatus: 'PENDING',
         splitAmountCents: 50,
       };
 
-      expect(isEligibleForSplit(orderAt2359WithSnapshot)).toBe(true);
-      expect(isPendingSplit(orderAt2359WithSnapshot)).toBe(true);
+      expect(isEligibleForSplit(orderAt2359PendingDefault)).toBe(false);
+      expect(isPendingSplit(orderAt2359PendingDefault)).toBe(false);
+
+      // Se possuir confirmação explícita comprovada no gateway (ex: CONFIRMED ou GATEWAY_ACCEPTED): elegível, mas não pendente
+      const orderAt2359Confirmed = {
+        id: 'ord-21-2359-confirmed',
+        status: 'paid',
+        createdAt: new Date('2026-10-22T02:59:59.000Z'),
+        splitStatus: 'CONFIRMED',
+        splitAmountCents: 50,
+      };
+
+      expect(isEligibleForSplit(orderAt2359Confirmed)).toBe(true);
+      expect(isPendingSplit(orderAt2359Confirmed)).toBe(false);
     });
 
     it('2. Pedidos de 22/10 às 00:00 em Recife (2026-10-22T03:00:00Z) são elegíveis à taxa da plataforma', () => {
@@ -520,16 +522,14 @@ describe('Admin Split Sync — Comprehensive Verification & API Identifier Suite
         paymentMethod: 'pix',
         paymentId: 'syncpay_old_123',
         storeId: 'store-1',
-        splitStatus: null,
-        splitAmountCents: null,
+        splitStatus: 'PENDING',
+        splitAmountCents: 50,
         createdAt: new Date('2026-10-22T02:59:00.000Z'), // 21/10 23:59 em Recife
       };
 
-      const isEligible =
-        (typeof legacyOrder.splitAmountCents === 'number' && legacyOrder.splitAmountCents > 0) ||
-        new Date(legacyOrder.createdAt) >= PLATFORM_SPLIT_EFFECTIVE_DATE;
+      const isEligibleForSync = new Date(legacyOrder.createdAt) >= PLATFORM_SPLIT_EFFECTIVE_DATE;
 
-      expect(isEligible).toBe(false);
+      expect(isEligibleForSync).toBe(false);
       expect(dbMock.update).not.toHaveBeenCalled();
     });
   });
