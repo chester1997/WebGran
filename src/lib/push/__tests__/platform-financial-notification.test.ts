@@ -46,6 +46,7 @@ import {
   isNotificationSoundEnabled,
   setNotificationSoundEnabled,
   playCommissionChime,
+  unlockAudioContext,
   setupForegroundNotificationSoundListener,
   _resetNotificationSoundStateForTesting,
   getNotificationSoundUrl,
@@ -508,6 +509,52 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       const played = await playCommissionChime({ eventId: "test-synth-fallback", force: true });
       expect(played).toBe(true);
       expect(mockCreateOscillator).toHaveBeenCalled();
+    });
+
+    it("permite repetições sucessivas de cliques de teste com force=true sem ser bloqueado por deduplicação", async () => {
+      _resetNotificationSoundStateForTesting();
+      const mockPlay = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal("Audio", class {
+        play = mockPlay;
+        preload = "";
+        currentTime = 0;
+      });
+
+      // Primeiro clique
+      const first = await playCommissionChime({ eventId: "manual-test", force: true });
+      expect(first).toBe(true);
+
+      // Segundo clique com mesmo ID mas force: true (não pode ser bloqueado)
+      const second = await playCommissionChime({ eventId: "manual-test", force: true });
+      expect(second).toBe(true);
+      expect(mockPlay).toHaveBeenCalledTimes(2);
+    });
+
+    it("unlockAudioContext inicializa buffer silencioso para destravar autoplay do navegador", async () => {
+      _resetNotificationSoundStateForTesting();
+      const mockCreateBuffer = vi.fn().mockReturnValue({ length: 1 });
+      const mockCreateBufferSource = vi.fn().mockReturnValue({
+        buffer: null,
+        connect: vi.fn(),
+        start: vi.fn(),
+      });
+      const mockResume = vi.fn().mockResolvedValue(undefined);
+
+      class MockCtx {
+        state = "suspended";
+        destination = {};
+        createBuffer = mockCreateBuffer;
+        createBufferSource = mockCreateBufferSource;
+        resume = mockResume;
+      }
+      vi.stubGlobal("AudioContext", MockCtx);
+      (window as any).AudioContext = MockCtx;
+
+      await unlockAudioContext();
+
+      expect(mockResume).toHaveBeenCalled();
+      expect(mockCreateBuffer).toHaveBeenCalledWith(1, 1, 22050);
+      expect(mockCreateBufferSource).toHaveBeenCalled();
     });
   });
 });

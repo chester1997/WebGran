@@ -24,9 +24,9 @@ export function PwaRegisterAndInstall() {
     // 0. Ativar listener de som em primeiro plano para notificações push
     setupForegroundNotificationSoundListener();
 
-    // 1. Safe Service Worker registration
+    // 1. Safe Service Worker registration (com verificação imediata de readyState)
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
+      const registerServiceWorker = () => {
         navigator.serviceWorker
           .register("/sw.js")
           .then((reg) => {
@@ -50,10 +50,11 @@ export function PwaRegisterAndInstall() {
               reg.pushManager.getSubscription().then((sub) => {
                 if (sub) {
                   try {
+                    const subJson = sub.toJSON();
                     const rawKey = sub.getKey ? sub.getKey("p256dh") : null;
                     const rawAuth = sub.getKey ? sub.getKey("auth") : null;
-                    const p256dh = rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "";
-                    const auth = rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "";
+                    const p256dh = subJson.keys?.p256dh || (rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "");
+                    const auth = subJson.keys?.auth || (rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "");
                     if (p256dh && auth) {
                       fetch("/api/seller/push/subscribe", {
                         method: "POST",
@@ -75,7 +76,13 @@ export function PwaRegisterAndInstall() {
           .catch((err) => {
             console.warn("[PWA] Falha ao registrar Service Worker:", err);
           });
-      });
+      };
+
+      if (document.readyState === "complete" || document.readyState === "interactive") {
+        registerServiceWorker();
+      } else {
+        window.addEventListener("load", registerServiceWorker, { once: true });
+      }
     }
 
     // 2. Detect iOS / iPadOS Safari (standalone mode check)

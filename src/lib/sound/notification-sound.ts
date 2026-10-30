@@ -1,7 +1,7 @@
 /**
  * Utilitário de reprodução sonora para notificações do WebGran.
- * Baseado no áudio de referência fornecido, com áudio leve pré-carregado
- * e fallback sintetizado via Web Audio API.
+ * Baseado no áudio oficial (/sounds/commission.mp3), com carregamento Web Audio API
+ * decodificado em memória, HTML5 Audio Element e fallback sintetizado via harmônicos.
  */
 
 const STORAGE_KEY = "webgran_notification_sound_enabled";
@@ -9,6 +9,9 @@ const STORAGE_KEY = "webgran_notification_sound_enabled";
 const playedSoundEvents = new Set<string>();
 let cachedAudioElement: HTMLAudioElement | null = null;
 let audioContext: AudioContext | null = null;
+let decodedAudioBuffer: AudioBuffer | null = null;
+let isAudioBufferLoading = false;
+let isForegroundListenerRegistered = false;
 
 /**
  * Retorna se o som de notificações está ativado pelo usuário.
@@ -38,20 +41,74 @@ export function setNotificationSoundEnabled(enabled: boolean): void {
 }
 
 /**
- * Desbloqueia o AudioContext sob interação do usuário para compatibilidade com autoplay.
+ * Retorna ou inicializa com segurança uma instância do AudioContext.
+ */
+function getOrCreateAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!audioContext) {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      try {
+        audioContext = new AudioCtx();
+      } catch {
+        // Ignora caso o navegador proíba a criação sem interação
+      }
+    }
+  }
+  return audioContext;
+}
+
+/**
+ * Pré-carrega e decodifica o arquivo MP3 de notificação na memória via Web Audio API.
+ */
+async function preloadAudioBuffer(): Promise<void> {
+  if (typeof window === "undefined" || decodedAudioBuffer || isAudioBufferLoading) return;
+  const ctx = getOrCreateAudioContext();
+  if (!ctx || typeof window.fetch !== "function") return;
+
+  isAudioBufferLoading = true;
+  try {
+    const response = await fetch(getNotificationSoundUrl(), { cache: "force-cache" });
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer();
+      decodedAudioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    }
+  } catch (err) {
+    // Ignora falha de decodificação de buffer; o fallback usará HTMLAudioElement ou sintetizador
+  } finally {
+    isAudioBufferLoading = false;
+  }
+}
+
+/**
+ * Desbloqueia o AudioContext e o subsistema de áudio sob interação real do usuário.
+ * Toca um buffer silencioso de 1 sample para autorizar autoplay no iOS Safari e Chrome Android.
  */
 export async function unlockAudioContext(): Promise<void> {
   if (typeof window === "undefined") return;
   try {
-    if (!audioContext) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        audioContext = new AudioCtx();
+    const ctx = getOrCreateAudioContext();
+    if (!ctx) return;
+
+    if (ctx.state === "suspended") {
+      await ctx.resume().catch(() => {});
+    }
+
+    // Toca 1 sample de silêncio para retirar restrição de autoplay
+    try {
+      if (typeof ctx.createBuffer === "function" && typeof ctx.createBufferSource === "function") {
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
       }
+    } catch {
+      // Ignora falhas em navegadores sem suporte
     }
-    if (audioContext && audioContext.state === "suspended") {
-      await audioContext.resume();
-    }
+
+    // Inicia o pré-carregamento do buffer decodificado
+    preloadAudioBuffer().catch(() => {});
   } catch (err) {
     // Autoplay policy or browser limitation
   }
@@ -106,9 +163,9 @@ export async function playCommissionChime(options?: {
     return false;
   }
 
-  // 2. Prevenir reprodução duplicada para o mesmo evento
+  // 2. Prevenir reprodução duplicada para o mesmo evento (em cliques forçados de teste, permite sempre)
   if (eventId) {
-    if (playedSoundEvents.has(eventId)) {
+    if (!force && playedSoundEvents.has(eventId)) {
       return false;
     }
     playedSoundEvents.add(eventId);
@@ -117,7 +174,7 @@ export async function playCommissionChime(options?: {
   // 3. Tentativa 1: HTMLAudioElement com o arquivo otimizado (/sounds/commission.mp3)
   try {
     if (!cachedAudioElement) {
-      cachedAudioElement = new Audio("/sounds/commission.mp3");
+      cachedAudioElement = new Audio(getNotificationSoundUrl());
       cachedAudioElement.preload = "auto";
     }
 
@@ -130,14 +187,34 @@ export async function playCommissionChime(options?: {
   } catch (audioErr: any) {
     // Se o HTMLAudioElement for bloqueado por política ou falhar carregamento, tenta o sintetizador
     console.warn("[NotificationSound] Audio elemento falhou, tentando fallback Web Audio:", audioErr?.message);
+    // Limpa instância com erro para permitir recriação limpa futura
+    cachedAudioElement = null;
   }
 
-  // 4. Tentativa 2: Web Audio API Oscillator Chime
+  // 4. Tentativa 2: Web Audio API com Buffer Pré-decodificado em memória (zero latência)
   try {
-    await unlockAudioContext();
-    if (audioContext && audioContext.state === "running") {
-      await synthesizeChimeFallback(audioContext);
-      return true;
+    const ctx = getOrCreateAudioContext();
+    if (ctx) {
+      if (ctx.state === "suspended") {
+        await ctx.resume().catch(() => {});
+      }
+
+      if (decodedAudioBuffer && ctx.state === "running") {
+        const source = ctx.createBufferSource();
+        source.buffer = decodedAudioBuffer;
+        const gainNode = ctx.createGain();
+        gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        source.start(0);
+        return true;
+      }
+
+      // 5. Tentativa 3: Web Audio API Oscillator Chime (Sintetizador Harmônico de alta fidelidade)
+      if (ctx.state === "running") {
+        await synthesizeChimeFallback(ctx);
+        return true;
+      }
     }
   } catch (ctxErr) {
     console.warn("[NotificationSound] Fallback sintetizador indisponível:", ctxErr);
@@ -160,6 +237,8 @@ export function _resetNotificationSoundStateForTesting(): void {
   playedSoundEvents.clear();
   cachedAudioElement = null;
   audioContext = null;
+  decodedAudioBuffer = null;
+  isAudioBufferLoading = false;
   isForegroundListenerRegistered = false;
 }
 
@@ -169,8 +248,6 @@ export function _resetNotificationSoundStateForTesting(): void {
  * Inclui desbloqueio preventivo de autoplay sob o primeiro toque/clique do usuário
  * tanto para o Web Audio API quanto para o elemento HTML5 Audio.
  */
-let isForegroundListenerRegistered = false;
-
 export function setupForegroundNotificationSoundListener(): void {
   if (typeof window === "undefined" || isForegroundListenerRegistered) return;
   isForegroundListenerRegistered = true;
@@ -178,7 +255,7 @@ export function setupForegroundNotificationSoundListener(): void {
   // 1. Desbloqueio preventivo de autoplay sob primeira interação do usuário (toque, clique ou tecla)
   if (typeof window.addEventListener === "function") {
     const handleFirstInteraction = () => {
-      // Desbloqueia AudioContext
+      // Desbloqueia AudioContext e sintetizadores
       unlockAudioContext().catch(() => {});
 
       // Pré-carrega e prepara o elemento HTML5 Audio para contornar o bloqueio de Autoplay no Chrome Android
@@ -220,4 +297,3 @@ export function setupForegroundNotificationSoundListener(): void {
     });
   }
 }
-

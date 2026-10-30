@@ -150,7 +150,10 @@ export default function SettingsClient({
         }
 
         // Checa se o Service Worker possui assinatura Push ativa no dispositivo
-        const reg = await navigator.serviceWorker.ready.catch(() => null);
+        let reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+        if (!reg) {
+          reg = await navigator.serviceWorker.register("/sw.js").catch(() => null);
+        }
         if (reg) {
           reg.update().catch(() => null);
         }
@@ -162,10 +165,11 @@ export default function SettingsClient({
           // Se o dispositivo possui inscrição no PushManager, assegura que está registrada no servidor para este usuário
           if (!statusRes?.hasActiveSubscription) {
             try {
+              const subJson = sub.toJSON();
               const rawKey = sub.getKey ? sub.getKey("p256dh") : null;
               const rawAuth = sub.getKey ? sub.getKey("auth") : null;
-              const p256dh = rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "";
-              const auth = rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "";
+              const p256dh = subJson.keys?.p256dh || (rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "");
+              const auth = subJson.keys?.auth || (rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "");
               if (p256dh && auth) {
                 fetch("/api/seller/push/subscribe", {
                   method: "POST",
@@ -346,8 +350,9 @@ export default function SettingsClient({
   };
 
 function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const cleanStr = (base64String || "").trim().replace(/^["']|["']$/g, "");
+  const padding = "=".repeat((4 - (cleanStr.length % 4)) % 4);
+  const base64 = (cleanStr + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) {
@@ -366,7 +371,10 @@ function urlBase64ToUint8Array(base64String: string) {
       // Desativação pelo usuário
       setRequestingPermission(true);
       try {
-        const reg = await navigator.serviceWorker.ready.catch(() => null);
+        let reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+        if (!reg) {
+          reg = await navigator.serviceWorker.ready.catch(() => null);
+        }
         const sub = reg ? await reg.pushManager.getSubscription().catch(() => null) : null;
         if (sub) {
           await fetch("/api/seller/push/unsubscribe", {
@@ -420,23 +428,37 @@ function urlBase64ToUint8Array(base64String: string) {
         return;
       }
 
-      // 2. Registrar PushManager no Service Worker
-      const reg = await navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
+      // 2. Registrar PushManager no Service Worker (garantindo que o SW está ativo)
+      let reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+      if (!reg) {
+        reg = await navigator.serviceWorker.register("/sw.js").catch(() => null);
+      }
+      if (!reg) {
+        throw new Error("Não foi possível inicializar o Service Worker no seu navegador.");
+      }
+
+      // Aguarda SW estar pronto com timeout defensivo
+      await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
+
+      const convertedKey = urlBase64ToUint8Array(publicKey);
+      let sub = await reg.pushManager.getSubscription().catch(() => null);
 
       if (!sub) {
-        const convertedKey = urlBase64ToUint8Array(publicKey);
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: convertedKey,
         });
       }
 
-      // 3. Extrair chaves criptográficas
+      // 3. Extrair chaves criptográficas (formato padrão W3C toJSON com fallback)
+      const subJson = sub.toJSON ? sub.toJSON() : null;
       const rawKey = sub.getKey ? sub.getKey("p256dh") : null;
       const rawAuth = sub.getKey ? sub.getKey("auth") : null;
-      const p256dh = rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "";
-      const auth = rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "";
+      const p256dh = subJson?.keys?.p256dh || (rawKey ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawKey)))) : "");
+      const auth = subJson?.keys?.auth || (rawAuth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(rawAuth)))) : "");
 
       // 4. Salvar assinatura no servidor vinculada ao vendedor autenticado
       const saveRes = await fetch("/api/seller/push/subscribe", {
@@ -458,6 +480,9 @@ function urlBase64ToUint8Array(base64String: string) {
       setBrowserNotificationsEnabled(true);
       localStorage.setItem("webgran_browser_notifications", "true");
       showToast("Notificações push PWA ativadas com sucesso!");
+
+      // Desbloqueia o áudio imediatamente no gesto do usuário
+      await unlockAudioContext();
     } catch (err: any) {
       console.error("Erro ao ativar notificações push:", err);
       alert(`Falha ao ativar notificações push: ${err?.message || "Erro desconhecido"}`);
@@ -498,7 +523,7 @@ function urlBase64ToUint8Array(base64String: string) {
                 icon: testPayload.icon,
                 badge: testPayload.badge,
                 data: testPayload.data,
-                tag: testPayload.tag,
+                tag: `${testPayload.tag}-${Date.now()}`,
               });
               shownViaSw = true;
             }
@@ -510,7 +535,7 @@ function urlBase64ToUint8Array(base64String: string) {
               icon: testPayload.icon,
               badge: testPayload.badge,
               data: testPayload.data,
-              tag: testPayload.tag,
+              tag: `${testPayload.tag}-${Date.now()}`,
             });
           }
 
@@ -522,9 +547,9 @@ function urlBase64ToUint8Array(base64String: string) {
         showToast(data.message || `Notificação push enviada para ${data.details?.sentCount || 1} dispositivo(s)!`);
       }
 
-      // Desbloquear audio e reproduzir o som da comissão quando a notificação for testada
+      // Desbloquear áudio e reproduzir comissão com garantia (force: true e ID dinâmico)
       await unlockAudioContext();
-      await playCommissionChime({ force: false, eventId: "test-notification" });
+      await playCommissionChime({ force: true, eventId: `test-notification-${Date.now()}` });
     } catch (err: any) {
       console.error("Erro ao disparar notificação de teste:", err);
       showToast("Erro ao contatar o servidor para envio de teste.");
@@ -537,15 +562,21 @@ function urlBase64ToUint8Array(base64String: string) {
     setNotificationSoundEnabled(next);
     if (next) {
       await unlockAudioContext();
-      playCommissionChime({ force: true });
+      playCommissionChime({ force: true, eventId: `toggle-sound-${Date.now()}` });
     }
   };
 
   const handleTestSound = async () => {
     setIsPlayingSoundTest(true);
-    await unlockAudioContext();
-    await playCommissionChime({ force: true });
-    setTimeout(() => setIsPlayingSoundTest(false), 1200);
+    try {
+      await unlockAudioContext();
+      const played = await playCommissionChime({ force: true, eventId: `manual-test-chime-${Date.now()}` });
+      if (!played) {
+        showToast("Áudio indisponível ou bloqueado pelo navegador.");
+      }
+    } finally {
+      setTimeout(() => setIsPlayingSoundTest(false), 1200);
+    }
   };
 
   const displayedAvatar = avatarPreview || avatarUrl;
