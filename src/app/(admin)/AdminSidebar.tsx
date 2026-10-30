@@ -131,7 +131,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
   return (
     <>
       {/* Mobile Header Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0B0B0E] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-md">
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--admin-bg,#0B0D13)] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-none">
         <div className="flex items-center gap-2 font-bold text-base tracking-tight">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-white">WebGran</span>
@@ -169,9 +169,8 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         aria-label="Navegação Administrativa"
         className={`
           fixed md:static inset-y-0 left-0 z-50
-          w-60 md:w-64 h-full bg-[#0B0B0E] md:bg-[#0A0C10]
-          border-r border-white/[0.06] md:border-r-0 md:border-none
-          rounded-none md:rounded-none shadow-2xl md:shadow-none
+          w-60 md:w-64 h-full bg-[var(--admin-bg,#0B0D13)]
+          border-0 md:border-0 rounded-none md:rounded-none shadow-none md:shadow-none
           flex-shrink-0 flex flex-col overflow-hidden
           transition-transform duration-200 ease-in-out outline-none
           ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
