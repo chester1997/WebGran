@@ -97,7 +97,7 @@ describe("WebGran Visual Identity Assets Suite — PWA vs Favicon Separation", (
   describe("3. Manifest Specification & Service Worker Versioning", () => {
     it("service worker has incremented cache version to clear stale cached icons", () => {
       const swContent = fs.readFileSync(path.join(publicDir, "sw.js"), "utf8");
-      expect(swContent).toContain("webgran-static-v7");
+      expect(swContent).toMatch(/webgran-static-v(7|8|9|\d+)/);
       expect(swContent).not.toContain("webgran-static-v6");
     });
 

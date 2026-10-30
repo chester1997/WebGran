@@ -1,5 +1,5 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v8';
+const CACHE_NAME = 'webgran-static-v9';
 
 // Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
@@ -9,6 +9,7 @@ const PRECACHE_ASSETS = [
   '/icons/icon-maskable-512x512.png',
   '/icons/badge-72x72.png',
   '/icons/badge-96x96.png',
+  '/icons/badge-128x128.png',
   '/icons/apple-touch-icon.png',
   '/sounds/commission.mp3',
   '/sounds/commission.ogg',
@@ -94,6 +95,12 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 4. STATIC BRAND ASSETS: Cache-First with Network fallback (icons and notification sounds)
+  // Requisições com cabeçalho Range (mídia HTML5 audio/video): bypass de cache direto para a rede (bug Chromium #73692)
+  if (request.headers.get('range')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   if (
     url.pathname.startsWith('/icons/') ||
     url.pathname.startsWith('/sounds/') ||
@@ -131,7 +138,7 @@ self.addEventListener('push', (event) => {
     title: 'WebGran',
     body: 'Você tem uma nova notificação.',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
+    badge: '/icons/badge-96x96.png',
     url: '/seller/financeiro',
     tag: 'webgran-notification',
   };
@@ -152,7 +159,7 @@ self.addEventListener('push', (event) => {
 
   const badgeUrl = data.badge
     ? (data.badge.startsWith('http') ? data.badge : new URL(data.badge, self.location.origin).href)
-    : new URL('/icons/badge-72x72.png', self.location.origin).href;
+    : new URL('/icons/badge-96x96.png', self.location.origin).href;
 
   const options = {
     body: data.body,
