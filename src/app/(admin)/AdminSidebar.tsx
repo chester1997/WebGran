@@ -225,9 +225,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: BOT */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2 border-t border-white/[0.06]">
-            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
-              BOT
+          <div className="pt-3 mt-2">
+            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+                BOT
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
             <div className="space-y-0.5">
               {botItems.map((item) => {
@@ -260,9 +263,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: VENDAS */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2 border-t border-white/[0.06]">
-            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
-              VENDAS
+          <div className="pt-3 mt-2">
+            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+                VENDAS
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
             <div className="space-y-0.5">
               {salesItems.map((item) => {
@@ -295,9 +301,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: PLATAFORMA */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2 border-t border-white/[0.06]">
-            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
-              PLATAFORMA
+          <div className="pt-3 mt-2">
+            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+                PLATAFORMA
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
             <div className="space-y-0.5">
               {platformItems.map((item) => {
@@ -405,9 +414,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: CONTA */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2 border-t border-white/[0.06]">
-            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
-              CONTA
+          <div className="pt-3 mt-2">
+            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+                CONTA
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
             <div className="space-y-1">
               {/* Configurações */}
