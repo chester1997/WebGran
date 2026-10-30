@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  Building2,
   Users,
   Bot,
   Package,
@@ -18,15 +17,16 @@ import {
   Store,
   Coins,
   ShieldCheck,
-  ArrowUpDown,
+  ArrowRight,
   Tag,
   AlertTriangle,
   Info,
   Calendar,
-  Check,
   Zap,
   ChevronDown,
-  X,
+  Trophy,
+  ExternalLink,
+  Percent,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type {
@@ -52,7 +52,6 @@ const ADMIN_PERIOD_OPTIONS = [
 
 export default function AdminDashboardClient() {
   const [period, setPeriod] = useState<AdminDashboardPeriod>("30d");
-  const [isPeriodOpen, setIsPeriodOpen] = useState<boolean>(false);
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -60,7 +59,13 @@ export default function AdminDashboardClient() {
 
   // Split sync state
   const [syncingSplits, setSyncingSplits] = useState<boolean>(false);
-  const [splitSyncResult, setSplitSyncResult] = useState<{ updated: number; skipped: number; divergence: number; errors: number; total: number; } | null>(null);
+  const [splitSyncResult, setSplitSyncResult] = useState<{
+    updated: number;
+    skipped: number;
+    divergence: number;
+    errors: number;
+    total: number;
+  } | null>(null);
 
   // Chart view toggle: "gmv" | "pix" | "orders"
   const [chartView, setChartView] = useState<"gmv" | "pix" | "orders">("gmv");
@@ -131,141 +136,105 @@ export default function AdminDashboardClient() {
     });
   }, [data?.sellerRanking, rankingSort]);
 
-  // Active period display object
-  const activePeriodObj = ADMIN_PERIOD_OPTIONS.find((p) => p.id === period) || ADMIN_PERIOD_OPTIONS[1];
+  // Total GMV do período para cálculo do % Share no Leaderboard
+  const totalPeriodGmv = useMemo(() => {
+    return data?.salesAndPayments.gmvApproved || data?.kpis.gmv.current || 0;
+  }, [data?.salesAndPayments.gmvApproved, data?.kpis.gmv.current]);
+
+  // Cálculo de Ticket Médio Real do período
+  const averageTicket = useMemo(() => {
+    const ordersCount = data?.salesAndPayments.paidOrdersCount || 0;
+    const gmv = data?.salesAndPayments.gmvApproved || 0;
+    if (ordersCount <= 0 || gmv <= 0) return 0;
+    return gmv / ordersCount;
+  }, [data?.salesAndPayments.paidOrdersCount, data?.salesAndPayments.gmvApproved]);
+
+  // Take-rate médio efetivo da plataforma no período
+  const effectiveTakeRate = useMemo(() => {
+    const gmv = data?.salesAndPayments.gmvApproved || 0;
+    const fees = data?.platformFees.processedFeeTotal || 0;
+    if (gmv <= 0 || fees <= 0) return null;
+    return ((fees / gmv) * 100).toFixed(1);
+  }, [data?.salesAndPayments.gmvApproved, data?.platformFees.processedFeeTotal]);
+
+  const activePeriodObj =
+    ADMIN_PERIOD_OPTIONS.find((p) => p.id === period) || ADMIN_PERIOD_OPTIONS[1];
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-12 text-gray-100 fade-in">
+    <div className="space-y-6 sm:space-y-8 pb-16 text-zinc-100 fade-in max-w-[1600px] mx-auto">
       {/* ==================================================== */}
-      {/* 1. HEADER SECTION (Integrado ao fundo, sem caixa card) */}
+      {/* 1. TOPBAR EXECUTIVA (Estilo Linear / Apple)           */}
       {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
               Dashboard Administrativo
             </h1>
-            <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/25 rounded-full flex items-center gap-1.5 shadow-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               Super Admin
             </span>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Telemetria Operacional
+            </span>
           </div>
           <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Visão estratégica em tempo real de vendas, pagamentos, ecossistema e taxas da plataforma
+            Visão estratégica em tempo real de vendas, conversão Pix, saúde do ecossistema e taxas da plataforma
           </p>
         </div>
 
-        {/* PERIOD SELECTOR (POPOVER PRESETS) & REFRESH */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Period Popover */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-              className={`inline-flex items-center justify-between gap-2 bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
-                isPeriodOpen
-                  ? "border-blue-500/80 ring-1 ring-blue-500/30 text-white"
-                  : "border-white/[0.08] hover:border-zinc-700"
-              }`}
-              aria-haspopup="dialog"
-              aria-expanded={isPeriodOpen}
-            >
-              <div className="flex items-center gap-2 truncate">
-                <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <span className="font-semibold text-white truncate">
-                  {activePeriodObj.label}
-                </span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-blue-400" : ""}`} />
-            </button>
-
-            {/* Backdrop for mobile */}
-            {isPeriodOpen && (
-              <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-xs sm:hidden z-40"
-                onClick={() => setIsPeriodOpen(false)}
-              />
-            )}
-
-            {/* Popover panel */}
-            {isPeriodOpen && (
-              <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[320px] bg-[#090A0D] border border-white/[0.08] rounded-2xl shadow-2xl p-4 space-y-3 animate-in fade-in-0 zoom-in-95">
-                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
-                  <div className="flex items-center gap-1.5 text-[#F3F4F6] font-semibold text-xs">
-                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Período de análise</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsPeriodOpen(false)}
-                    className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#15171D] transition-colors cursor-pointer"
-                    aria-label="Fechar"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
-                    Intervalos Rápidos
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {ADMIN_PERIOD_OPTIONS.map((p) => {
-                      const isSelected = period === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setPeriod(p.id);
-                            setIsPeriodOpen(false);
-                          }}
-                          className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border cursor-pointer ${
-                            isSelected
-                              ? "bg-[#15171D] text-white border-blue-500/80 shadow-xs font-semibold ring-1 ring-blue-500/20"
-                              : "bg-[#15171D] text-zinc-300 hover:text-white hover:bg-[#1C1E26] border-white/[0.08]"
-                          }`}
-                        >
-                          <span className="truncate leading-tight text-[11px]">{p.shortLabel}</span>
-                          <div className="flex items-center justify-between w-full pt-1">
-                            <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#090A0D] text-zinc-400'}`}>
-                              {p.badge}
-                            </span>
-                            {isSelected && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
+        {/* CONTROLES EXECUTIVOS: SEGMENTED PERIOD & REFRESH */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          {/* Segmented Control de Período (Linear Style) */}
+          <div className="inline-flex items-center bg-[#090A0E] p-1 rounded-xl border border-white/[0.08] shadow-inner">
+            {ADMIN_PERIOD_OPTIONS.map((p) => {
+              const isSelected = period === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPeriod(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-[#1E222D] text-white border border-blue-500/30 shadow-xs ring-1 ring-blue-500/20 font-bold"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <span className="sm:hidden">{p.badge}</span>
+                  <span className="hidden sm:inline">{p.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Refresh Button */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchDashboardStats(period, true)}
-              disabled={refreshing || loading}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#15171D] hover:bg-white/5 border border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 h-9"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-400" : ""}`} />
-              <span>Atualizar</span>
-            </button>
+          {/* Botão Atualizar com Microinteração */}
+          <button
+            type="button"
+            onClick={() => fetchDashboardStats(period, true)}
+            disabled={refreshing || loading}
+            title="Atualizar dados agora"
+            className="flex items-center gap-2 px-3.5 py-1.5 bg-[#0F1117] hover:bg-[#161922] border border-white/[0.08] hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 h-9 shadow-xs"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-400" : "text-zinc-400"}`}
+            />
+            <span className="hidden sm:inline">Atualizar</span>
+          </button>
 
-            {data?.updatedAt && (
-              <span className="text-[11px] text-zinc-400 font-mono hidden sm:flex items-center gap-1">
-                <Clock className="w-3 h-3 text-zinc-400" />
-                {data.updatedAt}
-              </span>
-            )}
-          </div>
+          {data?.updatedAt && (
+            <div className="hidden xl:flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 bg-white/[0.02] border border-white/[0.05] px-2.5 py-1.5 rounded-xl">
+              <Clock className="w-3 h-3 text-zinc-400" />
+              <span>{data.updatedAt}</span>
+            </div>
+          )}
         </div>
-      </div>
+      </header>
 
       {/* ERROR BANNER */}
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
@@ -280,279 +249,480 @@ export default function AdminDashboardClient() {
       )}
 
       {/* ==================================================== */}
-      {/* 2. PRIMARY INDICATORS (8 COMPACT CARDS) */}
+      {/* 2. HERO FINANCEIRO ASSIMÉTRICO (Stripe Style)        */}
       {/* ==================================================== */}
-      <div>
-        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-          <span>Indicadores Principais da Plataforma ({data?.periodLabel || activePeriodObj.label})</span>
-          <span className="text-[10px] text-gray-500 normal-case font-mono">Fuso: America/Recife (UTC-3)</span>
+      <section id="section-hero" className="space-y-2">
+        <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center justify-between">
+          <span>O Motor Financeiro da Plataforma ({data?.periodLabel || activePeriodObj.label})</span>
+          <span className="text-[10px] text-zinc-400 normal-case font-mono">Fuso: America/Recife (UTC-3)</span>
         </div>
 
         {loading && !data ? (
-          <KPISkeletonGrid />
+          <HeroSkeleton />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* 1. Vendedores (Base total + novos no período selecionado) */}
-            <KPICard
-              title="Total Vendedores"
-              value={data?.kpis.sellers.total.toLocaleString("pt-BR") || "0"}
-              periodCount={data?.kpis.sellers.current}
-              changePercent={data?.kpis.sellers.changePercent}
-              icon={Users}
-              accent="blue"
-              hint="Lojistas cadastrados na plataforma"
-            />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* HERO 1: GMV Aprovado (7 Colunas - Dominante) */}
+            <div className="lg:col-span-7 relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#121626] via-[#0E111A] to-[#090A0E] p-6 sm:p-7 shadow-2xl transition-all hover:border-blue-500/45 group">
+              {/* Specular Highlight decorativo sutil estilo Apple */}
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
 
-            {/* 2. Lojas (Base total + novas no período selecionado) */}
-            <KPICard
-              title="Total Lojas"
-              value={data?.kpis.stores.total.toLocaleString("pt-BR") || "0"}
-              periodCount={data?.kpis.stores.current}
-              changePercent={data?.kpis.stores.changePercent}
-              icon={Store}
-              accent="purple"
-              hint="Lojas criadas e configuradas"
-            />
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                      Volume Bruto Transacionado (GMV)
+                    </span>
+                    <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 uppercase font-mono">
+                      Vendas Aprovadas
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Total faturado no intervalo selecionado pelas lojas ativas
+                  </p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-400 shrink-0">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+              </div>
 
-            {/* 3. Bots Conectados (Base total + novos no período selecionado) */}
-            <KPICard
-              title="Bots Conectados"
-              value={data?.kpis.bots.total.toLocaleString("pt-BR") || "0"}
-              periodCount={data?.kpis.bots.current}
-              changePercent={data?.kpis.bots.changePercent}
-              icon={Bot}
-              accent="blue"
-              hint="Bots do Telegram com status ativo"
-            />
+              {/* Valor Principal Hero */}
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-3 my-2">
+                <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tabular-nums tracking-tight">
+                  {formatCurrency(data?.kpis.gmv.current ?? 0)}
+                </span>
 
-            {/* 4. Produtos (Base total + novos no período selecionado) */}
-            <KPICard
-              title="Total Produtos"
-              value={data?.kpis.products.total.toLocaleString("pt-BR") || "0"}
-              periodCount={data?.kpis.products.current}
-              changePercent={data?.kpis.products.changePercent}
-              icon={Package}
-              accent="zinc"
-              hint="Produtos ativos no catálogo global"
-            />
+                {data?.kpis.gmv.changePercent !== null && data?.kpis.gmv.changePercent !== undefined && (
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-lg border font-mono ${
+                      data.kpis.gmv.changePercent > 0
+                        ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25"
+                        : data.kpis.gmv.changePercent < 0
+                        ? "text-red-400 bg-red-500/10 border-red-500/25"
+                        : "text-zinc-400 bg-white/5 border-white/10"
+                    }`}
+                  >
+                    {data.kpis.gmv.changePercent > 0 ? (
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    ) : data.kpis.gmv.changePercent < 0 ? (
+                      <TrendingDown className="w-3.5 h-3.5" />
+                    ) : null}
+                    {data.kpis.gmv.changePercent > 0 ? `+${data.kpis.gmv.changePercent}%` : `${data.kpis.gmv.changePercent}%`}
+                    <span className="text-[10px] font-normal text-zinc-400">vs período ant.</span>
+                  </span>
+                )}
+              </div>
 
-            {/* 5. Clientes Telegram (Base total + novos no período selecionado) */}
-            <KPICard
-              title="Clientes Telegram"
-              value={data?.kpis.telegramCustomers.total.toLocaleString("pt-BR") || "0"}
-              periodCount={data?.kpis.telegramCustomers.current}
-              changePercent={data?.kpis.telegramCustomers.changePercent}
-              icon={UserCheck}
-              accent="blue"
-              hint="Compradores únicos via Telegram"
-            />
+              {/* Indicadores de Apoio Hero */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 mt-4 border-t border-white/[0.08] text-xs">
+                <div>
+                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Pedidos Aprovados</span>
+                  <span className="text-base font-bold text-white font-mono tabular-nums mt-0.5 block">
+                    {(data?.salesAndPayments.paidOrdersCount || data?.kpis.paidOrders.current || 0).toLocaleString("pt-BR")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Ticket Médio</span>
+                  <span className="text-base font-bold text-zinc-200 font-mono tabular-nums mt-0.5 block">
+                    {formatCurrency(averageTicket)}
+                  </span>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Acumulado Histórico</span>
+                  <span className="text-base font-bold text-zinc-300 font-mono tabular-nums mt-0.5 block">
+                    {formatCurrency(data?.kpis.gmv.total ?? 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-            {/* 6. Pedidos Pagos (Métrica temporal: valor no período + histórico de apoio) */}
-            <KPICard
-              title="Pedidos Pagos"
-              value={(data?.kpis.paidOrders.current ?? 0).toLocaleString("pt-BR")}
-              historicalTotal={`Total acumulado: ${(data?.kpis.paidOrders.total ?? 0).toLocaleString("pt-BR")}`}
-              changePercent={data?.kpis.paidOrders.changePercent}
-              icon={ShoppingCart}
-              accent="emerald"
-              hint="Vendas confirmadas no intervalo"
-            />
+            {/* HERO 2: Receita de Taxas da Plataforma (5 Colunas) */}
+            <div className="lg:col-span-5 relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-[#0B1713] via-[#0E1317] to-[#090A0E] p-6 sm:p-7 shadow-2xl transition-all hover:border-emerald-500/40 group">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
 
-            {/* 7. GMV Aprovado (Métrica financeira: valor no período + histórico de apoio) */}
-            <KPICard
-              title="Volume Bruto (GMV)"
-              value={formatCurrency(data?.kpis.gmv.current ?? 0)}
-              historicalTotal={`Total acumulado: ${formatCurrency(data?.kpis.gmv.total ?? 0)}`}
-              changePercent={data?.kpis.gmv.changePercent}
-              icon={DollarSign}
-              accent="blue"
-              isFeatured={true}
-              hint="Faturamento bruto no intervalo"
-            />
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                      Receita de Taxas da Plataforma
+                    </span>
+                    <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase font-mono">
+                      Processado / Aceito
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Comissões e taxas de gateway processadas com sucesso
+                  </p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shrink-0">
+                  <Coins className="w-5 h-5" />
+                </div>
+              </div>
 
-            {/* 8. Taxas Efetivamente Processadas (Métrica financeira: valor no período + histórico de apoio) */}
-            <KPICard
-              title="Taxas Processadas"
-              value={formatCurrency(data?.kpis.processedFees.current ?? 0)}
-              historicalTotal={`Total acumulado: ${formatCurrency(data?.kpis.processedFees.total ?? 0)}`}
-              changePercent={data?.kpis.processedFees.changePercent}
-              icon={Coins}
-              accent="emerald"
-              hint="Taxas da plataforma no intervalo"
-            />
+              {/* Valor Principal Taxas */}
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-3 my-2">
+                <span className="text-3xl sm:text-4xl lg:text-4xl font-black text-emerald-400 font-mono tabular-nums tracking-tight">
+                  {formatCurrency(data?.kpis.processedFees.current ?? 0)}
+                </span>
+
+                {data?.kpis.processedFees.changePercent !== null && data?.kpis.processedFees.changePercent !== undefined && (
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-lg border font-mono ${
+                      data.kpis.processedFees.changePercent > 0
+                        ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25"
+                        : data.kpis.processedFees.changePercent < 0
+                        ? "text-red-400 bg-red-500/10 border-red-500/25"
+                        : "text-zinc-400 bg-white/5 border-white/10"
+                    }`}
+                  >
+                    {data.kpis.processedFees.changePercent > 0 ? (
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    ) : data.kpis.processedFees.changePercent < 0 ? (
+                      <TrendingDown className="w-3.5 h-3.5" />
+                    ) : null}
+                    {data.kpis.processedFees.changePercent > 0 ? `+${data.kpis.processedFees.changePercent}%` : `${data.kpis.processedFees.changePercent}%`}
+                  </span>
+                )}
+              </div>
+
+              {/* Indicadores de Apoio Taxas */}
+              <div className="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-white/[0.08] text-xs">
+                <div>
+                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Take-Rate Efetivo</span>
+                  <span className="text-base font-bold text-white font-mono tabular-nums mt-0.5 block">
+                    {effectiveTakeRate ? `${effectiveTakeRate}% das vendas` : "R$ 0,50/venda"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Total Histórico</span>
+                  <span className="text-base font-bold text-zinc-300 font-mono tabular-nums mt-0.5 block">
+                    {formatCurrency(data?.kpis.processedFees.total ?? 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-      </div>
+      </section>
 
       {/* ==================================================== */}
-      {/* 3. VENDAS E PAGAMENTOS (DESEMPENHO COMERCIAL) */}
+      {/* 3. RÉGUA COMPACTA DE TELEMETRIA DO ECOSSISTEMA       */}
       {/* ==================================================== */}
-      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-400" />
-              Desempenho Comercial & Pagamentos
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Métricas reais de checkout, conversão Pix e evolução temporal no período
-            </p>
-          </div>
-
-          {/* Chart View Selector */}
-          <div className="flex items-center bg-[#15171D] p-1 rounded-xl border border-white/[0.08] text-xs">
-            <button
-              onClick={() => setChartView("gmv")}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                chartView === "gmv" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              Volume (GMV)
-            </button>
-            <button
-              onClick={() => setChartView("orders")}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                chartView === "orders" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              Pedidos Pagos
-            </button>
-            <button
-              onClick={() => setChartView("pix")}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                chartView === "pix" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              Pix Gerado vs Pago
-            </button>
-          </div>
-        </div>
-
-        {/* 4 Mini Performance Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
-            <span className="text-[11px] text-gray-400 uppercase font-semibold block">Pix Gerados</span>
-            <span className="text-xl font-black text-white mt-1 block font-mono tabular-nums">
-              {data?.salesAndPayments.pixGeneratedCount.toLocaleString("pt-BR") || "0"}
-            </span>
-            <span className="text-[10px] text-gray-500 mt-0.5 block">Cobranças Pix emitidas</span>
-          </div>
-
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
-            <span className="text-[11px] text-gray-400 uppercase font-semibold block">Pix Pagos</span>
-            <span className="text-xl font-black text-emerald-400 mt-1 block font-mono tabular-nums">
-              {data?.salesAndPayments.pixPaidCount.toLocaleString("pt-BR") || "0"}
-            </span>
-            <span className="text-[10px] text-gray-500 mt-0.5 block">Pagamentos confirmados</span>
-          </div>
-
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
-            <span className="text-[11px] text-gray-400 uppercase font-semibold block">Conversão Pix</span>
-            <span className="text-xl font-black text-blue-400 mt-1 block font-mono tabular-nums">
-              {data?.salesAndPayments.pixConversionRate !== null && data?.salesAndPayments.pixConversionRate !== undefined
-                ? `${data.salesAndPayments.pixConversionRate}%`
-                : "Sem dados"}
-            </span>
-            <span className="text-[10px] text-gray-500 mt-0.5 block">(Pix Pagos / Pix Gerados)</span>
-          </div>
-
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
-            <span className="text-[11px] text-gray-400 uppercase font-semibold block">GMV no Período</span>
-            <span className="text-xl font-black text-white mt-1 block font-mono tabular-nums">
-              {formatCurrency(data?.salesAndPayments.gmvApproved || 0)}
-            </span>
-            <span className="text-[10px] text-gray-500 mt-0.5 block">
-              {data?.salesAndPayments.paidOrdersCount || 0} pedidos aprovados
-            </span>
-          </div>
-        </div>
-
-        {/* Dynamic Chart Container */}
-        <div className="h-72 w-full pt-2">
-          {loading ? (
-            <ChartSkeleton />
-          ) : data?.salesAndPayments.dailyEvolution && data.salesAndPayments.dailyEvolution.length > 0 ? (
-            <AdminChartsComponent
-              type={chartView === "gmv" ? "gmv" : chartView === "orders" ? "orders" : "pix"}
-              data={data.salesAndPayments.dailyEvolution}
-            />
-          ) : (
-            <EmptyChartState message="Sem histórico de vendas para o período selecionado." />
-          )}
-        </div>
-      </div>
-
-      {/* ==================================================== */}
-      {/* 4. ACOMPANHAMENTO DAS TAXAS DA PLATAFORMA (FASE COMERCIAL) */}
-      {/* ==================================================== */}
-      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.08] pb-4">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Coins className="w-4 h-4 text-emerald-400" />
-              Taxas da Plataforma & Auditoria de Splits
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Acompanhamento rigoroso das taxas por venda Pix com base no estado real registrado no banco
-            </p>
-          </div>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 self-start sm:self-auto">
-            {formatCurrency(data?.platformFees.processedFeeTotal || 0)} processado no período
-          </span>
-        </div>
-
-        {/* Breakdown Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {/* Card 1: Previsto Total */}
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
-            <div className="flex items-center justify-between text-gray-400 text-xs">
-              <span>Taxas Previstas (Elegíveis)</span>
-              <Info className="w-3.5 h-3.5 text-gray-500" />
+      <section id="section-telemetry" className="bg-[#0A0C10] p-4 sm:p-5 rounded-2xl border border-white/[0.08] shadow-xl">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06]">
+          {/* 1. Lojistas */}
+          <div className="px-2 pt-2 sm:pt-0 sm:px-4 space-y-1.5">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Lojistas</span>
+              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <Users className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <span className="text-xl font-black text-white block">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white font-mono tabular-nums">
+                {data?.kpis.sellers.total.toLocaleString("pt-BR") || "0"}
+              </span>
+              {data?.kpis.sellers.current !== undefined && data.kpis.sellers.current > 0 && (
+                <span className="text-[11px] font-mono font-semibold text-blue-400">
+                  +{data.kpis.sellers.current} no período
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-zinc-400">Vendedores cadastrados</p>
+          </div>
+
+          {/* 2. Lojas */}
+          <div className="px-2 pt-2 sm:pt-0 sm:px-4 space-y-1.5">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Lojas</span>
+              <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <Store className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white font-mono tabular-nums">
+                {data?.kpis.stores.total.toLocaleString("pt-BR") || "0"}
+              </span>
+              {data?.kpis.stores.current !== undefined && data.kpis.stores.current > 0 && (
+                <span className="text-[11px] font-mono font-semibold text-purple-400">
+                  +{data.kpis.stores.current} novas
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-zinc-400">Lojas virtuais ativas</p>
+          </div>
+
+          {/* 3. Bots Telegram */}
+          <div className="px-2 pt-2 sm:pt-0 sm:px-4 space-y-1.5">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Bots Telegram</span>
+              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <Bot className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white font-mono tabular-nums">
+                {data?.kpis.bots.total.toLocaleString("pt-BR") || "0"}
+              </span>
+              <span className="text-[11px] font-mono text-emerald-400">
+                {data?.telegramStats.activeBots || 0} operando
+              </span>
+            </div>
+            <p className="text-[10px] text-zinc-400">Bots com webhook ativo</p>
+          </div>
+
+          {/* 4. Produtos */}
+          <div className="px-2 pt-2 sm:pt-0 sm:px-4 space-y-1.5">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Produtos</span>
+              <div className="p-1.5 rounded-lg bg-white/5 text-zinc-300 border border-white/10">
+                <Package className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white font-mono tabular-nums">
+                {data?.kpis.products.total.toLocaleString("pt-BR") || "0"}
+              </span>
+              {data?.kpis.products.current !== undefined && data.kpis.products.current > 0 && (
+                <span className="text-[11px] font-mono font-semibold text-zinc-400">
+                  +{data.kpis.products.current} no período
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-zinc-400">Catálogo global cadastrado</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================== */}
+      {/* 4. NÚCLEO ANALÍTICO: GRÁFICO + EFICIÊNCIA PIX       */}
+      {/* ==================================================== */}
+      <section id="section-charts" className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Lado Esquerdo: Gráfico Expansivo com Segmented Control (8 Colunas) */}
+        <div className="lg:col-span-8 bg-[#090A0E] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-400" />
+                Evolução Temporal & Vendas
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Tendência diária registrada em tempo real pelo sistema
+              </p>
+            </div>
+
+            {/* Segmented Control do Gráfico */}
+            <div className="inline-flex items-center bg-[#12141A] p-1 rounded-xl border border-white/[0.08] text-xs">
+              <button
+                type="button"
+                onClick={() => setChartView("gmv")}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  chartView === "gmv"
+                    ? "bg-blue-600 text-white shadow-xs font-bold"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Volume (GMV)
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartView("orders")}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  chartView === "orders"
+                    ? "bg-blue-600 text-white shadow-xs font-bold"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Pedidos Pagos
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartView("pix")}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  chartView === "pix"
+                    ? "bg-blue-600 text-white shadow-xs font-bold"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Pix Gerado vs Pago
+              </button>
+            </div>
+          </div>
+
+          {/* Gráfico Recharts */}
+          <div className="h-72 sm:h-80 w-full pt-1">
+            {loading ? (
+              <ChartSkeleton />
+            ) : data?.salesAndPayments.dailyEvolution && data.salesAndPayments.dailyEvolution.length > 0 ? (
+              <AdminChartsComponent
+                type={chartView === "gmv" ? "gmv" : chartView === "orders" ? "orders" : "pix"}
+                data={data.salesAndPayments.dailyEvolution}
+              />
+            ) : (
+              <EmptyChartState message="Sem histórico de transações para o período selecionado." />
+            )}
+          </div>
+        </div>
+
+        {/* Lado Direito: Eficiência do Checkout Pix (Stripe Insights Style - 4 Colunas) */}
+        <div className="lg:col-span-4 bg-[#090A0E] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl flex flex-col justify-between space-y-5">
+          <div>
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-400" />
+                Eficiência do Checkout Pix
+              </h2>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase">PushinPay</span>
+            </div>
+
+            {/* Destaque Taxa de Conversão */}
+            <div className="pt-4 pb-2 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-semibold text-zinc-300">Taxa de Conversão</span>
+                <span className="text-2xl font-black text-emerald-400 font-mono tabular-nums">
+                  {data?.salesAndPayments.pixConversionRate !== null &&
+                  data?.salesAndPayments.pixConversionRate !== undefined
+                    ? `${data.salesAndPayments.pixConversionRate}%`
+                    : "0.0%"}
+                </span>
+              </div>
+
+              {/* Barra de Progresso Visual de Precisão (Linear Style) */}
+              <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden p-0.5">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(0, data?.salesAndPayments.pixConversionRate || 0)
+                    )}%`,
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-zinc-400 block text-right font-mono">
+                Pix pagos / Pix gerados
+              </span>
+            </div>
+
+            {/* Grid de Métricas de Checkout */}
+            <div className="grid grid-cols-2 gap-3 pt-3">
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <span className="text-[10px] text-zinc-400 uppercase font-mono block">Pix Gerados</span>
+                <span className="text-lg font-black text-white font-mono tabular-nums mt-1 block">
+                  {data?.salesAndPayments.pixGeneratedCount.toLocaleString("pt-BR") || "0"}
+                </span>
+                <span className="text-[9px] text-zinc-400 block mt-0.5">Cobranças emitidas</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/20">
+                <span className="text-[10px] text-emerald-400 uppercase font-mono block">Pix Pagos</span>
+                <span className="text-lg font-black text-emerald-400 font-mono tabular-nums mt-1 block">
+                  {data?.salesAndPayments.pixPaidCount.toLocaleString("pt-BR") || "0"}
+                </span>
+                <span className="text-[9px] text-emerald-500/80 block mt-0.5">Confirmados</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Caixa de Apoio Informativa */}
+          <div className="p-3.5 rounded-xl bg-[#12141A] border border-white/[0.06] space-y-1.5 text-xs">
+            <div className="flex items-center justify-between text-zinc-300">
+              <span className="text-[11px] text-zinc-400">Total Aprovado:</span>
+              <span className="font-bold text-white font-mono tabular-nums">
+                {formatCurrency(data?.salesAndPayments.gmvApproved || 0)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-zinc-300">
+              <span className="text-[11px] text-zinc-400">Ticket Médio:</span>
+              <span className="font-bold text-blue-400 font-mono tabular-nums">
+                {formatCurrency(averageTicket)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================== */}
+      {/* 5. ESTEIRA DE LIQUIDAÇÃO & AUDITORIA DE SPLITS      */}
+      {/* ==================================================== */}
+      <section id="section-pipeline" className="bg-[#090A0E] p-5 sm:p-7 rounded-2xl border border-white/[0.08] shadow-2xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              Auditoria de Splits & Liquidação de Taxas
+            </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Esteira de conciliação bancária entre o gateway PushinPay e a plataforma WebGran
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
+              {formatCurrency(data?.platformFees.processedFeeTotal || 0)} processado
+            </span>
+          </div>
+        </div>
+
+        {/* Pipeline Conectado de 3 Estágios */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+          {/* Estágio 1: Previsto Total */}
+          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-2 relative">
+            <div className="flex items-center justify-between text-xs text-zinc-400">
+              <span className="font-semibold uppercase tracking-wider text-[10px]">
+                1. Taxas Previstas (Elegíveis)
+              </span>
+              <Info className="w-3.5 h-3.5 text-zinc-400" />
+            </div>
+            <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums block">
               {formatCurrency(data?.platformFees.expectedFeeTotal || 0)}
             </span>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
               Total de comissões calculadas para pedidos pagos no período conforme taxa individual configurada.
             </p>
           </div>
 
-          {/* Card 2: Processado / Aceito */}
-          <div className="bg-[#15171D] p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] space-y-1">
-            <div className="flex items-center justify-between text-emerald-400 text-xs font-semibold">
-              <span className="flex items-center gap-1.5">
+          {/* Estágio 2: Processado / Aceito */}
+          <div className="p-4 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/25 space-y-2 relative">
+            <div className="flex items-center justify-between text-xs text-emerald-400">
+              <span className="font-semibold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Splits Processados / Aceitos
+                2. Processado / Aceito
               </span>
-              <span className="font-mono text-[11px]">{data?.platformFees.processedCount || 0} pedidos</span>
+              <span className="font-mono text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded">
+                {data?.platformFees.processedCount || 0} pedidos
+              </span>
             </div>
-            <span className="text-xl font-black text-emerald-400 block">
+            <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono tabular-nums block">
               {formatCurrency(data?.platformFees.processedFeeTotal || 0)}
             </span>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Splits aceitos e confirmados com sucesso pelo gateway de pagamentos (`PROCESSED` / `GATEWAY_ACCEPTED`).
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Splits aceitos e confirmados com sucesso pelo gateway de pagamentos (<code className="text-emerald-300 font-mono">GATEWAY_ACCEPTED</code>).
             </p>
           </div>
 
-          {/* Card 3: Liquidado em Conta */}
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
-            <div className="flex items-center justify-between text-blue-400 text-xs font-semibold">
-              <span className="flex items-center gap-1.5">
+          {/* Estágio 3: Liquidado em Conta */}
+          <div className="p-4 rounded-xl bg-blue-500/[0.04] border border-blue-500/25 space-y-2 relative">
+            <div className="flex items-center justify-between text-xs text-blue-400">
+              <span className="font-semibold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Liquidado em Conta (`SETTLED`)
+                3. Liquidado em Conta
               </span>
-              <span className="font-mono text-[11px]">{data?.platformFees.settledCount || 0} pedidos</span>
+              <span className="font-mono text-[10px] bg-blue-500/20 px-1.5 py-0.5 rounded">
+                {data?.platformFees.settledCount || 0} pedidos
+              </span>
             </div>
-            <span className="text-xl font-black text-white block">
+            <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums block">
               {formatCurrency(data?.platformFees.settledFeeTotal || 0)}
             </span>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
-              Valor com liquidação bancária formalizada (`SETTLED`). Caso ainda não haja conciliação externa, exibe R$ 0,00.
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Valor com liquidação bancária formalizada (<code className="text-blue-300 font-mono">SETTLED</code>). Saldo efetivo em conta.
             </p>
           </div>
+        </div>
 
-          {/* Card 4: Pendentes */}
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
+        {/* Central de Exceções & Reconciliação */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
+          {/* Pendentes com Ação Rápida */}
+          <div className="p-4 rounded-xl bg-[#12141A] border border-amber-500/25 space-y-2.5">
             <div className="flex items-center justify-between text-amber-400 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
@@ -560,107 +730,106 @@ export default function AdminDashboardClient() {
               </span>
               <span className="font-mono text-[11px]">{data?.platformFees.pendingCount || 0} pedidos</span>
             </div>
-            <span className="text-xl font-black text-amber-400 block">
+            <span className="text-lg font-black text-amber-400 font-mono tabular-nums block">
               {formatCurrency(data?.platformFees.pendingFeeTotal || 0)}
             </span>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
-              Pedidos pagos aguardando processamento do split pelo gateway (`PENDING` ou `REQUESTED`).
-            </p>
-            {/* Reconcile button */}
             <button
               type="button"
               onClick={handleSyncSplits}
               disabled={syncingSplits || loading}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 disabled:opacity-50 cursor-pointer transition-all h-8 shadow-xs"
             >
               {syncingSplits ? (
-                <><RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando...</>
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando...
+                </>
               ) : (
-                <><Zap className="w-3 h-3" /> Reconciliar Agora</>
+                <>
+                  <Zap className="w-3 h-3" /> Reconciliar Agora
+                </>
               )}
             </button>
             {splitSyncResult && (
-              <p className="text-[10px] text-emerald-400 mt-1 font-mono">
-                ✓ {splitSyncResult.updated} atualizado(s) · {splitSyncResult.skipped} sem mudança · {splitSyncResult.divergence} divergência · {splitSyncResult.errors} erro(s)
+              <p className="text-[10px] text-emerald-400 font-mono">
+                ✓ {splitSyncResult.updated} atualizados · {splitSyncResult.skipped} inalterados
               </p>
             )}
           </div>
 
-          {/* Card 5: Isenções Intencionais (SKIPPED) */}
-          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
-            <div className="flex items-center justify-between text-gray-300 text-xs font-semibold">
+          {/* Isenções Intencionais (SKIPPED) */}
+          <div className="p-4 rounded-xl bg-[#12141A] border border-white/[0.08] space-y-2">
+            <div className="flex items-center justify-between text-zinc-300 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-blue-400" />
-                Isenções & Ignorados (`SKIPPED`)
+                <Tag className="w-3.5 h-3.5 text-zinc-400" />
+                Isenções / Skipped
               </span>
-              <span className="font-mono text-[11px]">{data?.platformFees.skippedCount || 0} pedidos</span>
+              <span className="font-mono text-[11px] text-zinc-400">
+                {data?.platformFees.skippedCount || 0} pedidos
+              </span>
             </div>
-            <span className="text-xl font-black text-gray-200 block">
+            <span className="text-lg font-black text-zinc-300 font-mono tabular-nums block">
               {formatCurrency(data?.platformFees.skippedFeeTotal || 0)}
             </span>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
-              Isenções temporárias ativas ou taxa zero intencional. <strong>Não é falha financeira</strong>.
+            <p className="text-[11px] text-zinc-400">
+              Taxa zero intencional ou isenção promocional ativa. <strong>Não é falha financeira</strong>.
             </p>
           </div>
 
-          {/* Card 6: Splits com Falha (FAILED) */}
-          <div className="bg-[#15171D] p-4 rounded-xl border border-red-500/20 bg-red-500/[0.03] space-y-1">
+          {/* Splits com Falha (FAILED) */}
+          <div className="p-4 rounded-xl bg-[#12141A] border border-red-500/25 space-y-2">
             <div className="flex items-center justify-between text-red-400 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                Splits com Falha (`FAILED`)
+                Splits com Falha
               </span>
               <span className="font-mono text-[11px]">{data?.platformFees.failedCount || 0} pedidos</span>
             </div>
-            <span className="text-xl font-black text-red-400 block">
+            <span className="text-lg font-black text-red-400 font-mono tabular-nums block">
               {formatCurrency(data?.platformFees.failedFeeTotal || 0)}
             </span>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Splits rejeitados ou que apresentaram erro de comunicação com a PushinPay.
+            <p className="text-[11px] text-zinc-400">
+              Transações com erro de comunicação com o gateway que exigem atenção.
             </p>
           </div>
         </div>
-
-        {/* Audit Footnote */}
-        <div className="p-3.5 bg-[#15171D] rounded-xl border border-white/[0.08] text-[11px] text-gray-400 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-          <p>
-            <strong>Regra de Auditoria Histórica:</strong> As métricas acima utilizam exclusivamente os snapshots de taxa
-            gravados no momento da criação da cobrança (`splitAmountCents` e `splitStatus`). Configurações recentes de taxa
-            não alteram o passado retroativamente.
-          </p>
-        </div>
-      </div>
+      </section>
 
       {/* ==================================================== */}
-      {/* 5. RANKING DE VENDEDORES (PRINCIPAIS VENDEDORES) */}
+      {/* 6. LEADERBOARD DE VENDEDORES COM % SHARE DO GMV      */}
       {/* ==================================================== */}
-      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+      <section id="section-leaderboard" className="bg-[#090A0E] p-5 sm:p-7 rounded-2xl border border-white/[0.08] shadow-2xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-400" />
-              Principais Vendedores
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              Leaderboard de Vendedores
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Desempenho por vendedor e lojas vinculadas no período ({data?.periodLabel || "Últimos 30 dias"})
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Participação no faturamento da plataforma e volume de transações no período
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-[#15171D] p-1 rounded-xl border border-white/[0.08] text-xs">
-            <span className="text-gray-400 px-2 text-[11px]">Ordenar por:</span>
+          {/* Ordenação do Ranking */}
+          <div className="flex items-center gap-2 bg-[#12141A] p-1 rounded-xl border border-white/[0.08] text-xs">
+            <span className="text-zinc-400 px-2 text-[11px]">Ordenar:</span>
             <button
+              type="button"
               onClick={() => setRankingSort("gmv")}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                rankingSort === "gmv" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                rankingSort === "gmv"
+                  ? "bg-blue-600 text-white shadow-xs font-bold"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               Maior GMV
             </button>
             <button
+              type="button"
               onClick={() => setRankingSort("orders")}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                rankingSort === "orders" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                rankingSort === "orders"
+                  ? "bg-blue-600 text-white shadow-xs font-bold"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               Mais Pedidos
@@ -671,59 +840,96 @@ export default function AdminDashboardClient() {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-white/[0.08] text-gray-400 text-[11px] font-semibold uppercase tracking-wider">
-                <th className="pb-3 px-3">#</th>
-                <th className="pb-3 px-3">Vendedor</th>
-                <th className="pb-3 px-3">Loja Vinculada</th>
-                <th className="pb-3 px-3 text-right">Pedidos Pagos</th>
+              <tr className="border-b border-white/[0.06] text-zinc-400 text-[10px] font-semibold uppercase tracking-wider font-mono">
+                <th className="pb-3 px-3 w-12">Pos</th>
+                <th className="pb-3 px-3">Vendedor & Loja</th>
+                <th className="pb-3 px-3 w-48">Share do Faturamento</th>
+                <th className="pb-3 px-3 text-right">Pedidos</th>
                 <th className="pb-3 px-3 text-right">GMV Aprovado</th>
-                <th className="pb-3 px-3 text-right">Taxas Processadas</th>
-                <th className="pb-3 px-3 text-right">Taxas Previstas</th>
+                <th className="pb-3 px-3 text-right">Taxas Retidas</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.05]">
-              {sortedRanking.map((s, idx) => (
-                <tr key={s.sellerId} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3 px-3 text-gray-500 font-mono text-[11px]">#{idx + 1}</td>
-                  <td className="py-3 px-3">
-                    <div>
-                      <p className="font-bold text-white text-xs">{s.sellerName}</p>
-                      <span className="text-[10px] text-gray-500">{s.sellerEmail}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-3">
-                    {s.storeName ? (
-                      <div>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-200">
-                          <Store className="w-3 h-3 text-blue-400" />
-                          {s.storeName}
+            <tbody className="divide-y divide-white/[0.04]">
+              {sortedRanking.map((s, idx) => {
+                const sharePercent =
+                  totalPeriodGmv > 0 ? (s.approvedGmv / totalPeriodGmv) * 100 : 0;
+
+                return (
+                  <tr key={s.sellerId} className="hover:bg-white/[0.02] transition-colors group">
+                    {/* Badge de Posição */}
+                    <td className="py-3 px-3">
+                      {idx === 0 ? (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold text-xs shadow-xs">
+                          1
                         </span>
-                        {s.storeSlug && (
-                          <span className="text-[10px] text-gray-500 block font-mono">/{s.storeSlug}</span>
-                        )}
+                      ) : idx === 1 ? (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300/15 border border-slate-300/30 text-slate-200 font-bold text-xs">
+                          2
+                        </span>
+                      ) : idx === 2 ? (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700/20 border border-amber-700/40 text-amber-400 font-bold text-xs">
+                          3
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400 font-mono text-[11px] px-1">
+                          #{idx + 1}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Vendedor e Loja Vinculada */}
+                    <td className="py-3 px-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-xs">{s.sellerName}</span>
+                          {s.storeName && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                              <Store className="w-2.5 h-2.5" />
+                              {s.storeName}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-zinc-400 font-mono">{s.sellerEmail}</span>
                       </div>
-                    ) : (
-                      <span className="text-[11px] text-gray-500 italic">Sem loja</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-right font-semibold text-gray-200">
-                    {s.paidOrdersCount.toLocaleString("pt-BR")}
-                  </td>
-                  <td className="py-3 px-3 text-right font-black text-white">
-                    {formatCurrency(s.approvedGmv)}
-                  </td>
-                  <td className="py-3 px-3 text-right font-bold text-emerald-400">
-                    {formatCurrency(s.processedFees)}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-[11px] text-gray-400">
-                    {formatCurrency(s.totalFeesExpected)}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+
+                    {/* Barra Visual de % Share */}
+                    <td className="py-3 px-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-zinc-400">Participação</span>
+                          <span className="font-bold text-white">{sharePercent.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                            style={{ width: `${Math.min(100, Math.max(0, sharePercent))}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Pedidos */}
+                    <td className="py-3 px-3 text-right font-semibold text-zinc-300 font-mono tabular-nums">
+                      {s.paidOrdersCount.toLocaleString("pt-BR")}
+                    </td>
+
+                    {/* GMV */}
+                    <td className="py-3 px-3 text-right font-black text-white font-mono tabular-nums">
+                      {formatCurrency(s.approvedGmv)}
+                    </td>
+
+                    {/* Taxas Processadas */}
+                    <td className="py-3 px-3 text-right font-bold text-emerald-400 font-mono tabular-nums">
+                      {formatCurrency(s.processedFees)}
+                    </td>
+                  </tr>
+                );
+              })}
 
               {sortedRanking.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-gray-500 text-xs">
+                  <td colSpan={6} className="py-10 text-center text-zinc-400 text-xs">
                     Nenhum pedido pago encontrado para os vendedores no período selecionado.
                   </td>
                 </tr>
@@ -731,235 +937,148 @@ export default function AdminDashboardClient() {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       {/* ==================================================== */}
-      {/* 6. ECOSSISTEMA TELEGRAM & NOTA DE ATRIBUIÇÃO */}
+      {/* 7. FEED DE VENDAS & ECOSSISTEMA TELEGRAM (7 + 5)     */}
       {/* ==================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Telegram Stats */}
-        <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
-          <div className="border-b border-white/[0.08] pb-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Bot className="w-4 h-4 text-purple-400" />
-              Ecossistema Telegram
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">Bots conectados e telemetria de clientes</p>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between p-3 bg-[#15171D] rounded-xl border border-white/[0.08]">
-              <span className="text-gray-400">Bots Conectados Ativos:</span>
-              <span className="font-black text-white text-sm">{data?.telegramStats.activeBots || 0}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-[#15171D] rounded-xl border border-white/[0.08]">
-              <span className="text-gray-400">Total de Clientes Registrados:</span>
-              <span className="font-black text-white text-sm">
-                {data?.telegramStats.totalCustomers.toLocaleString("pt-BR") || 0}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-[#15171D] rounded-xl border border-white/[0.08]">
-              <span className="text-gray-400">Novos Clientes no Período:</span>
-              <span className="font-bold text-blue-400 text-sm">
-                +{data?.telegramStats.newCustomersPeriod.toLocaleString("pt-BR") || 0}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-3 bg-purple-500/5 rounded-xl border border-purple-500/20 text-[11px] text-gray-400 leading-relaxed">
-            {data?.telegramStats.attributionNote}
-          </div>
-        </div>
-
-        {/* Recent Paid Sales */}
-        <div className="lg:col-span-2 bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+      <section id="section-feed" className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Últimos Pedidos Aprovados (7 Colunas) */}
+        <div className="lg:col-span-7 bg-[#090A0E] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
+          <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 text-emerald-400" />
                 Últimos Pedidos Aprovados
               </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Transações pagas mais recentes na plataforma</p>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Feed de transações pagas mais recentes na plataforma
+              </p>
             </div>
-            <span className="text-[11px] font-mono text-gray-500">Últimos 10</span>
+            <span className="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
+              Últimas 10
+            </span>
           </div>
 
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-white/[0.08] text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
-                  <th className="pb-2.5 px-2">Cliente</th>
-                  <th className="pb-2.5 px-2">Loja / Vendedor</th>
-                  <th className="pb-2.5 px-2">Total</th>
-                  <th className="pb-2.5 px-2">Split</th>
-                  <th className="pb-2.5 px-2 text-right">Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {(data?.recentSales || []).map((sale) => (
-                  <tr key={sale.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2.5 px-2 font-medium text-gray-200 truncate max-w-[120px]">
-                      {sale.customerName}
-                    </td>
-                    <td className="py-2.5 px-2 text-[11px]">
-                      <span className="text-gray-300 font-semibold">{sale.storeName}</span>
-                      <span className="text-[10px] text-gray-500 block">por {sale.sellerName}</span>
-                    </td>
-                    <td className="py-2.5 px-2 font-black text-white font-mono tabular-nums">{formatCurrency(sale.total)}</td>
-                    <td className="py-2.5 px-2">
-                      <span
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                          sale.splitStatus === "PROCESSED" || sale.splitStatus === "GATEWAY_ACCEPTED"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : sale.splitStatus === "SKIPPED"
-                            ? "bg-white/5 text-gray-400 border border-white/[0.08]"
-                            : sale.splitStatus === "FAILED"
-                            ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                            : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                        }`}
-                      >
-                        {sale.splitStatus || "PENDING"}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-2 text-right text-[10px] text-gray-400 font-mono">
+          <div className="divide-y divide-white/[0.04]">
+            {(data?.recentSales || []).map((sale) => (
+              <div
+                key={sale.id}
+                className="py-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
+              >
+                {/* Avatar Inicial + Cliente */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs uppercase font-mono">
+                    {sale.customerName ? sale.customerName.charAt(0) : "C"}
+                  </div>
+                  <div className="min-w-0 truncate">
+                    <p className="text-xs font-semibold text-white truncate">{sale.customerName}</p>
+                    <p className="text-[10px] text-zinc-400 truncate">
+                      {sale.storeName} · por <span className="text-zinc-300">{sale.sellerName}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Valor + Status do Split */}
+                <div className="text-right shrink-0 space-y-0.5">
+                  <span className="text-xs font-black text-white font-mono tabular-nums block">
+                    {formatCurrency(sale.total)}
+                  </span>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span
+                      className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold font-mono ${
+                        sale.splitStatus === "PROCESSED" || sale.splitStatus === "GATEWAY_ACCEPTED"
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25"
+                          : sale.splitStatus === "SKIPPED"
+                          ? "bg-white/5 text-zinc-400 border border-white/[0.08]"
+                          : sale.splitStatus === "FAILED"
+                          ? "bg-red-500/10 text-red-400 border border-red-500/25"
+                          : "bg-amber-500/10 text-amber-400 border border-amber-500/25"
+                      }`}
+                    >
+                      {sale.splitStatus || "PENDING"}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">
                       {new Date(sale.createdAt).toLocaleDateString("pt-BR", {
                         day: "2-digit",
                         month: "2-digit",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </td>
-                  </tr>
-                ))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
 
-                {(data?.recentSales || []).length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-6 text-center text-gray-500 text-xs">
-                      Nenhum pedido pago registrado recentemente.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            {(data?.recentSales || []).length === 0 && (
+              <div className="py-8 text-center text-zinc-400 text-xs">
+                Nenhuma venda confirmada registrada recentemente.
+              </div>
+            )}
           </div>
         </div>
-      </div>
+
+        {/* Ecossistema Telegram (5 Colunas) */}
+        <div className="lg:col-span-5 bg-[#090A0E] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="border-b border-white/[0.06] pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Bot className="w-4 h-4 text-purple-400" />
+                Ecossistema Telegram
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">Telemetria de bots e clientes conectados</p>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between p-3 bg-white/[0.02] rounded-xl border border-white/[0.06]">
+                <span className="text-zinc-400">Bots Conectados Ativos:</span>
+                <span className="font-black text-white text-sm font-mono tabular-nums">
+                  {data?.telegramStats.activeBots || 0} de {data?.telegramStats.totalBots || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white/[0.02] rounded-xl border border-white/[0.06]">
+                <span className="text-zinc-400">Clientes Telegram Totais:</span>
+                <span className="font-black text-white text-sm font-mono tabular-nums">
+                  {data?.telegramStats.totalCustomers.toLocaleString("pt-BR") || "0"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white/[0.02] rounded-xl border border-white/[0.06]">
+                <span className="text-zinc-400">Novos Clientes no Período:</span>
+                <span className="font-bold text-blue-400 text-sm font-mono tabular-nums">
+                  +{data?.telegramStats.newCustomersPeriod.toLocaleString("pt-BR") || "0"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-purple-500/[0.04] rounded-xl border border-purple-500/20 text-[11px] text-zinc-400 leading-relaxed">
+            {data?.telegramStats.attributionNote ||
+              "Telemetria baseada em compradores únicos que iniciaram sessão de compra via WebApp do Telegram."}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
 // ====================================================
-// REUSABLE COMPONENTS
+// SKELETONS & EMPTY STATES
 // ====================================================
 
-interface KPICardProps {
-  title: string;
-  value: string;
-  periodCount?: number;
-  periodValue?: string;
-  historicalTotal?: string;
-  changePercent?: number | null;
-  icon: any;
-  accent: "blue" | "emerald" | "purple" | "zinc";
-  isFeatured?: boolean;
-  hint?: string;
-}
-
-function KPICard({
-  title,
-  value,
-  periodCount,
-  periodValue,
-  historicalTotal,
-  changePercent,
-  icon: Icon,
-  accent,
-  isFeatured = false,
-  hint,
-}: KPICardProps) {
-  const accentStyles = {
-    blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
-    emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
-    purple: "bg-purple-500/10 border-purple-500/20 text-purple-400",
-    zinc: "bg-white/5 border-white/[0.08] text-gray-300",
-  };
-
+function HeroSkeleton() {
   return (
-    <div
-      className={`p-4 rounded-2xl border transition-all duration-200 ${
-        isFeatured
-          ? "bg-[#0F1014] border-blue-500/30 shadow-lg shadow-blue-500/5"
-          : "bg-[#0F1014] border-white/[0.08]"
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider truncate">
-          {title}
-        </span>
-        <div className={`p-2 rounded-xl border ${accentStyles[accent]} shrink-0`}>
-          <Icon className="w-4 h-4" />
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-pulse">
+      <div className="lg:col-span-7 h-48 bg-[#090A0E] rounded-2xl border border-white/[0.08] p-6 space-y-4">
+        <div className="h-4 w-40 bg-white/5 rounded" />
+        <div className="h-10 w-64 bg-white/10 rounded" />
+        <div className="h-3 w-48 bg-white/5 rounded" />
       </div>
-
-      <div className="space-y-1">
-        <span className="text-xl sm:text-2xl font-black text-white tracking-tight block font-mono tabular-nums">
-          {value}
-        </span>
-
-        {historicalTotal && (
-          <span className="text-[10px] font-mono text-zinc-400 block truncate">
-            {historicalTotal}
-          </span>
-        )}
-
-        {/* Period count / value badge & variation */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-          {periodCount !== undefined && (
-            <span className="text-[10px] font-mono text-gray-400">
-              +{periodCount.toLocaleString("pt-BR")} no período
-            </span>
-          )}
-          {periodValue !== undefined && (
-            <span className="text-[10px] font-mono text-gray-400">{periodValue} no período</span>
-          )}
-
-          {/* Genuine variation badge (only when meaningful and calculated) */}
-          {changePercent !== null && changePercent !== undefined && (
-            <span
-              className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                changePercent > 0
-                  ? "text-emerald-400 bg-emerald-500/10"
-                  : changePercent < 0
-                  ? "text-red-400 bg-red-500/10"
-                  : "text-gray-400 bg-white/5"
-              }`}
-            >
-              {changePercent > 0 ? (
-                <TrendingUp className="w-2.5 h-2.5" />
-              ) : changePercent < 0 ? (
-                <TrendingDown className="w-2.5 h-2.5" />
-              ) : null}
-              {changePercent > 0 ? `+${changePercent}%` : `${changePercent}%`}
-            </span>
-          )}
-        </div>
-
-        {hint && <span className="text-[10px] text-zinc-400 block truncate pt-0.5">{hint}</span>}
+      <div className="lg:col-span-5 h-48 bg-[#090A0E] rounded-2xl border border-white/[0.08] p-6 space-y-4">
+        <div className="h-4 w-40 bg-white/5 rounded" />
+        <div className="h-10 w-48 bg-white/10 rounded" />
+        <div className="h-3 w-32 bg-white/5 rounded" />
       </div>
-    </div>
-  );
-}
-
-function KPISkeletonGrid() {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-28 bg-[#0F1014] rounded-2xl border border-white/[0.08] p-4 space-y-3">
-          <div className="h-3 w-20 bg-white/5 rounded" />
-          <div className="h-6 w-28 bg-white/10 rounded" />
-          <div className="h-2 w-16 bg-white/5 rounded" />
-        </div>
-      ))}
     </div>
   );
 }
@@ -967,7 +1086,7 @@ function KPISkeletonGrid() {
 function ChartSkeleton() {
   return (
     <div className="h-full w-full flex items-center justify-center bg-white/[0.01] rounded-xl border border-white/[0.04] animate-pulse">
-      <div className="flex items-center gap-2 text-gray-500 text-xs font-mono">
+      <div className="flex items-center gap-2 text-zinc-400 text-xs font-mono">
         <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
         <span>Carregando série temporal...</span>
       </div>
@@ -978,9 +1097,9 @@ function ChartSkeleton() {
 function EmptyChartState({ message }: { message: string }) {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-white/[0.01] rounded-xl border border-white/[0.04] text-center p-4">
-      <Calendar className="w-6 h-6 text-gray-600 mb-2" />
-      <p className="text-xs text-gray-400 font-medium">{message}</p>
-      <span className="text-[10px] text-gray-600 mt-0.5">
+      <Calendar className="w-6 h-6 text-zinc-400 mb-2" />
+      <p className="text-xs text-zinc-300 font-medium">{message}</p>
+      <span className="text-[10px] text-zinc-400 mt-0.5">
         Selecione outro período ou aguarde novos eventos de vendas.
       </span>
     </div>
