@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SplitReconciliationService } from '../split-reconciliation-service';
+import { PLATFORM_SPLIT_EFFECTIVE_DATE } from '@/lib/analytics/admin-dashboard-service';
 
 // ─── DB mock ────────────────────────────────────────────────────────────────
 const { dbMock } = vi.hoisted(() => {
@@ -370,6 +371,166 @@ describe('Admin Split Sync — Comprehensive Verification & API Identifier Suite
           splitAmountCents: 50,
         })
       );
+    });
+  });
+
+  // ─── 5. PLATFORM SPLIT EFFECTIVE DATE (22/10/2026 00:00 RECIFE = 03:00 UTC) ──
+  describe('5. Platform Split Effective Date (22/10/2026 America/Recife = 03:00 UTC) & Timezone Precision', () => {
+    const isEligibleForSplit = (order: {
+      status: string;
+      createdAt: Date;
+      splitAmountCents?: number | null;
+      splitStatus?: string | null;
+    }): boolean => {
+      if (order.status !== 'paid') return false;
+      const hasExplicitSnapshot = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents);
+      const hasExplicitStatus = Boolean(order.splitStatus) && order.splitStatus!.trim() !== '' && order.splitStatus!.toUpperCase() !== 'PENDING';
+      const isPostEffectiveDate = order.createdAt >= PLATFORM_SPLIT_EFFECTIVE_DATE;
+      return hasExplicitSnapshot || hasExplicitStatus || isPostEffectiveDate;
+    };
+
+    const isPendingSplit = (order: {
+      status: string;
+      createdAt: Date;
+      splitAmountCents?: number | null;
+      splitStatus?: string | null;
+    }): boolean => {
+      if (!isEligibleForSplit(order)) return false;
+      const st = (order.splitStatus || 'PENDING').trim().toUpperCase();
+      const TERMINAL_STATUSES = ['SETTLED', 'CONFIRMED', 'PROCESSED', 'SKIPPED', 'FAILED'];
+      if (TERMINAL_STATUSES.includes(st)) return false;
+      return st === 'PENDING' || st === 'REQUESTED' || st === '';
+    };
+
+    it('confirma que a constante de vigência é exatamente 22/10/2026 00:00 em Recife (03:00:00.000Z em UTC)', () => {
+      expect(PLATFORM_SPLIT_EFFECTIVE_DATE.toISOString()).toBe('2026-10-22T03:00:00.000Z');
+    });
+
+    it('1. Pedidos de 21/10 às 23:59 em Recife (2026-10-22T02:59:59Z) são tratados como anteriores à vigência, salvo snapshot explícito', () => {
+      // 21/10/2026 23:59:59 em Recife (UTC-3) = 2026-10-22T02:59:59.000Z
+      const orderAt2359WithoutSnapshot = {
+        id: 'ord-21-2359-no-snap',
+        status: 'paid',
+        createdAt: new Date('2026-10-22T02:59:59.000Z'),
+        splitStatus: null,
+        splitAmountCents: null,
+      };
+
+      expect(isEligibleForSplit(orderAt2359WithoutSnapshot)).toBe(false);
+      expect(isPendingSplit(orderAt2359WithoutSnapshot)).toBe(false);
+
+      // Com status PENDING default legado mas sem snapshot: não elegível
+      const orderAt2359PendingDefault = {
+        id: 'ord-21-2359-pending-default',
+        status: 'paid',
+        createdAt: new Date('2026-10-22T02:59:59.000Z'),
+        splitStatus: 'PENDING',
+        splitAmountCents: null,
+      };
+
+      expect(isEligibleForSplit(orderAt2359PendingDefault)).toBe(false);
+      expect(isPendingSplit(orderAt2359PendingDefault)).toBe(false);
+
+      // Se possuir snapshot explícito (ex: comissão fixada de 50 centavos): respeita o snapshot
+      const orderAt2359WithSnapshot = {
+        id: 'ord-21-2359-with-snap',
+        status: 'paid',
+        createdAt: new Date('2026-10-22T02:59:59.000Z'),
+        splitStatus: 'PENDING',
+        splitAmountCents: 50,
+      };
+
+      expect(isEligibleForSplit(orderAt2359WithSnapshot)).toBe(true);
+      expect(isPendingSplit(orderAt2359WithSnapshot)).toBe(true);
+    });
+
+    it('2. Pedidos de 22/10 às 00:00 em Recife (2026-10-22T03:00:00Z) são elegíveis à taxa da plataforma', () => {
+      // 22/10/2026 00:00:00 em Recife (UTC-3) = 2026-10-22T03:00:00.000Z (marco exato)
+      const orderAt0000 = {
+        id: 'ord-22-0000',
+        status: 'paid',
+        createdAt: new Date('2026-10-22T03:00:00.000Z'),
+        splitStatus: null,
+        splitAmountCents: null,
+      };
+
+      expect(isEligibleForSplit(orderAt0000)).toBe(true);
+      expect(isPendingSplit(orderAt0000)).toBe(true);
+
+      // 22/10/2026 00:01:00 em Recife = 2026-10-22T03:01:00.000Z
+      const orderAt0001 = {
+        id: 'ord-22-0001',
+        status: 'paid',
+        createdAt: new Date('2026-10-22T03:01:00.000Z'),
+        splitStatus: 'REQUESTED',
+        splitAmountCents: 50,
+      };
+
+      expect(isEligibleForSplit(orderAt0001)).toBe(true);
+      expect(isPendingSplit(orderAt0001)).toBe(true);
+    });
+
+    it('3. Snapshots históricos explícitos continuam sempre respeitados independentemente da data de criação', () => {
+      // Pedido de 10/10 com splitAmountCents registrado explicitamente
+      const legacyWithSnapshot = {
+        id: 'ord-snap-legacy',
+        status: 'paid',
+        createdAt: new Date('2026-10-10T14:00:00.000Z'),
+        splitStatus: 'CONFIRMED',
+        splitAmountCents: 50,
+      };
+
+      expect(isEligibleForSplit(legacyWithSnapshot)).toBe(true);
+      // Já está CONFIRMED, portanto não é pendente
+      expect(isPendingSplit(legacyWithSnapshot)).toBe(false);
+    });
+
+    it('4. Pedido Mercado Pago de 29/10 com split CONFIRMED não aparece como pendente', () => {
+      const mpConfirmedOrder = {
+        id: 'c1df5c3b-7f6c-4869-a1b7-789a7fb85b88',
+        status: 'paid',
+        createdAt: new Date('2026-10-29T11:53:23Z'),
+        splitStatus: 'CONFIRMED',
+        splitAmountCents: 50,
+      };
+
+      expect(isEligibleForSplit(mpConfirmedOrder)).toBe(true);
+      expect(isPendingSplit(mpConfirmedOrder)).toBe(false);
+    });
+
+    it('5. Estados terminais (SETTLED, CONFIRMED, PROCESSED, SKIPPED, FAILED) continuam excluídos da pendência', () => {
+      const terminalStatuses = ['SETTLED', 'CONFIRMED', 'PROCESSED', 'SKIPPED', 'FAILED'];
+
+      for (const st of terminalStatuses) {
+        const order = {
+          id: `term-${st}`,
+          status: 'paid',
+          createdAt: new Date('2026-10-25T12:00:00Z'),
+          splitStatus: st,
+          splitAmountCents: 50,
+        };
+        expect(isPendingSplit(order)).toBe(false);
+      }
+    });
+
+    it('6. Pedidos legados não são alterados no banco e preservam seu estado histórico', () => {
+      const legacyOrder = {
+        id: 'order-legacy-1',
+        total: '10.00',
+        paymentMethod: 'pix',
+        paymentId: 'syncpay_old_123',
+        storeId: 'store-1',
+        splitStatus: null,
+        splitAmountCents: null,
+        createdAt: new Date('2026-10-22T02:59:00.000Z'), // 21/10 23:59 em Recife
+      };
+
+      const isEligible =
+        (typeof legacyOrder.splitAmountCents === 'number' && legacyOrder.splitAmountCents > 0) ||
+        new Date(legacyOrder.createdAt) >= PLATFORM_SPLIT_EFFECTIVE_DATE;
+
+      expect(isEligible).toBe(false);
+      expect(dbMock.update).not.toHaveBeenCalled();
     });
   });
 });

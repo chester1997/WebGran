@@ -18,6 +18,16 @@ import {
 
 export type AdminDashboardPeriod = "7d" | "30d" | "90d";
 
+/**
+ * Data oficial de entrada em vigor da taxa fixa de R$ 0,50 por venda (Migração 0007).
+ * Marco temporal comprovado em auditoria: 22 de Outubro de 2026 às 00:00:00 no fuso oficial
+ * da WebGran (America/Recife, UTC-3), correspondendo exatamente a 2026-10-22T03:00:00.000Z em UTC.
+ * Vendas criadas antes deste instante pertencem ao modelo comercial anterior
+ * e não devem ser imputadas retroativamente como pendências da regra de R$ 0,50,
+ * salvo se possuírem snapshot de comissão explícito.
+ */
+export const PLATFORM_SPLIT_EFFECTIVE_DATE = new Date("2026-10-22T03:00:00.000Z");
+
 export interface PeriodResolution {
   period: AdminDashboardPeriod;
   periodLabel: string;
@@ -389,27 +399,37 @@ export class AdminDashboardService {
 
       // Platform fee categorization exclusively for paid orders
       if (isPaid) {
-        const feeCents = typeof ord.splitAmountCents === "number" ? ord.splitAmountCents : 50;
-        const feeReais = feeCents / 100;
-        expectedFeeTotal += feeReais;
+        // Pedido só é elegível à regra de taxa da plataforma se possuir snapshot explícito
+        // ou se sua criação for a partir do marco de vigência da taxa fixa (22/10/2026).
+        // Vendas anteriores pertenciam a outro modelo e não configuram pendência retroativa.
+        const hasExplicitSnapshot = typeof ord.splitAmountCents === "number" && !isNaN(ord.splitAmountCents);
+        const hasExplicitStatus = Boolean(ord.splitStatus) && ord.splitStatus!.trim() !== "" && ord.splitStatus!.toUpperCase() !== "PENDING";
+        const isPostEffectiveDate = new Date(ord.createdAt) >= PLATFORM_SPLIT_EFFECTIVE_DATE;
+        const isEligibleForSplitRule = hasExplicitSnapshot || hasExplicitStatus || isPostEffectiveDate;
 
-        const st = (ord.splitStatus || "PENDING").toUpperCase();
-        if (st === "SETTLED") {
-          settledFeeTotal += feeReais;
-          settledCount += 1;
-        } else if (st === "PROCESSED" || st === "CONFIRMED" || st === "GATEWAY_ACCEPTED") {
-          processedFeeTotal += feeReais;
-          processedCount += 1;
-        } else if (st === "SKIPPED") {
-          skippedFeeTotal += feeReais;
-          skippedCount += 1;
-        } else if (st === "FAILED") {
-          failedFeeTotal += feeReais;
-          failedCount += 1;
-        } else {
-          // PENDING or REQUESTED
-          pendingFeeTotal += feeReais;
-          pendingCount += 1;
+        if (isEligibleForSplitRule) {
+          const feeCents = hasExplicitSnapshot ? ord.splitAmountCents! : 50;
+          const feeReais = feeCents / 100;
+          expectedFeeTotal += feeReais;
+
+          const st = (ord.splitStatus || "PENDING").toUpperCase();
+          if (st === "SETTLED") {
+            settledFeeTotal += feeReais;
+            settledCount += 1;
+          } else if (st === "PROCESSED" || st === "CONFIRMED" || st === "GATEWAY_ACCEPTED") {
+            processedFeeTotal += feeReais;
+            processedCount += 1;
+          } else if (st === "SKIPPED") {
+            skippedFeeTotal += feeReais;
+            skippedCount += 1;
+          } else if (st === "FAILED") {
+            failedFeeTotal += feeReais;
+            failedCount += 1;
+          } else {
+            // PENDING or REQUESTED
+            pendingFeeTotal += feeReais;
+            pendingCount += 1;
+          }
         }
       }
     }
@@ -433,7 +453,7 @@ export class AdminDashboardService {
         paidOrdersCount: sql<number>`count(case when ${orders.status} = 'paid' then 1 end)`,
         approvedGmv: sql<number>`coalesce(sum(case when ${orders.status} = 'paid' then cast(${orders.total} as numeric) else 0 end), 0)`,
         processedFees: sql<number>`coalesce(sum(case when ${orders.status} = 'paid' and ${orders.splitStatus} in ('PROCESSED', 'CONFIRMED', 'GATEWAY_ACCEPTED') then cast(${orders.splitAmountCents} as numeric) / 100 else 0 end), 0)`,
-        totalFeesExpected: sql<number>`coalesce(sum(case when ${orders.status} = 'paid' then cast(coalesce(${orders.splitAmountCents}, 50) as numeric) / 100 else 0 end), 0)`,
+        totalFeesExpected: sql<number>`coalesce(sum(case when ${orders.status} = 'paid' and (${orders.createdAt} >= ${PLATFORM_SPLIT_EFFECTIVE_DATE} or ${orders.splitAmountCents} is not null) then cast(coalesce(${orders.splitAmountCents}, 50) as numeric) / 100 else 0 end), 0)`,
       })
       .from(users)
       .leftJoin(stores, eq(stores.ownerId, users.id))

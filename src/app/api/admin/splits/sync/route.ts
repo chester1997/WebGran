@@ -3,9 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/db';
 import { orders, sellerPaymentConnections } from '@/db/schema';
-import { eq, and, or, isNull, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, isNotNull, gte, sql } from 'drizzle-orm';
 import { decrypt } from '@/lib/encryption';
 import { SplitReconciliationService } from '@/lib/payments/split-reconciliation-service';
+import { PLATFORM_SPLIT_EFFECTIVE_DATE } from '@/lib/analytics/admin-dashboard-service';
 
 /**
  * POST /api/admin/splits/sync
@@ -33,6 +34,9 @@ export async function POST(req: NextRequest) {
   const adminName = session.user.name || 'Admin';
 
   // 1. Find paid orders whose splits genuinely require reconciliation.
+  // Must be eligible for platform split:
+  // - Created on or after PLATFORM_SPLIT_EFFECTIVE_DATE (2026-10-22)
+  // - Or having an explicit splitAmountCents snapshot recorded.
   // Encompasses null, empty strings, 'PENDING', and 'REQUESTED' (case-insensitive).
   // Strictly filters out terminal states: SETTLED, CONFIRMED, PROCESSED, SKIPPED, FAILED.
   const pendingOrders = await db
@@ -44,11 +48,16 @@ export async function POST(req: NextRequest) {
       storeId: orders.storeId,
       splitStatus: orders.splitStatus,
       splitAmountCents: orders.splitAmountCents,
+      createdAt: orders.createdAt,
     })
     .from(orders)
     .where(
       and(
         eq(orders.status, 'paid'),
+        or(
+          gte(orders.createdAt, PLATFORM_SPLIT_EFFECTIVE_DATE),
+          isNotNull(orders.splitAmountCents)
+        ),
         or(
           isNull(orders.splitStatus),
           eq(orders.splitStatus, ''),
@@ -87,6 +96,16 @@ export async function POST(req: NextRequest) {
 
       // Guard: never reprocess terminal or settled states
       if (TERMINAL_SPLIT_STATUSES.has(currentUpperStatus)) {
+        summary.skipped++;
+        continue;
+      }
+
+      // Guard: strictly ignore orders prior to effective date without explicit fee snapshot
+      const isEligible =
+        (typeof order.splitAmountCents === 'number' && order.splitAmountCents > 0) ||
+        new Date(order.createdAt) >= PLATFORM_SPLIT_EFFECTIVE_DATE;
+
+      if (!isEligible) {
         summary.skipped++;
         continue;
       }
