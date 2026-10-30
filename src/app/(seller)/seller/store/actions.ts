@@ -4,25 +4,78 @@ import crypto from "crypto";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { stores, telegramBots } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
 
-export async function saveBotAction(formData: FormData) {
-  const seller = await requireSeller();
-  const store = await getCurrentStore();
-  if (!store) throw new Error("Loja não encontrada.");
+export type SaveBotActionResult = {
+  success: boolean;
+  error?: string;
+  message?: string;
+};
 
-  const botAllowed = await hasFeature(seller.id, "telegram_bot");
-  if (!botAllowed) {
-    throw new Error("A integração com Bot do Telegram não está disponível no seu plano. Faça upgrade.");
+export async function saveBotAction(formData: FormData): Promise<SaveBotActionResult> {
+  let seller;
+  let store;
+  try {
+    seller = await requireSeller();
+    store = await getCurrentStore();
+  } catch (err: any) {
+    return { success: false, error: "Usuário não autenticado ou sessão expirada." };
   }
 
-  const token = formData.get("token") as string;
-  const buttonName = (formData.get("buttonName") as string) || "Abrir Loja";
-  const existingBotId = formData.get("existingBotId") as string | null;
+  if (!store) {
+    return { success: false, error: "Loja não encontrada." };
+  }
+
+  try {
+    const botAllowed = await hasFeature(seller.id, "telegram_bot");
+    if (!botAllowed) {
+      return { 
+        success: false, 
+        error: "A integração com Bot do Telegram não está disponível no seu plano. Faça upgrade para continuar." 
+      };
+    }
+  } catch (err: any) {
+    console.error("[saveBotAction] Erro ao validar permissão do plano:", err?.message || err);
+    return { success: false, error: "Erro ao consultar permissões do plano. Tente novamente." };
+  }
+
+  const rawToken = (formData.get("token") as string | null) || "";
+  const token = rawToken.trim();
+  const rawButtonName = (formData.get("buttonName") as string | null) || "";
+  const buttonName = rawButtonName.trim() || "Abrir App";
+  const existingBotId = (formData.get("existingBotId") as string | null) || null;
+  const rawName = (formData.get("name") as string | null) || "";
+  const name = rawName.trim();
+  const rawLogoUrl = (formData.get("logoUrl") as string | null) || "";
+  const logoUrl = rawLogoUrl.trim();
+
+  // 1. Atualizar personalização da loja (Nome e Logo) preservando dados atuais se campos vazios
+  try {
+    const storeUpdates: Partial<typeof stores.$inferInsert> = {};
+    if (name && name !== store.name) {
+      storeUpdates.name = name;
+    }
+    if (logoUrl && logoUrl !== store.logoUrl) {
+      storeUpdates.logoUrl = logoUrl;
+    }
+
+    if (Object.keys(storeUpdates).length > 0) {
+      storeUpdates.updatedAt = new Date();
+      await db.update(stores).set(storeUpdates).where(eq(stores.id, store.id));
+      if (storeUpdates.name) store.name = storeUpdates.name;
+      if (storeUpdates.logoUrl) store.logoUrl = storeUpdates.logoUrl;
+    }
+  } catch (err: any) {
+    console.error("[saveBotAction] Erro ao atualizar dados de personalização da loja:", err?.message || err);
+    return { 
+      success: false, 
+      error: "Erro ao atualizar dados de personalização da loja no banco de dados." 
+    };
+  }
 
   let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -34,73 +87,157 @@ export async function saveBotAction(formData: FormData) {
   const appUrl = rawAppUrl.replace(/\/+$/, "");
   const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
 
-  const isRealToken = token && token.includes(":");
-
+  const isRealToken = Boolean(token && token.includes(":") && !token.includes("••••"));
   const cleanWebhookUrl = `${appUrl}/api/telegram/webhook`;
 
   if (isRealToken) {
-    // --- Token provided: validate, register webhook, set menu button ---
-    const botService = new TelegramBotService(token);
+    // --- Token fornecido: validação via getMe, webhook, menu button e persistência ---
+    let botService: TelegramBotService;
+    let botInfo: { id: number | string; username?: string; first_name?: string };
+    try {
+      botService = new TelegramBotService(token);
+      botInfo = await botService.getMe();
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao validar token do bot no Telegram:", err?.message || err);
+      return { 
+        success: false, 
+        error: "Token do Telegram inválido ou não autorizado. Verifique o token fornecido pelo @BotFather." 
+      };
+    }
 
-    // 1. Validate token with getMe
-    const botInfo = await botService.getMe();
     const botTelegramId = String(botInfo.id);
 
-    // 2. Generate secretToken for secure multi-tenant verification
-    const secretToken = crypto.randomBytes(32).toString("hex");
-
-    // 3. Set Webhook automatically with botId query param and secret_token header
-    const webhookUrl = `${cleanWebhookUrl}?botId=${botTelegramId}`;
-    await botService.setWebhook(webhookUrl, secretToken);
-
-    // 4. Set the blue Menu Button automatically
-    await botService.setChatMenuButton({
-      type: "web_app",
-      text: buttonName,
-      web_app: { url: miniAppUrl }
-    });
-
-    // 5. Fetch bot's profile photo
-    const photoUrl = await botService.getProfilePhotoUrl();
-    const tokenEncrypted = encrypt(token);
-
-    // 6. Upsert in DB
-    const existingBot = await db.query.telegramBots.findFirst({
-      where: and(
-        eq(telegramBots.botId, botTelegramId),
-        eq(telegramBots.storeId, store.id)
-      )
-    });
-
-    if (existingBot) {
-      await db.update(telegramBots).set({
-        username: botInfo.username || "",
-        displayName: botInfo.first_name || "",
-        photoUrl: photoUrl ?? existingBot.photoUrl,
-        tokenEncrypted,
-        secretToken,
-        buttonText: buttonName,
-        updatedAt: new Date()
-      }).where(eq(telegramBots.id, existingBot.id));
-    } else {
-      await db.insert(telegramBots).values({
-        storeId: store.id,
-        botId: botTelegramId,
-        username: botInfo.username || "",
-        displayName: botInfo.first_name || "",
-        photoUrl: photoUrl ?? null,
-        tokenEncrypted,
-        secretToken,
-        buttonText: buttonName,
-        status: "active"
+    // Verificação estrita de bot_id globalmente (respeitando constraint UNIQUE)
+    // Se o bot já pertencer a outra loja, impede a associação e informa o usuário
+    let botInOtherStore;
+    try {
+      botInOtherStore = await db.query.telegramBots.findFirst({
+        where: and(
+          eq(telegramBots.botId, botTelegramId),
+          ne(telegramBots.storeId, store.id)
+        )
       });
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao verificar bot globalmente:", err?.message || err);
+      return { success: false, error: "Erro ao consultar integridade do bot no banco de dados." };
+    }
+
+    if (botInOtherStore) {
+      return {
+        success: false,
+        error: "Este bot já está vinculado a outra loja no WebGran. Por segurança, não é permitido associar o mesmo bot a lojas diferentes."
+      };
+    }
+
+    // Busca se este bot já está cadastrado nesta loja
+    let existingBotInStore;
+    try {
+      existingBotInStore = await db.query.telegramBots.findFirst({
+        where: and(
+          eq(telegramBots.botId, botTelegramId),
+          eq(telegramBots.storeId, store.id)
+        )
+      });
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao verificar bot na loja:", err?.message || err);
+      return { success: false, error: "Erro ao consultar dados da loja no banco." };
+    }
+
+    // SecretToken para multi-tenant seguro
+    const secretToken = existingBotInStore?.secretToken || crypto.randomBytes(32).toString("hex");
+
+    // Webhook no Telegram
+    const webhookUrl = `${cleanWebhookUrl}?botId=${botTelegramId}`;
+    try {
+      await botService.setWebhook(webhookUrl, secretToken);
+    } catch (err: any) {
+      console.error("[saveBotAction] Falha ao registrar webhook no Telegram:", err?.message || err);
+      return {
+        success: false,
+        error: "Não foi possível registrar o webhook no Telegram. Verifique a conexão e tente novamente."
+      };
+    }
+
+    // Botão Azul (Menu Button)
+    try {
+      await botService.setChatMenuButton({
+        type: "web_app",
+        text: buttonName,
+        web_app: { url: miniAppUrl }
+      });
+    } catch (err: any) {
+      console.warn("[saveBotAction] Aviso: Falha não crítica ao definir Chat Menu Button:", err?.message || err);
+    }
+
+    // Foto de perfil do bot
+    let photoUrl: string | null = null;
+    try {
+      photoUrl = await botService.getProfilePhotoUrl();
+    } catch (err: any) {
+      console.warn("[saveBotAction] Aviso: Falha ao obter foto de perfil do Telegram:", err?.message || err);
+    }
+
+    let tokenEncrypted: string;
+    try {
+      tokenEncrypted = encrypt(token);
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao criptografar token:", err?.message || err);
+      return { success: false, error: "Erro interno de segurança ao armazenar credenciais." };
+    }
+
+    // Upsert no Neon DB
+    try {
+      if (existingBotInStore) {
+        await db.update(telegramBots).set({
+          username: botInfo.username || "",
+          displayName: botInfo.first_name || "",
+          photoUrl: photoUrl ?? existingBotInStore.photoUrl,
+          tokenEncrypted,
+          secretToken,
+          buttonText: buttonName,
+          status: "active",
+          updatedAt: new Date()
+        }).where(eq(telegramBots.id, existingBotInStore.id));
+      } else {
+        await db.insert(telegramBots).values({
+          storeId: store.id,
+          botId: botTelegramId,
+          username: botInfo.username || "",
+          displayName: botInfo.first_name || "",
+          photoUrl: photoUrl ?? null,
+          tokenEncrypted,
+          secretToken,
+          buttonText: buttonName,
+          status: "active"
+        });
+      }
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao gravar bot no Neon:", err?.message || err);
+      return {
+        success: false,
+        error: "Erro ao salvar bot no banco de dados. Verifique os dados e tente novamente."
+      };
     }
   } else if (existingBotId) {
-    // --- No new token provided: re-register webhook and update menu button ---
-    const existingBot = await db.query.telegramBots.findFirst({
-      where: eq(telegramBots.id, existingBotId)
-    });
-    if (existingBot) {
+    // --- Edição de bot existente sem novo token ---
+    let existingBot;
+    try {
+      existingBot = await db.query.telegramBots.findFirst({
+        where: and(
+          eq(telegramBots.id, existingBotId),
+          eq(telegramBots.storeId, store.id)
+        )
+      });
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao buscar bot para edição:", err?.message || err);
+      return { success: false, error: "Erro ao consultar bot existente." };
+    }
+
+    if (!existingBot) {
+      return { success: false, error: "Bot não encontrado para esta loja." };
+    }
+
+    try {
       const currentToken = decrypt(existingBot.tokenEncrypted);
       const botService = new TelegramBotService(currentToken);
 
@@ -109,29 +246,61 @@ export async function saveBotAction(formData: FormData) {
         secretToken = crypto.randomBytes(32).toString("hex");
       }
 
-      const photoUrl = await botService.getProfilePhotoUrl();
+      let photoUrl = existingBot.photoUrl;
+      try {
+        const freshPhoto = await botService.getProfilePhotoUrl();
+        if (freshPhoto) photoUrl = freshPhoto;
+      } catch (err: any) {
+        console.warn("[saveBotAction] Não foi possível atualizar foto de perfil do bot:", err?.message || err);
+      }
 
       await db.update(telegramBots).set({ 
         secretToken,
         buttonText: buttonName,
-        photoUrl: photoUrl ?? existingBot.photoUrl,
+        photoUrl,
         updatedAt: new Date()
       }).where(eq(telegramBots.id, existingBot.id));
 
       const webhookUrl = `${cleanWebhookUrl}?botId=${existingBot.botId}`;
-      await botService.setWebhook(webhookUrl, secretToken);
+      try {
+        await botService.setWebhook(webhookUrl, secretToken);
+      } catch (err: any) {
+        console.warn("[saveBotAction] Aviso: Erro ao re-registrar webhook no Telegram:", err?.message || err);
+      }
 
-      await botService.setChatMenuButton({
-        type: "web_app",
-        text: buttonName,
-        web_app: { url: miniAppUrl }
-      });
+      try {
+        await botService.setChatMenuButton({
+          type: "web_app",
+          text: buttonName,
+          web_app: { url: miniAppUrl }
+        });
+      } catch (err: any) {
+        console.warn("[saveBotAction] Aviso: Erro ao atualizar menu button no Telegram:", err?.message || err);
+      }
+    } catch (err: any) {
+      console.error("[saveBotAction] Erro ao atualizar bot existente:", err?.message || err);
+      return {
+        success: false,
+        error: "Erro ao atualizar dados do bot. Verifique as configurações e tente novamente."
+      };
     }
   } else {
-    throw new Error("Token do bot é obrigatório para adicionar um novo bot.");
+    return {
+      success: false,
+      error: "O Token do Bot é obrigatório para cadastrar um novo bot."
+    };
   }
 
-  revalidatePath("/seller/store");
+  try {
+    revalidatePath("/seller/store");
+  } catch (err: any) {
+    console.warn("[saveBotAction] Erro não impeditivo ao revalidar caminho:", err?.message || err);
+  }
+
+  return {
+    success: true,
+    message: "Bot configurado com sucesso! Webhook e botão do Mini App atualizados."
+  };
 }
 
 export async function deleteBotAction(botId: string) {
