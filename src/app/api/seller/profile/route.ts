@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, orders } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -12,6 +12,19 @@ export async function GET() {
     const userRecord = await db.query.users.findFirst({
       where: eq(users.id, seller.id),
     });
+
+    // Faturamento acumulado de pedidos aprovados/pagos da loja do vendedor (Isolamento estrito)
+    let totalPaidRevenue = 0;
+    if (store?.id) {
+      const revenueResult = await db
+        .select({
+          totalRevenue: sql<number>`coalesce(sum(case when ${orders.status} = 'paid' then cast(${orders.total} as numeric) else 0 end), 0)`
+        })
+        .from(orders)
+        .where(and(eq(orders.storeId, store.id), eq(orders.status, "paid")));
+
+      totalPaidRevenue = Number(revenueResult[0]?.totalRevenue || 0);
+    }
 
     return NextResponse.json(
       {
@@ -26,6 +39,7 @@ export async function GET() {
         store: store ? {
           id: store.id,
           name: store.name,
+          totalPaidRevenue,
         } : null,
       },
       {
