@@ -135,12 +135,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
       {/* Sidebar Container */}
       <aside className={`
         fixed md:static inset-y-0 left-0 z-50
-        w-60 bg-[#0B0B0E] border-r border-white/[0.06] flex-shrink-0 flex flex-col
+        w-60 md:w-64 bg-[#0B0B0E] md:bg-transparent border-r border-white/[0.06] md:border-r-0 flex-shrink-0 flex flex-col
         transition-transform duration-200 ease-in-out shadow-2xl md:shadow-none
         ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       `}>
         {/* Brand Header */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.06]">
+        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.06] md:border-b-transparent">
           <Link href="/admin" className="flex items-center" onClick={() => setMobileOpen(false)}>
             <img
               src="/logo-expanded.png"
