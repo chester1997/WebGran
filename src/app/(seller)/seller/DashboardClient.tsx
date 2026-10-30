@@ -237,7 +237,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
     <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-20">
       
       {/* 1. Executive Neutral Dark Header & Unified Filters */}
-      <div className="relative bg-[#111214] border border-[#25272B] rounded-2xl p-4 sm:p-5 lg:px-6 lg:py-4.5 shadow-xs overflow-visible">
+      <div className="relative bg-[#0F1014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 lg:px-6 lg:py-4.5 shadow-xs overflow-visible">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
           {/* Lado Esquerdo: Saudação Principal e Data Atual */}
@@ -270,12 +270,12 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
               <select
                 value={selectedBot}
                 onChange={(e) => handleBotChange(e.target.value)}
-                className="w-full bg-[#151619] hover:bg-[#1A1C20] text-zinc-200 hover:text-white border border-[#25272B] hover:border-zinc-700 rounded-xl pl-8 pr-8 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer h-9 shadow-xs"
+                className="w-full bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border border-white/[0.08] hover:border-zinc-700 rounded-xl pl-8 pr-8 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer h-9 shadow-xs"
                 aria-label="Selecionar Bot"
               >
-                <option value="all" className="bg-[#111214] text-white">Todos os bots</option>
+                <option value="all" className="bg-[#0F1014] text-white">Todos os bots</option>
                 {availableBots.map((b) => (
-                  <option key={b.id} value={b.id} className="bg-[#111214] text-white">
+                  <option key={b.id} value={b.id} className="bg-[#0F1014] text-white">
                     {b.displayName || (b.username ? `@${b.username}` : `Bot ${b.id.slice(0, 6)}`)}
                   </option>
                 ))}
@@ -290,10 +290,10 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
               <button
                 type="button"
                 onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#151619] hover:bg-[#1A1C20] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
+                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
                   isPeriodOpen 
                     ? "border-blue-500/80 ring-1 ring-blue-500/30 text-white" 
-                    : "border-[#25272B] hover:border-zinc-700"
+                    : "border-white/[0.08] hover:border-zinc-700"
                 }`}
                 aria-haspopup="dialog"
                 aria-expanded={isPeriodOpen}
@@ -317,10 +317,10 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
               {/* Painel Popover do Seletor */}
               {isPeriodOpen && (
-                <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[360px] bg-[#111214] border border-[#25272B] rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 animate-in fade-in-0 zoom-in-95">
+                <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[360px] bg-[#0F1014] border border-white/[0.08] rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 animate-in fade-in-0 zoom-in-95">
                   
                   {/* Topo do Popover */}
-                  <div className="flex items-center justify-between border-b border-[#25272B] pb-2.5">
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
                     <div className="flex items-center gap-1.5 text-[#F3F4F6] font-semibold text-xs">
                       <SlidersHorizontal className="w-3.5 h-3.5 text-blue-500" />
                       <span>Selecione o período de análise</span>
@@ -328,7 +328,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                     <button
                       type="button"
                       onClick={() => setIsPeriodOpen(false)}
-                      className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#151619] transition-colors"
+                      className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#15171D] transition-colors"
                       aria-label="Fechar"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -352,12 +352,12 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                             className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border ${
                               isSelected
                                 ? "bg-[#181A20] text-white border-blue-500/80 shadow-xs font-semibold ring-1 ring-blue-500/20"
-                                : "bg-[#151619] text-zinc-300 hover:text-white hover:bg-[#1A1C20] border-[#25272B]"
+                                : "bg-[#15171D] text-zinc-300 hover:text-white hover:bg-[#1C1E26] border-white/[0.08]"
                             }`}
                           >
                             <span className="truncate leading-tight text-[11px]">{p.label}</span>
                             <div className="flex items-center justify-between w-full pt-1">
-                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#111214] text-zinc-400'}`}>
+                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#0F1014] text-zinc-400'}`}>
                                 {p.badge}
                               </span>
                               {isSelected && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
@@ -369,7 +369,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   </div>
 
                   {/* Seção Personalizada */}
-                  <div className="pt-2 border-t border-[#25272B] space-y-2.5">
+                  <div className="pt-2 border-t border-white/[0.08] space-y-2.5">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
                       Intervalo Personalizado
                     </span>
@@ -385,7 +385,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                             setCustomStart(e.target.value);
                             setCustomError(null);
                           }}
-                          className="w-full bg-[#151619] border border-[#25272B] hover:border-zinc-700 focus:border-blue-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-blue-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
                         />
                       </div>
                       <div className="space-y-1">
@@ -398,7 +398,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                             setCustomEnd(e.target.value);
                             setCustomError(null);
                           }}
-                          className="w-full bg-[#151619] border border-[#25272B] hover:border-zinc-700 focus:border-blue-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-blue-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
                         />
                       </div>
                     </div>
@@ -457,7 +457,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* 1. Log de Atividades (Esquerda) */}
-        <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
@@ -476,12 +476,12 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
             {isPending ? (
               <div className="space-y-2 py-2">
-                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
-                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
-                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#15171D] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#15171D] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#15171D] rounded-xl animate-pulse" />
               </div>
             ) : (!data.activityLog || data.activityLog.length === 0) ? (
-              <div className="py-10 text-center bg-[#151619]/50 rounded-xl border border-[#25272B] space-y-2">
+              <div className="py-10 text-center bg-[#15171D]/50 rounded-xl border border-white/[0.08] space-y-2">
                 <Activity className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
                 <p className="text-zinc-300 text-xs font-semibold">Nenhuma atividade recente registrada.</p>
                 <p className="text-zinc-500 text-[11px] max-w-xs mx-auto">
@@ -504,7 +504,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   return (
                     <div
                       key={event.id}
-                      className="p-3 rounded-xl bg-[#151619] border border-[#25272B] hover:border-zinc-700 transition-all flex items-center justify-between gap-2.5"
+                      className="p-3 rounded-xl bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 transition-all flex items-center justify-between gap-2.5"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
@@ -541,7 +541,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-zinc-400 bg-[#111214] px-2 py-0.5 rounded-md border border-[#25272B] wg-tabular">
+                        <span className="inline-flex items-center text-[10px] font-mono font-medium text-zinc-400 bg-[#0F1014] px-2 py-0.5 rounded-md border border-white/[0.08] wg-tabular">
                           {event.dateFormatted} • {event.timeFormatted}
                         </span>
                       </div>
@@ -552,7 +552,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-[#25272B] text-[11px] text-[#9CA3AF] flex items-center justify-between">
+          <div className="pt-3 border-t border-white/[0.08] text-[11px] text-[#9CA3AF] flex items-center justify-between">
             <span>Histórico operacional:</span>
             <span className="font-bold text-[#F3F4F6] wg-tabular">
               {data.activityLog?.length || 0} {(data.activityLog?.length || 0) === 1 ? "registro" : "registros"}
@@ -561,7 +561,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
         </div>
 
         {/* 2. Mais Vendidos (Meio) */}
-        <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
@@ -573,11 +573,11 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
             {isPending ? (
               <div className="space-y-3 py-3">
-                <div className="h-12 bg-[#151619] rounded-xl animate-pulse" />
-                <div className="h-12 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-12 bg-[#15171D] rounded-xl animate-pulse" />
+                <div className="h-12 bg-[#15171D] rounded-xl animate-pulse" />
               </div>
             ) : data.topProducts.length === 0 ? (
-              <div className="py-10 text-center bg-[#151619]/50 rounded-xl border border-[#25272B] space-y-2">
+              <div className="py-10 text-center bg-[#15171D]/50 rounded-xl border border-white/[0.08] space-y-2">
                 <ShoppingBag className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
                 <p className="text-zinc-300 text-xs font-semibold">Nenhum produto vendido ainda neste período.</p>
               </div>
@@ -586,7 +586,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                 {data.topProducts.map((prod, idx) => (
                   <div
                     key={prod.id}
-                    className="p-3 rounded-xl bg-[#151619] border border-[#25272B] hover:border-zinc-700 transition-all duration-150 group space-y-1.5"
+                    className="p-3 rounded-xl bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 transition-all duration-150 group space-y-1.5"
                   >
                     <div className="flex items-center justify-between gap-2.5 min-w-0">
                       
@@ -599,11 +599,11 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                         ) : idx === 2 ? (
                           <div className="w-6 h-6 rounded-lg bg-amber-700/10 border border-amber-700/20 text-amber-400 text-xs font-mono font-bold flex items-center justify-center shrink-0">3</div>
                         ) : (
-                          <div className="w-6 h-6 rounded-lg bg-[#111214] border border-[#25272B] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
+                          <div className="w-6 h-6 rounded-lg bg-[#0F1014] border border-white/[0.08] text-zinc-400 text-xs font-mono font-medium flex items-center justify-center shrink-0">{idx + 1}</div>
                         )}
 
                         {/* Product Cover */}
-                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#111214] border border-[#25272B] shrink-0 flex items-center justify-center text-zinc-500">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#0F1014] border border-white/[0.08] shrink-0 flex items-center justify-center text-zinc-500">
                           {prod.coverUrl ? (
                             <img
                               src={prod.coverUrl}
@@ -637,7 +637,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
                     {/* Subtle Share Progress Bar */}
                     {prod.percentage !== undefined && prod.percentage > 0 && (
-                      <div className="h-1 bg-[#1E2024] rounded-full overflow-hidden">
+                      <div className="h-1 bg-[#1A1C24] rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-500/80 rounded-full"
                           style={{ width: `${Math.min(prod.percentage, 100)}%` }}
@@ -650,7 +650,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-[#25272B] text-[11px] text-[#9CA3AF] flex items-center justify-between">
+          <div className="pt-3 border-t border-white/[0.08] text-[11px] text-[#9CA3AF] flex items-center justify-between">
             <span>Ranking de produtos:</span>
             <span className="font-bold text-[#F3F4F6] wg-tabular">
               {data.topProducts?.length || 0} {(data.topProducts?.length || 0) === 1 ? "produto" : "produtos"}
@@ -659,7 +659,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
         </div>
 
         {/* 3. Desempenho por Bot (Direita) */}
-        <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between min-h-[380px]">
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
@@ -670,18 +670,18 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                 </div>
               </div>
 
-              <div className="px-2 py-0.5 rounded-full bg-[#151619] border border-[#25272B] text-[10px] font-mono text-zinc-300 font-medium">
+              <div className="px-2 py-0.5 rounded-full bg-[#15171D] border border-white/[0.08] text-[10px] font-mono text-zinc-300 font-medium">
                 {data.channels.length} {data.channels.length === 1 ? "canal" : "canais"}
               </div>
             </div>
 
             {isPending ? (
               <div className="space-y-3 py-3">
-                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
-                <div className="h-14 bg-[#151619] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#15171D] rounded-xl animate-pulse" />
+                <div className="h-14 bg-[#15171D] rounded-xl animate-pulse" />
               </div>
             ) : data.channels.length === 0 ? (
-              <div className="py-10 text-center bg-[#151619]/50 rounded-xl border border-[#25272B] space-y-2">
+              <div className="py-10 text-center bg-[#15171D]/50 rounded-xl border border-white/[0.08] space-y-2">
                 <Bot className="w-7 h-7 text-zinc-600 mx-auto opacity-50" />
                 <p className="text-zinc-300 text-xs font-semibold">Nenhum canal ativo registrado.</p>
                 <p className="text-zinc-500 text-[11px] max-w-xs mx-auto">
@@ -695,10 +695,10 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                   return (
                     <div 
                       key={chan.channel} 
-                      className={`p-3 rounded-xl bg-[#151619] border transition-all space-y-2 ${
+                      className={`p-3 rounded-xl bg-[#15171D] border transition-all space-y-2 ${
                         isSelected 
                           ? "border-blue-500/80 ring-1 ring-blue-500/20" 
-                          : "border-[#25272B] hover:border-zinc-700"
+                          : "border-white/[0.08] hover:border-zinc-700"
                       }`}
                     >
                       {/* Linha Superior: Avatar, Nome e Faturamento */}
@@ -718,7 +718,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                       </div>
 
                       {/* Métricas Operacionais: Starts, Vendas e Taxa de Conversão */}
-                      <div className="grid grid-cols-3 gap-1.5 py-0.5 text-center bg-[#111214] p-1.5 rounded-lg border border-[#25272B]">
+                      <div className="grid grid-cols-3 gap-1.5 py-0.5 text-center bg-[#0F1014] p-1.5 rounded-lg border border-white/[0.08]">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-zinc-400 block font-medium">Starts</span>
                           <span className="text-xs font-bold font-mono text-blue-400 wg-tabular">
@@ -745,7 +745,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
                           <span>Participação nas vendas</span>
                           <span className="font-mono font-semibold text-zinc-300">{chan.percentage}%</span>
                         </div>
-                        <div className="h-1.5 bg-[#1E2024] rounded-full overflow-hidden border border-[#25272B]">
+                        <div className="h-1.5 bg-[#1A1C24] rounded-full overflow-hidden border border-white/[0.08]">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
                               chan.channel === "web" ? "bg-emerald-500" : "bg-blue-500"
@@ -762,7 +762,7 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
             )}
           </div>
 
-          <div className="pt-3 border-t border-[#25272B] text-[11px] text-[#9CA3AF] flex items-center justify-between">
+          <div className="pt-3 border-t border-white/[0.08] text-[11px] text-[#9CA3AF] flex items-center justify-between">
             <span>Canal principal:</span>
             <span className="font-bold text-[#F3F4F6] uppercase tracking-wider font-mono">
               {data.channels[0]?.label || "Nenhum"}

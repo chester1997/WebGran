@@ -111,16 +111,16 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         <div className="flex items-center gap-2 font-bold text-base tracking-tight">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-white">WebGran</span>
-          <span className="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/20 tracking-wider">
+          <span className="text-[10px] bg-blue-500/10 text-blue-500 font-bold px-2 py-0.5 rounded border border-blue-500/20 tracking-wider">
             ADMIN
           </span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Abrir menu de navegação"
-          className="p-1.5 rounded-lg bg-[#141418] text-zinc-300 hover:text-white border border-white/[0.06] active:scale-95 transition-all cursor-pointer"
+          className="p-1.5 rounded-lg bg-[#15171D] text-zinc-300 hover:text-white border border-white/[0.06] active:scale-95 transition-all cursor-pointer"
         >
-          {mobileOpen ? <X className="w-5 h-5 text-blue-400" /> : <Menu className="w-5 h-5" />}
+          {mobileOpen ? <X className="w-5 h-5 text-blue-500" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
@@ -149,7 +149,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             />
           </Link>
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md tracking-wider uppercase">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md tracking-wider uppercase">
               ADMIN
             </span>
             <button
@@ -171,15 +171,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             className={`
               flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
               ${pathname === "/admin"
-                ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold"
-                : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
               }
             `}
           >
             {pathname === "/admin" && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
             )}
-            <LayoutDashboard className={`w-4 h-4 transition-colors ${pathname === "/admin" ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+            <LayoutDashboard className={`w-4 h-4 transition-colors ${pathname === "/admin" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
             <span className="truncate">Dashboard</span>
           </Link>
 
@@ -202,15 +202,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
                       ${isActive
-                        ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold"
-                        : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                        ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                       }
                     `}
                   >
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
                     )}
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">{item.label}</span>
                   </Link>
                 );
@@ -237,15 +237,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
                       ${isActive
-                        ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold"
-                        : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                        ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                       }
                     `}
                   >
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
                     )}
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">{item.label}</span>
                   </Link>
                 );
@@ -272,15 +272,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
                       ${isActive
-                        ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold"
-                        : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                        ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                       }
                     `}
                   >
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
                     )}
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">{item.label}</span>
                   </Link>
                 );
@@ -292,11 +292,11 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   type="button"
                   onClick={() => setUserVideoToggled(!videoOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
-                    isVideoActive ? "text-white font-bold bg-[#14141B]" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                    isVideoActive ? "text-white font-semibold bg-[#15171D] border border-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Film className={`w-4 h-4 shrink-0 transition-colors ${isVideoActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                    <Film className={`w-4 h-4 shrink-0 transition-colors ${isVideoActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">Biblioteca de Vídeos</span>
                   </div>
                   {videoOpen ? (
@@ -325,14 +325,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                             onClick={() => setMobileOpen(false)}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                               isActive
-                                ? "bg-[#14141B] text-white font-bold border border-white/10 shadow-md"
+                                ? "bg-[#15171D] text-white font-semibold border border-white/[0.08] shadow-xs"
                                 : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                             }`}
                           >
                             {isActive && (
-                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-blue-600 rounded-r-md shadow-sm shadow-blue-500/30" />
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
                             )}
-                            <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                            <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                             <span className="truncate flex-1">{item.label}</span>
                           </Link>
                         </div>
@@ -349,15 +349,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
                   ${pathname === "/admin/themes"
-                    ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold"
-                    : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                    ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                   }
                 `}
               >
                 {pathname === "/admin/themes" && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
                 )}
-                <Palette className={`w-4 h-4 transition-colors ${pathname === "/admin/themes" ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                <Palette className={`w-4 h-4 transition-colors ${pathname === "/admin/themes" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                 <span className="truncate">Temas</span>
               </Link>
             </div>
@@ -378,15 +378,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
                   ${pathname === "/admin/settings"
-                    ? "bg-[#14141B] text-white border border-white/10 shadow-md font-bold"
-                    : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                    ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                   }
                 `}
               >
                 {pathname === "/admin/settings" && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-[18px] rounded-r-md bg-blue-600 shadow-sm shadow-blue-500/30" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
                 )}
-                <Settings className={`w-4 h-4 transition-colors ${pathname === "/admin/settings" ? "text-blue-400" : "text-zinc-400"}`} strokeWidth={1.8} />
+                <Settings className={`w-4 h-4 transition-colors ${pathname === "/admin/settings" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                 <span className="truncate">Configurações</span>
               </Link>
 
@@ -411,7 +411,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         <div className="p-2.5 border-t border-white/[0.06]">
           <div
             onClick={() => setProfileModalOpen(true)}
-            className="flex items-center justify-between p-2 rounded-xl bg-[#141418] hover:bg-[#181820] border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer group"
+            className="flex items-center justify-between p-2 rounded-xl bg-[#0F1014] hover:bg-[#15171D] border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               {currentUser?.avatarUrl ? (
@@ -443,7 +443,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   setProfileModalOpen(true);
                 }}
                 title="Editar Perfil"
-                className="p-1 rounded-md text-zinc-400 hover:text-blue-400 hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-zinc-400 hover:text-blue-500 hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <UserCog className="w-3.5 h-3.5" />
               </button>
@@ -609,11 +609,11 @@ function AdminProfileModal({ user, onClose, onSave }: AdminProfileModalProps) {
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-md bg-[#111116] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in-0 zoom-in-95 duration-150">
+      <div className="relative w-full max-w-md bg-[#0F1014] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in-0 zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] bg-[#14141B]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] bg-[#0F1014]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
               <UserCog className="w-4 h-4" />
             </div>
             <div>
@@ -650,7 +650,7 @@ function AdminProfileModal({ user, onClose, onSave }: AdminProfileModalProps) {
           )}
 
           {/* Avatar Section */}
-          <div className="flex items-center gap-4 p-3 rounded-xl bg-[#141418] border border-white/[0.06]">
+          <div className="flex items-center gap-4 p-3 rounded-xl bg-[#15171D] border border-white/[0.06]">
             <div className="relative shrink-0">
               {previewUrl ? (
                 <img
@@ -706,7 +706,7 @@ function AdminProfileModal({ user, onClose, onSave }: AdminProfileModalProps) {
           {/* Display Name Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-300 block">
-              Nome de Exibição <span className="text-blue-400">*</span>
+              Nome de Exibição <span className="text-blue-500">*</span>
             </label>
             <input
               type="text"
@@ -716,7 +716,7 @@ function AdminProfileModal({ user, onClose, onSave }: AdminProfileModalProps) {
               maxLength={80}
               required
               disabled={isSaving}
-              className="w-full px-3 py-2 bg-[#16161D] border border-white/[0.08] focus:border-blue-500 text-white text-xs rounded-xl focus:outline-none transition-all placeholder:text-zinc-400 disabled:opacity-50"
+              className="w-full px-3 py-2 bg-[#15171D] border border-white/[0.08] focus:border-blue-500 text-white text-xs rounded-xl focus:outline-none transition-all placeholder:text-zinc-400 disabled:opacity-50"
             />
           </div>
 
@@ -736,14 +736,14 @@ function AdminProfileModal({ user, onClose, onSave }: AdminProfileModalProps) {
               value={user.email || ""}
               readOnly
               disabled
-              className="w-full px-3 py-2 bg-[#141418] border border-white/[0.04] text-zinc-400 text-xs rounded-xl cursor-not-allowed select-none"
+              className="w-full px-3 py-2 bg-[#15171D] border border-white/[0.04] text-zinc-400 text-xs rounded-xl cursor-not-allowed select-none"
             />
           </div>
 
           {/* Role & ID (Read-Only Info) */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between text-[11px]">
             <span className="text-zinc-400">Nível de Permissão:</span>
-            <span className="font-semibold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+            <span className="font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
               Super Administrador WebGran
             </span>
           </div>

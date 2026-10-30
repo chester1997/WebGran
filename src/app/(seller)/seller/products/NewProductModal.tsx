@@ -190,12 +190,12 @@ export function NewProductModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
+      <DialogTrigger className="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
         <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] shadow-2xl rounded-2xl">
-        <div className="p-4 sm:p-6 border-b border-white/5 shrink-0 flex items-center justify-between">
+      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] shadow-2xl rounded-2xl">
+        <div className="p-4 sm:p-6 border-b border-white/[0.08] shrink-0 flex items-center justify-between">
           <DialogTitle className="text-lg sm:text-xl font-bold text-white">Novo Produto</DialogTitle>
         </div>
 
@@ -217,7 +217,7 @@ export function NewProductModal({
                 name="title"
                 required
                 placeholder="Ex: Plano Mensal Premium"
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-zinc-600"
               />
             </div>
 
@@ -228,7 +228,7 @@ export function NewProductModal({
                 name="description"
                 rows={3}
                 placeholder="Detalhe tudo o que o cliente recebe ao comprar este produto..."
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
+                className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-zinc-600 resize-none custom-scrollbar"
               ></textarea>
             </div>
 
@@ -243,12 +243,12 @@ export function NewProductModal({
                   required
                   min="0"
                   placeholder="0.00"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-semibold"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all font-semibold"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Duração</label>
-                <select name="duration" defaultValue="lifetime" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="duration" defaultValue="lifetime" className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="daily">Diário</option>
                   <option value="weekly">Semanal</option>
                   <option value="monthly">Mensal</option>
@@ -270,7 +270,7 @@ export function NewProductModal({
                   min="0"
                   max="100"
                   placeholder="0"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all"
                 />
               </div>
               <div className="flex items-end pb-1 sm:pb-3">
@@ -283,7 +283,7 @@ export function NewProductModal({
               <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Imagem do produto</label>
               
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start w-full">
-                <div className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1E] flex items-center justify-center self-center sm:self-start">
+                <div className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-lg border border-white/10 overflow-hidden bg-[#15171D] flex items-center justify-center self-center sm:self-start">
                   {imageUrl ? (
                     <>
                       <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -312,7 +312,7 @@ export function NewProductModal({
                     type="button" 
                     variant="outline" 
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white h-10 sm:h-11 px-4 rounded-lg w-full text-xs sm:text-sm truncate"
+                    className="bg-[#15171D] border-white/[0.08] text-zinc-300 hover:bg-white/5 hover:text-white h-10 sm:h-11 px-4 rounded-lg w-full text-xs sm:text-sm truncate"
                   >
                     <Upload className="w-4 h-4 mr-2 shrink-0" /> Enviar imagem do computador
                   </Button>
@@ -321,7 +321,7 @@ export function NewProductModal({
                     value={imageUrl.startsWith("data:") ? "" : imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="ou cole uma URL de imagem aqui"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
                   />
                   <p className="text-[10px] text-zinc-500">Recomendado: 600 × 600 px - máx 5MB</p>
                 </div>
@@ -337,21 +337,21 @@ export function NewProductModal({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 w-full">
                 <div 
                   onClick={() => setDeliveryType("telegram")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-blue-500/80 bg-blue-500/[0.08] ring-1 ring-blue-500/20 text-white" : "border-white/[0.08] bg-[#15171D] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "telegram" ? "text-white" : "text-zinc-300"}`}>Grupo / Canal Telegram</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Bot envia link de convite automaticamente</p>
                 </div>
                 <div 
                   onClick={() => setDeliveryType("external")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "external" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "external" ? "border-blue-500/80 bg-blue-500/[0.08] ring-1 ring-blue-500/20 text-white" : "border-white/[0.08] bg-[#15171D] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "external" ? "text-white" : "text-zinc-300"}`}>Link externo</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Bot envia qualquer link após pagamento</p>
                 </div>
                 <div 
                   onClick={() => setDeliveryType("product_video")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "product_video" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "product_video" ? "border-blue-500/80 bg-blue-500/[0.08] ring-1 ring-blue-500/20 text-white" : "border-white/[0.08] bg-[#15171D] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "product_video" ? "text-white" : "text-zinc-300"}`}>Vídeo do Produto</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-tight">Cliente recebe acesso aos vídeos pelo Mini App</p>
@@ -374,14 +374,14 @@ export function NewProductModal({
                         setTestResult(null);
                       }}
                       placeholder="Ex: -1001234567890"
-                      className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                      className="flex-1 bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all font-mono"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       disabled={testingAccess || !deliveryValue.trim()}
                       onClick={handleTestAccess}
-                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 sm:h-11 px-4 rounded-lg shrink-0 font-medium w-full sm:w-auto"
+                      className="bg-[#15171D] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 sm:h-11 px-4 rounded-lg shrink-0 font-medium w-full sm:w-auto"
                     >
                       {testingAccess ? "Testando..." : "🔍 Testar conexão"}
                     </Button>
@@ -420,13 +420,13 @@ export function NewProductModal({
                     value={deliveryValue}
                     onChange={(e) => setDeliveryValue(e.target.value)}
                     placeholder="Ex: https://meudrive.com/arquivo"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all"
                   />
                 </div>
               )}
 
               {deliveryType === "product_video" && (
-                <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/[0.08] space-y-3 w-full">
                   <ProductVideosManager
                     onSelectedVideoIdsChange={setSelectedVideoIds}
                     onPendingVideosChange={setPendingVideos}
@@ -443,7 +443,7 @@ export function NewProductModal({
                   name="botId" 
                   value={selectedBotId} 
                   onChange={(e) => setSelectedBotId(e.target.value)} 
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
                 >
                   <option value="">Todos os Bots (Loja Geral)</option>
                   {bots?.map(b => (
@@ -453,7 +453,7 @@ export function NewProductModal({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Categoria</label>
-                <select name="categoryId" defaultValue="" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="categoryId" defaultValue="" className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Sem Categoria</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -465,14 +465,14 @@ export function NewProductModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
-                <select name="status" defaultValue="active" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="status" defaultValue="active" className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="active">Ativo na Loja</option>
                   <option value="draft">Inativo (Rascunho)</option>
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Badge do Produto</label>
-                <select name="badge" defaultValue="" className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="badge" defaultValue="" className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Nenhum Badge</option>
                   <option value="novo">🟢 Novo (Verde)</option>
                   <option value="dublado">🔵 Dublado (DUB)</option>
@@ -493,7 +493,7 @@ export function NewProductModal({
             />
 
             {/* Indicadores Visuais da Vitrine */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#15171D] border border-white/[0.08] space-y-3 w-full">
               <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider">
                 Indicadores da Vitrine (Mini App)
               </label>
@@ -511,7 +511,7 @@ export function NewProductModal({
           </form>
         </div>
 
-        <div className="p-4 sm:p-5 border-t border-white/5 shrink-0 flex items-center justify-end gap-3 bg-[#121214]">
+        <div className="p-4 sm:p-5 border-t border-white/[0.08] shrink-0 flex items-center justify-end gap-3 bg-[#0F1014]">
           <Button 
             type="button" 
             variant="ghost" 
@@ -524,7 +524,7 @@ export function NewProductModal({
             type="submit" 
             form="new-product-form"
             disabled={loading} 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 sm:px-8 shadow-lg shadow-blue-600/20 text-xs sm:text-sm"
+            className="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-semibold rounded-lg px-6 sm:px-8 shadow-lg shadow-blue-600/20 text-xs sm:text-sm"
           >
             {loading ? "Salvando..." : "Salvar Produto"}
           </Button>

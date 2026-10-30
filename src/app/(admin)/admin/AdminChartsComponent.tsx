@@ -59,8 +59,8 @@ export function AdminChartsComponent({ type, data }: AdminChartsProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "#111116",
-              borderColor: "rgba(255,255,255,0.1)",
+              backgroundColor: "#0F1014",
+              borderColor: "rgba(255,255,255,0.08)",
               borderRadius: "12px",
               color: "#FFF",
               fontSize: "12px",
@@ -104,8 +104,8 @@ export function AdminChartsComponent({ type, data }: AdminChartsProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "#111116",
-              borderColor: "rgba(255,255,255,0.1)",
+              backgroundColor: "#0F1014",
+              borderColor: "rgba(255,255,255,0.08)",
               borderRadius: "12px",
               color: "#FFF",
               fontSize: "12px",
@@ -141,8 +141,8 @@ export function AdminChartsComponent({ type, data }: AdminChartsProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "#111116",
-              borderColor: "rgba(255,255,255,0.1)",
+              backgroundColor: "#0F1014",
+              borderColor: "rgba(255,255,255,0.08)",
               borderRadius: "12px",
               color: "#FFF",
               fontSize: "12px",
@@ -167,8 +167,8 @@ export function AdminChartsComponent({ type, data }: AdminChartsProps) {
           <YAxis stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "#111116",
-              borderColor: "rgba(255,255,255,0.1)",
+              backgroundColor: "#0F1014",
+              borderColor: "rgba(255,255,255,0.08)",
               borderRadius: "12px",
               color: "#FFF",
               fontSize: "12px",
@@ -211,13 +211,13 @@ export function AdminChartsComponent({ type, data }: AdminChartsProps) {
             dataKey="count"
           >
             {data.map((entry: any, index: number) => (
-              <Cell key={`cell-${index}`} fill={entry.color} stroke="#111116" strokeWidth={2} />
+              <Cell key={`cell-${index}`} fill={entry.color} stroke="#0F1014" strokeWidth={2} />
             ))}
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: "#111116",
-              borderColor: "rgba(255,255,255,0.1)",
+              backgroundColor: "#0F1014",
+              borderColor: "rgba(255,255,255,0.08)",
               borderRadius: "12px",
               color: "#FFF",
               fontSize: "12px",

@@ -170,7 +170,7 @@ export default function AdminReportsClient({
             type="button"
             onClick={() => fetchReports(currentPage)}
             disabled={isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14141B] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0F1014] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
             title="Recarregar relatório"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin text-blue-400" : "text-zinc-400"}`} />
@@ -180,7 +180,7 @@ export default function AdminReportsClient({
       </div>
 
       {/* 2. FILTERS BAR */}
-      <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-lg space-y-4 w-full">
+      <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-lg space-y-4 w-full">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Seller Filter */}
           <div className="flex items-center gap-2 min-w-[260px]">
@@ -188,7 +188,7 @@ export default function AdminReportsClient({
             <select
               value={selectedSeller}
               onChange={(e) => handleSellerChange(e.target.value)}
-              className="w-full text-xs font-semibold bg-[#0F0F14] border border-white/[0.08] rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500/50 cursor-pointer"
+              className="w-full text-xs font-semibold bg-[#15171D] border border-white/[0.08] rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500/50 cursor-pointer"
             >
               <option value="all">Todos os Vendedores (Plataforma Completa)</option>
               {availableSellers.map((s) => (
@@ -200,7 +200,7 @@ export default function AdminReportsClient({
           </div>
 
           {/* Quick Period Buttons */}
-          <div className="flex items-center gap-1.5 bg-[#0F0F14] p-1 rounded-xl border border-white/[0.06] overflow-x-auto">
+          <div className="flex items-center gap-1.5 bg-[#15171D] p-1 rounded-xl border border-white/[0.06] overflow-x-auto">
             {[
               { id: "7d", label: "7 Dias" },
               { id: "30d", label: "30 Dias" },
@@ -236,7 +236,7 @@ export default function AdminReportsClient({
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="text-xs bg-[#0F0F14] border border-white/[0.08] rounded-xl px-3 py-1.5 text-zinc-200 focus:outline-none focus:border-blue-500/50"
+                className="text-xs bg-[#15171D] border border-white/[0.08] rounded-xl px-3 py-1.5 text-zinc-200 focus:outline-none focus:border-blue-500/50"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export default function AdminReportsClient({
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="text-xs bg-[#0F0F14] border border-white/[0.08] rounded-xl px-3 py-1.5 text-zinc-200 focus:outline-none focus:border-blue-500/50"
+                className="text-xs bg-[#15171D] border border-white/[0.08] rounded-xl px-3 py-1.5 text-zinc-200 focus:outline-none focus:border-blue-500/50"
               />
             </div>
             <button
@@ -271,72 +271,72 @@ export default function AdminReportsClient({
       {/* 3. KPIS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4 w-full">
         {/* KPI 1: Clientes Únicos */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Clientes Únicos</span>
             <Users className="w-4 h-4 text-blue-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.uniqueCustomers.toLocaleString("pt-BR") : "0"}
           </div>
           <span className="text-[10px] text-zinc-500 block">Clientes compradores</span>
         </div>
 
         {/* KPI 2: Produtos Ativos */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Produtos Ativos</span>
             <Package className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.activeProducts.toLocaleString("pt-BR") : "0"}
           </div>
           <span className="text-[10px] text-zinc-500 block">Disponíveis na loja</span>
         </div>
 
         {/* KPI 3: Vendas Aprovadas */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Vendas Pagas</span>
             <ShoppingBag className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.approvedSalesCount.toLocaleString("pt-BR") : "0"}
           </div>
           <span className="text-[10px] text-zinc-500 block">Status aprovado</span>
         </div>
 
         {/* KPI 4: Faturamento Bruto (GMV) */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Faturamento (GMV)</span>
             <DollarSign className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.formattedGmv : "R$ 0,00"}
           </div>
           <span className="text-[10px] text-zinc-500 block">Volume bruto transacionado</span>
         </div>
 
         {/* KPI 5: Ticket Médio */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Ticket Médio</span>
             <TrendingUp className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.formattedAvgTicket : "R$ 0,00"}
           </div>
           <span className="text-[10px] text-zinc-500 block">Média por venda paga</span>
         </div>
 
         {/* KPI 6: Conversão */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] space-y-1">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Conversão</span>
             <Percent className="w-4 h-4 text-indigo-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.formattedConversionRate : "0%"}
           </div>
           <span className="text-[10px] text-zinc-500 block" title="Pedidos pagos / Total de checkouts gerados">
@@ -345,12 +345,12 @@ export default function AdminReportsClient({
         </div>
 
         {/* KPI 7: Taxas da Plataforma */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 space-y-1">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-blue-500/30 shadow-lg shadow-blue-500/5 space-y-1">
           <div className="flex items-center justify-between text-blue-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">Taxas WebGran</span>
             <Receipt className="w-4 h-4 text-blue-400" />
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">
+          <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
             {kpis ? kpis.formattedTotalPlatformFees : "R$ 0,00"}
           </div>
           <span className="text-[10px] text-blue-400 font-medium block">Receita retida via split</span>
@@ -360,7 +360,7 @@ export default function AdminReportsClient({
       {/* 4. CHARTS & GATEWAY BREAKDOWN SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
         {/* Time Series Chart (Col-span 2) */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl space-y-4 w-full">
+        <div className="lg:col-span-2 p-5 rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-xl space-y-4 w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-white tracking-tight">Evolução ao Longo do Tempo</h2>
@@ -372,7 +372,7 @@ export default function AdminReportsClient({
             </div>
 
             {/* Metric Switcher */}
-            <div className="flex items-center gap-1 bg-[#0F0F14] p-1 rounded-xl border border-white/[0.06] self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-[#15171D] p-1 rounded-xl border border-white/[0.06] self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setChartMetric("gmv")}
@@ -473,7 +473,7 @@ export default function AdminReportsClient({
         </div>
 
         {/* Gateway Breakdown Card */}
-        <div className="p-5 rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
             <div>
               <h2 className="text-base font-bold text-white tracking-tight">Taxas por Gateway</h2>
@@ -491,7 +491,7 @@ export default function AdminReportsClient({
                 {gatewayBreakdown.map((gw, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-xl bg-[#0F0F14] border border-white/[0.06] space-y-2"
+                    className="p-3 rounded-xl bg-[#15171D] border border-white/[0.06] space-y-2"
                   >
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
@@ -529,7 +529,7 @@ export default function AdminReportsClient({
       </div>
 
       {/* 5. DETAILED ORDERS TABLE */}
-      <div className="rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl overflow-hidden space-y-4 p-5 w-full">
+      <div className="rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-xl overflow-hidden space-y-4 p-5 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-bold text-white tracking-tight">Detalhamento dos Pedidos</h2>
@@ -546,7 +546,7 @@ export default function AdminReportsClient({
               placeholder="Buscar por ID, cliente, loja..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs bg-[#0F0F14] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50"
+              className="w-full text-xs bg-[#15171D] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50"
             />
           </div>
         </div>
@@ -650,7 +650,7 @@ export default function AdminReportsClient({
                 type="button"
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage <= 1 || isPending}
-                className="p-1.5 rounded-lg bg-[#0F0F14] border border-white/[0.08] hover:border-white/20 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="p-1.5 rounded-lg bg-[#15171D] border border-white/[0.08] hover:border-white/20 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 title="Página anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -662,7 +662,7 @@ export default function AdminReportsClient({
                 type="button"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= data.orders.totalPages || isPending}
-                className="p-1.5 rounded-lg bg-[#0F0F14] border border-white/[0.08] hover:border-white/20 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="p-1.5 rounded-lg bg-[#15171D] border border-white/[0.08] hover:border-white/20 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 title="Próxima página"
               >
                 <ChevronRight className="w-4 h-4" />

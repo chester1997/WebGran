@@ -232,7 +232,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
       {/* ==================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Total de Features */}
-        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Total de Recursos
@@ -250,7 +250,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
         </div>
 
         {/* Features Ativas */}
-        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Recursos Ativos
@@ -268,7 +268,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
         </div>
 
         {/* Categorias no Catálogo */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Categorias Mapeadas
@@ -289,7 +289,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
       {/* ==================================================== */}
       {/* 3. TOOLBAR: SEARCH & CATEGORY FILTER */}
       {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#111116] rounded-2xl border border-white/[0.08]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#0F1014] rounded-2xl border border-white/[0.08]">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
@@ -297,7 +297,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome, chave ou categoria..."
-            className="w-full pl-9 pr-8 py-2 bg-[#16161D] border border-white/[0.08] focus:border-blue-500 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-9 pr-8 py-2 bg-[#15171D] border border-white/[0.08] focus:border-blue-500 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
             <button
@@ -318,7 +318,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
                 selectedCategory === catKey
                   ? "bg-blue-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-white bg-[#16161D] hover:bg-white/[0.04] border border-white/[0.06]"
+                  : "text-zinc-400 hover:text-white bg-[#15171D] hover:bg-white/[0.04] border border-white/[0.06]"
               }`}
             >
               {catLabel}
@@ -330,7 +330,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
       {/* ==================================================== */}
       {/* 4. FEATURES TABLE */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
         <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Catálogo de Recursos ({filteredFeatures.length})
@@ -433,7 +433,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
       {/* ==================================================== */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+          <div className="bg-[#0F1014] border border-white/[0.08] w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
@@ -468,7 +468,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                   value={featureForm.key}
                   onChange={(e) => setFeatureForm({ ...featureForm, key: e.target.value })}
                   placeholder="ex: max_products"
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                 />
               </div>
 
@@ -482,7 +482,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                   value={featureForm.name}
                   onChange={(e) => setFeatureForm({ ...featureForm, name: e.target.value })}
                   placeholder="Ex: Limite de Produtos"
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -499,7 +499,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                       type: e.target.value as any,
                       defaultValue: e.target.value === "BOOLEAN" ? "true" : "0"
                     })}
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                   >
                     <option value="BOOLEAN">BOOLEAN (Liga/Desliga)</option>
                     <option value="LIMIT">LIMIT (Numérico/Ilimitado)</option>
@@ -514,7 +514,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                   <select
                     value={featureForm.category}
                     onChange={(e) => setFeatureForm({ ...featureForm, category: e.target.value })}
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="catalog">Catálogo</option>
                     <option value="integrations">Integrações</option>
@@ -536,7 +536,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                   <select
                     value={featureForm.defaultValue}
                     onChange={(e) => setFeatureForm({ ...featureForm, defaultValue: e.target.value })}
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="true">Ativado (true)</option>
                     <option value="false">Desativado (false)</option>
@@ -547,7 +547,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                     value={featureForm.defaultValue}
                     onChange={(e) => setFeatureForm({ ...featureForm, defaultValue: e.target.value })}
                     placeholder="Ex: 100 (ou -1 para ilimitado)"
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                   />
                 )}
               </div>
@@ -561,7 +561,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                   value={featureForm.description}
                   onChange={(e) => setFeatureForm({ ...featureForm, description: e.target.value })}
                   placeholder="Descrição do propósito deste recurso..."
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -571,7 +571,7 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
                   id="featActive"
                   checked={featureForm.isActive}
                   onChange={(e) => setFeatureForm({ ...featureForm, isActive: e.target.checked })}
-                  className="w-4 h-4 rounded border-white/[0.1] bg-[#16161D] text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-white/[0.1] bg-[#15171D] text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
                 <label htmlFor="featActive" className="text-xs text-zinc-300 cursor-pointer select-none">
                   Feature ativa no catálogo

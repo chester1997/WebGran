@@ -284,11 +284,11 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Banners</h1>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
               {bannersList.length} de {maxLimit} banners
             </span>
           </div>
@@ -300,7 +300,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
         <Button
           onClick={openAddModal}
           disabled={isLimitReached}
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-blue-600/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Adicionar Banner
@@ -308,9 +308,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       </div>
 
       {/* Banner Size Recommendation Notice Card */}
-      <div className="bg-[#121216] border border-red-500/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
             <ImageIcon className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
@@ -324,16 +324,16 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             </div>
           </div>
         </div>
-        <span className="text-[11px] text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 shrink-0">
+        <span className="text-[11px] text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/[0.08] shrink-0">
           ⚡ Imagens maiores se ajustam perfeitamente ao card.
         </span>
       </div>
 
       {/* Interval Setting Control */}
-      <div className="bg-[#121216] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 shrink-0">
-            <Clock className="w-5 h-5 text-red-500" />
+            <Clock className="w-5 h-5 text-blue-400" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">Intervalo do Slider</h3>
@@ -349,8 +349,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
               disabled={isSavingInterval}
               className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
                 bannerInterval === seconds
-                  ? "bg-red-600 text-white border-red-500 shadow-md shadow-red-600/20"
-                  : "bg-[#1A1A22] text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
+                  ? "bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/20"
+                  : "bg-[#15171D] text-zinc-400 border-white/[0.08] hover:text-white hover:border-white/20"
               }`}
             >
               {seconds}s
@@ -361,7 +361,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
 
       {/* Banners List Grid */}
       {bannersList.length === 0 ? (
-        <div className="bg-[#121216] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+        <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-12 text-center flex flex-col items-center justify-center">
           <ImageIcon className="w-12 h-12 text-zinc-600 mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Nenhum banner cadastrado</h3>
           <p className="text-xs text-zinc-400 max-w-sm mb-6">
@@ -369,7 +369,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           </p>
           <Button
             onClick={openAddModal}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2"
+            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl px-5 py-2"
           >
             + Adicionar Primeiro Banner
           </Button>
@@ -381,12 +381,12 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             return (
               <div
                 key={banner.id}
-                className={`bg-[#121216] border rounded-2xl overflow-hidden transition-all flex flex-col justify-between shadow-xl ${
-                  isActive ? "border-white/10" : "border-white/5 opacity-60"
+                className={`bg-[#0F1014] border rounded-2xl overflow-hidden transition-all flex flex-col justify-between shadow-xl ${
+                  isActive ? "border-white/10" : "border-white/[0.08] opacity-60"
                 }`}
               >
                 {/* Banner Image Preview Container — Compact & Balanced Height */}
-                <div className="relative w-full aspect-[2.5/1] max-h-[180px] bg-black/40 overflow-hidden border-b border-white/5">
+                <div className="relative w-full aspect-[2.5/1] max-h-[180px] bg-black/40 overflow-hidden border-b border-white/[0.08]">
                   <img
                     src={banner.imageUrl}
                     alt={banner.title}
@@ -425,7 +425,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                   </div>
 
                   {/* Actions Button Row */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.08]">
                     {/* Reorder Up/Down */}
                     <div className="flex items-center gap-1">
                       <button
@@ -463,7 +463,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                       {/* Edit */}
                       <button
                         onClick={() => openEditModal(banner)}
-                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/5 transition-all"
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/[0.08] transition-all"
                         title="Editar Banner"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -489,8 +489,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       {/* Add / Edit Banner Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121216] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95">
-            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+          <div className="bg-[#0F1014] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95">
+            <div className="p-5 border-b border-white/[0.08] flex items-center justify-between">
               <h3 className="text-base font-bold text-white">
                 {editingBanner ? "Editar Banner" : "Adicionar Novo Banner"}
               </h3>
@@ -512,7 +512,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Ex: Promoção de Lançamento"
-                  className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500 transition-all"
+                  className="w-full bg-[#15171D] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all"
                 />
               </div>
 
@@ -527,13 +527,13 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 p-1 bg-[#181820] rounded-xl border border-white/5">
+                <div className="grid grid-cols-2 gap-2 p-1 bg-[#15171D] rounded-xl border border-white/[0.08]">
                   <button
                     type="button"
                     onClick={() => setInputMode("upload")}
                     className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                       inputMode === "upload"
-                        ? "bg-red-600 text-white shadow-md"
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
                         : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -545,7 +545,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                     onClick={() => setInputMode("url")}
                     className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                       inputMode === "url"
-                        ? "bg-red-600 text-white shadow-md"
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
                         : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -567,9 +567,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                   />
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-white/10 hover:border-red-500/50 bg-[#181820] hover:bg-[#1E1E28] rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center group"
+                    className="w-full border-2 border-dashed border-white/10 hover:border-blue-500/50 bg-[#15171D] hover:bg-[#1A1C24] rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center group"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-3 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-blue-400 mb-3 group-hover:scale-110 transition-transform">
                       <Upload className="w-6 h-6" />
                     </div>
                     <p className="text-sm font-semibold text-white">
@@ -617,7 +617,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                     placeholder="https://exemplo.com/imagem.png"
-                    className="w-full bg-[#181820] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500 transition-all"
+                    className="w-full bg-[#15171D] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all"
                   />
                   <div className="mt-2 text-[11px] font-semibold space-y-0.5">
                     <p className="text-amber-400">🌟 Tamanho Ideal: 1200 x 540 px (ou 1200 x 675 px)</p>
@@ -649,7 +649,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
               )}
 
               {/* Buttons */}
-              <div className="pt-4 border-t border-white/5 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
@@ -660,7 +660,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2 shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2"
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl px-5 py-2 shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSubmitting ? (
                     <>

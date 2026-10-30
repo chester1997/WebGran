@@ -33,16 +33,16 @@ async function AdminSidebarWrapper() {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0B0B0D] text-white selection:bg-red-500/30 selection:text-red-200">
+    <div className="min-h-screen bg-[#090A0D] text-white selection:bg-blue-500/30 selection:text-blue-200">
       <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         {/* Modern Sidebar Component wrapped in Suspense */}
-        <Suspense fallback={<div className="w-64 bg-[#111115] h-full animate-pulse hidden md:block" />}>
+        <Suspense fallback={<div className="w-64 bg-[#0B0B0E] h-full animate-pulse hidden md:block" />}>
           <AdminSidebarWrapper />
         </Suspense>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0B0B0D]">
-          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-[#0B0B0D] custom-admin-scrollbar">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#090A0D]">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-[#090A0D] custom-admin-scrollbar">
             <div className="w-full space-y-6">
               <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse">Carregando painel admin...</div>}>
                 {children}

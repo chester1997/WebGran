@@ -27,7 +27,7 @@ interface CommercialMetricsCardsProps {
 
 /**
  * Semicircular Velocímetro for Pix Conversion Rate.
- * Built with pure SVG, dark theme, neutral track (#25272B), and subtle blue progress.
+ * Built with pure SVG, dark theme, neutral track (white/[0.08]), and subtle blue progress.
  */
 function SemicircleGauge({ 
   percentage, 
@@ -75,7 +75,7 @@ function SemicircleGauge({
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
             fill="none"
-            stroke="#25272B"
+            stroke="#21232B"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />
@@ -121,8 +121,8 @@ function PerformanceTooltip({ active, payload }: any) {
     const count = Number(item.salesCount || 0);
 
     return (
-      <div className="bg-[#151619] border border-[#25272B] text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[140px]">
-        <div className="flex items-center justify-between gap-2 border-b border-[#25272B] pb-1.5 mb-1">
+      <div className="bg-[#15171D] border border-white/[0.08] text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[140px]">
+        <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-1.5 mb-1">
           <span className="font-medium text-zinc-300 text-[11px]">{item.fullDate || item.dateLabel}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
         </div>
@@ -257,7 +257,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
           <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 sm:gap-4 h-full">
 
             {/* CARD 1: VENDAS APROVADAS (Superior Esquerdo) */}
-            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
+            <div className="relative bg-[#0F1014] border border-white/[0.08] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -289,14 +289,14 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                   </div>
 
                   {approvedSales?.hasTargetGoal && approvedSales.targetGoal && (
-                    <div className="pt-1.5 sm:pt-2 mt-auto border-t border-[#25272B] space-y-1 sm:space-y-1.5">
+                    <div className="pt-1.5 sm:pt-2 mt-auto border-t border-white/[0.08] space-y-1 sm:space-y-1.5">
                       <div className="flex items-center justify-between text-[10px] sm:text-xs">
                         <span className="text-zinc-400 font-medium truncate">Meta</span>
                         <span className="text-blue-400 font-bold font-mono">
                           {approvedSales.targetProgressPercent}%
                         </span>
                       </div>
-                      <div className="h-1 sm:h-1.5 w-full bg-[#151619] rounded-full overflow-hidden">
+                      <div className="h-1 sm:h-1.5 w-full bg-[#15171D] rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-500 rounded-full transition-all duration-500"
                           style={{ width: `${approvedSales.targetProgressPercent || 0}%` }}
@@ -309,7 +309,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* CARD 2: TAXA DE CONVERSÃO (Superior Direito) */}
-            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
+            <div className="relative bg-[#0F1014] border border-white/[0.08] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -345,7 +345,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* CARD 3: TOTAL DE STARTS (Inferior Esquerdo) */}
-            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
+            <div className="relative bg-[#0F1014] border border-white/[0.08] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -384,7 +384,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* CARD 4: TICKET MÉDIO (Inferior Direito) */}
-            <div className="relative bg-[#111214] border border-[#25272B] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
+            <div className="relative bg-[#0F1014] border border-white/[0.08] hover:border-zinc-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs transition-colors flex flex-col justify-between overflow-hidden min-h-[145px] sm:min-h-[160px] h-full">
               {isPending ? (
                 <div className="space-y-2 sm:space-y-3 animate-pulse">
                   <div className="h-3 sm:h-4 bg-white/5 rounded w-1/3" />
@@ -427,7 +427,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             COLUNA DIREITA: GRÁFICO SEU DESEMPENHO (60% da largura)
            ========================================================================= */}
         <div className="lg:col-span-3 flex flex-col h-full">
-          <div className="bg-[#111214] border border-[#25272B] rounded-2xl p-4 sm:p-5 md:p-6 shadow-xs flex flex-col justify-between h-full relative overflow-hidden min-h-[320px] sm:min-h-[340px]">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 md:p-6 shadow-xs flex flex-col justify-between h-full relative overflow-hidden min-h-[320px] sm:min-h-[340px]">
             {/* Header: Title + Subtitle + Total Badge */}
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
@@ -455,8 +455,8 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                   Carregando desempenho...
                 </div>
               ) : !hasSeriesSales ? (
-                <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#151619] rounded-xl border border-[#25272B] space-y-1.5 my-auto">
-                  <div className="w-8 h-8 rounded-lg bg-zinc-800/60 border border-[#25272B] flex items-center justify-center text-zinc-400">
+                <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center bg-[#15171D] rounded-xl border border-white/[0.08] space-y-1.5 my-auto">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800/60 border border-white/[0.08] flex items-center justify-center text-zinc-400">
                     <BarChart3 className="w-4 h-4 opacity-70 text-blue-400" />
                   </div>
                   <p className="text-zinc-200 text-xs font-semibold">{periodConfig.emptyText}</p>
@@ -503,7 +503,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
                         strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#bluePerformanceGrad)"
-                        dot={{ r: 2.5, fill: "#3B82F6", stroke: "#111214", strokeWidth: 1.5 }}
+                        dot={{ r: 2.5, fill: "#3B82F6", stroke: "#0F1014", strokeWidth: 1.5 }}
                         activeDot={{
                           r: 4.5,
                           stroke: "#FFFFFF",
@@ -518,7 +518,7 @@ export function CommercialMetricsCards({ metrics, isPending = false }: Commercia
             </div>
 
             {/* Footer Summary */}
-            <div className="pt-2.5 mt-auto border-t border-[#25272B] flex items-center justify-between text-[11px] text-zinc-400">
+            <div className="pt-2.5 mt-auto border-t border-white/[0.08] flex items-center justify-between text-[11px] text-zinc-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                 Receita confirmada

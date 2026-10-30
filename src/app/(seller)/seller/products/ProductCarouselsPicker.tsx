@@ -34,7 +34,7 @@ export function ProductCarouselsPicker({
   };
 
   return (
-    <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+    <div className="p-3.5 sm:p-4 rounded-xl bg-[#15171D] border border-white/[0.08] space-y-3 w-full">
       <div className="flex items-center justify-between">
         <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
           <Layers className="w-3.5 h-3.5 text-blue-400" />
@@ -56,7 +56,7 @@ export function ProductCarouselsPicker({
       <input type="hidden" name="carouselIds" value={JSON.stringify(selectedIds)} />
 
       {carousels.length === 0 ? (
-        <div className="p-4 rounded-xl bg-[#131316] border border-white/5 text-center space-y-2.5">
+        <div className="p-4 rounded-xl bg-[#0F1014] border border-white/[0.08] text-center space-y-2.5">
           <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
             <Sparkles className="w-4 h-4" />
           </div>
@@ -95,7 +95,7 @@ export function ProductCarouselsPicker({
                 className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all group ${
                   isSelected
                     ? "bg-blue-500/10 border-blue-500/40 shadow-sm shadow-blue-500/5"
-                    : "bg-[#141417] border-white/5 hover:border-white/15 hover:bg-[#18181D]"
+                    : "bg-[#0F1014] border-white/[0.08] hover:border-white/20 hover:bg-[#15171D]"
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">

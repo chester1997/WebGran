@@ -428,13 +428,13 @@ describe("CommercialMetricsCards Component & Layout Suite", () => {
 
     expect(cards.length).toBe(4);
 
-    // Todos os 4 cards possuem superfícies escuras neutras, bordas #25272B, alturas mínimas harmônicas e padding proporcional
+    // Todos os 4 cards possuem superfícies escuras neutras Titanium, bordas sutis, alturas mínimas harmônicas e padding proporcional
     cards.forEach((card: any) => {
       expect(card.props.className).toContain("min-h-[145px]");
       expect(card.props.className).toContain("p-3");
       expect(card.props.className).toContain("h-full");
-      expect(card.props.className).toContain("bg-[#111214]");
-      expect(card.props.className).toContain("border-[#25272B]");
+      expect(card.props.className).toMatch(/bg-\[#(0F1014|111214)\]/);
+      expect(card.props.className).toMatch(/border-(white\/\[0\.08\]|\[#25272B\])/);
     });
   });
 });

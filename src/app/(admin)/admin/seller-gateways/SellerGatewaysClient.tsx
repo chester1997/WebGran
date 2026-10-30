@@ -149,7 +149,7 @@ export default function SellerGatewaysClient({ initialControls }: SellerGateways
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14141B] border border-white/[0.08] text-zinc-300 text-xs font-medium">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0F1014] border border-white/[0.08] text-zinc-300 text-xs font-medium">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span>Validação Ativa em Backend</span>
           </div>
@@ -157,7 +157,7 @@ export default function SellerGatewaysClient({ initialControls }: SellerGateways
       </div>
 
       {/* INFORMATIVE CARD */}
-      <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] text-xs text-zinc-300 flex items-start gap-3 shadow-md">
+      <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] text-xs text-zinc-300 flex items-start gap-3 shadow-md">
         <HelpCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-semibold text-white">Como funciona o controle de gateways:</p>
@@ -179,7 +179,7 @@ export default function SellerGatewaysClient({ initialControls }: SellerGateways
           return (
             <div
               key={ctrl.gateway}
-              className="rounded-2xl bg-[#14141B] border border-white/[0.08] shadow-xl p-5 flex flex-col justify-between space-y-5 relative overflow-hidden"
+              className="rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-xl p-5 flex flex-col justify-between space-y-5 relative overflow-hidden"
             >
               {/* Top Accent Indicator */}
               <div
@@ -208,7 +208,7 @@ export default function SellerGatewaysClient({ initialControls }: SellerGateways
                 </div>
 
                 {/* CONTROLS */}
-                <div className="p-3.5 rounded-xl bg-[#0F0F14] border border-white/[0.06] space-y-3.5">
+                <div className="p-3.5 rounded-xl bg-[#15171D] border border-white/[0.06] space-y-3.5">
                   {/* Control 1: New Connections */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="space-y-0.5">
@@ -305,7 +305,7 @@ export default function SellerGatewaysClient({ initialControls }: SellerGateways
                       }))
                     }
                     placeholder="Instruções internas para a equipe de suporte..."
-                    className="w-full text-xs bg-[#0F0F14] border border-white/[0.08] rounded-xl px-3 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 resize-none"
+                    className="w-full text-xs bg-[#15171D] border border-white/[0.08] rounded-xl px-3 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 resize-none"
                   />
                 </div>
 

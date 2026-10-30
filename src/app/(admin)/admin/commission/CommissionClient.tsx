@@ -150,7 +150,7 @@ export default function CommissionClient({
             type="button"
             onClick={handleTestSound}
             disabled={isPlayingSound}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#16161D] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#15171D] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
             title="Ouvir som de notificação de comissão"
           >
             <Volume2 className={`w-3.5 h-3.5 ${isPlayingSound ? "animate-bounce text-emerald-400" : "text-amber-400"}`} />
@@ -168,7 +168,7 @@ export default function CommissionClient({
       {/* ==================================================== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 w-full">
         {/* Card 1: Valor Vigente */}
-        <div className="p-5 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 relative overflow-hidden">
+        <div className="p-5 rounded-2xl bg-[#0F1014] border border-blue-500/30 shadow-lg shadow-blue-500/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 text-white pointer-events-none">
             <Coins className="w-24 h-24" />
           </div>
@@ -176,7 +176,7 @@ export default function CommissionClient({
             Comissão Atual / Venda
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            <span className="text-3xl sm:text-4xl font-black text-white tracking-tight font-mono tabular-nums">
               {commission ? commission.formattedFee : "Indisponível"}
             </span>
             {commission && (
@@ -190,7 +190,7 @@ export default function CommissionClient({
         </div>
 
         {/* Card 2: Última Atualização */}
-        <div className="p-5 rounded-2xl bg-[#111116] border border-white/[0.08] relative overflow-hidden">
+        <div className="p-5 rounded-2xl bg-[#0F1014] border border-white/[0.08] relative overflow-hidden">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
             Última Alteração
           </span>
@@ -207,7 +207,7 @@ export default function CommissionClient({
         </div>
 
         {/* Card 3: Regra de Aplicação */}
-        <div className="p-5 rounded-2xl bg-[#111116] border border-white/[0.08] relative overflow-hidden">
+        <div className="p-5 rounded-2xl bg-[#0F1014] border border-white/[0.08] relative overflow-hidden">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
             Regra de Negócio
           </span>
@@ -238,7 +238,7 @@ export default function CommissionClient({
       {/* ==================================================== */}
       {/* 3. FORM SECTION */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-5 w-full">
+      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-5 w-full">
         <div>
           <h2 className="text-base font-bold text-white">Atualizar Valor da Comissão</h2>
           <p className="text-xs text-zinc-400 mt-1">
@@ -252,7 +252,7 @@ export default function CommissionClient({
               <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
                 Novo Valor por Venda (R$)
               </label>
-              <div className="relative rounded-xl border border-white/[0.08] bg-[#16161D] focus-within:border-blue-500 transition-colors">
+              <div className="relative rounded-xl border border-white/[0.08] bg-[#15171D] focus-within:border-blue-500 transition-colors">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
                   R$
                 </span>
@@ -279,7 +279,7 @@ export default function CommissionClient({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Ex: Ajuste da taxa operacional da plataforma"
-                className="w-full rounded-xl border border-white/[0.08] bg-[#16161D] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600"
+                className="w-full rounded-xl border border-white/[0.08] bg-[#15171D] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600"
                 disabled={loading}
               />
               <p className="mt-1.5 text-[11px] text-zinc-500">
@@ -304,7 +304,7 @@ export default function CommissionClient({
       {/* ==================================================== */}
       {/* 4. AUDIT HISTORY SECTION */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl w-full">
+      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl w-full">
         <div className="flex items-center gap-2.5 p-5 border-b border-white/[0.06]">
           <History className="w-4 h-4 text-blue-400" />
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
@@ -317,7 +317,7 @@ export default function CommissionClient({
         ) : (
           <div className="overflow-x-auto custom-admin-scrollbar">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-white/[0.02] text-zinc-400 text-[11px] font-semibold uppercase tracking-wider border-b border-white/[0.06]">
+              <thead className="bg-[#15171D] text-zinc-400 text-[11px] font-semibold uppercase tracking-wider border-b border-white/[0.06]">
                 <tr>
                   <th className="py-3 px-4">Data / Hora</th>
                   <th className="py-3 px-4">Responsável</th>

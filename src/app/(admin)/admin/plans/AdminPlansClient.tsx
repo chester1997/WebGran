@@ -355,7 +355,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       {/* ==================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Total de Planos */}
-        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Total de Planos
@@ -373,7 +373,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
         </div>
 
         {/* Planos Ativos */}
-        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Planos Ativos
@@ -391,7 +391,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
         </div>
 
         {/* Vendedores em Planos */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Vendedores em Planos
@@ -412,7 +412,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       {/* ==================================================== */}
       {/* 3. PLANS TABLE */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
         <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Catálogo de Planos ({plans.length})
@@ -516,7 +516,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       {/* ==================================================== */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] w-full max-w-4xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95">
+          <div className="bg-[#0F1014] border border-white/[0.08] w-full max-w-4xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95">
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 flex-shrink-0">
               <div className="flex items-center gap-2.5">
@@ -584,7 +584,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                         value={planForm.name}
                         onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
                         placeholder="Ex: Plano Pro, Plano Starter, Business"
-                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
@@ -597,7 +597,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                         value={planForm.slug}
                         onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })}
                         placeholder="ex: plano-pro"
-                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </div>
                   </div>
@@ -613,7 +613,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                         required
                         value={planForm.price}
                         onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </div>
 
@@ -624,7 +624,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                       <select
                         value={planForm.billingInterval}
                         onChange={(e) => setPlanForm({ ...planForm, billingInterval: e.target.value })}
-                        className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                       >
                         <option value="month">Mensal</option>
                         <option value="year">Anual</option>
@@ -641,7 +641,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                       value={planForm.description}
                       onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
                       placeholder="Descrição dos benefícios e diferenciais do plano..."
-                      className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -651,7 +651,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                       id="activePlanCheck"
                       checked={planForm.active}
                       onChange={(e) => setPlanForm({ ...planForm, active: e.target.checked })}
-                      className="w-4 h-4 rounded border-white/[0.1] bg-[#16161D] text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      className="w-4 h-4 rounded border-white/[0.1] bg-[#15171D] text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                     <label htmlFor="activePlanCheck" className="text-xs text-zinc-300 cursor-pointer select-none">
                       Plano ativo para novas contratações pelos vendedores
@@ -674,7 +674,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                     </div>
                   ) : (
                     Object.entries(groupedFeatures).map(([category, items]) => (
-                      <div key={category} className="bg-[#141418] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                      <div key={category} className="bg-[#15171D] border border-white/[0.06] rounded-xl p-4 space-y-3">
                         <h3 className="text-[11px] font-bold uppercase tracking-wider text-blue-400 border-b border-white/[0.06] pb-2">
                           {categoryLabels[category] || category}
                         </h3>
@@ -684,7 +684,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                             const currentVal = featureFormValues[feat.id];
 
                             return (
-                              <div key={feat.id} className="bg-[#16161D] border border-white/[0.06] p-3 rounded-xl space-y-2">
+                              <div key={feat.id} className="bg-[#15171D] border border-white/[0.06] p-3 rounded-xl space-y-2">
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-xs text-white">{feat.name}</span>
                                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/[0.06]">
@@ -703,7 +703,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                         ...featureFormValues,
                                         [feat.id]: e.target.value === "true",
                                       })}
-                                      className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                                      className="w-full bg-[#0F1014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                                     >
                                       <option value="true">Liberado (✓ Ativado)</option>
                                       <option value="false">Bloqueado (✕ Desativado)</option>
@@ -722,7 +722,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                         [feat.id]: parseInt(e.target.value) || 0,
                                       })}
                                       placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                      className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                                      className="w-full bg-[#0F1014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                                     />
                                     <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
                                       <input
@@ -732,7 +732,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                           ...featureFormValues,
                                           [feat.id]: e.target.checked ? -1 : 100,
                                         })}
-                                        className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
+                                        className="rounded border-white/[0.1] bg-[#0F1014] text-blue-600 focus:ring-blue-500"
                                       />
                                       <span>Ilimitado (-1)</span>
                                     </label>
@@ -751,7 +751,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                           [feat.id]: parseInt(e.target.value) || 0,
                                         })}
                                         placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                        className="flex-1 bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                                        className="flex-1 bg-[#0F1014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                                       />
                                       <span className="text-[11px] text-zinc-400 font-bold">GB</span>
                                     </div>
@@ -763,7 +763,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                           ...featureFormValues,
                                           [feat.id]: e.target.checked ? -1 : 50,
                                         })}
-                                        className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
+                                        className="rounded border-white/[0.1] bg-[#0F1014] text-blue-600 focus:ring-blue-500"
                                       />
                                       <span>Ilimitado (-1 GB)</span>
                                     </label>
@@ -780,7 +780,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
               )}
 
               {/* PREVISUALIZAÇÃO: RECURSOS INCLUÍDOS */}
-              <div className="bg-[#141418] border border-blue-500/20 rounded-xl p-4 space-y-2.5">
+              <div className="bg-[#15171D] border border-blue-500/20 rounded-xl p-4 space-y-2.5">
                 <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-blue-400">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Recursos incluídos no plano (Pré-visualização)</span>
@@ -790,7 +790,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {getIncludedFeaturesPreview().map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 text-[11px] text-zinc-200 bg-[#111116] p-2 rounded-lg border border-white/[0.06]">
+                      <div key={idx} className="flex items-center gap-1.5 text-[11px] text-zinc-200 bg-[#0F1014] p-2 rounded-lg border border-white/[0.06]">
                         <Check className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span className="truncate">{item}</span>
                       </div>
@@ -827,7 +827,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
       {/* ==================================================== */}
       {isFeatureModalOpen && selectedPlanForFeatures && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] w-full max-w-3xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95">
+          <div className="bg-[#0F1014] border border-white/[0.08] w-full max-w-3xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
@@ -862,7 +862,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                 </div>
               ) : (
                 Object.entries(groupedFeatures).map(([category, items]) => (
-                  <div key={category} className="bg-[#141418] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                  <div key={category} className="bg-[#15171D] border border-white/[0.06] rounded-xl p-4 space-y-3">
                     <h3 className="text-[11px] font-bold uppercase tracking-wider text-blue-400 border-b border-white/[0.06] pb-2">
                       {categoryLabels[category] || category}
                     </h3>
@@ -872,7 +872,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                         const currentVal = featureFormValues[feat.id];
 
                         return (
-                          <div key={feat.id} className="bg-[#16161D] border border-white/[0.06] p-3 rounded-xl space-y-2">
+                          <div key={feat.id} className="bg-[#15171D] border border-white/[0.06] p-3 rounded-xl space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-xs text-white">{feat.name}</span>
                               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/[0.06]">
@@ -891,7 +891,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                     ...featureFormValues,
                                     [feat.id]: e.target.value === "true",
                                   })}
-                                  className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                                  className="w-full bg-[#0F1014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                                 >
                                   <option value="true">Liberado (✓ Ativado)</option>
                                   <option value="false">Bloqueado (✕ Desativado)</option>
@@ -910,7 +910,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                     [feat.id]: parseInt(e.target.value) || 0,
                                   })}
                                   placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                  className="w-full bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
+                                  className="w-full bg-[#0F1014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                                 />
                                 <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
                                   <input
@@ -920,7 +920,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                       ...featureFormValues,
                                       [feat.id]: e.target.checked ? -1 : 100,
                                     })}
-                                    className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
+                                    className="rounded border-white/[0.1] bg-[#0F1014] text-blue-600 focus:ring-blue-500"
                                   />
                                   <span>Ilimitado (-1)</span>
                                 </label>
@@ -939,7 +939,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                       [feat.id]: parseInt(e.target.value) || 0,
                                     })}
                                     placeholder={currentVal === -1 ? "Ilimitado" : "0"}
-                                    className="flex-1 bg-[#111116] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50"
+                                    className="flex-1 bg-[#0F1014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50"
                                   />
                                   <span className="text-[11px] text-zinc-400 font-bold">GB</span>
                                 </div>
@@ -951,7 +951,7 @@ export default function AdminPlansClient({ user }: { user: any }) {
                                       ...featureFormValues,
                                       [feat.id]: e.target.checked ? -1 : 50,
                                     })}
-                                    className="rounded border-white/[0.1] bg-[#111116] text-blue-600 focus:ring-blue-500"
+                                    className="rounded border-white/[0.1] bg-[#0F1014] text-blue-600 focus:ring-blue-500"
                                   />
                                   <span>Ilimitado (-1 GB)</span>
                                 </label>

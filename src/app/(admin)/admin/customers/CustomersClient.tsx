@@ -92,7 +92,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
       {/* ==================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Total de Clientes */}
-        <div className="p-4 rounded-2xl bg-[#14141B] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-blue-500/30 shadow-lg shadow-blue-500/5 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Total de Clientes
@@ -110,7 +110,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
         </div>
 
         {/* Com @Username */}
-        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Com @Username Público
@@ -128,7 +128,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
         </div>
 
         {/* Lojas com Atendimento */}
-        <div className="p-4 rounded-2xl bg-[#111116] border border-white/[0.08] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider truncate">
               Lojas com Atendimento
@@ -149,7 +149,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
       {/* ==================================================== */}
       {/* 3. TOOLBAR: SEARCH & COUNT */}
       {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#111116] rounded-2xl border border-white/[0.08]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#0F1014] rounded-2xl border border-white/[0.08]">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
@@ -160,7 +160,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-8 py-2 bg-[#16161D] border border-white/[0.08] focus:border-blue-500 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-9 pr-8 py-2 bg-[#15171D] border border-white/[0.08] focus:border-blue-500 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {searchTerm && (
             <button
@@ -183,7 +183,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
       {/* ==================================================== */}
       {/* 4. CUSTOMERS TABLE */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl">
+      <div className="bg-[#0F1014] rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Lista de Clientes ({filteredCustomers.length})
@@ -250,7 +250,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
                       type="button"
                       onClick={(e) => handleCopyId(cust.telegramUserId, e)}
                       title="Clique para copiar Telegram ID"
-                      className="inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-300 bg-[#16161D] hover:bg-white/10 px-2 py-1 rounded-lg border border-white/[0.08] transition-colors"
+                      className="inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-300 bg-[#15171D] hover:bg-white/10 px-2 py-1 rounded-lg border border-white/[0.08] transition-colors"
                     >
                       <span>{cust.telegramUserId}</span>
                       {copiedId === cust.telegramUserId ? (
@@ -337,7 +337,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg bg-[#16161D] border border-white/[0.08] text-zinc-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                className="p-1.5 rounded-lg bg-[#15171D] border border-white/[0.08] text-zinc-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 aria-label="Página anterior"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -350,7 +350,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg bg-[#16161D] border border-white/[0.08] text-zinc-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                className="p-1.5 rounded-lg bg-[#15171D] border border-white/[0.08] text-zinc-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 aria-label="Próxima página"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -370,9 +370,9 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
             onClick={() => setSelectedCustomer(null)}
           />
 
-          <div className="relative w-full max-w-md bg-[#111116] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in-0 zoom-in-95 duration-150">
+          <div className="relative w-full max-w-md bg-[#0F1014] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in-0 zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] bg-[#14141B]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] bg-[#0F1014]">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                   <UserCheck className="w-4 h-4" />
@@ -394,7 +394,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
             {/* Modal Body */}
             <div className="p-5 space-y-4 text-xs">
               {/* Profile Card */}
-              <div className="flex items-center gap-3.5 p-4 rounded-xl bg-[#141418] border border-white/[0.06]">
+              <div className="flex items-center gap-3.5 p-4 rounded-xl bg-[#15171D] border border-white/[0.06]">
                 <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-base shrink-0 overflow-hidden">
                   {selectedCustomer.photoUrl ? (
                     <img
@@ -456,7 +456,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end px-5 py-3 border-t border-white/[0.08] bg-[#14141B]">
+            <div className="flex items-center justify-end px-5 py-3 border-t border-white/[0.08] bg-[#0F1014]">
               <button
                 type="button"
                 onClick={() => setSelectedCustomer(null)}

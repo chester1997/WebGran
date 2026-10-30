@@ -162,7 +162,7 @@ export default function AdminDashboardClient() {
             <button
               type="button"
               onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-              className={`inline-flex items-center justify-between gap-2 bg-[#151619] hover:bg-[#1A1C20] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
+              className={`inline-flex items-center justify-between gap-2 bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
                 isPeriodOpen
                   ? "border-blue-500/80 ring-1 ring-blue-500/30 text-white"
                   : "border-white/[0.08] hover:border-zinc-700"
@@ -189,8 +189,8 @@ export default function AdminDashboardClient() {
 
             {/* Popover panel */}
             {isPeriodOpen && (
-              <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[320px] bg-[#111214] border border-[#25272B] rounded-2xl shadow-2xl p-4 space-y-3 animate-in fade-in-0 zoom-in-95">
-                <div className="flex items-center justify-between border-b border-[#25272B] pb-2">
+              <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 w-auto sm:w-[320px] bg-[#090A0D] border border-white/[0.08] rounded-2xl shadow-2xl p-4 space-y-3 animate-in fade-in-0 zoom-in-95">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
                   <div className="flex items-center gap-1.5 text-[#F3F4F6] font-semibold text-xs">
                     <Calendar className="w-3.5 h-3.5 text-blue-400" />
                     <span>Período de análise</span>
@@ -198,7 +198,7 @@ export default function AdminDashboardClient() {
                   <button
                     type="button"
                     onClick={() => setIsPeriodOpen(false)}
-                    className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#151619] transition-colors cursor-pointer"
+                    className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#15171D] transition-colors cursor-pointer"
                     aria-label="Fechar"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -222,13 +222,13 @@ export default function AdminDashboardClient() {
                           }}
                           className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border cursor-pointer ${
                             isSelected
-                              ? "bg-[#181A20] text-white border-blue-500/80 shadow-xs font-semibold ring-1 ring-blue-500/20"
-                              : "bg-[#151619] text-zinc-300 hover:text-white hover:bg-[#1A1C20] border-[#25272B]"
+                              ? "bg-[#15171D] text-white border-blue-500/80 shadow-xs font-semibold ring-1 ring-blue-500/20"
+                              : "bg-[#15171D] text-zinc-300 hover:text-white hover:bg-[#1C1E26] border-white/[0.08]"
                           }`}
                         >
                           <span className="truncate leading-tight text-[11px]">{p.shortLabel}</span>
                           <div className="flex items-center justify-between w-full pt-1">
-                            <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#111214] text-zinc-400'}`}>
+                            <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-[#090A0D] text-zinc-400'}`}>
                               {p.badge}
                             </span>
                             {isSelected && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
@@ -247,7 +247,7 @@ export default function AdminDashboardClient() {
             <button
               onClick={() => fetchDashboardStats(period, true)}
               disabled={refreshing || loading}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#16161D] hover:bg-white/5 border border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 h-9"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#15171D] hover:bg-white/5 border border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 h-9"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-400" : ""}`} />
               <span>Atualizar</span>
@@ -387,7 +387,7 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       {/* 3. VENDAS E PAGAMENTOS (DESEMPENHO COMERCIAL) */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-6">
+      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -400,7 +400,7 @@ export default function AdminDashboardClient() {
           </div>
 
           {/* Chart View Selector */}
-          <div className="flex items-center bg-[#16161D] p-1 rounded-xl border border-white/[0.08] text-xs">
+          <div className="flex items-center bg-[#15171D] p-1 rounded-xl border border-white/[0.08] text-xs">
             <button
               onClick={() => setChartView("gmv")}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
@@ -430,25 +430,25 @@ export default function AdminDashboardClient() {
 
         {/* 4 Mini Performance Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08]">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
             <span className="text-[11px] text-gray-400 uppercase font-semibold block">Pix Gerados</span>
-            <span className="text-xl font-black text-white mt-1 block">
+            <span className="text-xl font-black text-white mt-1 block font-mono tabular-nums">
               {data?.salesAndPayments.pixGeneratedCount.toLocaleString("pt-BR") || "0"}
             </span>
             <span className="text-[10px] text-gray-500 mt-0.5 block">Cobranças Pix emitidas</span>
           </div>
 
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08]">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
             <span className="text-[11px] text-gray-400 uppercase font-semibold block">Pix Pagos</span>
-            <span className="text-xl font-black text-emerald-400 mt-1 block">
+            <span className="text-xl font-black text-emerald-400 mt-1 block font-mono tabular-nums">
               {data?.salesAndPayments.pixPaidCount.toLocaleString("pt-BR") || "0"}
             </span>
             <span className="text-[10px] text-gray-500 mt-0.5 block">Pagamentos confirmados</span>
           </div>
 
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08]">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
             <span className="text-[11px] text-gray-400 uppercase font-semibold block">Conversão Pix</span>
-            <span className="text-xl font-black text-blue-400 mt-1 block">
+            <span className="text-xl font-black text-blue-400 mt-1 block font-mono tabular-nums">
               {data?.salesAndPayments.pixConversionRate !== null && data?.salesAndPayments.pixConversionRate !== undefined
                 ? `${data.salesAndPayments.pixConversionRate}%`
                 : "Sem dados"}
@@ -456,9 +456,9 @@ export default function AdminDashboardClient() {
             <span className="text-[10px] text-gray-500 mt-0.5 block">(Pix Pagos / Pix Gerados)</span>
           </div>
 
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08]">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
             <span className="text-[11px] text-gray-400 uppercase font-semibold block">GMV no Período</span>
-            <span className="text-xl font-black text-white mt-1 block">
+            <span className="text-xl font-black text-white mt-1 block font-mono tabular-nums">
               {formatCurrency(data?.salesAndPayments.gmvApproved || 0)}
             </span>
             <span className="text-[10px] text-gray-500 mt-0.5 block">
@@ -485,7 +485,7 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       {/* 4. ACOMPANHAMENTO DAS TAXAS DA PLATAFORMA (FASE COMERCIAL) */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-5">
+      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.08] pb-4">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -504,7 +504,7 @@ export default function AdminDashboardClient() {
         {/* Breakdown Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {/* Card 1: Previsto Total */}
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08] space-y-1">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
             <div className="flex items-center justify-between text-gray-400 text-xs">
               <span>Taxas Previstas (Elegíveis)</span>
               <Info className="w-3.5 h-3.5 text-gray-500" />
@@ -518,7 +518,7 @@ export default function AdminDashboardClient() {
           </div>
 
           {/* Card 2: Processado / Aceito */}
-          <div className="bg-[#16161D] p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] space-y-1">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] space-y-1">
             <div className="flex items-center justify-between text-emerald-400 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -535,7 +535,7 @@ export default function AdminDashboardClient() {
           </div>
 
           {/* Card 3: Liquidado em Conta */}
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08] space-y-1">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
             <div className="flex items-center justify-between text-blue-400 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -552,7 +552,7 @@ export default function AdminDashboardClient() {
           </div>
 
           {/* Card 4: Pendentes */}
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08] space-y-1">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
             <div className="flex items-center justify-between text-amber-400 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
@@ -587,7 +587,7 @@ export default function AdminDashboardClient() {
           </div>
 
           {/* Card 5: Isenções Intencionais (SKIPPED) */}
-          <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08] space-y-1">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-1">
             <div className="flex items-center justify-between text-gray-300 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-blue-400" />
@@ -604,7 +604,7 @@ export default function AdminDashboardClient() {
           </div>
 
           {/* Card 6: Splits com Falha (FAILED) */}
-          <div className="bg-[#16161D] p-4 rounded-xl border border-red-500/20 bg-red-500/[0.03] space-y-1">
+          <div className="bg-[#15171D] p-4 rounded-xl border border-red-500/20 bg-red-500/[0.03] space-y-1">
             <div className="flex items-center justify-between text-red-400 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -622,7 +622,7 @@ export default function AdminDashboardClient() {
         </div>
 
         {/* Audit Footnote */}
-        <div className="p-3.5 bg-[#16161D] rounded-xl border border-white/[0.08] text-[11px] text-gray-400 flex items-start gap-2.5">
+        <div className="p-3.5 bg-[#15171D] rounded-xl border border-white/[0.08] text-[11px] text-gray-400 flex items-start gap-2.5">
           <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
           <p>
             <strong>Regra de Auditoria Histórica:</strong> As métricas acima utilizam exclusivamente os snapshots de taxa
@@ -635,7 +635,7 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       {/* 5. RANKING DE VENDEDORES (PRINCIPAIS VENDEDORES) */}
       {/* ==================================================== */}
-      <div className="bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
+      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -647,7 +647,7 @@ export default function AdminDashboardClient() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-[#16161D] p-1 rounded-xl border border-white/[0.08] text-xs">
+          <div className="flex items-center gap-2 bg-[#15171D] p-1 rounded-xl border border-white/[0.08] text-xs">
             <span className="text-gray-400 px-2 text-[11px]">Ordenar por:</span>
             <button
               onClick={() => setRankingSort("gmv")}
@@ -738,7 +738,7 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Telegram Stats */}
-        <div className="bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
+        <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
           <div className="border-b border-white/[0.08] pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Bot className="w-4 h-4 text-purple-400" />
@@ -748,17 +748,17 @@ export default function AdminDashboardClient() {
           </div>
 
           <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between p-3 bg-[#16161D] rounded-xl border border-white/[0.08]">
+            <div className="flex items-center justify-between p-3 bg-[#15171D] rounded-xl border border-white/[0.08]">
               <span className="text-gray-400">Bots Conectados Ativos:</span>
               <span className="font-black text-white text-sm">{data?.telegramStats.activeBots || 0}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-[#16161D] rounded-xl border border-white/[0.08]">
+            <div className="flex items-center justify-between p-3 bg-[#15171D] rounded-xl border border-white/[0.08]">
               <span className="text-gray-400">Total de Clientes Registrados:</span>
               <span className="font-black text-white text-sm">
                 {data?.telegramStats.totalCustomers.toLocaleString("pt-BR") || 0}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-[#16161D] rounded-xl border border-white/[0.08]">
+            <div className="flex items-center justify-between p-3 bg-[#15171D] rounded-xl border border-white/[0.08]">
               <span className="text-gray-400">Novos Clientes no Período:</span>
               <span className="font-bold text-blue-400 text-sm">
                 +{data?.telegramStats.newCustomersPeriod.toLocaleString("pt-BR") || 0}
@@ -772,7 +772,7 @@ export default function AdminDashboardClient() {
         </div>
 
         {/* Recent Paid Sales */}
-        <div className="lg:col-span-2 bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
+        <div className="lg:col-span-2 bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -805,7 +805,7 @@ export default function AdminDashboardClient() {
                       <span className="text-gray-300 font-semibold">{sale.storeName}</span>
                       <span className="text-[10px] text-gray-500 block">por {sale.sellerName}</span>
                     </td>
-                    <td className="py-2.5 px-2 font-black text-white">{formatCurrency(sale.total)}</td>
+                    <td className="py-2.5 px-2 font-black text-white font-mono tabular-nums">{formatCurrency(sale.total)}</td>
                     <td className="py-2.5 px-2">
                       <span
                         className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
@@ -888,8 +888,8 @@ function KPICard({
     <div
       className={`p-4 rounded-2xl border transition-all duration-200 ${
         isFeatured
-          ? "bg-[#14141B] border-blue-500/30 shadow-lg shadow-blue-500/5"
-          : "bg-[#111116] border-white/[0.08]"
+          ? "bg-[#0F1014] border-blue-500/30 shadow-lg shadow-blue-500/5"
+          : "bg-[#0F1014] border-white/[0.08]"
       }`}
     >
       <div className="flex items-center justify-between mb-2">
@@ -902,7 +902,7 @@ function KPICard({
       </div>
 
       <div className="space-y-1">
-        <span className="text-xl sm:text-2xl font-black text-white tracking-tight block">
+        <span className="text-xl sm:text-2xl font-black text-white tracking-tight block font-mono tabular-nums">
           {value}
         </span>
 
@@ -954,7 +954,7 @@ function KPISkeletonGrid() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-28 bg-[#111116] rounded-2xl border border-white/[0.08] p-4 space-y-3">
+        <div key={i} className="h-28 bg-[#0F1014] rounded-2xl border border-white/[0.08] p-4 space-y-3">
           <div className="h-3 w-20 bg-white/5 rounded" />
           <div className="h-6 w-28 bg-white/10 rounded" />
           <div className="h-2 w-16 bg-white/5 rounded" />

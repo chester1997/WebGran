@@ -620,7 +620,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
   return (
     <div className="space-y-8 pb-12 fade-in text-gray-100">
       {/* HEADER & ACTIONS */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl">
         <div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
@@ -647,7 +647,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
           <Button
             variant="outline"
             onClick={handleRefresh}
-            className="flex-1 sm:flex-initial bg-[#16161D] border-white/[0.08] hover:bg-white/5 text-gray-300 hover:text-white rounded-xl text-xs h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="flex-1 sm:flex-initial bg-[#15171D] border-white/[0.08] hover:bg-white/5 text-gray-300 hover:text-white rounded-xl text-xs h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Atualizar</span>
@@ -681,12 +681,12 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
         {/* Total Sellers */}
-        <div className="bg-[#111116] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
+        <div className="bg-[#0F1014] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
           <div>
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Total Vendedores
             </span>
-            <span className="text-2xl font-black text-white mt-1 block">{totalSellers}</span>
+            <span className="text-2xl font-black text-white mt-1 block font-mono tabular-nums">{totalSellers}</span>
           </div>
           <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
             <Users className="w-5 h-5" />
@@ -694,12 +694,12 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         </div>
 
         {/* Active Sellers */}
-        <div className="bg-[#111116] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
+        <div className="bg-[#0F1014] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
           <div>
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Vendedores Ativos
             </span>
-            <span className="text-2xl font-black text-emerald-400 mt-1 block">{activeSellersCount}</span>
+            <span className="text-2xl font-black text-emerald-400 mt-1 block font-mono tabular-nums">{activeSellersCount}</span>
           </div>
           <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
             <ShieldCheck className="w-5 h-5" />
@@ -707,12 +707,12 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         </div>
 
         {/* Telegram Bots */}
-        <div className="bg-[#111116] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
+        <div className="bg-[#0F1014] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
           <div>
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Bots Conectados
             </span>
-            <span className="text-2xl font-black text-purple-400 mt-1 block">{totalBotsConnected}</span>
+            <span className="text-2xl font-black text-purple-400 mt-1 block font-mono tabular-nums">{totalBotsConnected}</span>
           </div>
           <div className="p-2.5 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400">
             <Bot className="w-5 h-5" />
@@ -720,7 +720,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         </div>
 
         {/* Custom Fees */}
-        <div className="bg-[#111116] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
+        <div className="bg-[#0F1014] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
           <div>
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Taxa Personalizada
@@ -733,12 +733,12 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         </div>
 
         {/* Active Exemptions */}
-        <div className="bg-[#111116] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
+        <div className="bg-[#0F1014] p-4 rounded-2xl border border-white/[0.08] flex items-center justify-between">
           <div>
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Isenções Ativas
             </span>
-            <span className="text-2xl font-black text-amber-400 mt-1 block">{exemptionActiveCount}</span>
+            <span className="text-2xl font-black text-amber-400 mt-1 block font-mono tabular-nums">{exemptionActiveCount}</span>
           </div>
           <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
             <Tag className="w-5 h-5" />
@@ -747,7 +747,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       </div>
 
       {/* SEARCH & FILTERS BAR */}
-      <div className="bg-[#111116] p-4 rounded-2xl border border-white/[0.08] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="bg-[#0F1014] p-4 rounded-2xl border border-white/[0.08] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Search */}
         <div className="relative flex-1 max-w-lg">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -756,7 +756,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
             placeholder="Buscar por nome, e-mail, loja, slug ou @bot..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#16161D] border border-white/[0.08] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+            className="w-full pl-10 pr-4 py-2 bg-[#15171D] border border-white/[0.08] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
           />
           {searchTerm && (
             <button
@@ -771,7 +771,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
         {/* Filter Badges */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-[#16161D] p-1 rounded-xl border border-white/[0.08] text-xs">
+          <div className="flex items-center gap-1 bg-[#15171D] p-1 rounded-xl border border-white/[0.08] text-xs">
             <button
               onClick={() => setStatusFilter("all")}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -805,7 +805,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
           </div>
 
           {/* Fee Filter */}
-          <div className="flex items-center gap-1 bg-[#16161D] p-1 rounded-xl border border-white/[0.08] text-xs">
+          <div className="flex items-center gap-1 bg-[#15171D] p-1 rounded-xl border border-white/[0.08] text-xs">
             <button
               onClick={() => setFeeFilter("all")}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -851,7 +851,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       </div>
 
       {/* SELLERS & FEES TABLE */}
-      <div className="bg-[#111116] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl">
+      <div className="bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-white">Vendedores e Configuração de Taxas</h2>
           <span className="text-xs text-gray-400">{filteredSellers.length} vendedor(es) listado(s)</span>
@@ -1046,7 +1046,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
-                            className="w-56 bg-[#16161D] border border-white/[0.08] shadow-2xl p-1 text-xs text-gray-300"
+                            className="w-56 bg-[#15171D] border border-white/[0.08] shadow-2xl p-1 text-xs text-gray-300"
                           >
                             <DropdownMenuItem
                               onClick={() => handleOpenCommissionModal(seller)}
@@ -1189,7 +1189,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isManageCommissionOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-6 shadow-2xl relative">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-white/[0.08] pb-4">
               <div>
@@ -1213,7 +1213,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
             </div>
 
             {/* Current Fee Badge in Modal */}
-            <div className="bg-[#16161D] p-3.5 rounded-xl border border-white/[0.08] flex items-center justify-between">
+            <div className="bg-[#15171D] p-3.5 rounded-xl border border-white/[0.08] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400">
                   <TrendingUp className="w-4 h-4" />
@@ -1311,7 +1311,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         commissionMode === "DEFAULT"
                           ? "bg-blue-500/10 border-blue-500/40 text-white shadow-sm"
-                          : "bg-[#16161D] border-white/[0.08] text-gray-400 hover:border-white/[0.2]"
+                          : "bg-[#15171D] border-white/[0.08] text-gray-400 hover:border-white/[0.2]"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -1328,7 +1328,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         commissionMode === "CUSTOM"
                           ? "bg-blue-500/10 border-blue-500/40 text-white shadow-sm"
-                          : "bg-[#16161D] border-white/[0.08] text-gray-400 hover:border-white/[0.2]"
+                          : "bg-[#15171D] border-white/[0.08] text-gray-400 hover:border-white/[0.2]"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -1345,7 +1345,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         commissionMode === "EXEMPTION"
                           ? "bg-amber-500/10 border-amber-500/40 text-white shadow-sm"
-                          : "bg-[#16161D] border-white/[0.08] text-gray-400 hover:border-white/[0.2]"
+                          : "bg-[#15171D] border-white/[0.08] text-gray-400 hover:border-white/[0.2]"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -1370,7 +1370,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                 )}
 
                 {commissionMode === "CUSTOM" && (
-                  <div className="p-4 rounded-xl bg-[#16161D] border border-white/[0.08] space-y-4">
+                  <div className="p-4 rounded-xl bg-[#15171D] border border-white/[0.08] space-y-4">
                     <div className="flex items-center justify-between">
                       <label className="text-gray-300 font-semibold">Valor da Taxa por Venda</label>
                       <span className="text-base font-black text-blue-400">
@@ -1407,7 +1407,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                           const val = parseFloat(e.target.value);
                           if (!isNaN(val)) setCustomFeeInput(val);
                         }}
-                        className="w-full bg-[#111116] border border-white/[0.08] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-blue-500/50"
+                        className="w-full bg-[#0F1014] border border-white/[0.08] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-blue-500/50"
                       />
                     </div>
                   </div>
@@ -1425,7 +1425,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                           required
                           value={exemptionStartInput}
                           onChange={(e) => setExemptionStartInput(e.target.value)}
-                          className="w-full bg-[#111116] border border-white/[0.08] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
+                          className="w-full bg-[#0F1014] border border-white/[0.08] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
                         />
                       </div>
 
@@ -1438,7 +1438,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                           required
                           value={exemptionEndInput}
                           onChange={(e) => setExemptionEndInput(e.target.value)}
-                          className="w-full bg-[#111116] border border-white/[0.08] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
+                          className="w-full bg-[#0F1014] border border-white/[0.08] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
                         />
                       </div>
                     </div>
@@ -1453,12 +1453,12 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                         value={exemptionReasonInput}
                         onChange={(e) => setExemptionReasonInput(e.target.value)}
                         placeholder="Ex: Parceria comercial exclusiva Q4, vendedor VIP promocional"
-                        className="w-full bg-[#111116] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+                        className="w-full bg-[#0F1014] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
                       />
                     </div>
 
                     {/* Dynamic Preview */}
-                    <div className="p-3 bg-[#111116] rounded-xl border border-white/[0.08] space-y-2">
+                    <div className="p-3 bg-[#0F1014] rounded-xl border border-white/[0.08] space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-400">Durante o período de isenção:</span>
                         <span className="font-bold text-emerald-400">R$ 0,00 (Isento)</span>
@@ -1485,7 +1485,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     value={changeReasonInput}
                     onChange={(e) => setChangeReasonInput(e.target.value)}
                     placeholder="Ex: Ajuste acordado via WhatsApp, correção de plano, promoção concedida"
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   />
                   <span className="text-[10px] text-gray-500 block">
                     Registrado de forma imutável no log de auditoria com seu usuário de super administrador.
@@ -1498,7 +1498,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     type="button"
                     variant="outline"
                     onClick={handleCloseCommissionModal}
-                    className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                    className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                   >
                     Fechar
                   </Button>
@@ -1526,7 +1526,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     {commissionAuditHistory.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-[#16161D] p-3.5 rounded-xl border border-white/[0.08] space-y-2"
+                        className="bg-[#15171D] p-3.5 rounded-xl border border-white/[0.08] space-y-2"
                       >
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-mono text-gray-400">
@@ -1553,7 +1553,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                           )}
                         </div>
 
-                        <p className="text-gray-300 text-[11px] bg-[#111116] p-2 rounded-lg border border-white/[0.04]">
+                        <p className="text-gray-300 text-[11px] bg-[#0F1014] p-2 rounded-lg border border-white/[0.04]">
                           &ldquo;{item.reason}&rdquo;
                         </p>
                       </div>
@@ -1575,7 +1575,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Plus className="w-5 h-5 text-blue-400" />
@@ -1596,7 +1596,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     value={addForm.name}
                     onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                     placeholder="Ex: João da Silva"
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -1608,7 +1608,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     value={addForm.email}
                     onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                     placeholder="joao@exemplo.com"
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -1622,7 +1622,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   value={addForm.password}
                   onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
                   placeholder="Mínimo de 6 caracteres"
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -1639,7 +1639,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                       setAddForm({ ...addForm, storeName: name, storeSlug: addForm.storeSlug ? addForm.storeSlug : autoSlug });
                     }}
                     placeholder="Ex: Minha Loja VIP"
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -1651,7 +1651,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                     value={addForm.storeSlug}
                     onChange={(e) => setAddForm({ ...addForm, storeSlug: e.target.value })}
                     placeholder="minha-loja-vip"
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500 font-mono"
                   />
                 </div>
               </div>
@@ -1662,7 +1662,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   <select
                     value={addForm.status}
                     onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="active">🟢 Ativo</option>
                     <option value="suspended">🔴 Suspenso</option>
@@ -1674,7 +1674,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   <select
                     value={addForm.daysActive}
                     onChange={(e) => setAddForm({ ...addForm, daysActive: e.target.value })}
-                    className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="30">30 Dias (Mensal)</option>
                     <option value="90">90 Dias (Trimestral)</option>
@@ -1688,7 +1688,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -1710,7 +1710,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isEditUserOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <UserPen className="w-5 h-5 text-blue-400" />
@@ -1729,7 +1729,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   required
                   value={editUserForm.name}
                   onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -1740,7 +1740,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   required
                   value={editUserForm.email}
                   onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -1749,7 +1749,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditUserOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -1771,7 +1771,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isEditStoreOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Store className="w-5 h-5 text-purple-400" />
@@ -1790,7 +1790,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   required
                   value={editStoreForm.name}
                   onChange={(e) => setEditStoreForm({ ...editStoreForm, name: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -1801,7 +1801,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   required
                   value={editStoreForm.slug}
                   onChange={(e) => setEditStoreForm({ ...editStoreForm, slug: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500 font-mono"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500 font-mono"
                 />
               </div>
 
@@ -1810,7 +1810,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                 <select
                   value={editStoreForm.status}
                   onChange={(e) => setEditStoreForm({ ...editStoreForm, status: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
                 >
                   <option value="active">🟢 Ativa</option>
                   <option value="suspended">🔴 Suspensa</option>
@@ -1823,7 +1823,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditStoreOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -1845,7 +1845,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isManageSubOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-emerald-400" />
@@ -1857,7 +1857,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
             </div>
 
             <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-4 bg-[#16161D] p-4 rounded-xl border border-white/[0.08]">
+              <div className="grid grid-cols-2 gap-4 bg-[#15171D] p-4 rounded-xl border border-white/[0.08]">
                 <div>
                   <span className="text-gray-400 block text-[11px]">Plano Contratado</span>
                   <span className="text-white font-bold text-sm block">
@@ -1889,7 +1889,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
               </div>
 
               {selectedSeller.latestInvoice && (
-                <div className="bg-[#16161D] p-4 rounded-xl border border-white/[0.08] space-y-2">
+                <div className="bg-[#15171D] p-4 rounded-xl border border-white/[0.08] space-y-2">
                   <h4 className="font-bold text-gray-300 flex items-center justify-between">
                     <span>Última Cobrança</span>
                     <span className="text-[10px] text-gray-400 font-mono">ID: {selectedSeller.latestInvoice.id.slice(0, 8)}...</span>
@@ -1934,7 +1934,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isReleaseSubOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Unlock className="w-5 h-5 text-emerald-400" />
@@ -1955,7 +1955,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                 <select
                   value={releaseDaysInput}
                   onChange={(e) => setReleaseDaysInput(e.target.value)}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500 text-xs font-semibold"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500 text-xs font-semibold"
                 >
                   <option value="30">30 Dias de Acesso (1 Mês)</option>
                   <option value="60">60 Dias de Acesso (2 Meses)</option>
@@ -1970,7 +1970,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsReleaseSubOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -1992,7 +1992,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isResetPasswordOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Key className="w-5 h-5 text-blue-400" />
@@ -2017,7 +2017,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   value={resetPasswordInput}
                   onChange={(e) => setResetPasswordInput(e.target.value)}
                   placeholder="Mínimo de 6 caracteres"
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -2026,7 +2026,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsResetPasswordOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -2048,7 +2048,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isConfirmSuspendOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 {selectedSeller.status === "suspended" ? (
@@ -2086,7 +2086,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsConfirmSuspendOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -2113,7 +2113,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
       {/* ==================================================== */}
       {isConfirmDeleteOpen && selectedSeller && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-red-500/30 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-[#0F1014] border border-red-500/30 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-lg font-bold text-red-400 flex items-center gap-2">
                 <Trash2 className="w-5 h-5 text-red-400" />
@@ -2140,7 +2140,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                   type="button"
                   variant="outline"
                   onClick={() => setIsConfirmDeleteOpen(false)}
-                  className="bg-[#16161D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
+                  className="bg-[#15171D] border-white/[0.08] text-gray-300 hover:text-white rounded-xl text-xs h-10 px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>

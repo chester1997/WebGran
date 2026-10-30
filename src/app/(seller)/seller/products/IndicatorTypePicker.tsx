@@ -31,7 +31,7 @@ export function IndicatorTypePicker({
           className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all select-none cursor-pointer ${
             showViews
               ? "border-sky-500/50 bg-sky-500/10 text-white shadow-sm shadow-sky-500/10"
-              : "border-white/5 bg-[#1A1A1E] text-zinc-400 hover:border-white/15 hover:text-zinc-300"
+              : "border-white/[0.08] bg-[#15171D] text-zinc-400 hover:border-white/20 hover:text-zinc-300"
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -57,7 +57,7 @@ export function IndicatorTypePicker({
           className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all select-none cursor-pointer ${
             showFire
               ? "border-amber-500/50 bg-amber-500/10 text-white shadow-sm shadow-amber-500/10"
-              : "border-white/5 bg-[#1A1A1E] text-zinc-400 hover:border-white/15 hover:text-zinc-300"
+              : "border-white/[0.08] bg-[#15171D] text-zinc-400 hover:border-white/20 hover:text-zinc-300"
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -79,7 +79,7 @@ export function IndicatorTypePicker({
 
       {/* Input Number for Olho (👁) */}
       {showViews && (
-        <div className="space-y-1 p-3 rounded-xl bg-[#15151A] border border-sky-500/20">
+        <div className="space-y-1 p-3 rounded-xl bg-[#0F1014] border border-sky-500/20">
           <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-wider">
             Número de Visualizações (👁)
           </label>
@@ -89,14 +89,14 @@ export function IndicatorTypePicker({
             value={viewsCount}
             onChange={(e) => setViewsCount(Number(e.target.value))}
             placeholder="Ex: 46600 (exibe 👁 46.6K)"
-            className="w-full bg-[#1A1A1E] border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500 transition-all font-mono font-bold"
+            className="w-full bg-[#15171D] border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500 transition-all font-mono font-bold"
           />
         </div>
       )}
 
       {/* Input Number for Foguinho (🔥) */}
       {showFire && (
-        <div className="space-y-1 p-3 rounded-xl bg-[#15151A] border border-amber-500/20">
+        <div className="space-y-1 p-3 rounded-xl bg-[#0F1014] border border-amber-500/20">
           <label className="block text-[10px] font-bold text-amber-400 uppercase tracking-wider">
             Número do Foguinho (🔥)
           </label>
@@ -106,7 +106,7 @@ export function IndicatorTypePicker({
             value={fireCount}
             onChange={(e) => setFireCount(Number(e.target.value))}
             placeholder="Ex: 12400 (exibe 🔥 12.4K)"
-            className="w-full bg-[#1A1A1E] border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition-all font-mono font-bold"
+            className="w-full bg-[#15171D] border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition-all font-mono font-bold"
           />
         </div>
       )}

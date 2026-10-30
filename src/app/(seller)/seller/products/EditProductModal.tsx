@@ -174,8 +174,8 @@ export function EditProductModal({
         <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[90vh] rounded-2xl">
-        <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between shrink-0">
+      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[90vh] rounded-2xl">
+        <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between shrink-0">
           <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-white">Editar Produto</DialogTitle>
         </div>
 
@@ -195,7 +195,7 @@ export function EditProductModal({
               <input 
                 type="text" name="title" defaultValue={product?.title} required
                 placeholder="Ex: Plano Mensal Premium"
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-zinc-600"
               />
             </div>
 
@@ -206,7 +206,7 @@ export function EditProductModal({
                 name="description" defaultValue={product?.description || ""}
                 rows={3}
                 placeholder="Detalhe tudo o que o cliente recebe ao comprar este produto..."
-                className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600 resize-none"
+                className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600 resize-none"
               />
             </div>
 
@@ -216,12 +216,12 @@ export function EditProductModal({
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Preço (R$) *</label>
                 <input 
                   type="number" name="price" defaultValue={product?.price} required step="0.01" min="0"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Duração</label>
-                <select name="duration" defaultValue={product?.duration || "lifetime"} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="duration" defaultValue={product?.duration || "lifetime"} className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="lifetime">Vitalício</option>
                   <option value="monthly">Mensal</option>
                   <option value="quarterly">Trimestral</option>
@@ -238,7 +238,7 @@ export function EditProductModal({
               <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Imagem do produto</label>
               
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start w-full">
-                <div className="relative shrink-0 w-24 h-24 rounded-xl border border-white/10 overflow-hidden bg-[#1A1A1E] flex items-center justify-center self-center sm:self-start">
+                <div className="relative shrink-0 w-24 h-24 rounded-xl border border-white/10 overflow-hidden bg-[#15171D] flex items-center justify-center self-center sm:self-start">
                   {imageUrl ? (
                     <>
                       <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -259,7 +259,7 @@ export function EditProductModal({
                   <Button
                     type="button" variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-[#1A1A1E] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white h-10 px-4 rounded-lg w-full text-xs sm:text-sm truncate"
+                    className="bg-[#15171D] border-white/[0.08] text-zinc-300 hover:bg-white/5 hover:text-white h-10 px-4 rounded-lg w-full text-xs sm:text-sm truncate"
                   >
                     <Upload className="w-4 h-4 mr-2 shrink-0" /> Enviar do computador
                   </Button>
@@ -268,7 +268,7 @@ export function EditProductModal({
                     value={imageUrl.startsWith("data:") ? "" : imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="ou cole uma URL de imagem aqui"
-                    className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
+                    className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-all placeholder:text-zinc-600"
                   />
                   <p className="text-[10px] text-zinc-500">Recomendado: 600 × 600 px · máx 5MB</p>
                 </div>
@@ -284,21 +284,21 @@ export function EditProductModal({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 w-full">
                 <div 
                   onClick={() => setDeliveryType("telegram")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "telegram" ? "border-blue-500/80 bg-blue-500/[0.08] ring-1 ring-blue-500/20 text-white" : "border-white/[0.08] bg-[#15171D] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "telegram" ? "text-white" : "text-zinc-300"}`}>Grupo / Canal Telegram</p>
                   <p className="text-[11px] text-zinc-500 mt-1">Bot envia link de convite automaticamente</p>
                 </div>
                 <div 
                   onClick={() => setDeliveryType("external")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "external" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "external" ? "border-blue-500/80 bg-blue-500/[0.08] ring-1 ring-blue-500/20 text-white" : "border-white/[0.08] bg-[#15171D] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "external" ? "text-white" : "text-zinc-300"}`}>Link externo</p>
                   <p className="text-[11px] text-zinc-500 mt-1">Bot envia qualquer link após pagamento</p>
                 </div>
                 <div 
                   onClick={() => setDeliveryType("product_video")}
-                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "product_video" ? "border-blue-500 bg-blue-500/5" : "border-white/5 bg-[#1A1A1E] hover:border-white/10"}`}
+                  className={`p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === "product_video" ? "border-blue-500/80 bg-blue-500/[0.08] ring-1 ring-blue-500/20 text-white" : "border-white/[0.08] bg-[#15171D] hover:border-white/10"}`}
                 >
                   <p className={`text-sm font-bold ${deliveryType === "product_video" ? "text-white" : "text-zinc-300"}`}>Vídeo do Produto</p>
                   <p className="text-[11px] text-zinc-500 mt-1">Cliente recebe acesso aos vídeos pelo Mini App</p>
@@ -320,14 +320,14 @@ export function EditProductModal({
                         setTestResult(null);
                       }}
                       placeholder="Ex: -1001234567890"
-                      className="flex-1 bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
+                      className="flex-1 bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       disabled={testingAccess || !deliveryValue.trim()}
                       onClick={handleTestAccess}
-                      className="bg-[#1A1A1E] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 px-4 rounded-lg shrink-0 font-medium w-full sm:w-auto"
+                      className="bg-[#15171D] border-white/10 hover:bg-white/5 text-xs text-zinc-300 h-10 px-4 rounded-lg shrink-0 font-medium w-full sm:w-auto"
                     >
                       {testingAccess ? "Testando..." : "🔍 Testar conexão"}
                     </Button>
@@ -362,11 +362,11 @@ export function EditProductModal({
                   value={deliveryValue}
                   onChange={(e) => setDeliveryValue(e.target.value)}
                   placeholder="Ex: https://meudrive.com/arquivo"
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
                 />
               )}
               {deliveryType === "product_video" && product?.id && (
-                <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#15171D] border border-white/[0.08] space-y-3 w-full">
                   <ProductVideosManager productId={product.id} productTitle={product.title} />
                 </div>
               )}
@@ -380,7 +380,7 @@ export function EditProductModal({
                   name="botId" 
                   value={selectedBotId} 
                   onChange={(e) => setSelectedBotId(e.target.value)} 
-                  className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
                 >
                   <option value="">Todos os Bots (Loja Geral)</option>
                   {bots?.map(b => (
@@ -390,7 +390,7 @@ export function EditProductModal({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Categoria</label>
-                <select name="categoryId" defaultValue={product?.categoryId || ''} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="categoryId" defaultValue={product?.categoryId || ''} className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Sem Categoria</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -403,14 +403,14 @@ export function EditProductModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Status</label>
-                <select name="status" defaultValue={product?.status || "active"} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="status" defaultValue={product?.status || "active"} className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="active">Ativo na Loja</option>
                   <option value="draft">Inativo (Rascunho)</option>
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Badge do Produto</label>
-                <select name="badge" defaultValue={product?.badge ? product.badge.toLowerCase().trim().replace(/\s+/g, '_') : ""} className="w-full bg-[#1A1A1E] border border-white/5 rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
+                <select name="badge" defaultValue={product?.badge ? product.badge.toLowerCase().trim().replace(/\s+/g, '_') : ""} className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">
                   <option value="">Nenhum Badge</option>
                   <option value="novo">🟢 Novo (Verde)</option>
                   <option value="dublado">🔵 Dublado (DUB)</option>
@@ -431,7 +431,7 @@ export function EditProductModal({
             />
 
             {/* Indicadores Visuais da Vitrine */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#18181C] border border-white/5 space-y-3 w-full">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#15171D] border border-white/[0.08] space-y-3 w-full">
               <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider">
                 Indicadores da Vitrine (Mini App)
               </label>
@@ -449,7 +449,7 @@ export function EditProductModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-white/5 shrink-0 flex items-center justify-end gap-3 bg-[#121214]">
+        <div className="p-4 sm:p-5 border-t border-white/[0.08] shrink-0 flex items-center justify-end gap-3 bg-[#0F1014]">
           <Button 
             type="button" variant="ghost" onClick={() => setOpen(false)}
             className="text-zinc-400 hover:text-white hover:bg-white/5 px-4 sm:px-6 rounded-lg font-medium text-xs sm:text-sm"
@@ -458,7 +458,7 @@ export function EditProductModal({
           </Button>
           <Button 
             type="submit" form="edit-product-form" disabled={loading} 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 sm:px-8 shadow-lg shadow-blue-600/20 text-xs sm:text-sm"
+            className="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-semibold rounded-lg px-6 sm:px-8 shadow-lg shadow-blue-600/20 text-xs sm:text-sm"
           >
             {loading ? "Salvando..." : "Salvar Produto"}
           </Button>

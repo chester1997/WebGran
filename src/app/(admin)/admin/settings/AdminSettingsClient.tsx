@@ -287,7 +287,7 @@ export default function AdminSettingsClient({
             <span>Ver Cobranças de Assinatura</span>
           </Link>
 
-          <div className="px-2.5 py-1 rounded-xl bg-[#111116] border border-white/[0.08] flex items-center gap-2 text-xs text-zinc-300">
+          <div className="px-2.5 py-1 rounded-xl bg-[#0F1014] border border-white/[0.08] flex items-center gap-2 text-xs text-zinc-300">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             <span className="text-[11px] font-mono">SUPER_ADMIN</span>
           </div>
@@ -330,7 +330,7 @@ export default function AdminSettingsClient({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* CARD 1: ASSINATURA WEBGRAN SAAS */}
-          <div className="bg-[#111116] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
+          <div className="bg-[#0F1014] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -352,7 +352,7 @@ export default function AdminSettingsClient({
                 </button>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#16161D] border border-white/[0.06] space-y-2.5 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#15171D] border border-white/[0.06] space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-400">Nome do Plano</span>
                   <span className="font-bold text-white">{activePlan.name}</span>
@@ -376,7 +376,7 @@ export default function AdminSettingsClient({
           </div>
 
           {/* CARD 2: TEMA PADRÃO DO SISTEMA */}
-          <div className="bg-[#111116] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
+          <div className="bg-[#0F1014] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2.5 rounded-xl bg-white/5 border border-white/[0.08] text-zinc-300">
@@ -388,7 +388,7 @@ export default function AdminSettingsClient({
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#16161D] border border-white/[0.06] space-y-2.5 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#15171D] border border-white/[0.06] space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-400">Tema Ativo</span>
                   <span className="font-bold text-white">{defaultTheme?.name || "Studio"}</span>
@@ -421,7 +421,7 @@ export default function AdminSettingsClient({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* CARD 3: SYNCPAY PLATAFORMA */}
-          <div className="bg-[#111116] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
+          <div className="bg-[#0F1014] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -440,7 +440,7 @@ export default function AdminSettingsClient({
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#16161D] border border-white/[0.06] space-y-2 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#15171D] border border-white/[0.06] space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-400">Status da Integração</span>
                   <span className="font-semibold text-emerald-400">Ativo & Operacional</span>
@@ -460,7 +460,7 @@ export default function AdminSettingsClient({
           </div>
 
           {/* CARD 4: MERCADO PAGO PLATAFORMA (FALLBACK) */}
-          <div className="bg-[#111116] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
+          <div className="bg-[#0F1014] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -486,7 +486,7 @@ export default function AdminSettingsClient({
                 )}
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#16161D] border border-white/[0.06] space-y-2 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#15171D] border border-white/[0.06] space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-400">Status Fallback</span>
                   <span className={`font-bold ${mp.isConnected ? "text-emerald-400" : "text-amber-400"}`}>
@@ -585,7 +585,7 @@ export default function AdminSettingsClient({
           Segurança e Controle de Acesso
         </h2>
 
-        <div className="bg-[#111116] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4">
+        <div className="bg-[#0F1014] p-5 rounded-2xl border border-white/[0.08] shadow-xl space-y-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
               <ShieldCheck className="w-5 h-5" />
@@ -597,15 +597,15 @@ export default function AdminSettingsClient({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3 rounded-xl bg-[#16161D] border border-white/[0.06] text-xs">
+            <div className="p-3 rounded-xl bg-[#15171D] border border-white/[0.06] text-xs">
               <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Administrador</span>
               <span className="font-bold text-white block mt-0.5 truncate">{user.name || "Administrador Supremo"}</span>
             </div>
-            <div className="p-3 rounded-xl bg-[#16161D] border border-white/[0.06] text-xs">
+            <div className="p-3 rounded-xl bg-[#15171D] border border-white/[0.06] text-xs">
               <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">E-mail Cadastrado</span>
               <span className="font-mono text-zinc-300 text-[11px] block mt-0.5 truncate">{user.email}</span>
             </div>
-            <div className="p-3 rounded-xl bg-[#16161D] border border-white/[0.06] text-xs">
+            <div className="p-3 rounded-xl bg-[#15171D] border border-white/[0.06] text-xs">
               <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Papel de Permissão</span>
               <span className="font-semibold text-blue-400 text-xs block mt-0.5">SUPER_ADMIN</span>
             </div>
@@ -625,7 +625,7 @@ export default function AdminSettingsClient({
       {/* MODAL: EDITAR PLANO DE ASSINATURA */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <h3 className="text-sm font-bold text-white">
                 {editingPlan ? "Editar Plano de Assinatura" : "Novo Plano de Assinatura"}
@@ -645,7 +645,7 @@ export default function AdminSettingsClient({
                   required
                   value={planForm.name}
                   onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -659,7 +659,7 @@ export default function AdminSettingsClient({
                   required
                   value={planForm.price}
                   onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
 
@@ -671,7 +671,7 @@ export default function AdminSettingsClient({
                   rows={3}
                   value={planForm.description}
                   onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -700,7 +700,7 @@ export default function AdminSettingsClient({
       {/* MODAL: TOKEN MERCADO PAGO */}
       {isTokenModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <div className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-blue-400" />
@@ -722,7 +722,7 @@ export default function AdminSettingsClient({
                   placeholder="APP_USR-..."
                   value={tokenForm.accessToken}
                   onChange={(e) => setTokenForm({ ...tokenForm, accessToken: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
                 />
                 <p className="text-[11px] text-zinc-500 mt-1">
                   Obtenha em Mercado Pago Developers -&gt; Suas Aplicações -&gt; Credenciais de Produção.
@@ -738,7 +738,7 @@ export default function AdminSettingsClient({
                   placeholder="proprietario@webgran.online"
                   value={tokenForm.email}
                   onChange={(e) => setTokenForm({ ...tokenForm, email: e.target.value })}
-                  className="w-full bg-[#16161D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -767,7 +767,7 @@ export default function AdminSettingsClient({
       {/* MODAL: CONFIRMAR DESCONEXÃO */}
       {isDisconnectConfirmOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111116] border border-white/[0.08] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl relative animate-in fade-in zoom-in-95">
+          <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl relative animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-2.5 text-red-400">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <h3 className="text-sm font-bold text-white">Desconectar Mercado Pago?</h3>
