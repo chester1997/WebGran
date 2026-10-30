@@ -64,6 +64,12 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     { name: "Clientes", href: "/seller/customers", icon: Users },
   ];
 
+  // CONTA Subitens
+  const accountItems = [
+    { name: "Gateways", href: "/seller/recebimentos", icon: CreditCard },
+    { name: "Configurações", href: "/seller/settings", icon: Settings },
+  ];
+
   // Active child checks
   const isBotChildActive = botTelegramSubItems.some(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
@@ -354,22 +360,30 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
               </p>
             )}
             <div className="space-y-0.5">
-              <Link 
-                href="/seller/settings"
-                onClick={() => isMobile && setMobileDrawerOpen(false)}
-                title={!isExpanded ? "Configurações" : undefined}
-                className={`group flex items-center ${!isExpanded ? "justify-center px-2" : "justify-start px-3"} py-2 rounded-xl text-[13px] font-medium transition-all duration-150 relative ${
-                  pathname === "/seller/settings" 
-                    ? "bg-[#18181C] text-white font-semibold border border-white/5 shadow-xs" 
-                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
-                }`}
-              >
-                {pathname === "/seller/settings" && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                )}
-                <Settings className={`w-4 h-4 shrink-0 transition-colors ${pathname === "/seller/settings" ? "text-blue-500" : "text-zinc-400 group-hover:text-zinc-200"}`} strokeWidth={1.75} />
-                {isExpanded && <span className="ml-3 truncate">Configurações</span>}
-              </Link>
+              {accountItems.map((item) => {
+                const isActive = pathname === item.href || (item.href !== "/seller" && pathname.startsWith(item.href + "/"));
+                const ItemIcon = item.icon;
+
+                return (
+                  <Link 
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => isMobile && setMobileDrawerOpen(false)}
+                    title={!isExpanded ? item.name : undefined}
+                    className={`group flex items-center ${!isExpanded ? "justify-center px-2" : "justify-start px-3"} py-2 rounded-xl text-[13px] font-medium transition-all duration-150 relative ${
+                      isActive 
+                        ? "bg-[#18181C] text-white font-semibold border border-white/5 shadow-xs" 
+                        : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
+                    )}
+                    <ItemIcon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400 group-hover:text-zinc-200"}`} strokeWidth={1.75} />
+                    {isExpanded && <span className="ml-3 truncate">{item.name}</span>}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
