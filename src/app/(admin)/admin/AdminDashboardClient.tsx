@@ -258,13 +258,7 @@ export default function AdminDashboardClient() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* HERO 1: GMV Aprovado (7 Colunas - Dominante) */}
-            <div className="lg:col-span-7 bg-[#0C0F17] bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(59,130,246,0.09)_0%,transparent_70%)] border border-blue-500/20 rounded-2xl p-6 sm:p-7 shadow-sm transition-all duration-150 ease-out hover:border-blue-500/[0.35] motion-safe:hover:-translate-y-[1px] relative overflow-hidden">
-              {/* Linha de luz de 1px no topo do card */}
-              <div
-                aria-hidden="true"
-                className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-blue-400/50 via-blue-400/20 to-transparent pointer-events-none"
-              />
-
+            <div className="lg:col-span-7 bg-[#0C0F17] bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(59,130,246,0.09)_0%,transparent_70%)] hover:bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(59,130,246,0.13)_0%,transparent_70%)] rounded-2xl p-6 sm:p-7 shadow-sm transition-all duration-150 ease-out motion-safe:hover:-translate-y-[1px] relative overflow-hidden">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
@@ -279,10 +273,8 @@ export default function AdminDashboardClient() {
                     Total faturado no intervalo selecionado pelas lojas ativas
                   </p>
                 </div>
-                {/* Ícone dentro de selo de 36px com rounded-lg, fundo 12% e borda 20% */}
-                <div className="w-9 h-9 rounded-lg bg-blue-500/[0.12] border border-blue-500/20 flex items-center justify-center shrink-0">
-                  <DollarSign className="w-4.5 h-4.5 text-blue-400" strokeWidth={2} />
-                </div>
+                {/* Ícone direto sobre a superfície, sem caixa/selo */}
+                <DollarSign className="w-5 h-5 text-blue-400 shrink-0" strokeWidth={2} />
               </div>
 
               {/* Valor Principal Hero com Halo difuso */}
@@ -304,10 +296,10 @@ export default function AdminDashboardClient() {
                   const formatted = isPositive ? (val > 999 ? "+999%+" : `+${val}%`) : isNegative ? (val < -999 ? "-999%-" : `${val}%`) : `${val}%`;
                   const fullLabel = `${isPositive ? `+${val}%` : `${val}%`} vs anterior`;
                   const pillColor = isPositive
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    ? "bg-emerald-500/10 text-emerald-400"
                     : isNegative
-                      ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                      : "bg-white/[0.04] text-zinc-400 border border-white/[0.06]";
+                      ? "bg-red-500/10 text-red-400"
+                      : "bg-white/[0.04] text-zinc-400";
 
                   return (
                     <span
@@ -350,13 +342,7 @@ export default function AdminDashboardClient() {
             </div>
 
             {/* HERO 2: Receita de Taxas da Plataforma (5 Colunas) */}
-            <div className="lg:col-span-5 bg-[#091211] bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(16,185,129,0.09)_0%,transparent_70%)] border border-emerald-500/20 rounded-2xl p-6 sm:p-7 shadow-sm transition-all duration-150 ease-out hover:border-emerald-500/[0.35] motion-safe:hover:-translate-y-[1px] relative overflow-hidden">
-              {/* Linha de luz de 1px no topo do card */}
-              <div
-                aria-hidden="true"
-                className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-emerald-400/50 via-emerald-400/20 to-transparent pointer-events-none"
-              />
-
+            <div className="lg:col-span-5 bg-[#091211] bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(16,185,129,0.09)_0%,transparent_70%)] hover:bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(16,185,129,0.13)_0%,transparent_70%)] rounded-2xl p-6 sm:p-7 shadow-sm transition-all duration-150 ease-out motion-safe:hover:-translate-y-[1px] relative overflow-hidden">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
@@ -371,10 +357,8 @@ export default function AdminDashboardClient() {
                     Comissões e taxas processadas com sucesso pelo gateway
                   </p>
                 </div>
-                {/* Ícone dentro de selo de 36px com rounded-lg, fundo 12% e borda 20% */}
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/[0.12] border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <Coins className="w-4.5 h-4.5 text-emerald-400" strokeWidth={2} />
-                </div>
+                {/* Ícone direto sobre a superfície, sem caixa/selo */}
+                <Coins className="w-5 h-5 text-emerald-400 shrink-0" strokeWidth={2} />
               </div>
 
               {/* Valor Principal Taxas com Halo difuso */}
@@ -396,10 +380,10 @@ export default function AdminDashboardClient() {
                   const formatted = isPositive ? (val > 999 ? "+999%+" : `+${val}%`) : isNegative ? (val < -999 ? "-999%-" : `${val}%`) : `${val}%`;
                   const fullLabel = `${isPositive ? `+${val}%` : `${val}%`} vs anterior`;
                   const pillColor = isPositive
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    ? "bg-emerald-500/10 text-emerald-400"
                     : isNegative
-                      ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                      : "bg-white/[0.04] text-zinc-400 border border-white/[0.06]";
+                      ? "bg-red-500/10 text-red-400"
+                      : "bg-white/[0.04] text-zinc-400";
 
                   return (
                     <span
