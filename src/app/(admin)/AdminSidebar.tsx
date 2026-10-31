@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -132,13 +133,22 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     <>
       {/* Mobile Header Bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--admin-bg,#0B0D13)] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-none">
-        <div className="flex items-center gap-2 font-bold text-base tracking-tight">
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-          <span className="text-white">WebGran</span>
+        <Link href="/admin" className="flex items-center gap-2.5 min-w-0" onClick={() => setMobileOpen(false)}>
+          <Image
+            src="/logo-webgran-icon.png"
+            alt="WebGran"
+            width={32}
+            height={32}
+            priority
+            className="w-8 h-8 rounded-full object-contain shrink-0"
+          />
+          <span className="font-semibold text-base text-white tracking-tight">
+            WebGran
+          </span>
           <span className="text-[10px] bg-blue-500/10 text-blue-500 font-bold px-2 py-0.5 rounded-lg border border-blue-500/20 tracking-wider">
             ADMIN
           </span>
-        </div>
+        </Link>
         <button
           ref={hamburgerButtonRef}
           id="admin-mobile-menu-trigger"
@@ -179,14 +189,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         {/* Brand Header */}
         <div className="px-7 pt-7 pb-5 flex items-center justify-between">
           <Link href="/admin" className="flex items-center gap-3 min-w-0" onClick={() => setMobileOpen(false)}>
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-black/40 border border-white/[0.08] flex items-center justify-center">
-              <img
-                src="/logo.png"
-                alt="WebGran"
-                className="h-8 w-auto max-w-none object-cover"
-                style={{ objectPosition: "left center" }}
-              />
-            </div>
+            <Image
+              src="/logo-webgran-icon.png"
+              alt="WebGran"
+              width={40}
+              height={40}
+              priority
+              className="w-10 h-10 rounded-full object-contain shrink-0"
+            />
             <span className="font-semibold text-[18px] text-white tracking-tight truncate">
               WebGran
             </span>
