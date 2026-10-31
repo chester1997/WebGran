@@ -619,6 +619,14 @@ export default function AdminSettingsClient({
       </div>
 
       {/* ==================================================== */}
+      {/* 4.1 RODAPÉ DE CRÉDITOS E LICENÇAS                    */}
+      {/* ==================================================== */}
+      <footer className="pt-6 pb-2 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-zinc-500 font-mono select-none">
+        <span>WebGran Platform Admin</span>
+        <span>Ícones Solar por 480 Design, licença CC BY 4.0</span>
+      </footer>
+
+      {/* ==================================================== */}
       {/* 5. MODALS */}
       {/* ==================================================== */}
 
