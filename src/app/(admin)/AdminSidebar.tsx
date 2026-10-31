@@ -178,14 +178,20 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
       >
         {/* Brand Header */}
         <div className="px-7 pt-7 pb-5 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center" onClick={() => setMobileOpen(false)}>
-            <img
-              src="/logo-expanded.png"
-              alt="WebGran Logo"
-              className="h-10 w-auto max-w-[170px] object-contain"
-            />
+          <Link href="/admin" className="flex items-center gap-3 min-w-0" onClick={() => setMobileOpen(false)}>
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-black/40 border border-white/[0.08] flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="WebGran"
+                className="h-8 w-auto max-w-none object-cover"
+                style={{ objectPosition: "left center" }}
+              />
+            </div>
+            <span className="font-semibold text-[18px] text-white tracking-tight truncate">
+              WebGran
+            </span>
           </Link>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg tracking-wider uppercase">
               ADMIN
             </span>
@@ -201,7 +207,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         </div>
 
         {/* Navigation Links */}
-        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-7 py-3 space-y-1 custom-scrollbar">
+        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-7 py-3 space-y-1 sidebar-scroll">
           {/* Dashboard (Root Item) */}
           <Link
             href="/admin"
