@@ -258,14 +258,20 @@ export default function AdminDashboardClient() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* HERO 1: GMV Aprovado (7 Colunas - Dominante) */}
-            <div className="lg:col-span-7 bg-[#0C0F17] rounded-2xl p-6 sm:p-7 shadow-sm transition-all relative overflow-hidden">
+            <div className="lg:col-span-7 bg-[#0C0F17] bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(59,130,246,0.09)_0%,transparent_70%)] border border-blue-500/20 rounded-2xl p-6 sm:p-7 shadow-sm transition-all duration-150 ease-out hover:border-blue-500/[0.35] motion-safe:hover:-translate-y-[1px] relative overflow-hidden">
+              {/* Linha de luz de 1px no topo do card */}
+              <div
+                aria-hidden="true"
+                className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-blue-400/50 via-blue-400/20 to-transparent pointer-events-none"
+              />
+
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
                       Volume Bruto Transacionado (GMV)
                     </span>
-                    <span className="text-[9px] font-mono text-zinc-400 uppercase">
+                    <span className="text-[9px] font-mono text-zinc-300 uppercase tracking-wider">
                       Vendas Aprovadas
                     </span>
                   </div>
@@ -273,53 +279,70 @@ export default function AdminDashboardClient() {
                     Total faturado no intervalo selecionado pelas lojas ativas
                   </p>
                 </div>
-                {/* Ícone direto sobre a superfície (sem caixa/quadrado colorido) */}
-                <DollarSign className="w-5 h-5 text-blue-400 shrink-0" strokeWidth={2} />
+                {/* Ícone dentro de selo de 36px com rounded-lg, fundo 12% e borda 20% */}
+                <div className="w-9 h-9 rounded-lg bg-blue-500/[0.12] border border-blue-500/20 flex items-center justify-center shrink-0">
+                  <DollarSign className="w-4.5 h-4.5 text-blue-400" strokeWidth={2} />
+                </div>
               </div>
 
-              {/* Valor Principal Hero */}
-              <div className="flex flex-col sm:flex-row sm:items-baseline gap-3 my-2">
-                <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tabular-nums tracking-tight">
+              {/* Valor Principal Hero com Halo difuso */}
+              <div className="relative flex flex-col sm:flex-row sm:items-baseline gap-3 my-2">
+                {/* Halo difuso atrás do valor */}
+                <div
+                  aria-hidden="true"
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 w-48 h-24 bg-blue-500/[0.14] rounded-full blur-[40px] pointer-events-none"
+                />
+
+                <span className="relative z-10 text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tabular-nums tracking-tight">
                   {formatCurrency(data?.kpis.gmv.current ?? 0)}
                 </span>
 
-                {data?.kpis.gmv.changePercent !== null && data?.kpis.gmv.changePercent !== undefined && (
-                  <span
-                    className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${data.kpis.gmv.changePercent > 0
-                        ? "text-emerald-400"
-                        : data.kpis.gmv.changePercent < 0
-                          ? "text-red-400"
-                          : "text-zinc-400"
-                      }`}
-                  >
-                    {data.kpis.gmv.changePercent > 0 ? (
-                      <TrendingUp className="w-3.5 h-3.5" />
-                    ) : data.kpis.gmv.changePercent < 0 ? (
-                      <TrendingDown className="w-3.5 h-3.5" />
-                    ) : null}
-                    {data.kpis.gmv.changePercent > 0 ? `+${data.kpis.gmv.changePercent}%` : `${data.kpis.gmv.changePercent}%`}
-                    <span className="text-[10px] text-zinc-400">vs anterior</span>
-                  </span>
-                )}
+                {data?.kpis.gmv.changePercent !== null && data?.kpis.gmv.changePercent !== undefined && (() => {
+                  const val = data.kpis.gmv.changePercent;
+                  const isPositive = val > 0;
+                  const isNegative = val < 0;
+                  const formatted = isPositive ? (val > 999 ? "+999%+" : `+${val}%`) : isNegative ? (val < -999 ? "-999%-" : `${val}%`) : `${val}%`;
+                  const fullLabel = `${isPositive ? `+${val}%` : `${val}%`} vs anterior`;
+                  const pillColor = isPositive
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : isNegative
+                      ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                      : "bg-white/[0.04] text-zinc-400 border border-white/[0.06]";
+
+                  return (
+                    <span
+                      title={fullLabel}
+                      className={`relative z-10 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-mono font-medium ${pillColor}`}
+                    >
+                      {isPositive ? (
+                        <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                      ) : isNegative ? (
+                        <TrendingDown className="w-3.5 h-3.5 shrink-0" />
+                      ) : null}
+                      <span>{formatted}</span>
+                      <span className="text-[10px] text-zinc-400 opacity-80">vs anterior</span>
+                    </span>
+                  );
+                })()}
               </div>
 
-              {/* Indicadores de Apoio Hero */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 mt-4 border-t border-white/[0.04] text-xs">
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Pedidos Aprovados</span>
-                  <span className="text-base font-bold text-white font-mono tabular-nums mt-0.5 block">
+              {/* Indicadores de Apoio Hero em colunas separadas por linhas verticais */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] pt-4 mt-4 border-t border-white/[0.06] text-xs">
+                <div className="sm:pr-4 pb-3 sm:pb-0">
+                  <span className="text-[10px] text-zinc-300 uppercase font-mono tracking-wider block">Pedidos Aprovados</span>
+                  <span className="text-base font-semibold text-white font-mono tabular-nums mt-0.5 block">
                     {(data?.salesAndPayments.paidOrdersCount || data?.kpis.paidOrders.current || 0).toLocaleString("pt-BR")}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Ticket Médio</span>
-                  <span className="text-base font-bold text-zinc-300 font-mono tabular-nums mt-0.5 block">
+                <div className="sm:px-4 py-3 sm:py-0">
+                  <span className="text-[10px] text-zinc-300 uppercase font-mono tracking-wider block">Ticket Médio</span>
+                  <span className="text-base font-semibold text-zinc-100 font-mono tabular-nums mt-0.5 block">
                     {formatCurrency(averageTicket)}
                   </span>
                 </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Acumulado Histórico</span>
-                  <span className="text-base font-bold text-zinc-400 font-mono tabular-nums mt-0.5 block">
+                <div className="sm:pl-4 pt-3 sm:pt-0">
+                  <span className="text-[10px] text-zinc-300 uppercase font-mono tracking-wider block">Acumulado Histórico</span>
+                  <span className="text-base font-semibold text-zinc-200 font-mono tabular-nums mt-0.5 block">
                     {formatCurrency(data?.kpis.gmv.total ?? 0)}
                   </span>
                 </div>
@@ -327,14 +350,20 @@ export default function AdminDashboardClient() {
             </div>
 
             {/* HERO 2: Receita de Taxas da Plataforma (5 Colunas) */}
-            <div className="lg:col-span-5 bg-[#091211] rounded-2xl p-6 sm:p-7 shadow-sm transition-all relative overflow-hidden">
+            <div className="lg:col-span-5 bg-[#091211] bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,rgba(16,185,129,0.09)_0%,transparent_70%)] border border-emerald-500/20 rounded-2xl p-6 sm:p-7 shadow-sm transition-all duration-150 ease-out hover:border-emerald-500/[0.35] motion-safe:hover:-translate-y-[1px] relative overflow-hidden">
+              {/* Linha de luz de 1px no topo do card */}
+              <div
+                aria-hidden="true"
+                className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-emerald-400/50 via-emerald-400/20 to-transparent pointer-events-none"
+              />
+
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
                       Receita de Taxas da Plataforma
                     </span>
-                    <span className="text-[9px] font-mono text-zinc-400 uppercase">
+                    <span className="text-[9px] font-mono text-zinc-300 uppercase tracking-wider">
                       Confirmado
                     </span>
                   </div>
@@ -342,46 +371,64 @@ export default function AdminDashboardClient() {
                     Comissões e taxas processadas com sucesso pelo gateway
                   </p>
                 </div>
-                {/* Ícone direto sobre a superfície */}
-                <Coins className="w-5 h-5 text-emerald-400 shrink-0" strokeWidth={2} />
+                {/* Ícone dentro de selo de 36px com rounded-lg, fundo 12% e borda 20% */}
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/[0.12] border border-emerald-500/20 flex items-center justify-center shrink-0">
+                  <Coins className="w-4.5 h-4.5 text-emerald-400" strokeWidth={2} />
+                </div>
               </div>
 
-              {/* Valor Principal Taxas */}
-              <div className="flex flex-col sm:flex-row sm:items-baseline gap-3 my-2">
-                <span className="text-3xl sm:text-4xl lg:text-4xl font-black text-emerald-400 font-mono tabular-nums tracking-tight">
+              {/* Valor Principal Taxas com Halo difuso */}
+              <div className="relative flex flex-col sm:flex-row sm:items-baseline gap-3 my-2">
+                {/* Halo difuso atrás do valor */}
+                <div
+                  aria-hidden="true"
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 w-48 h-24 bg-emerald-500/[0.14] rounded-full blur-[40px] pointer-events-none"
+                />
+
+                <span className="relative z-10 text-3xl sm:text-4xl lg:text-4xl font-black text-emerald-400 font-mono tabular-nums tracking-tight">
                   {formatCurrency(data?.kpis.processedFees.current ?? 0)}
                 </span>
 
-                {data?.kpis.processedFees.changePercent !== null && data?.kpis.processedFees.changePercent !== undefined && (
-                  <span
-                    className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${data.kpis.processedFees.changePercent > 0
-                        ? "text-emerald-400"
-                        : data.kpis.processedFees.changePercent < 0
-                          ? "text-red-400"
-                          : "text-zinc-400"
-                      }`}
-                  >
-                    {data.kpis.processedFees.changePercent > 0 ? (
-                      <TrendingUp className="w-3.5 h-3.5" />
-                    ) : data.kpis.processedFees.changePercent < 0 ? (
-                      <TrendingDown className="w-3.5 h-3.5" />
-                    ) : null}
-                    {data.kpis.processedFees.changePercent > 0 ? `+${data.kpis.processedFees.changePercent}%` : `${data.kpis.processedFees.changePercent}%`}
-                  </span>
-                )}
+                {data?.kpis.processedFees.changePercent !== null && data?.kpis.processedFees.changePercent !== undefined && (() => {
+                  const val = data.kpis.processedFees.changePercent;
+                  const isPositive = val > 0;
+                  const isNegative = val < 0;
+                  const formatted = isPositive ? (val > 999 ? "+999%+" : `+${val}%`) : isNegative ? (val < -999 ? "-999%-" : `${val}%`) : `${val}%`;
+                  const fullLabel = `${isPositive ? `+${val}%` : `${val}%`} vs anterior`;
+                  const pillColor = isPositive
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : isNegative
+                      ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                      : "bg-white/[0.04] text-zinc-400 border border-white/[0.06]";
+
+                  return (
+                    <span
+                      title={fullLabel}
+                      className={`relative z-10 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-mono font-medium ${pillColor}`}
+                    >
+                      {isPositive ? (
+                        <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                      ) : isNegative ? (
+                        <TrendingDown className="w-3.5 h-3.5 shrink-0" />
+                      ) : null}
+                      <span>{formatted}</span>
+                      <span className="text-[10px] text-zinc-400 opacity-80">vs anterior</span>
+                    </span>
+                  );
+                })()}
               </div>
 
-              {/* Indicadores de Apoio Taxas */}
-              <div className="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-white/[0.04] text-xs">
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Take-Rate Efetivo</span>
-                  <span className="text-base font-bold text-white font-mono tabular-nums mt-0.5 block">
+              {/* Indicadores de Apoio Taxas em colunas separadas por linhas verticais */}
+              <div className="grid grid-cols-2 divide-x divide-white/[0.06] pt-4 mt-4 border-t border-white/[0.06] text-xs">
+                <div className="pr-4">
+                  <span className="text-[10px] text-zinc-300 uppercase font-mono tracking-wider block">Take-Rate Efetivo</span>
+                  <span className="text-base font-semibold text-white font-mono tabular-nums mt-0.5 block">
                     {effectiveTakeRate ? `${effectiveTakeRate}% das vendas` : "R$ 0,50/venda"}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Total Histórico</span>
-                  <span className="text-base font-bold text-zinc-400 font-mono tabular-nums mt-0.5 block">
+                <div className="pl-4">
+                  <span className="text-[10px] text-zinc-300 uppercase font-mono tracking-wider block">Total Histórico</span>
+                  <span className="text-base font-semibold text-zinc-200 font-mono tabular-nums mt-0.5 block">
                     {formatCurrency(data?.kpis.processedFees.total ?? 0)}
                   </span>
                 </div>
