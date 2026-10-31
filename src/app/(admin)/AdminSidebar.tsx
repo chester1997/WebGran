@@ -35,6 +35,19 @@ import {
   Wallet
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import SidebarNavItem from "./SidebarNavItem";
+import {
+  BotIcon,
+  CartIcon,
+  ChartColumnIncreasingIcon,
+  CreditCardIcon,
+  HandCoinsIcon,
+  PaletteIcon,
+  SettingsIcon,
+  UserCheckIcon,
+  UsersIcon,
+  WalletIcon,
+} from "@/components/icons";
 
 interface AdminUser {
   id?: string;
@@ -84,24 +97,24 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
 
   // Section 1: BOT
   const botItems = [
-    { label: "Bots", href: "/admin/bots", icon: Bot },
+    { label: "Bots", href: "/admin/bots", animatedIcon: BotIcon },
   ];
 
   // Section 2: VENDAS
   const salesItems = [
-    { label: "Pedidos", href: "/admin/orders", icon: ShoppingCart },
-    { label: "Clientes", href: "/admin/customers", icon: UserCheck },
-    { label: "Vendedores e Taxas", href: "/admin/sellers", icon: Users },
-    { label: "Comissão da Plataforma", href: "/admin/commission", icon: Coins },
-    { label: "Relatórios", href: "/admin/reports", icon: BarChart3 },
+    { label: "Pedidos", href: "/admin/orders", animatedIcon: CartIcon },
+    { label: "Clientes", href: "/admin/customers", animatedIcon: UserCheckIcon },
+    { label: "Vendedores e Taxas", href: "/admin/sellers", animatedIcon: UsersIcon },
+    { label: "Comissão da Plataforma", href: "/admin/commission", animatedIcon: HandCoinsIcon },
+    { label: "Relatórios", href: "/admin/reports", animatedIcon: ChartColumnIncreasingIcon },
   ];
 
   // Section 3: PLATAFORMA
   const platformItems = [
     { label: "Planos WebGran", href: "/admin/plans", icon: Package },
-    { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: CreditCard },
+    { label: "Assinaturas WebGran", href: "/admin/subscriptions", animatedIcon: CreditCardIcon },
     { label: "Recursos & Features", href: "/admin/features", icon: Sliders },
-    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", icon: Wallet },
+    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", animatedIcon: Wallet },
   ];
 
   // Submenu: Biblioteca de Vídeos
@@ -219,20 +232,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         {/* Navigation Links */}
         <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-7 py-3 space-y-1 sidebar-scroll">
           {/* Dashboard (Root Item) */}
-          <Link
+          <SidebarNavItem
             href="/admin"
+            label="Dashboard"
+            isActive={pathname === "/admin"}
             onClick={() => setMobileOpen(false)}
-            className={`
-              flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
-              ${pathname === "/admin"
-                ? "bg-blue-500/10 text-white font-semibold"
-                : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-              }
-            `}
-          >
-            <LayoutDashboard className={`w-4 h-4 transition-colors ${pathname === "/admin" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-            <span className="truncate">Dashboard</span>
-          </Link>
+            icon={LayoutDashboard}
+          />
 
           {/* ==================================================== */}
           {/* SECTION: BOT */}
@@ -246,24 +252,16 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             </div>
             <div className="space-y-0.5">
               {botItems.map((item) => {
-                const Icon = item.icon;
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
-                  <Link
+                  <SidebarNavItem
                     key={item.href}
                     href={item.href}
+                    label={item.label}
+                    isActive={isActive}
                     onClick={() => setMobileOpen(false)}
-                    className={`
-                      flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
-                      ${isActive
-                        ? "bg-blue-500/10 text-white font-semibold"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                      }
-                    `}
-                  >
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
+                    animatedIcon={item.animatedIcon}
+                  />
                 );
               })}
             </div>
@@ -281,24 +279,16 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             </div>
             <div className="space-y-0.5">
               {salesItems.map((item) => {
-                const Icon = item.icon;
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
-                  <Link
+                  <SidebarNavItem
                     key={item.href}
                     href={item.href}
+                    label={item.label}
+                    isActive={isActive}
                     onClick={() => setMobileOpen(false)}
-                    className={`
-                      flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
-                      ${isActive
-                        ? "bg-blue-500/10 text-white font-semibold"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                      }
-                    `}
-                  >
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
+                    animatedIcon={item.animatedIcon}
+                  />
                 );
               })}
             </div>
@@ -316,51 +306,41 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             </div>
             <div className="space-y-0.5">
               {platformItems.map((item) => {
-                const Icon = item.icon;
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
-                  <Link
+                  <SidebarNavItem
                     key={item.href}
                     href={item.href}
+                    label={item.label}
+                    isActive={isActive}
                     onClick={() => setMobileOpen(false)}
-                    className={`
-                      flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
-                      ${isActive
-                        ? "bg-blue-500/10 text-white font-semibold"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                      }
-                    `}
-                  >
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
+                    icon={item.icon}
+                    animatedIcon={item.animatedIcon}
+                  />
                 );
               })}
 
               {/* Submenu Expansível: Biblioteca de Vídeos */}
               <div className="space-y-0.5">
-                <button
-                  type="button"
+                <SidebarNavItem
+                  label="Biblioteca de Vídeos"
+                  isActive={isVideoActive}
+                  icon={Film}
                   onClick={() => setUserVideoToggled(!videoOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
                     isVideoActive ? "bg-blue-500/10 text-white font-semibold" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Film className={`w-4 h-4 shrink-0 transition-colors ${isVideoActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                    <span className="truncate">Biblioteca de Vídeos</span>
-                  </div>
                   {videoOpen ? (
                     <ChevronUp className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-150" strokeWidth={1.8} />
                   ) : (
                     <ChevronDown className="w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150" strokeWidth={1.8} />
                   )}
-                </button>
+                </SidebarNavItem>
 
                 {videoOpen && (
                   <div className="relative pl-6 space-y-1 my-1">
                     {videoLibraryItems.map((item, index) => {
-                      const Icon = item.icon;
                       const isActive = pathname === item.href || (item.href !== "/admin/video-library" && pathname.startsWith(item.href));
                       const isLast = index === videoLibraryItems.length - 1;
 
@@ -371,18 +351,20 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                             <path d="M 0 0 V 8 Q 0 14 6 14 H 12" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" strokeLinecap="round" />
                           </svg>
 
-                          <Link
+                          <SidebarNavItem
                             href={item.href}
+                            label={item.label}
+                            isActive={isActive}
                             onClick={() => setMobileOpen(false)}
+                            icon={item.icon}
+                            iconSize={14}
+                            iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
                               isActive
                                 ? "bg-blue-500/10 text-white font-semibold"
                                 : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                             }`}
-                          >
-                            <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                            <span className="truncate flex-1">{item.label}</span>
-                          </Link>
+                          />
                         </div>
                       );
                     })}
@@ -391,20 +373,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               </div>
 
               {/* Temas */}
-              <Link
+              <SidebarNavItem
                 href="/admin/themes"
+                label="Temas"
+                isActive={pathname === "/admin/themes"}
                 onClick={() => setMobileOpen(false)}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
-                  ${pathname === "/admin/themes"
-                    ? "bg-blue-500/10 text-white font-semibold"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                  }
-                `}
-              >
-                <Palette className={`w-4 h-4 transition-colors ${pathname === "/admin/themes" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                <span className="truncate">Temas</span>
-              </Link>
+                animatedIcon={PaletteIcon}
+              />
             </div>
           </div>
 
@@ -420,34 +395,27 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             </div>
             <div className="space-y-1">
               {/* Configurações */}
-              <Link
+              <SidebarNavItem
                 href="/admin/settings"
+                label="Configurações"
+                isActive={pathname === "/admin/settings"}
                 onClick={() => setMobileOpen(false)}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
-                  ${pathname === "/admin/settings"
-                    ? "bg-blue-500/10 text-white font-semibold"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                  }
-                `}
-              >
-                <Settings className={`w-4 h-4 transition-colors ${pathname === "/admin/settings" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
-                <span className="truncate">Configurações</span>
-              </Link>
+                animatedIcon={SettingsIcon}
+              />
 
               {/* Store Access Button for Platform Owner */}
-              <Link
+              <SidebarNavItem
                 href="/seller"
+                label="Painel do Vendedor"
                 onClick={() => setMobileOpen(false)}
+                icon={Store}
+                iconClassName="w-4 h-4 text-emerald-400 group-hover:scale-105 transition-all shrink-0"
                 className="
                   flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium
                   text-emerald-400 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/35
                   transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 group
                 "
-              >
-                <Store className="w-4 h-4 text-emerald-400 group-hover:scale-105 transition-all shrink-0" strokeWidth={1.8} />
-                <span className="truncate">Painel do Vendedor</span>
-              </Link>
+              />
             </div>
           </div>
         </nav>
