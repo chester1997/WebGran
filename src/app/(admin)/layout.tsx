@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     >
       <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--admin-bg,#0B0D13)]">
         {/* Modern Sidebar Component wrapped in Suspense */}
-        <Suspense fallback={<div className="w-64 bg-[var(--admin-bg,#0B0D13)] h-full animate-pulse hidden md:block" />}>
+        <Suspense fallback={<div className="w-72 bg-[var(--admin-bg,#0B0D13)] h-full animate-pulse hidden md:block" />}>
           <AdminSidebarWrapper />
         </Suspense>
 

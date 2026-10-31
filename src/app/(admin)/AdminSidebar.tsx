@@ -135,7 +135,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         <div className="flex items-center gap-2 font-bold text-base tracking-tight">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-white">WebGran</span>
-          <span className="text-[10px] bg-blue-500/10 text-blue-500 font-bold px-2 py-0.5 rounded border border-blue-500/20 tracking-wider">
+          <span className="text-[10px] bg-blue-500/10 text-blue-500 font-bold px-2 py-0.5 rounded-lg border border-blue-500/20 tracking-wider">
             ADMIN
           </span>
         </div>
@@ -169,7 +169,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         aria-label="Navegação Administrativa"
         className={`
           fixed md:static inset-y-0 left-0 z-50
-          w-60 md:w-64 h-full bg-[var(--admin-bg,#0B0D13)]
+          w-72 h-full bg-[var(--admin-bg,#0B0D13)]
           border-0 md:border-0 rounded-none md:rounded-none shadow-none md:shadow-none
           flex-shrink-0 flex flex-col overflow-hidden
           transition-transform duration-200 ease-in-out outline-none
@@ -177,16 +177,16 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         `}
       >
         {/* Brand Header */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.06]">
+        <div className="px-7 pt-7 pb-5 flex items-center justify-between">
           <Link href="/admin" className="flex items-center" onClick={() => setMobileOpen(false)}>
             <img
               src="/logo-expanded.png"
               alt="WebGran Logo"
-              className="h-8 w-auto max-w-[150px] object-contain"
+              className="h-10 w-auto max-w-[170px] object-contain"
             />
           </Link>
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md tracking-wider uppercase">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg tracking-wider uppercase">
               ADMIN
             </span>
             <button
@@ -201,22 +201,19 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         </div>
 
         {/* Navigation Links */}
-        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto py-3 px-2.5 space-y-1 custom-scrollbar">
+        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-7 py-3 space-y-1 custom-scrollbar">
           {/* Dashboard (Root Item) */}
           <Link
             href="/admin"
             onClick={() => setMobileOpen(false)}
             className={`
-              flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
+              flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
               ${pathname === "/admin"
-                ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                ? "bg-blue-500/10 text-white font-semibold"
                 : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
               }
             `}
           >
-            {pathname === "/admin" && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-            )}
             <LayoutDashboard className={`w-4 h-4 transition-colors ${pathname === "/admin" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
             <span className="truncate">Dashboard</span>
           </Link>
@@ -241,16 +238,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
+                      flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
                       ${isActive
-                        ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                        ? "bg-blue-500/10 text-white font-semibold"
                         : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                       }
                     `}
                   >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                    )}
                     <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">{item.label}</span>
                   </Link>
@@ -279,16 +273,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
+                      flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
                       ${isActive
-                        ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                        ? "bg-blue-500/10 text-white font-semibold"
                         : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                       }
                     `}
                   >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                    )}
                     <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">{item.label}</span>
                   </Link>
@@ -317,16 +308,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
+                      flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
                       ${isActive
-                        ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                        ? "bg-blue-500/10 text-white font-semibold"
                         : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                       }
                     `}
                   >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                    )}
                     <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                     <span className="truncate">{item.label}</span>
                   </Link>
@@ -338,8 +326,8 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 <button
                   type="button"
                   onClick={() => setUserVideoToggled(!videoOpen)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
-                    isVideoActive ? "text-white font-semibold bg-[#15171D] border border-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                  className={`w-full flex items-center justify-between px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                    isVideoActive ? "bg-blue-500/10 text-white font-semibold" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -370,15 +358,12 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                           <Link
                             href={item.href}
                             onClick={() => setMobileOpen(false)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
                               isActive
-                                ? "bg-[#15171D] text-white font-semibold border border-white/[0.08] shadow-xs"
+                                ? "bg-blue-500/10 text-white font-semibold"
                                 : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                             }`}
                           >
-                            {isActive && (
-                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                            )}
                             <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                             <span className="truncate flex-1">{item.label}</span>
                           </Link>
@@ -394,16 +379,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 href="/admin/themes"
                 onClick={() => setMobileOpen(false)}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
+                  flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
                   ${pathname === "/admin/themes"
-                    ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                    ? "bg-blue-500/10 text-white font-semibold"
                     : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                   }
                 `}
               >
-                {pathname === "/admin/themes" && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                )}
                 <Palette className={`w-4 h-4 transition-colors ${pathname === "/admin/themes" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                 <span className="truncate">Temas</span>
               </Link>
@@ -426,16 +408,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 href="/admin/settings"
                 onClick={() => setMobileOpen(false)}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 relative
+                  flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative
                   ${pathname === "/admin/settings"
-                    ? "bg-[#15171D] text-white border border-white/[0.08] shadow-xs font-semibold"
+                    ? "bg-blue-500/10 text-white font-semibold"
                     : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                   }
                 `}
               >
-                {pathname === "/admin/settings" && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-sm shadow-blue-500/50" />
-                )}
                 <Settings className={`w-4 h-4 transition-colors ${pathname === "/admin/settings" ? "text-blue-500" : "text-zinc-400"}`} strokeWidth={1.8} />
                 <span className="truncate">Configurações</span>
               </Link>
@@ -445,7 +424,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 href="/seller"
                 onClick={() => setMobileOpen(false)}
                 className="
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium
+                  flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium
                   text-emerald-400 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/35
                   transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 group
                 "
@@ -458,20 +437,20 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
         </nav>
 
         {/* User Footer Card */}
-        <div className="p-2.5 border-t border-white/[0.06]">
+        <div className="px-7 py-4 border-t border-white/[0.06]">
           <div
             onClick={() => setProfileModalOpen(true)}
-            className="flex items-center justify-between p-2 rounded-xl bg-[#0F1014] hover:bg-[#15171D] border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer group"
+            className="flex items-center justify-between p-2 rounded-lg bg-[#0F1014] hover:bg-[#15171D] border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               {currentUser?.avatarUrl ? (
                 <img
                   src={currentUser.avatarUrl}
                   alt={currentUser.name || "Avatar"}
-                  className="w-7 h-7 rounded-full object-cover shrink-0 border border-blue-500/30 bg-[#0E0E12]"
+                  className="w-7 h-7 rounded-lg object-cover shrink-0 border border-blue-500/30 bg-[#0E0E12]"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[11px] shrink-0 border border-white/20">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-[11px] shrink-0 border border-white/20">
                   {currentUser?.name?.[0]?.toUpperCase() || "A"}
                 </div>
               )}
@@ -493,7 +472,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   setProfileModalOpen(true);
                 }}
                 title="Editar Perfil"
-                className="p-1 rounded-md text-zinc-400 hover:text-blue-500 hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <UserCog className="w-3.5 h-3.5" />
               </button>
@@ -504,7 +483,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   signOut({ callbackUrl: "/login" });
                 }}
                 title="Sair"
-                className="p-1 rounded-md text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
