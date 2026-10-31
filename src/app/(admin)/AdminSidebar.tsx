@@ -5,25 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  Bot,
-  Package,
-  ShoppingCart,
-  UserCheck,
-  Palette,
-  Settings,
   Menu,
   X,
   LogOut,
-  Store,
-  CreditCard,
-  Sliders,
-  Film,
-  HardDrive,
   ChevronDown,
   ChevronUp,
-  Coins,
   Camera,
   Trash2,
   Lock,
@@ -35,17 +21,24 @@ import {
 import { signOut } from "next-auth/react";
 import SidebarNavItem from "./SidebarNavItem";
 import {
-  BotIcon,
-  CartIcon,
-  ChartColumnIncreasingIcon,
-  CreditCardIcon,
-  HandCoinsIcon,
-  PaletteIcon,
-  SettingsIcon,
-  UserCheckIcon,
-  UsersIcon,
-  WalletIcon,
-} from "@/components/icons";
+  SolarSpeedometerMiddleIcon,
+  SolarBotIcon,
+  SolarCartLarge2Icon,
+  SolarUserIdIcon,
+  SolarUsersGroupRoundedIcon,
+  SolarHandMoneyIcon,
+  SolarChart2Icon,
+  SolarBoxIcon,
+  SolarCard2Icon,
+  SolarTuning4Icon,
+  SolarWalletMoneyIcon,
+  SolarVideoLibraryIcon,
+  SolarClapperboardPlayIcon,
+  SolarCloudStorageIcon,
+  SolarPaletteRoundIcon,
+  SolarSettingsIcon,
+  SolarShop2Icon,
+} from "@/components/icons/solar";
 
 interface AdminUser {
   id?: string;
@@ -95,30 +88,30 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
 
   // Section 1: BOT
   const botItems = [
-    { label: "Bots", href: "/admin/bots", animatedIcon: BotIcon },
+    { label: "Bots", href: "/admin/bots", icon: SolarBotIcon },
   ];
 
   // Section 2: VENDAS
   const salesItems = [
-    { label: "Pedidos", href: "/admin/orders", animatedIcon: CartIcon },
-    { label: "Clientes", href: "/admin/customers", animatedIcon: UserCheckIcon },
-    { label: "Vendedores e Taxas", href: "/admin/sellers", animatedIcon: UsersIcon },
-    { label: "Comissão da Plataforma", href: "/admin/commission", animatedIcon: HandCoinsIcon },
-    { label: "Relatórios", href: "/admin/reports", animatedIcon: ChartColumnIncreasingIcon },
+    { label: "Pedidos", href: "/admin/orders", icon: SolarCartLarge2Icon },
+    { label: "Clientes", href: "/admin/customers", icon: SolarUserIdIcon },
+    { label: "Vendedores e Taxas", href: "/admin/sellers", icon: SolarUsersGroupRoundedIcon },
+    { label: "Comissão da Plataforma", href: "/admin/commission", icon: SolarHandMoneyIcon },
+    { label: "Relatórios", href: "/admin/reports", icon: SolarChart2Icon },
   ];
 
   // Section 3: PLATAFORMA
   const platformItems = [
-    { label: "Planos WebGran", href: "/admin/plans", icon: Package, fallbackAnimation: "package" as const },
-    { label: "Assinaturas WebGran", href: "/admin/subscriptions", animatedIcon: CreditCardIcon },
-    { label: "Recursos & Features", href: "/admin/features", icon: Sliders, fallbackAnimation: "sliders" as const },
-    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", animatedIcon: WalletIcon },
+    { label: "Planos WebGran", href: "/admin/plans", icon: SolarBoxIcon },
+    { label: "Assinaturas WebGran", href: "/admin/subscriptions", icon: SolarCard2Icon },
+    { label: "Recursos & Features", href: "/admin/features", icon: SolarTuning4Icon },
+    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", icon: SolarWalletMoneyIcon },
   ];
 
   // Submenu: Biblioteca de Vídeos
   const videoLibraryItems = [
-    { label: "Visão Geral", href: "/admin/video-library", icon: Film, fallbackAnimation: "film" as const },
-    { label: "Planos de Armazenamento", href: "/admin/video-library/plans", icon: HardDrive },
+    { label: "Visão Geral", href: "/admin/video-library", icon: SolarClapperboardPlayIcon },
+    { label: "Planos de Armazenamento", href: "/admin/video-library/plans", icon: SolarCloudStorageIcon },
   ];
 
   const isVideoActive = videoLibraryItems.some(
@@ -235,7 +228,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             label="Dashboard"
             isActive={pathname === "/admin"}
             onClick={() => setMobileOpen(false)}
-            icon={LayoutDashboard}
+            icon={SolarSpeedometerMiddleIcon}
           />
 
           {/* ==================================================== */}
@@ -258,7 +251,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     label={item.label}
                     isActive={isActive}
                     onClick={() => setMobileOpen(false)}
-                    animatedIcon={item.animatedIcon}
+                    icon={item.icon}
                   />
                 );
               })}
@@ -285,7 +278,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     label={item.label}
                     isActive={isActive}
                     onClick={() => setMobileOpen(false)}
-                    animatedIcon={item.animatedIcon}
+                    icon={item.icon}
                   />
                 );
               })}
@@ -313,8 +306,6 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     isActive={isActive}
                     onClick={() => setMobileOpen(false)}
                     icon={item.icon}
-                    animatedIcon={item.animatedIcon}
-                    fallbackAnimation={item.fallbackAnimation}
                   />
                 );
               })}
@@ -324,8 +315,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 <SidebarNavItem
                   label="Biblioteca de Vídeos"
                   isActive={isVideoActive}
-                  icon={Film}
-                  fallbackAnimation="film"
+                  icon={SolarVideoLibraryIcon}
                   onClick={() => setUserVideoToggled(!videoOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
                     isVideoActive ? "bg-blue-500/10 text-white font-semibold" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
@@ -357,7 +347,6 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                             isActive={isActive}
                             onClick={() => setMobileOpen(false)}
                             icon={item.icon}
-                            fallbackAnimation={item.fallbackAnimation}
                             iconSize={14}
                             iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
@@ -379,7 +368,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 label="Temas"
                 isActive={pathname === "/admin/themes"}
                 onClick={() => setMobileOpen(false)}
-                animatedIcon={PaletteIcon}
+                icon={SolarPaletteRoundIcon}
               />
             </div>
           </div>
@@ -401,7 +390,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 label="Configurações"
                 isActive={pathname === "/admin/settings"}
                 onClick={() => setMobileOpen(false)}
-                animatedIcon={SettingsIcon}
+                icon={SolarSettingsIcon}
               />
 
               {/* Store Access Button for Platform Owner */}
@@ -409,7 +398,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 href="/seller"
                 label="Painel do Vendedor"
                 onClick={() => setMobileOpen(false)}
-                icon={Store}
+                icon={SolarShop2Icon}
                 iconClassName="w-4 h-4 text-emerald-400 group-hover:scale-105 transition-all shrink-0"
                 className="
                   flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium

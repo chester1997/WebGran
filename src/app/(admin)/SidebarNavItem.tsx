@@ -9,8 +9,6 @@ export interface IconHandle {
   stopAnimation: () => void;
 }
 
-export type FallbackAnimationType = "package" | "film" | "sliders";
-
 interface SidebarNavItemProps {
   href?: string;
   onClick?: () => void;
@@ -18,53 +16,24 @@ interface SidebarNavItemProps {
   isActive?: boolean;
   icon?: ElementType;
   animatedIcon?: ElementType;
-  fallbackAnimation?: FallbackAnimationType;
   iconSize?: number;
   iconClassName?: string;
   className?: string;
   children?: ReactNode;
 }
 
-const FALLBACK_VARIANTS: Record<FallbackAnimationType, Variants> = {
-  package: {
-    normal: {
-      y: 0,
-      transition: { duration: 0.25, ease: "easeOut" },
-    },
-    animate: {
-      y: [0, -2, 0],
-      transition: {
-        duration: 0.3,
-        type: "spring",
-        stiffness: 400,
-        damping: 15,
-      },
-    },
+const MOTION_VARIANTS: Variants = {
+  normal: {
+    y: 0,
+    rotate: 0,
+    scale: 1,
+    transition: { duration: 0.2, ease: "easeOut" },
   },
-  film: {
-    normal: {
-      rotate: 0,
-      transition: { duration: 0.25, ease: "easeOut" },
-    },
-    animate: {
-      rotate: [0, -8, 8, 0],
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut",
-      },
-    },
-  },
-  sliders: {
-    normal: {
-      y: 0,
-      transition: { duration: 0.25, ease: "easeOut" },
-    },
-    animate: {
-      y: [0, -1.5, 0],
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut",
-      },
+  animate: {
+    y: [0, -1.5, 0],
+    transition: {
+      duration: 0.3,
+      ease: "easeInOut",
     },
   },
 };
@@ -76,55 +45,35 @@ export default function SidebarNavItem({
   isActive = false,
   icon: StaticIcon,
   animatedIcon: AnimatedIcon,
-  fallbackAnimation,
   iconSize = 16,
   iconClassName,
   className,
   children,
 }: SidebarNavItemProps) {
   const iconRef = useRef<IconHandle | null>(null);
-  const fallbackControls = useAnimation();
-
-  // Resolve fallback type (explicit prop or auto-inferred by label)
-  const resolvedFallback: FallbackAnimationType | null =
-    fallbackAnimation ||
-    (label === "Planos WebGran"
-      ? "package"
-      : label === "Recursos & Features"
-      ? "sliders"
-      : label === "Biblioteca de Vídeos" || label === "Visão Geral"
-      ? "film"
-      : null);
+  const motionControls = useAnimation();
 
   const handleMouseEnter = useCallback(() => {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     iconRef.current?.startAnimation?.();
-    if (resolvedFallback) {
-      fallbackControls.start("animate");
-    }
-  }, [resolvedFallback, fallbackControls]);
+    motionControls.start("animate");
+  }, [motionControls]);
 
   const handleMouseLeave = useCallback(() => {
     iconRef.current?.stopAnimation?.();
-    if (resolvedFallback) {
-      fallbackControls.start("normal");
-    }
-  }, [resolvedFallback, fallbackControls]);
+    motionControls.start("normal");
+  }, [motionControls]);
 
   const handleFocus = useCallback(() => {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     iconRef.current?.startAnimation?.();
-    if (resolvedFallback) {
-      fallbackControls.start("animate");
-    }
-  }, [resolvedFallback, fallbackControls]);
+    motionControls.start("animate");
+  }, [motionControls]);
 
   const handleBlur = useCallback(() => {
     iconRef.current?.stopAnimation?.();
-    if (resolvedFallback) {
-      fallbackControls.start("normal");
-    }
-  }, [resolvedFallback, fallbackControls]);
+    motionControls.start("normal");
+  }, [motionControls]);
 
   const defaultClasses = `flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
     isActive
@@ -150,6 +99,7 @@ export default function SidebarNavItem({
     if (StaticIcon) {
       const staticEl = (
         <StaticIcon
+          size={iconSize}
           className={
             iconClassName ||
             `w-4 h-4 shrink-0 transition-colors ${defaultIconColor}`
@@ -158,31 +108,25 @@ export default function SidebarNavItem({
         />
       );
 
-      if (resolvedFallback && FALLBACK_VARIANTS[resolvedFallback]) {
-        return (
-          <motion.span
-            animate={fallbackControls}
-            initial="normal"
-            variants={FALLBACK_VARIANTS[resolvedFallback]}
-            className="w-4 h-4 shrink-0 flex items-center justify-center pointer-events-none"
-            style={{ originX: 0.5, originY: 0.5 }}
-          >
-            {staticEl}
-          </motion.span>
-        );
-      }
-
-      return staticEl;
+      return (
+        <motion.span
+          animate={motionControls}
+          initial="normal"
+          variants={MOTION_VARIANTS}
+          className="w-4 h-4 shrink-0 flex items-center justify-center pointer-events-none"
+          style={{ originX: 0.5, originY: 0.5 }}
+        >
+          {staticEl}
+        </motion.span>
+      );
     }
     return null;
   };
 
   const content = (
     <>
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        {renderIcon()}
-        <span className="truncate">{label}</span>
-      </div>
+      {renderIcon()}
+      <span className="truncate flex-1">{label}</span>
       {children}
     </>
   );
