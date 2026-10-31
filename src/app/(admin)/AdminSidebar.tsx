@@ -31,8 +31,6 @@ import {
   AlertCircle,
   Loader2,
   UserCog,
-  BarChart3,
-  Wallet
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import SidebarNavItem from "./SidebarNavItem";
@@ -111,15 +109,15 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
 
   // Section 3: PLATAFORMA
   const platformItems = [
-    { label: "Planos WebGran", href: "/admin/plans", icon: Package },
+    { label: "Planos WebGran", href: "/admin/plans", icon: Package, fallbackAnimation: "package" as const },
     { label: "Assinaturas WebGran", href: "/admin/subscriptions", animatedIcon: CreditCardIcon },
-    { label: "Recursos & Features", href: "/admin/features", icon: Sliders },
-    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", animatedIcon: Wallet },
+    { label: "Recursos & Features", href: "/admin/features", icon: Sliders, fallbackAnimation: "sliders" as const },
+    { label: "Gateways dos Vendedores", href: "/admin/seller-gateways", animatedIcon: WalletIcon },
   ];
 
   // Submenu: Biblioteca de Vídeos
   const videoLibraryItems = [
-    { label: "Visão Geral", href: "/admin/video-library", icon: Film },
+    { label: "Visão Geral", href: "/admin/video-library", icon: Film, fallbackAnimation: "film" as const },
     { label: "Planos de Armazenamento", href: "/admin/video-library/plans", icon: HardDrive },
   ];
 
@@ -316,6 +314,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                     onClick={() => setMobileOpen(false)}
                     icon={item.icon}
                     animatedIcon={item.animatedIcon}
+                    fallbackAnimation={item.fallbackAnimation}
                   />
                 );
               })}
@@ -326,6 +325,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   label="Biblioteca de Vídeos"
                   isActive={isVideoActive}
                   icon={Film}
+                  fallbackAnimation="film"
                   onClick={() => setUserVideoToggled(!videoOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
                     isVideoActive ? "bg-blue-500/10 text-white font-semibold" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
@@ -357,6 +357,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                             isActive={isActive}
                             onClick={() => setMobileOpen(false)}
                             icon={item.icon}
+                            fallbackAnimation={item.fallbackAnimation}
                             iconSize={14}
                             iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
