@@ -79,7 +79,7 @@ export default function SidebarNavItem({
 
   const activeBgClass = accent === "emerald"
     ? "bg-emerald-500/10 text-white font-semibold"
-    : "bg-blue-500/10 text-white font-semibold";
+    : "bg-[#3984FF]/10 text-white font-semibold";
 
   const defaultClasses = `flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
     isActive
@@ -90,7 +90,7 @@ export default function SidebarNavItem({
   const defaultIconColor = isActive
     ? accent === "emerald"
       ? "text-emerald-400"
-      : "text-blue-500"
+      : "text-[#3984FF]"
     : "text-zinc-400";
 
   const renderIcon = () => {

@@ -140,7 +140,7 @@ export default function SellerSidebar({
         </Link>
 
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] md:text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg tracking-wider uppercase">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] md:text-[10px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 rounded-lg tracking-wider uppercase">
             VENDEDOR
           </span>
           {isMobileDrawer && onCloseMobile && (
@@ -181,7 +181,7 @@ export default function SellerSidebar({
               isActive={pathname === "/seller"}
               onClick={handleLinkClick}
               icon={SolarSellerDashboardIcon}
-              accent="emerald"
+              accent="blue"
             />
           </div>
         </div>
@@ -203,11 +203,11 @@ export default function SellerSidebar({
               label="Configurações do Bot"
               isActive={isBotChildActive}
               icon={SolarSellerBotIcon}
-              accent="emerald"
+              accent="blue"
               onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
               className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium text-left transition-all duration-150 cursor-pointer ${
                 isBotChildActive
-                  ? "bg-emerald-500/10 text-white font-semibold"
+                  ? "bg-[#3984FF]/10 text-white font-semibold"
                   : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
@@ -239,11 +239,11 @@ export default function SellerSidebar({
                         onClick={handleLinkClick}
                         icon={item.icon}
                         iconSize={14}
-                        accent="emerald"
-                        iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-emerald-400" : "text-zinc-400"}`}
+                        accent="blue"
+                        iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
                           isActive
-                            ? "bg-emerald-500/10 text-white font-semibold"
+                            ? "bg-[#3984FF]/10 text-white font-semibold"
                             : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                         }`}
                       />
@@ -277,7 +277,7 @@ export default function SellerSidebar({
                   isActive={isActive}
                   onClick={handleLinkClick}
                   icon={item.icon}
-                  accent="emerald"
+                  accent="blue"
                 />
               );
             })}
@@ -306,7 +306,7 @@ export default function SellerSidebar({
                   isActive={isActive}
                   onClick={handleLinkClick}
                   icon={item.icon}
-                  accent="emerald"
+                  accent="blue"
                 />
               );
             })}
@@ -323,12 +323,12 @@ export default function SellerSidebar({
         <div className="p-3 rounded-lg bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 text-zinc-300">
-              <SolarSellerSalesVolumeIcon size={16} className="text-emerald-400 shrink-0" />
+              <SolarSellerSalesVolumeIcon size={16} className="text-[#3984FF] shrink-0" />
               <span className="text-[11px] font-semibold text-zinc-200">
                 Volume de vendas
               </span>
             </div>
-            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400">
+            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/20">
               {percentage.toFixed(0)}%
             </span>
           </div>
@@ -343,10 +343,10 @@ export default function SellerSidebar({
               </span>
             </div>
 
-            {/* Barra de Progresso Fina Esmeralda */}
+            {/* Barra de Progresso Fina Azul */}
             <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-[#3984FF] rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${percentage}%` }}
               />
             </div>
@@ -368,7 +368,7 @@ export default function SellerSidebar({
         {/* Perfil do Vendedor & Logout */}
         <div className="flex items-center justify-between p-2 rounded-lg bg-[#0F1014] border border-white/[0.06]">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center border border-emerald-500/30 shrink-0 font-bold text-[11px] text-white overflow-hidden">
+            <div className="w-7 h-7 rounded-lg bg-[#1D4ED8] flex items-center justify-center border border-[#3984FF]/30 shrink-0 font-bold text-[11px] text-white overflow-hidden">
               {sellerProfile?.avatarUrl ? (
                 <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (

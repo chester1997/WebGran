@@ -2,6 +2,7 @@
 
 import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import SellerSidebar, { SellerProfileData } from "./SellerSidebar";
@@ -89,13 +90,16 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       style={
         {
           "--seller-bg": "#0B0D13",
-          "--seller-surface": "#12141A",
-          "--seller-surface-raised": "#181A20",
-          "--seller-border": "rgba(255, 255, 255, 0.05)",
-          "--seller-accent": "#10B981",
+          "--seller-surface": "#101218",
+          "--seller-surface-raised": "#151821",
+          "--seller-border": "rgba(255, 255, 255, 0.06)",
+          "--seller-accent": "#3984FF",
+          "--seller-accent-deep": "#1D4ED8",
+          "--seller-accent-light": "#60A5FA",
+          "--seller-accent-glow": "rgba(57, 132, 255, 0.12)",
         } as React.CSSProperties
       }
-      className="min-h-screen bg-[var(--seller-bg,#0B0D13)] text-zinc-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-200"
+      className="min-h-screen bg-[var(--seller-bg,#0B0D13)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
     >
       <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--seller-bg,#0B0D13)]">
 
@@ -141,33 +145,39 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
           <header className="shrink-0 w-full bg-[var(--seller-bg,#0B0D13)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
-            {/* Linha Mobile Compacta (Menu + WebGran + Avatar): md:hidden */}
-            <div className="md:hidden flex items-center justify-between px-3.5 pt-2 pb-1.5 border-b border-white/[0.04]">
-              <div className="flex items-center gap-2.5">
+            {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): md:hidden */}
+            <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0B0D13]">
+              <div className="flex items-center gap-2.5 shrink-0 min-w-0">
                 <button
                   ref={hamburgerButtonRef}
                   type="button"
                   onClick={() => setMobileDrawerOpen(true)}
-                  className="p-1.5 text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-lg border border-white/10 transition-colors cursor-pointer shrink-0"
+                  className="w-8 h-8 flex items-center justify-center text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-lg border border-white/10 transition-colors cursor-pointer shrink-0"
                   title="Abrir menu"
                   aria-label="Abrir menu"
                 >
                   <Menu className="w-4 h-4" />
                 </button>
-                <Link href="/seller" className="flex items-center gap-1.5 shrink-0">
-                  <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-[1px]">
-                    <div className="w-full h-full bg-[#0B0D13] rounded-[4px] flex items-center justify-center">
-                      <span className="font-black text-[9px] text-white">W</span>
-                    </div>
-                  </div>
-                  <span className="font-bold text-xs text-white tracking-tight">WebGran</span>
-                  <span className="px-1.5 py-0.2 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+
+                <Link href="/seller" className="flex items-center gap-2 shrink-0">
+                  <Image
+                    src="/logo-webgran-icon.png"
+                    alt="WebGran"
+                    width={32}
+                    height={32}
+                    priority
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-contain shrink-0"
+                  />
+                  <span className="font-semibold text-sm text-white tracking-tight shrink-0 whitespace-nowrap">
+                    WebGran
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 tracking-wider uppercase shrink-0">
                     Vendedor
                   </span>
                 </Link>
               </div>
 
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center border border-white/10 shrink-0 font-bold text-[10px] text-white overflow-hidden">
+              <div className="w-7 h-7 rounded-lg bg-[#1D4ED8] flex items-center justify-center border border-[#3984FF]/30 shrink-0 font-bold text-[11px] text-white overflow-hidden">
                 {sellerProfile?.avatarUrl ? (
                   <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -189,7 +199,22 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             aria-label="Painel do Vendedor"
             className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[var(--seller-bg,#0B0D13)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
           >
-            <div className="w-full space-y-6">
+            {/* Ambient Bottom-Up Lighting + Subtle Dotted Mesh (pointer-events-none) */}
+            <div
+              className="absolute inset-0 pointer-events-none z-0"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `
+                  radial-gradient(ellipse 85% 55% at 50% 100%, rgba(57, 132, 255, 0.10), transparent 75%),
+                  radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px)
+                `,
+                backgroundSize: "100% 100%, 24px 24px",
+                backgroundPosition: "center bottom, 0 0",
+                backgroundRepeat: "no-repeat, repeat",
+              }}
+            />
+
+            <div className="w-full space-y-6 relative z-10">
               <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
                 {children}
               </Suspense>

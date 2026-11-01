@@ -131,8 +131,8 @@ function ChannelAvatarItem({ chan }: { chan: { channel: string; label: string; p
   }
 
   return (
-    <div className="w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-      <Globe className="w-3.5 h-3.5 text-emerald-400" />
+    <div className="w-6 h-6 rounded-full bg-[#3984FF]/15 border border-[#3984FF]/30 flex items-center justify-center shrink-0">
+      <Globe className="w-3.5 h-3.5 text-[#3984FF]" />
     </div>
   );
 }
@@ -254,8 +254,8 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
         subtitle={formattedDate}
         badge={
           isPending ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-mono shrink-0 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-              <RefreshCw className="w-3 h-3 animate-spin text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#3984FF] font-mono shrink-0 bg-[#3984FF]/10 border border-[#3984FF]/25 px-2 py-0.5 rounded-full">
+              <RefreshCw className="w-3 h-3 animate-spin text-[#3984FF]" />
               <span className="hidden sm:inline">Atualizando...</span>
             </span>
           ) : null
@@ -268,7 +268,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
               <select
                 value={selectedBot}
                 onChange={(e) => handleBotChange(e.target.value)}
-                className="w-full bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border border-white/[0.08] hover:border-zinc-700 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500 transition-all appearance-none cursor-pointer h-9 shadow-xs"
+                className="w-full bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border border-white/[0.08] hover:border-zinc-700 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium focus:outline-none focus:border-[#3984FF] transition-all appearance-none cursor-pointer h-9 shadow-xs"
                 aria-label="Selecionar Bot"
               >
                 <option value="all" className="bg-[#0F1014] text-white">Todos os bots</option>
@@ -289,19 +289,19 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
                 onClick={() => setIsPeriodOpen(!isPeriodOpen)}
                 className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${
                   isPeriodOpen 
-                    ? "border-emerald-500/80 ring-1 ring-emerald-500/30 text-white" 
+                    ? "border-[#3984FF]/80 ring-1 ring-[#3984FF]/30 text-white" 
                     : "border-white/[0.08] hover:border-zinc-700"
                 }`}
                 aria-haspopup="dialog"
                 aria-expanded={isPeriodOpen}
               >
                 <div className="flex items-center gap-2 truncate">
-                  <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <Calendar className="w-3.5 h-3.5 text-[#3984FF] shrink-0" />
                   <span className="font-semibold text-[#F3F4F6] truncate max-w-[130px] sm:max-w-[180px]">
                     {activePeriodLabel}
                   </span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-emerald-400" : ""}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isPeriodOpen ? "rotate-180 text-[#3984FF]" : ""}`} />
               </button>
 
               {/* Backdrop para telas pequenas (sem blur) */}
@@ -318,7 +318,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
                   {/* Topo do Popover */}
                   <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
                     <div className="flex items-center gap-1.5 text-[#F3F4F6] font-semibold text-xs">
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-[#3984FF]" />
                       <span>Selecione o período de análise</span>
                     </div>
                     <button
@@ -347,16 +347,16 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
                             disabled={isPending}
                             className={`px-2 py-2 rounded-xl text-xs font-medium transition-all text-left flex flex-col justify-between h-[52px] border cursor-pointer ${
                               isSelected
-                                ? "bg-[#181A20] text-white border-emerald-500/80 shadow-xs font-semibold ring-1 ring-emerald-500/20"
+                                ? "bg-[#181A20] text-white border-[#3984FF]/80 shadow-xs font-semibold ring-1 ring-[#3984FF]/25"
                                 : "bg-[#15171D] text-zinc-300 hover:text-white hover:bg-[#1C1E26] border-white/[0.08]"
                             }`}
                           >
                             <span className="truncate leading-tight text-[11px]">{p.label}</span>
                             <div className="flex items-center justify-between w-full pt-1">
-                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-emerald-500/20 text-emerald-300' : 'bg-[#0F1014] text-zinc-400'}`}>
+                              <span className={`text-[9px] font-mono px-1 rounded ${isSelected ? 'bg-[#3984FF]/20 text-[#60A5FA]' : 'bg-[#0F1014] text-zinc-400'}`}>
                                 {p.badge}
                               </span>
-                              {isSelected && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
+                              {isSelected && <Check className="w-3 h-3 text-[#3984FF] shrink-0" />}
                             </div>
                           </button>
                         );
@@ -381,7 +381,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
                             setCustomStart(e.target.value);
                             setCustomError(null);
                           }}
-                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-emerald-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-[#3984FF] text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
                         />
                       </div>
                       <div className="space-y-1">
@@ -394,7 +394,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
                             setCustomEnd(e.target.value);
                             setCustomError(null);
                           }}
-                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-emerald-500 text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-[#3984FF] text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
                         />
                       </div>
                     </div>
@@ -410,7 +410,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
                       type="button"
                       onClick={handleApplyCustomPeriod}
                       disabled={isPending}
-                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl py-2 text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                      className="w-full bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl py-2 text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
                     >
                       <span>Aplicar intervalo de datas</span>
                       <ArrowRight className="w-3.5 h-3.5" />

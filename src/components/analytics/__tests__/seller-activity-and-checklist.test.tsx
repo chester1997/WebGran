@@ -177,7 +177,7 @@ describe("SellerActivityAndChannels Suite (Apple Design, Microcopy & Isolation)"
     expect(htmlSingle).toContain("lg:grid-cols-2");
   });
 
-  it("6. Produtos mais vendidos renderiza miniatura, título, unidades e barra esmeralda", () => {
+  it("6. Produtos mais vendidos renderiza miniatura, título, unidades e barra de participação", () => {
     const html = renderToStaticMarkup(
       <SellerActivityAndChannels
         activityLog={sampleActivities}
@@ -191,7 +191,7 @@ describe("SellerActivityAndChannels Suite (Apple Design, Microcopy & Isolation)"
     expect(html).toContain("Acesso Vitalício VIP Club");
     expect(html).toContain("15 unidades vendidas");
     expect(html).toContain("75% do total");
-    expect(html).toContain("bg-emerald-500 rounded-full");
+    expect(html).toContain("bg-[#3984FF] rounded-full");
   });
 
   it("7. Exibe frase exata no estado vazio de mais vendidos", () => {

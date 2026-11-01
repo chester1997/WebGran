@@ -121,7 +121,7 @@ export function SellerSetupChecklist({
           </span>
           <div className="w-20 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500 motion-reduce:transition-none"
+              className="h-full bg-[#3984FF] rounded-full transition-all duration-500 motion-reduce:transition-none"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -137,7 +137,7 @@ export function SellerSetupChecklist({
               className={`p-3.5 rounded-[8px] border transition-all flex flex-col justify-between gap-3 ${
                 step.completed
                   ? "bg-white/[0.02] border-white/[0.04] opacity-80"
-                  : "bg-[var(--seller-surface-raised,#181A20)] border-[var(--seller-border,rgba(255,255,255,0.08))] hover:border-emerald-500/30"
+                  : "bg-[var(--seller-surface-raised,#181A20)] border-[var(--seller-border,rgba(255,255,255,0.08))] hover:border-[#3984FF]/40"
               }`}
             >
               <div className="flex items-start gap-2.5 min-w-0">
@@ -175,7 +175,7 @@ export function SellerSetupChecklist({
                 ) : (
                   <Link
                     href={step.href}
-                    className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 hover:text-emerald-300 transition-colors group focus:outline-none focus:ring-1 focus:ring-emerald-400/50 rounded"
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-[#3984FF] hover:text-[#60A5FA] transition-colors group focus:outline-none focus:ring-1 focus:ring-[#3984FF]/50 rounded"
                   >
                     <span>{step.cta}</span>
                     <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />

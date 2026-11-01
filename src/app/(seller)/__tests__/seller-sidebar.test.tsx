@@ -57,7 +57,7 @@ describe("SellerSidebar Component (Etapa B)", () => {
 
     expect(html).toContain("Volume de vendas");
     expect(html).toContain("50%");
-    expect(html).toContain("bg-emerald-500");
+    expect(html).toContain("bg-[#3984FF]");
   });
 
   it("NÃO exibe 'Voltar ao Admin' para vendedores regulares", () => {
@@ -97,7 +97,7 @@ describe("SellerSidebar Component (Etapa B)", () => {
     expect(html).toContain("Voltar ao Admin");
   });
 
-  it("aplica estilo verde-esmeralda (sem borda e sem pílula azul) no item ativo", () => {
+  it("aplica estilo azul sofisticado no item ativo", () => {
     const html = renderToStaticMarkup(
       <SellerSidebar
         sellerProfile={{
@@ -112,9 +112,9 @@ describe("SellerSidebar Component (Etapa B)", () => {
       />
     );
 
-    // O item ativo (/seller) deve ter bg-emerald-500/10 e text-emerald-400
-    expect(html).toContain("bg-emerald-500/10");
-    expect(html).toContain("text-emerald-400");
+    // O item ativo (/seller) deve ter bg-[#3984FF]/10 e text-[#3984FF]
+    expect(html).toContain("bg-[#3984FF]/10");
+    expect(html).toContain("text-[#3984FF]");
     // Não deve conter a pílula azul antiga nem bg-[#18181C]
     expect(html).not.toContain("bg-blue-500 rounded-r-full");
   });

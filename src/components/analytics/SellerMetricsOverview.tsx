@@ -34,7 +34,7 @@ function RevenueTooltip({ active, payload }: any) {
       <div className="bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.08))] text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[150px] pointer-events-none select-none">
         <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-1.5 mb-1">
           <span className="font-medium text-zinc-300 text-[11px]">{item.fullDate || item.dateLabel}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3984FF]" />
         </div>
         <div className="flex items-center justify-between text-xs gap-3">
           <span className="text-zinc-400">Receita:</span>
@@ -180,7 +180,7 @@ export function SellerMetricsOverview({
                 {formatBRL(todayRevenue)}
               </span>
               {growthPercent && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tabular-nums">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 tabular-nums">
                   <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>{growthPercent} vs ontem</span>
                 </span>
@@ -249,7 +249,7 @@ export function SellerMetricsOverview({
               {conversionRatePercent !== null && (
                 <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden pt-0.5">
                   <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    className="h-full bg-[#3984FF] rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(conversionRatePercent, 100)}%` }}
                   />
                 </div>
@@ -331,9 +331,9 @@ export function SellerMetricsOverview({
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 >
                   <defs>
-                    <linearGradient id="emeraldRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.16} />
-                      <stop offset="100%" stopColor="#10B981" stopOpacity={0.0} />
+                    <linearGradient id="azureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3984FF" stopOpacity={0.24} />
+                      <stop offset="100%" stopColor="#3984FF" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
@@ -359,16 +359,16 @@ export function SellerMetricsOverview({
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#10B981"
+                    stroke="#3984FF"
                     strokeWidth={2}
                     fillOpacity={1}
-                    fill="url(#emeraldRevenueGrad)"
-                    dot={{ r: 2.5, fill: "#10B981", stroke: "#12141A", strokeWidth: 1.5 }}
+                    fill="url(#azureRevenueGrad)"
+                    dot={{ r: 2.5, fill: "#3984FF", stroke: "#12141A", strokeWidth: 1.5 }}
                     activeDot={{
                       r: 4.5,
                       stroke: "#FFFFFF",
                       strokeWidth: 2,
-                      fill: "#10B981",
+                      fill: "#3984FF",
                     }}
                   />
                 </AreaChart>

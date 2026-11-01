@@ -91,8 +91,8 @@ export function SellerActivityAndChannels({
               <p className="text-xs text-zinc-400 mt-0.5">Acontecimentos em tempo real</p>
             </div>
 
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-medium text-emerald-400 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse motion-reduce:animate-none" />
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[10px] font-medium text-[#3984FF] shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3984FF] animate-pulse motion-reduce:animate-none" />
               <span>Tempo real</span>
             </div>
           </div>
@@ -112,7 +112,7 @@ export function SellerActivityAndChannels({
               <p className="text-xs text-zinc-400">Nenhuma atividade recente registrada no período.</p>
               <Link
                 href="/seller/store"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-[#3984FF]"
               >
                 <span>Ver link do bot</span>
                 <ArrowRight className="w-3 h-3" />
@@ -123,7 +123,7 @@ export function SellerActivityAndChannels({
               tabIndex={0}
               role="region"
               aria-label="Lista de atividades recentes rolável"
-              className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
+              className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-[#3984FF]/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
             >
               <ul role="list" className="space-y-2 pb-6">
                 {activityLog.map((event) => {
@@ -248,7 +248,7 @@ export function SellerActivityAndChannels({
               </p>
               <Link
                 href="/seller/store"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-[#3984FF]"
               >
                 <span>Divulgar meu bot</span>
                 <ArrowRight className="w-3 h-3" />
@@ -259,7 +259,7 @@ export function SellerActivityAndChannels({
               tabIndex={0}
               role="region"
               aria-label="Lista de produtos mais vendidos rolável"
-              className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
+              className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-[#3984FF]/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
             >
               <ul role="list" className="space-y-2 pb-6">
                 {topProducts.map((prod) => {
@@ -306,11 +306,11 @@ export function SellerActivityAndChannels({
                         </div>
                       </div>
 
-                      {/* Barra discreta de participação em esmeralda */}
+                      {/* Barra discreta de participação em azul */}
                       {percentage > 0 && (
                         <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-500 motion-reduce:transition-none"
+                            className="h-full bg-[#3984FF] rounded-full transition-all duration-500 motion-reduce:transition-none"
                             style={{ width: `${Math.min(percentage, 100)}%` }}
                           />
                         </div>
@@ -365,7 +365,7 @@ export function SellerActivityAndChannels({
                 <p className="text-xs text-zinc-400">Nenhum bot ativo registrado.</p>
                 <Link
                   href="/seller/store"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-[#3984FF]"
                 >
                   <span>Conectar bot</span>
                   <ArrowRight className="w-3 h-3" />
@@ -376,7 +376,7 @@ export function SellerActivityAndChannels({
                 tabIndex={0}
                 role="region"
                 aria-label="Lista de desempenho por bot rolável"
-                className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
+                className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-[#3984FF]/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
               >
                 <ul role="list" className="space-y-2 pb-6">
                   {channels.map((chan) => {
@@ -388,14 +388,14 @@ export function SellerActivityAndChannels({
                         key={chan.channel}
                         className={`p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border transition-all space-y-2.5 ${
                           isSelected
-                            ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                            ? "border-[#3984FF]/60 ring-1 ring-[#3984FF]/30"
                             : "border-[var(--seller-border,rgba(255,255,255,0.06))] hover:border-white/10"
                         }`}
                       >
                         {/* Top row: Bot info e receita */}
                         <div className="flex items-center justify-between text-xs gap-2">
                           <span className="font-medium text-white flex items-center gap-2 min-w-0">
-                            <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center text-[#3984FF] shrink-0">
                               <Bot className="w-3 h-3" />
                             </div>
                             <span className="truncate">{chan.label}</span>
@@ -415,7 +415,7 @@ export function SellerActivityAndChannels({
                         <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
-                              isSelected ? "bg-emerald-400" : "bg-emerald-500/70"
+                              isSelected ? "bg-[#3984FF]" : "bg-[#3984FF]/70"
                             }`}
                             style={{ width: `${Math.min(percentage, 100)}%` }}
                           />
