@@ -194,32 +194,47 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           </header>
 
           {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado */}
-          <main
-            tabIndex={0}
-            aria-label="Painel do Vendedor"
-            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[var(--seller-bg,#0B0D13)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
-          >
-            {/* Ambient Bottom-Up Lighting + Subtle Dotted Mesh (pointer-events-none) */}
+          <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0B0D13)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 z-10">
+            {/* 1. Malha Pontilhada Sutil em todo o Canvas (atrás do conteúdo) */}
             <div
               className="absolute inset-0 pointer-events-none z-0"
               aria-hidden="true"
               style={{
-                backgroundImage: `
-                  radial-gradient(ellipse 85% 55% at 50% 100%, rgba(57, 132, 255, 0.10), transparent 75%),
-                  radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px)
-                `,
-                backgroundSize: "100% 100%, 24px 24px",
-                backgroundPosition: "center bottom, 0 0",
-                backgroundRepeat: "no-repeat, repeat",
+                backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px)",
+                backgroundSize: "24px 24px",
+                backgroundPosition: "0 0",
+                backgroundRepeat: "repeat",
               }}
             />
 
-            <div className="w-full space-y-6 relative z-10">
-              <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
-                {children}
-              </Suspense>
-            </div>
-          </main>
+            {/* 2. Gradiente Ancorado Exclusivamente na Extremidade Inferior (45% a 50% da área visível) */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-[48%] pointer-events-none z-0"
+              aria-hidden="true"
+              style={{
+                background: `linear-gradient(
+                  to top,
+                  rgba(20, 48, 88, 0.32) 0%,
+                  rgba(28, 65, 116, 0.20) 25%,
+                  rgba(35, 78, 135, 0.08) 60%,
+                  transparent 100%
+                )`,
+              }}
+            />
+
+            {/* 3. Área de Rolagem do Conteúdo */}
+            <main
+              tabIndex={0}
+              aria-label="Painel do Vendedor"
+              className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
+            >
+              <div className="w-full space-y-6 relative z-10">
+                <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
+                  {children}
+                </Suspense>
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </div>
