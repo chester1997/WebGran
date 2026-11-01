@@ -40,7 +40,10 @@ export function BotCard({ store, bot }: { store: any; bot: any }) {
   };
 
   return (
-    <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col h-full">
+    <div 
+      id={`bot-${bot.id}`}
+      className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col h-full scroll-mt-24"
+    >
       {/* Card Header with Bot Avatar, Title & Notification Status Badge */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">

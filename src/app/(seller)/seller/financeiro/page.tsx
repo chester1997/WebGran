@@ -1,13 +1,16 @@
-import { requireSeller, getCurrentStore } from '@/lib/auth';
-import { db } from '@/db';
-import { orders } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
-import FinanceiroClient from './FinanceiroClient';
+import { connection } from "next/server";
+import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { db } from "@/db";
+import { orders } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
+import FinanceiroClient from "./FinanceiroClient";
 import SetupStoreClient from "../SetupStoreClient";
-import { hasFeature } from '@/lib/entitlements/entitlement-service';
-import { DollarSign } from 'lucide-react';
+import { hasFeature } from "@/lib/entitlements/entitlement-service";
+import { DollarSign, Lock } from "lucide-react";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 export default async function FinanceiroPage() {
+  await connection();
   const seller = await requireSeller();
   const store = await getCurrentStore();
 
@@ -18,21 +21,26 @@ export default async function FinanceiroPage() {
   const hasFinancialReports = await hasFeature(seller.id, "financial_reports_enabled");
   if (!hasFinancialReports) {
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent p-8 text-center space-y-4 shadow-xl">
-          <div className="inline-flex p-4 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
-            <DollarSign className="w-10 h-10" />
+      <div className="space-y-6 w-full max-w-full">
+        <SellerPageHeader
+          portalId="seller-page-header-portal"
+          title="Financeiro"
+          subtitle="Acompanhe o faturamento líquido, vendas processadas e repasses da sua loja."
+        />
+        <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-8 text-center space-y-4 max-w-2xl mx-auto">
+          <div className="inline-flex p-3 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Lock className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground">Relatórios Financeiros Indisponíveis</h2>
-          <p className="text-muted-foreground max-w-md mx-auto text-sm leading-relaxed">
-            Os relatórios financeiros detalhados e o histórico consolidado de métricas não estão disponíveis no seu plano atual. Faça upgrade do seu plano para liberar este recurso.
+          <h2 className="text-lg font-semibold text-white">Relatórios Financeiros Indisponíveis</h2>
+          <p className="text-zinc-400 max-w-md mx-auto text-xs leading-relaxed">
+            Os relatórios financeiros detalhados e o histórico consolidado de métricas não estão disponíveis no seu plano atual. Faça upgrade para liberar este recurso.
           </p>
         </div>
       </div>
     );
   }
 
-  // Fetch Store Transactions
+  // Consulta de transações da loja do vendedor
   const storeOrders = await db.query.orders.findMany({
     where: eq(orders.storeId, store.id),
     orderBy: [desc(orders.createdAt)],
@@ -41,9 +49,9 @@ export default async function FinanceiroPage() {
     },
   });
 
-  // Calculate Metrics
-  const paidOrders = storeOrders.filter(o => o.status === 'paid');
-  const pendingOrders = storeOrders.filter(o => o.status === 'pending');
+  // Cálculo das métricas
+  const paidOrders = storeOrders.filter((o) => o.status === "paid");
+  const pendingOrders = storeOrders.filter((o) => o.status === "pending");
 
   const totalBruto = paidOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const totalTaxa = paidOrders.reduce((sum, o) => sum + Number(o.platformFee || 0), 0);
@@ -57,13 +65,13 @@ export default async function FinanceiroPage() {
     pendingCount: pendingOrders.length,
   };
 
-  const formattedTransactions = storeOrders.map(o => ({
+  const formattedTransactions = storeOrders.map((o) => ({
     id: o.id,
     paymentId: o.paymentId,
-    paymentMethod: o.paymentMethod || 'mercadopago',
-    customerName: o.customer?.firstName 
-      ? `${o.customer.firstName} ${o.customer.lastName || ''}`.trim() 
-      : o.customer?.username || 'Cliente',
+    paymentMethod: o.paymentMethod || "mercadopago",
+    customerName: o.customer?.firstName
+      ? `${o.customer.firstName} ${o.customer.lastName || ""}`.trim()
+      : o.customer?.username || "Cliente",
     total: Number(o.total || 0),
     platformFee: Number(o.platformFee || 0),
     netAmount: Number(o.netAmount || (Number(o.total) - Number(o.platformFee || 0))),

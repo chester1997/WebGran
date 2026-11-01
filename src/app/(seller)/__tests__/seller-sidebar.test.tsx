@@ -1,0 +1,122 @@
+import { describe, it, expect, vi } from "vitest";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import SellerSidebar from "../SellerSidebar";
+
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/seller",
+}));
+
+// Mock next-auth/react
+vi.mock("next-auth/react", () => ({
+  signOut: vi.fn(),
+}));
+
+describe("SellerSidebar Component (Etapa B)", () => {
+  it("renderiza os itens de navegação principais com o logo WebGran e badge Vendedor", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "seller-1",
+          name: "João Silva",
+          email: "joao@exemplo.com",
+          avatarUrl: null,
+          role: "seller",
+        }}
+        totalRevenue={5000}
+        salesGoal={15000}
+      />
+    );
+
+    expect(html).toContain("WebGran");
+    expect(html).toContain("Vendedor");
+    expect(html).toContain("Dashboard");
+    expect(html).toContain("Configurações do Bot");
+    expect(html).toContain("Pedidos");
+    expect(html).toContain("Financeiro");
+    expect(html).toContain("Clientes");
+    expect(html).toContain("Gateways");
+    expect(html).toContain("Configurações");
+  });
+
+  it("renderiza o card de volume de vendas com valores formatados e percentual correto", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "seller-1",
+          name: "João Silva",
+          email: "joao@exemplo.com",
+          avatarUrl: null,
+          role: "seller",
+        }}
+        totalRevenue={7500}
+        salesGoal={15000}
+      />
+    );
+
+    expect(html).toContain("Volume de vendas");
+    expect(html).toContain("50%");
+    expect(html).toContain("bg-emerald-500");
+  });
+
+  it("NÃO exibe 'Voltar ao Admin' para vendedores regulares", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "seller-1",
+          name: "João Silva",
+          email: "joao@exemplo.com",
+          avatarUrl: null,
+          role: "seller",
+        }}
+        totalRevenue={1000}
+        salesGoal={15000}
+      />
+    );
+
+    expect(html).not.toContain("Voltar ao Admin");
+    expect(html).not.toContain("Categorias");
+  });
+
+  it("exibe 'Voltar ao Admin' e 'Categorias' quando o usuário é admin em impersonação", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "admin-1",
+          name: "Admin Master",
+          email: "admin@webgran.online",
+          avatarUrl: null,
+          role: "admin",
+        }}
+        totalRevenue={1000}
+        salesGoal={15000}
+      />
+    );
+
+    expect(html).toContain("Voltar ao Admin");
+  });
+
+  it("aplica estilo verde-esmeralda (sem borda e sem pílula azul) no item ativo", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "seller-1",
+          name: "João Silva",
+          email: "joao@exemplo.com",
+          avatarUrl: null,
+          role: "seller",
+        }}
+        totalRevenue={1000}
+        salesGoal={15000}
+      />
+    );
+
+    // O item ativo (/seller) deve ter bg-emerald-500/10 e text-emerald-400
+    expect(html).toContain("bg-emerald-500/10");
+    expect(html).toContain("text-emerald-400");
+    // Não deve conter a pílula azul antiga nem bg-[#18181C]
+    expect(html).not.toContain("bg-blue-500 rounded-r-full");
+  });
+});
+
