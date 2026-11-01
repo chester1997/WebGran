@@ -3,12 +3,13 @@
 import crypto from "crypto";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { stores, telegramBots } from "@/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { stores, telegramBots, botSaleNotificationRecipients, botSaleNotificationTokens } from "@/db/schema";
+import { eq, and, ne, lt, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
+import { formatBrtDateTime } from "@/lib/notifications/seller-sale-notification-service";
 
 export type SaveBotActionResult = {
   success: boolean;
@@ -330,6 +331,314 @@ export async function deleteBotAction(botId: string) {
 
   await db.delete(telegramBots).where(eq(telegramBots.id, botId));
   revalidatePath("/seller/store");
+}
+
+export type BotNotificationRecipientInfo = {
+  id: string;
+  telegramChatId: string;
+  displayName: string | null;
+  status: "active" | "blocked" | "disconnected";
+  createdAt: Date;
+};
+
+export type BotNotificationInfoResult = {
+  success: boolean;
+  error?: string;
+  status: "active" | "disconnected" | "reconnect";
+  recipients: BotNotificationRecipientInfo[];
+  botUsername?: string;
+  botDisplayName?: string | null;
+};
+
+// In-memory rate limiting per seller for polling: max 40 requests per 60 seconds
+const pollingRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+export async function checkPollingRateLimit(sellerId: string): Promise<boolean> {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const maxRequests = 40;
+
+  const current = pollingRateLimitMap.get(sellerId);
+  if (!current || now > current.resetAt) {
+    pollingRateLimitMap.set(sellerId, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (current.count >= maxRequests) {
+    return false;
+  }
+
+  current.count++;
+  return true;
+}
+
+export async function getBotNotificationInfoAction(botId: string): Promise<BotNotificationInfoResult> {
+  let seller;
+  let store;
+  try {
+    seller = await requireSeller();
+    store = await getCurrentStore();
+  } catch {
+    return { success: false, error: "Não autenticado.", status: "disconnected", recipients: [] };
+  }
+
+  if (!store) {
+    return { success: false, error: "Loja não encontrada.", status: "disconnected", recipients: [] };
+  }
+
+  // Rate Limiting validation
+  if (!(await checkPollingRateLimit(seller.id))) {
+    return {
+      success: false,
+      error: "Taxa de requisições excedida. Aguarde alguns instantes.",
+      status: "disconnected",
+      recipients: [],
+    };
+  }
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
+  });
+
+  if (!bot) {
+    return { success: false, error: "Bot não encontrado.", status: "disconnected", recipients: [] };
+  }
+
+  const recipients = await db.query.botSaleNotificationRecipients.findMany({
+    where: and(
+      eq(botSaleNotificationRecipients.botId, botId),
+      eq(botSaleNotificationRecipients.storeId, store.id)
+    ),
+    orderBy: [desc(botSaleNotificationRecipients.createdAt)],
+  });
+
+  const activeRecipients = recipients.filter((r) => r.status === "active");
+  const hasBlocked = recipients.some((r) => r.status === "blocked") || bot.status === "invalid_token";
+
+  let status: "active" | "disconnected" | "reconnect" = "disconnected";
+  if (hasBlocked) {
+    status = "reconnect";
+  } else if (activeRecipients.length > 0) {
+    status = "active";
+  }
+
+  return {
+    success: true,
+    status,
+    recipients: recipients.map((r) => ({
+      id: r.id,
+      telegramChatId: r.telegramChatId,
+      displayName: r.displayName,
+      status: r.status as any,
+      createdAt: r.createdAt,
+    })),
+    botUsername: bot.username,
+    botDisplayName: bot.displayName,
+  };
+}
+
+export async function generateBotNotificationLinkAction(botId: string) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
+  });
+
+  if (!bot || !bot.username) {
+    throw new Error("Bot não encontrado ou sem username configurado.");
+  }
+
+  // Purge expired tokens older than 1 hour for cleanliness
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    await db
+      .delete(botSaleNotificationTokens)
+      .where(
+        and(
+          eq(botSaleNotificationTokens.botId, botId),
+          lt(botSaleNotificationTokens.expiresAt, oneHourAgo)
+        )
+      );
+  } catch {
+    // Non-critical cleanup
+  }
+
+  // Generate high-entropy token: 24 bytes (192 bits), safe base64url ([A-Za-z0-9_-], <= 40 chars)
+  const token = crypto.randomBytes(24).toString("base64url");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+  await db.insert(botSaleNotificationTokens).values({
+    storeId: store.id,
+    botId: bot.id,
+    tokenHash,
+    expiresAt,
+  });
+
+  const link = `https://t.me/${bot.username}?start=notif_${token}`;
+
+  return {
+    success: true,
+    link,
+    expiresAt: expiresAt.toISOString(),
+  };
+}
+
+export async function disconnectBotNotificationRecipientAction(recipientId: string) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  await db
+    .delete(botSaleNotificationRecipients)
+    .where(
+      and(
+        eq(botSaleNotificationRecipients.id, recipientId),
+        eq(botSaleNotificationRecipients.storeId, store.id)
+      )
+    );
+
+  revalidatePath("/seller/store");
+  return { success: true };
+}
+
+export async function saveManualBotNotificationRecipientAction(
+  botId: string,
+  telegramId: string,
+  displayName?: string
+) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  const cleanId = (telegramId || "").trim();
+  if (!cleanId) throw new Error("Informe um Telegram ID válido.");
+  if (!/^-?\d+$/.test(cleanId)) {
+    throw new Error("O Telegram ID deve conter apenas números (ex: 123456789).");
+  }
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
+  });
+
+  if (!bot) throw new Error("Bot não encontrado.");
+
+  if (String(bot.botId).trim() === cleanId) {
+    throw new Error(
+      "O ID informado pertence ao bot da sua loja. O Telegram proíbe bots de enviarem mensagens para bots. Você deve informar o seu ID pessoal de usuário."
+    );
+  }
+
+  const name = (displayName || "").trim() || "Configurado manualmente";
+  const now = new Date();
+
+  await db
+    .insert(botSaleNotificationRecipients)
+    .values({
+      storeId: store.id,
+      botId: bot.id,
+      telegramChatId: cleanId,
+      displayName: name,
+      status: "active",
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [botSaleNotificationRecipients.botId, botSaleNotificationRecipients.telegramChatId],
+      set: {
+        status: "active",
+        displayName: name,
+        updatedAt: now,
+      },
+    });
+
+  // Also maintain store-level fallback
+  await db
+    .update(stores)
+    .set({ telegramNotificationId: cleanId, updatedAt: now })
+    .where(eq(stores.id, store.id));
+
+  revalidatePath("/seller/store");
+  return { success: true };
+}
+
+export async function sendTestBotNotificationAction(botId: string) {
+  const seller = await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada.");
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
+  });
+
+  if (!bot || !bot.tokenEncrypted) {
+    throw new Error("Bot não encontrado ou token não configurado.");
+  }
+
+  const recipients = await db.query.botSaleNotificationRecipients.findMany({
+    where: and(
+      eq(botSaleNotificationRecipients.botId, botId),
+      eq(botSaleNotificationRecipients.storeId, store.id),
+      eq(botSaleNotificationRecipients.status, "active")
+    ),
+  });
+
+  if (recipients.length === 0) {
+    throw new Error("Nenhum aviso configurado para este bot. Conecte seu Telegram primeiro.");
+  }
+
+  const botToken = decrypt(bot.tokenEncrypted);
+  const botService = new TelegramBotService(botToken);
+  const nowStr = formatBrtDateTime(new Date());
+
+  const testMessage =
+`🧪 [TESTE DE NOTIFICAÇÃO]
+🛒 Nova venda realizada!
+
+📦 Produto: Assinatura VIP (Exemplo de Teste)
+👤 Cliente: Cliente de Teste (@cliente_teste)
+💰 Valor Bruto: R$ 97,00
+💵 Valor Líquido: R$ 92,15
+🆔 Pedido: #TESTE-001
+🤖 Bot: @${bot.username}
+📅 Data: ${nowStr}
+
+⚠️ Esta é uma notificação de teste disparada pelo painel para validar a conexão.`;
+
+  let sentCount = 0;
+  let blockedCount = 0;
+
+  for (const recipient of recipients) {
+    try {
+      await botService.sendMessage(recipient.telegramChatId, testMessage);
+      sentCount++;
+    } catch (err: any) {
+      const errMsg = String(err?.message || err);
+      if (
+        errMsg.includes("403") ||
+        errMsg.toLowerCase().includes("blocked") ||
+        errMsg.toLowerCase().includes("user is deactivated")
+      ) {
+        blockedCount++;
+        await db
+          .update(botSaleNotificationRecipients)
+          .set({ status: "blocked", updatedAt: new Date() })
+          .where(eq(botSaleNotificationRecipients.id, recipient.id));
+      }
+    }
+  }
+
+  if (sentCount === 0 && blockedCount > 0) {
+    throw new Error("O bot foi bloqueado no Telegram ou o usuário desativou as mensagens. Reconecte o aviso.");
+  }
+
+  return {
+    success: true,
+    sentCount,
+    blockedCount,
+    message: `Mensagem de teste enviada com sucesso para ${sentCount} destinatário(s)! Verifique seu Telegram.`,
+  };
 }
 
 export async function saveTelegramNotificationIdAction(telegramNotificationId: string) {

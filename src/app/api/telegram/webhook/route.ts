@@ -283,6 +283,100 @@ export async function POST(req: NextRequest) {
 
       // Check if message is a video trigger deep link (/start v_...)
       const startParam = text.replace(/^\/start\s*/i, "").trim();
+
+      // Check if message is a sales notification linking deep link (/start notif_...)
+      if (startParam.startsWith("notif_")) {
+        try {
+          const rawToken = startParam.replace(/^notif_/i, "").trim();
+          const crypto = await import("crypto");
+          const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+          const now = new Date();
+
+          const { db } = await import("@/db");
+          const { botSaleNotificationTokens, botSaleNotificationRecipients, stores } = await import("@/db/schema");
+          const { sql, eq } = await import("drizzle-orm");
+
+          // Consumo estritamente atômico em única query com validação de loja, bot, expiração e status
+          const updateResult = await db.execute(sql`
+            UPDATE bot_sale_notification_tokens
+            SET used_at = NOW()
+            WHERE token_hash = ${tokenHash}
+              AND bot_id = ${resolved.bot.id}
+              AND store_id = ${store.id}
+              AND used_at IS NULL
+              AND expires_at > NOW()
+            RETURNING id, store_id, bot_id
+          `);
+
+          let tokenRecord: { id: string; store_id: string; bot_id: string } | null = null;
+          if (Array.isArray(updateResult) && updateResult.length > 0) {
+            tokenRecord = updateResult[0] as any;
+          } else if (Array.isArray((updateResult as any)?.rows) && (updateResult as any).rows.length > 0) {
+            tokenRecord = (updateResult as any).rows[0];
+          }
+
+          if (tokenRecord) {
+            // Extract display name from Telegram user
+            const senderParts = [update.message.from?.first_name, update.message.from?.last_name].filter(Boolean);
+            const displayName = senderParts.length > 0
+              ? senderParts.join(" ")
+              : (update.message.from?.username ? `@${update.message.from?.username}` : "Lojista");
+
+            const recipientChatId = String(chatId);
+            const storeId = tokenRecord.store_id || (tokenRecord as any).storeId;
+            const botId = tokenRecord.bot_id || (tokenRecord as any).botId;
+
+            // Register recipient for this bot
+            await db
+              .insert(botSaleNotificationRecipients)
+              .values({
+                storeId,
+                botId,
+                telegramChatId: recipientChatId,
+                displayName,
+                status: "active",
+                updatedAt: now,
+              })
+              .onConflictDoUpdate({
+                target: [botSaleNotificationRecipients.botId, botSaleNotificationRecipients.telegramChatId],
+                set: {
+                  status: "active",
+                  displayName,
+                  updatedAt: now,
+                },
+              });
+
+            // Also keep store.telegramNotificationId updated as backup if not present
+            if (!store.telegramNotificationId) {
+              await db
+                .update(stores)
+                .set({ telegramNotificationId: recipientChatId, updatedAt: now })
+                .where(eq(stores.id, storeId));
+            }
+
+            await botService.sendMessage(
+              chatId,
+              "Pronto! Você vai receber um aviso aqui a cada venda deste bot ✅"
+            );
+            return NextResponse.json({ ok: true });
+          } else {
+            // Token expired, already used, invalid, or bot mismatch: neutral response
+            await botService.sendMessage(
+              chatId,
+              "⚠️ Este link de ativação é inválido ou já expirou.\n\nAcesse o painel da sua loja e clique em 'Ativar avisos de venda' para gerar um novo link."
+            );
+            return NextResponse.json({ ok: true });
+          }
+        } catch (notifErr: any) {
+          console.error("[TELEGRAM WEBHOOK] Error activating notification recipient:", notifErr?.message);
+          await botService.sendMessage(
+            chatId,
+            "⚠️ Ocorreu um erro ao ativar os avisos de venda. Por favor, tente novamente no painel."
+          );
+          return NextResponse.json({ ok: true });
+        }
+      }
+
       if (startParam.startsWith("v_")) {
         try {
           const { VideoTriggerService } = await import("@/lib/videos/video-trigger-service");

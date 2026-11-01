@@ -102,6 +102,54 @@ export const telegramBotChats = pgTable('telegram_bot_chats', {
   storeActiveIdx: index('telegram_bot_chats_store_active_idx').on(t.storeId, t.isActive),
 }));
 
+export const botSaleNotificationRecipients = pgTable('bot_sale_notification_recipients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  telegramChatId: text('telegram_chat_id').notNull(),
+  displayName: text('display_name'),
+  status: text('status').notNull().default('active'), // 'active' | 'blocked' | 'disconnected'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  botChatUnique: unique().on(t.botId, t.telegramChatId),
+  botStatusIdx: index('bot_sale_recipients_bot_idx').on(t.botId, t.status),
+  storeIdx: index('bot_sale_recipients_store_idx').on(t.storeId),
+}));
+
+export const botSaleNotificationTokens = pgTable('bot_sale_notification_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  tokenHashIdx: index('bot_sale_tokens_hash_idx').on(t.tokenHash),
+  botIdx: index('bot_sale_tokens_bot_idx').on(t.botId),
+}));
+
+export const orderBotNotificationDeliveries = pgTable('order_bot_notification_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  recipientId: uuid('recipient_id').references(() => botSaleNotificationRecipients.id, { onDelete: 'cascade' }),
+  telegramChatId: text('telegram_chat_id').notNull(),
+  status: text('status').notNull().default('pending'), // 'pending' | 'claiming' | 'delivered' | 'failed'
+  sentAt: timestamp('sent_at'),
+  attempts: integer('attempts').notNull().default(0),
+  claimToken: text('claim_token'),
+  claimedAt: timestamp('claimed_at'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  orderBotRecipientUnique: unique().on(t.orderId, t.botId, t.recipientId),
+  orderStatusIdx: index('order_bot_deliveries_order_status_idx').on(t.orderId, t.status),
+  claimTokenIdx: index('order_bot_deliveries_claim_token_idx').on(t.claimToken),
+}));
+
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
@@ -437,6 +485,7 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   sessions: many(storeSessions),
   carts: many(carts),
   combos: many(combos),
+  botSaleNotificationRecipients: many(botSaleNotificationRecipients),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -463,6 +512,47 @@ export const telegramBotsRelations = relations(telegramBots, ({ one, many }) => 
     references: [stores.id],
   }),
   chats: many(telegramBotChats),
+  notificationRecipients: many(botSaleNotificationRecipients),
+  notificationTokens: many(botSaleNotificationTokens),
+  notificationDeliveries: many(orderBotNotificationDeliveries),
+}));
+
+export const botSaleNotificationRecipientsRelations = relations(botSaleNotificationRecipients, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [botSaleNotificationRecipients.storeId],
+    references: [stores.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [botSaleNotificationRecipients.botId],
+    references: [telegramBots.id],
+  }),
+  deliveries: many(orderBotNotificationDeliveries),
+}));
+
+export const botSaleNotificationTokensRelations = relations(botSaleNotificationTokens, ({ one }) => ({
+  store: one(stores, {
+    fields: [botSaleNotificationTokens.storeId],
+    references: [stores.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [botSaleNotificationTokens.botId],
+    references: [telegramBots.id],
+  }),
+}));
+
+export const orderBotNotificationDeliveriesRelations = relations(orderBotNotificationDeliveries, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderBotNotificationDeliveries.orderId],
+    references: [orders.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [orderBotNotificationDeliveries.botId],
+    references: [telegramBots.id],
+  }),
+  recipient: one(botSaleNotificationRecipients, {
+    fields: [orderBotNotificationDeliveries.recipientId],
+    references: [botSaleNotificationRecipients.id],
+  }),
 }));
 
 export const telegramBotChatsRelations = relations(telegramBotChats, ({ one }) => ({
@@ -534,6 +624,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.progressiveComboId],
     references: [combos.id],
   }),
+  botNotificationDeliveries: many(orderBotNotificationDeliveries),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({

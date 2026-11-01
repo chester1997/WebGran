@@ -3,11 +3,10 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { stores, telegramBots } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { Store as StoreIcon, Globe, Bot, Bell, ExternalLink, Copy, HelpCircle, Info, Trash2 } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BotSettingsModal } from "./BotSettingsModal";
 import { BotCard } from "./BotCard";
-import { TelegramNotificationForm } from "./TelegramNotificationForm";
 import { SupportContactForm } from "./SupportContactForm";
 
 import SetupStoreClient from "../SetupStoreClient";
@@ -21,13 +20,30 @@ export default async function SellerStorePage() {
     return <SetupStoreClient />;
   }
 
-  // Load bots (now an array as the UI suggests multiple bots side-by-side)
+  // Load bots with notification recipients
   const bots = await db.query.telegramBots.findMany({
-    where: eq(telegramBots.storeId, store.id)
+    where: eq(telegramBots.storeId, store.id),
+    with: {
+      notificationRecipients: true,
+    },
   });
 
-  const domain = "https://webgran.com"; // placeholder
-  const storeUrl = `${domain}/s/${store.slug}`;
+  const enrichedBots = bots.map((bot) => {
+    const recipients = (bot as any).notificationRecipients || [];
+    const activeRecipients = recipients.filter((r: any) => r.status === "active");
+    const hasBlocked = recipients.some((r: any) => r.status === "blocked") || bot.status === "invalid_token";
+    let notificationStatus: "active" | "disconnected" | "reconnect" = "disconnected";
+    if (hasBlocked) {
+      notificationStatus = "reconnect";
+    } else if (activeRecipients.length > 0) {
+      notificationStatus = "active";
+    }
+    return {
+      ...bot,
+      notificationStatus,
+      notificationRecipients: recipients,
+    };
+  });
 
   return (
     <div className="space-y-6 fade-in w-full">
@@ -45,16 +61,13 @@ export default async function SellerStorePage() {
         
         {/* Bots Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {bots.map((bot) => (
+          {enrichedBots.map((bot) => (
             <BotCard key={bot.id} store={store} bot={bot} />
           ))}
 
           {/* Add Bot Card (Empty State Trigger) */}
           <BotSettingsModal store={store} triggerText="Adicionar bot" isCard={true} />
         </div>
-
-        {/* Notificações de Venda */}
-        <TelegramNotificationForm initialTelegramId={store.telegramNotificationId || ""} />
 
         {/* Contato de Suporte ao Cliente */}
         <SupportContactForm initialSupportContactUrl={store.supportValue || ""} />
