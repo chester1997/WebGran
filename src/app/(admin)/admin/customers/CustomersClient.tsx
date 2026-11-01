@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import {
   UserCheck,
   AtSign,
@@ -67,25 +68,16 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
 
   return (
     <div className="space-y-6 pb-12 text-zinc-100 fade-in">
-      {/* ==================================================== */}
-      {/* 1. HEADER (Integrado ao fundo, sem caixa card) */}
-      {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Clientes Telegram (Globais)
-            </h1>
-            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              Consumidores da Rede
-            </span>
-          </div>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Base consolidada de compradores e usuários que interagiram com os bots do Telegram
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Clientes Telegram (Globais)"
+        badge={
+          <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            Consumidores da Rede
+          </span>
+        }
+        subtitle="Base consolidada de compradores e usuários que interagiram com os bots do Telegram"
+      />
 
       {/* ==================================================== */}
       {/* 2. SUMMARY KPI CARDS */}

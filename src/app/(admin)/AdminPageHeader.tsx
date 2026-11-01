@@ -1,32 +1,66 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
-interface AdminPageHeaderProps {
-  children: ReactNode;
+export interface AdminPageHeaderProps {
+  children?: ReactNode;
   portalId?: string;
+  title?: string;
+  badge?: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
 }
+
+const emptySubscribe = () => () => {};
 
 export default function AdminPageHeader({
   children,
   portalId = "admin-page-header-portal",
+  title,
+  badge,
+  subtitle,
+  actions,
+  className = "",
 }: AdminPageHeaderProps) {
-  const [mounted, setMounted] = useState(false);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const portalTarget = useSyncExternalStore(
+    emptySubscribe,
+    () => (typeof document !== "undefined" ? document.getElementById(portalId) : null),
+    () => null
+  );
 
-  useEffect(() => {
-    const target = document.getElementById(portalId);
-    if (target) {
-      setPortalTarget(target);
-    }
-    setMounted(true);
-  }, [portalId]);
-
-  if (!mounted || !portalTarget) {
+  if (!portalTarget) {
     return null;
   }
 
-  return createPortal(children, portalTarget);
-}
+  const content = children ? (
+    children
+  ) : (
+    <header className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full ${className}`}>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {title && (
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+              {title}
+            </h1>
+          )}
+          {badge}
+        </div>
+        {subtitle && (
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
+            {subtitle}
+          </p>
+        )}
+      </div>
 
+      {actions && (
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {actions}
+        </div>
+      )}
+    </header>
+  );
+
+  return createPortal(content, portalTarget);
+}

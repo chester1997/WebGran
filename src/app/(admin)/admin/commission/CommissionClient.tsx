@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import {
   Coins,
   Clock,
@@ -126,42 +127,34 @@ export default function CommissionClient({
 
   return (
     <div className="space-y-6 pb-12 text-zinc-100 fade-in w-full">
-      {/* ==================================================== */}
-      {/* 1. HEADER (Integrado ao fundo, sem caixa card) */}
-      {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Comissão da Plataforma
-            </h1>
-            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              Configuração Global
-            </span>
+      <AdminPageHeader
+        title="Comissão da Plataforma"
+        badge={
+          <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            Configuração Global
+          </span>
+        }
+        subtitle="Configure a taxa fixa retida por venda no split Pix automático da PushinPay"
+        actions={
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={handleTestSound}
+              disabled={isPlayingSound}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#15171D] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+              title="Ouvir som de notificação de comissão"
+            >
+              <Volume2 className={`w-3.5 h-3.5 ${isPlayingSound ? "animate-bounce text-emerald-400" : "text-amber-400"}`} />
+              <span>{isPlayingSound ? "Tocando..." : "Testar Som"}</span>
+            </button>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Split Ativo & Seguro</span>
+            </div>
           </div>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Configure a taxa fixa retida por venda no split Pix automático da PushinPay
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={handleTestSound}
-            disabled={isPlayingSound}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#15171D] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
-            title="Ouvir som de notificação de comissão"
-          >
-            <Volume2 className={`w-3.5 h-3.5 ${isPlayingSound ? "animate-bounce text-emerald-400" : "text-amber-400"}`} />
-            <span>{isPlayingSound ? "Tocando..." : "Testar Som"}</span>
-          </button>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-            <ShieldCheck className="w-4 h-4" />
-            <span>Split Ativo & Seguro</span>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ==================================================== */}
       {/* 2. OVERVIEW CARDS */}

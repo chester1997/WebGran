@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import {
   Sliders,
   Plus,
@@ -184,33 +185,25 @@ export default function AdminFeaturesClient({ user }: { user: any }) {
 
   return (
     <div className="space-y-6 pb-12 text-zinc-100 fade-in">
-      {/* ==================================================== */}
-      {/* 1. HEADER (Integrado ao fundo, sem caixa card) */}
-      {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Features & Entitlements
-            </h1>
-            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              Catálogo Global
-            </span>
-          </div>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Defina o catálogo global de recursos comercializáveis, limites e regras de permissão do ecossistema WebGran
-          </p>
-        </div>
-
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-sm cursor-pointer h-9 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nova Feature</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Features & Entitlements"
+        badge={
+          <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            Catálogo Global
+          </span>
+        }
+        subtitle="Defina o catálogo global de recursos comercializáveis, limites e regras de permissão do ecossistema WebGran"
+        actions={
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-sm cursor-pointer h-9 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nova Feature</span>
+          </button>
+        }
+      />
 
       {/* Alerts */}
       {error && (

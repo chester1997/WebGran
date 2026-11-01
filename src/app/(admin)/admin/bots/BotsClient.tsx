@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import { Bot, Store, Search, CheckCircle2, XCircle, Calendar } from "lucide-react";
 
 interface BotItem {
@@ -50,32 +51,27 @@ export default function BotsClient({ initialBots }: { initialBots: BotItem[] }) 
 
   return (
     <div className="space-y-8 pb-10">
-      {/* HEADER & SEARCH */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#141416] p-6 rounded-2xl border border-[#27272A] shadow-xl">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Bots Conectados</h1>
-            <span className="px-2.5 py-1 text-xs font-bold bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded-full">
-              Telegram Bots
-            </span>
+      <AdminPageHeader
+        title="Bots Conectados"
+        badge={
+          <span className="px-2.5 py-1 text-xs font-bold bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded-full">
+            Telegram Bots
+          </span>
+        }
+        subtitle="Monitoramento de todos os bots do Telegram ativos e vinculados a lojas"
+        actions={
+          <div className="relative min-w-[260px] sm:min-w-[280px]">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por bot, @username ou loja..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[#18181B] border border-white/[0.08] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
+            />
           </div>
-          <p className="text-gray-400 text-sm mt-1">
-            Monitoramento de todos os bots do Telegram ativos e vinculados a lojas
-          </p>
-        </div>
-
-        {/* SEARCH INPUT */}
-        <div className="relative min-w-[280px]">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por bot, @username ou loja..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
-          />
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

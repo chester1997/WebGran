@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AdminPageHeader from "../../../AdminPageHeader";
 import {
   Film,
   HardDrive,
@@ -181,32 +182,19 @@ export default function VideoLibraryPlansClient({ user }: { user: any }) {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Top Banner / Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-violet-900/40 via-purple-900/30 to-zinc-900 p-6 rounded-2xl border border-violet-500/20 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-violet-600/20 rounded-xl border border-violet-500/30 text-violet-400">
-              <Film className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                Biblioteca de Vídeos — Planos de Armazenamento
-              </h1>
-              <p className="text-sm text-zinc-400">
-                Administração exclusiva dos planos comerciais e cotas de armazenamento GB para vídeos.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleOpenCreateModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Criar Plano de Armazenamento</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Biblioteca de Vídeos — Planos de Armazenamento"
+        subtitle="Administração exclusiva dos planos comerciais e cotas de armazenamento GB para vídeos."
+        actions={
+          <button
+            onClick={handleOpenCreateModal}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Criar Plano de Armazenamento</span>
+          </button>
+        }
+      />
 
       {/* Notifications */}
       {error && (

@@ -162,28 +162,22 @@ export default function AdminDashboardClient() {
       {/* ==================================================== */}
       {/* 1. TOPBAR EXECUTIVA (Sóbria, Minimalista, Sem Caixas) */}
       {/* ==================================================== */}
-      <AdminPageHeader>
-        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-                Dashboard Administrativo
-              </h1>
-              <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 bg-white/[0.04] rounded-full">
-                Super Admin
-              </span>
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-zinc-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Operacional
-              </span>
-            </div>
-            <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-              Visão estratégica em tempo real de vendas, conversão Pix, saúde do ecossistema e taxas da plataforma
-            </p>
-          </div>
-
-          {/* CONTROLES: SEGMENTED PERIOD & REFRESH */}
-          <div className="flex items-center gap-2.5 shrink-0">
+      <AdminPageHeader
+        title="Dashboard Administrativo"
+        badge={
+          <>
+            <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 bg-white/[0.04] rounded-full">
+              Super Admin
+            </span>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-zinc-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Operacional
+            </span>
+          </>
+        }
+        subtitle="Visão estratégica em tempo real de vendas, conversão Pix, saúde do ecossistema e taxas da plataforma"
+        actions={
+          <>
             {/* Segmented Control Minimalista (Linear Style) */}
             <div className="inline-flex items-center bg-[#07080B] p-0.5 rounded-lg border border-white/[0.05]">
               {ADMIN_PERIOD_OPTIONS.map((p) => {
@@ -224,9 +218,9 @@ export default function AdminDashboardClient() {
                 <span>{data.updatedAt}</span>
               </div>
             )}
-          </div>
-        </header>
-      </AdminPageHeader>
+          </>
+        }
+      />
 
       {/* ERROR BANNER */}
       {errorMsg && (

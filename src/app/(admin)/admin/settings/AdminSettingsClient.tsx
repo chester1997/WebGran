@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import Link from "next/link";
 import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
 import {
@@ -259,40 +260,32 @@ export default function AdminSettingsClient({
 
   return (
     <div className="space-y-6 pb-12 text-zinc-100 fade-in max-w-6xl">
-      {/* ==================================================== */}
-      {/* 1. HEADER (Integrado ao fundo, sem caixa card) */}
-      {/* ==================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Configurações da Plataforma
-            </h1>
-            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              Plataforma WebGran
-            </span>
-          </div>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Gerencie planos de assinatura SaaS, recebimento da plataforma e credenciais de segurança global
-          </p>
-        </div>
+      <AdminPageHeader
+        title="Configurações da Plataforma"
+        badge={
+          <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            Plataforma WebGran
+          </span>
+        }
+        subtitle="Gerencie planos de assinatura SaaS, recebimento da plataforma e credenciais de segurança global"
+        actions={
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Link
+              href="/admin/subscriptions"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-300 hover:text-white text-xs font-semibold transition-colors shadow-xs"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Ver Cobranças de Assinatura</span>
+            </Link>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <Link
-            href="/admin/subscriptions"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-300 hover:text-white text-xs font-semibold transition-colors shadow-xs"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Ver Cobranças de Assinatura</span>
-          </Link>
-
-          <div className="px-2.5 py-1 rounded-xl bg-[#0F1014] border border-white/[0.08] flex items-center gap-2 text-xs text-zinc-300">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-[11px] font-mono">SUPER_ADMIN</span>
+            <div className="px-2.5 py-1 rounded-xl bg-[#0F1014] border border-white/[0.08] flex items-center gap-2 text-xs text-zinc-300">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[11px] font-mono">SUPER_ADMIN</span>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Notifications Banner */}
       {notification && (

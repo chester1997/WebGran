@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import { useRouter } from "next/navigation";
 import { formatBusinessDate, formatBusinessDateTime } from "@/lib/analytics/timezone-utils";
 import {
@@ -619,41 +620,35 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
 
   return (
     <div className="space-y-8 pb-12 fade-in text-gray-100">
-      {/* HEADER & ACTIONS */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#0F1014] p-5 sm:p-6 rounded-2xl border border-white/[0.08] shadow-2xl">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Vendedores e Taxas
-            </h1>
-            <span className="px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
-              Super Admin WebGran
-            </span>
+      <AdminPageHeader
+        title="Vendedores e Taxas"
+        badge={
+          <span className="px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
+            Super Admin WebGran
+          </span>
+        }
+        subtitle="Gestão completa de vendedores, lojas, bots, taxas individuais e auditoria"
+        actions={
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs h-9 px-3.5 flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar Vendedor</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              className="bg-[#15171D] border-white/[0.08] hover:bg-white/5 text-gray-300 hover:text-white rounded-xl text-xs h-9 px-3 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Atualizar</span>
+            </Button>
           </div>
-          <p className="text-gray-400 text-xs sm:text-sm mt-1">
-            Gestão completa de vendedores, lojas, bots, taxas individuais e auditoria
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs h-9 sm:h-10 px-3.5 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Adicionar Vendedor</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            className="flex-1 sm:flex-initial bg-[#15171D] border-white/[0.08] hover:bg-white/5 text-gray-300 hover:text-white rounded-xl text-xs h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Atualizar</span>
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* FEEDBACK ALERTS */}
       {feedbackMsg && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import {
   BarChart3,
   Users,
@@ -148,24 +149,16 @@ export default function AdminReportsClient({
 
   return (
     <div className="space-y-6 pb-12 text-zinc-100 w-full">
-      {/* 1. HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-              Relatórios da Plataforma
-            </h1>
-            <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              BI & Performance
-            </span>
-          </div>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Métricas de vendas, GMV, taxas da plataforma e detalhamento individual por vendedor ou visão consolidada.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <AdminPageHeader
+        title="Relatórios da Plataforma"
+        badge={
+          <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            BI & Performance
+          </span>
+        }
+        subtitle="Métricas de vendas, GMV, taxas da plataforma e detalhamento individual por vendedor ou visão consolidada."
+        actions={
           <button
             type="button"
             onClick={() => fetchReports(currentPage)}
@@ -176,8 +169,8 @@ export default function AdminReportsClient({
             <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin text-blue-400" : "text-zinc-400"}`} />
             <span>{isPending ? "Atualizando..." : "Recarregar"}</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* 2. FILTERS BAR */}
       <div className="p-4 rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-lg space-y-4 w-full">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import AdminPageHeader from "../../AdminPageHeader";
 import Link from "next/link";
 import {
   Film,
@@ -107,44 +108,31 @@ export default function VideoLibraryOverviewClient({ user }: { user: any }) {
 
   return (
     <div className="w-full p-4 md:p-8 space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-violet-950/60 via-zinc-900 to-zinc-950 p-6 rounded-2xl border border-violet-500/20 shadow-2xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-violet-600/20 rounded-xl border border-violet-500/30 text-violet-400">
-              <Film className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                Biblioteca de Vídeos — Dashboard Operacional
-              </h1>
-              <p className="text-sm text-zinc-400">
-                Métricas em tempo real de armazenamento, vendas, assinaturas e uso por vendedor.
-              </p>
-            </div>
+      <AdminPageHeader
+        title="Biblioteca de Vídeos — Dashboard Operacional"
+        subtitle="Métricas em tempo real de armazenamento, vendas, assinaturas e uso por vendedor."
+        actions={
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl border border-zinc-700 text-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              <span>Atualizar</span>
+            </button>
+
+            <Link
+              href="/admin/video-library/plans"
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
+            >
+              <HardDrive className="w-3.5 h-3.5" />
+              <span>Planos de Armazenamento</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl border border-zinc-700 text-xs transition-all cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            <span>Atualizar</span>
-          </button>
-
-          <Link
-            href="/admin/video-library/plans"
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
-          >
-            <HardDrive className="w-3.5 h-3.5" />
-            <span>Planos de Armazenamento</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-red-400 flex items-center gap-3">
