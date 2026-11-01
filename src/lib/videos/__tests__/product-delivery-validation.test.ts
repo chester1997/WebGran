@@ -123,9 +123,9 @@ describe("DeliveryType & Product Video Validation Suite", () => {
     formData.set("deliveryType", "external");
     formData.set("deliveryValue", "");
 
-    await expect(createProductAction(formData)).rejects.toThrow(
-      "Informe o Link externo para entrega após o pagamento."
-    );
+    const res = await createProductAction(formData);
+    expect(res.success).toBe(false);
+    expect(res.error).toBe("Informe o Link externo para entrega após o pagamento.");
   });
 
   it("3. product_video não exige URL (externalDeliveryUrl)", async () => {
@@ -155,9 +155,9 @@ describe("DeliveryType & Product Video Validation Suite", () => {
     formData.set("deliveryValue", "");
     formData.set("videoIds", JSON.stringify([]));
 
-    await expect(createProductAction(formData)).rejects.toThrow(
-      "Produtos do tipo Vídeo exigem pelo menos um vídeo com status PRONTO associado."
-    );
+    const res = await createProductAction(formData);
+    expect(res.success).toBe(false);
+    expect(res.error).toBe("Produtos do tipo Vídeo exigem pelo menos um vídeo com status PRONTO associado.");
   });
 
   it("5. product_video com vídeo READY salva com sucesso", async () => {
@@ -192,9 +192,9 @@ describe("DeliveryType & Product Video Validation Suite", () => {
     formData.set("deliveryType", "product_video");
     formData.set("videoIds", JSON.stringify(["vid-proc-1"]));
 
-    await expect(createProductAction(formData)).rejects.toThrow(
-      'O vídeo "Vídeo Processando" ainda não está pronto para entrega (status: PROCESSING).'
-    );
+    const res = await createProductAction(formData);
+    expect(res.success).toBe(false);
+    expect(res.error).toBe('O vídeo "Vídeo Processando" ainda não está pronto para entrega (status: PROCESSING).');
   });
 
   it("7. product_video com vídeo UPLOADING falha", async () => {
@@ -211,9 +211,9 @@ describe("DeliveryType & Product Video Validation Suite", () => {
     formData.set("deliveryType", "product_video");
     formData.set("videoIds", JSON.stringify(["vid-up-1"]));
 
-    await expect(createProductAction(formData)).rejects.toThrow(
-      'O vídeo "Vídeo Enviando" ainda não está pronto para entrega (status: UPLOADING).'
-    );
+    const res = await createProductAction(formData);
+    expect(res.success).toBe(false);
+    expect(res.error).toBe('O vídeo "Vídeo Enviando" ainda não está pronto para entrega (status: UPLOADING).');
   });
 
   it("8. product_video com vídeo FAILED falha", async () => {
@@ -230,9 +230,9 @@ describe("DeliveryType & Product Video Validation Suite", () => {
     formData.set("deliveryType", "product_video");
     formData.set("videoIds", JSON.stringify(["vid-fail-1"]));
 
-    await expect(createProductAction(formData)).rejects.toThrow(
-      'O vídeo "Vídeo Com Falha" ainda não está pronto para entrega (status: FAILED).'
-    );
+    const res = await createProductAction(formData);
+    expect(res.success).toBe(false);
+    expect(res.error).toBe('O vídeo "Vídeo Com Falha" ainda não está pronto para entrega (status: FAILED).');
   });
 
   it("9. produto PAID com deliveryType product_video libera acesso aos vídeos", async () => {
@@ -277,7 +277,9 @@ describe("DeliveryType & Product Video Validation Suite", () => {
     formDataBypass.set("deliveryType", "product_video");
     formDataBypass.set("deliveryValue", ""); // sem link e sem vídeo
 
-    await expect(createProductAction(formDataBypass)).rejects.toThrow(
+    const res = await createProductAction(formDataBypass);
+    expect(res.success).toBe(false);
+    expect(res.error).toBe(
       "Produtos do tipo Vídeo exigem pelo menos um vídeo com status PRONTO associado."
     );
   });

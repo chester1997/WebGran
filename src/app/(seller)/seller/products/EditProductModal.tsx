@@ -160,9 +160,11 @@ export function EditProductModal({
         setOpen(false);
         setErrorMessage(null);
         router.refresh();
+      } else {
+        setErrorMessage(res?.error || "Erro ao atualizar produto.");
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "Erro ao atualizar produto.");
+      setErrorMessage(err?.message || "Erro inesperado ao atualizar produto.");
     } finally {
       setLoading(false);
     }

@@ -306,7 +306,9 @@ describe("Product-Bot Association Isolation & Scope Regression Suite", () => {
       formData.set("deliveryValue", "https://link.com");
       formData.set("botId", botAlien.id);
 
-      await expect(createProductAction(formData)).rejects.toThrow(
+      const res = await createProductAction(formData);
+      expect(res.success).toBe(false);
+      expect(res.error).toBe(
         "O bot selecionado não pertence a esta loja."
       );
     });
@@ -322,7 +324,9 @@ describe("Product-Bot Association Isolation & Scope Regression Suite", () => {
       formData.set("deliveryValue", "https://link.com");
       formData.set("botId", botAlien.id);
 
-      await expect(updateProductAction("prod-uuid-1", formData)).rejects.toThrow(
+      const res = await updateProductAction("prod-uuid-1", formData);
+      expect(res.success).toBe(false);
+      expect(res.error).toBe(
         "O bot selecionado não pertence a esta loja."
       );
     });

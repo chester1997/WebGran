@@ -267,7 +267,9 @@ describe("Product and Carousel Decoupling Suite", () => {
       formData.set("deliveryValue", "-1001234567890");
       formData.set("carouselIds", JSON.stringify(["c-valid-1", "c-foreign-2"]));
 
-      await expect(createProductAction(formData)).rejects.toThrow(
+      const res = await createProductAction(formData);
+      expect(res.success).toBe(false);
+      expect(res.error).toBe(
         "Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja."
       );
     });
@@ -349,9 +351,9 @@ describe("Product and Carousel Decoupling Suite", () => {
       formData.set("deliveryValue", "-10099887766");
       formData.set("carouselIds", JSON.stringify(["foreign-carousel-999"]));
 
-      await expect(
-        updateProductAction("prod-existing-3", formData)
-      ).rejects.toThrow("Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja.");
+      const res = await updateProductAction("prod-existing-3", formData);
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja.");
     });
   });
 

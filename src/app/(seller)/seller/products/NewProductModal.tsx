@@ -166,11 +166,15 @@ export function NewProductModal({
       if (res?.success) {
         // Associate pending videos with newly created product ID
         if (res?.product?.id && pendingVideos.length > 0) {
-          await fetch(`/api/seller/products/${res.product.id}/videos/attach-pending`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ pendingVideos }),
-          });
+          try {
+            await fetch(`/api/seller/products/${res.product.id}/videos/attach-pending`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ pendingVideos }),
+            });
+          } catch (attachErr) {
+            console.warn("[NewProductModal] Falha ao associar vídeos pendentes:", attachErr);
+          }
         }
 
         setPendingVideos([]);
@@ -180,9 +184,12 @@ export function NewProductModal({
         setDeliveryValue("");
         setErrorMessage(null);
         router.refresh();
+      } else {
+        // Exibe o erro específico retornado pela Server Action sem derrubar a renderização
+        setErrorMessage(res?.error || "Erro ao criar produto.");
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "Erro ao criar produto.");
+      setErrorMessage(err?.message || "Erro inesperado ao criar produto.");
     } finally {
       setLoading(false);
     }
