@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import SellerSidebar, { SellerProfileData } from "./SellerSidebar";
+import { SaleNotificationSoundHandler } from "@/components/audio/SaleNotificationSoundHandler";
 
 interface SellerLayoutProps {
   children: ReactNode;
@@ -228,6 +229,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
               aria-label="Painel do Vendedor"
               className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
             >
+              <SaleNotificationSoundHandler />
               <div className="w-full space-y-6 relative z-10">
                 <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
                   {children}

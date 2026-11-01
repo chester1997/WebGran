@@ -7,6 +7,13 @@
 import { COMMISSION_AUDIO_DATA_URI } from "./commission-audio-data";
 
 const STORAGE_KEY = "webgran_notification_sound_enabled";
+const PREFS_STORAGE_PREFIX = "webgran_sound_config";
+
+export interface NotificationSoundPreferences {
+  enabled: boolean;
+  soundId: string;
+  volume: number; // 0 to 100
+}
 
 export interface DiagnosticLogEntry {
   timestamp: string;
@@ -18,11 +25,68 @@ export interface DiagnosticLogEntry {
 
 const diagnosticLogs: DiagnosticLogEntry[] = [];
 const playedSoundEvents = new Set<string>();
-let cachedAudioElement: HTMLAudioElement | null = null;
+let sharedAudioElement: HTMLAudioElement | null = null;
 let audioContext: AudioContext | null = null;
 let decodedAudioBuffer: AudioBuffer | null = null;
 let isAudioBufferLoading = false;
 let isForegroundListenerRegistered = false;
+let isSystemUnlocked = false;
+let lastSoundPlayedAt = 0;
+
+/**
+ * Retorna as preferências completas de som de notificação para o usuário (por dispositivo).
+ */
+export function getNotificationSoundPreferences(userId?: string): NotificationSoundPreferences {
+  if (typeof window === "undefined") {
+    return { enabled: true, soundId: "commission", volume: 80 };
+  }
+
+  try {
+    const key = userId ? `${PREFS_STORAGE_PREFIX}_${userId}` : PREFS_STORAGE_PREFIX;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        enabled: parsed.enabled !== undefined ? Boolean(parsed.enabled) : true,
+        soundId: parsed.soundId || "commission",
+        volume: typeof parsed.volume === "number" ? Math.max(0, Math.min(100, parsed.volume)) : 80,
+      };
+    }
+
+    // Fallback legado
+    const legacyVal = localStorage.getItem(STORAGE_KEY);
+    const enabled = legacyVal === null ? true : legacyVal === "true";
+    return { enabled, soundId: "commission", volume: 80 };
+  } catch {
+    return { enabled: true, soundId: "commission", volume: 80 };
+  }
+}
+
+/**
+ * Salva as preferências de som de notificação no localStorage.
+ */
+export function saveNotificationSoundPreferences(
+  prefs: Partial<NotificationSoundPreferences>,
+  userId?: string
+): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const current = getNotificationSoundPreferences(userId);
+    const updated: NotificationSoundPreferences = {
+      ...current,
+      ...prefs,
+    };
+
+    const key = userId ? `${PREFS_STORAGE_PREFIX}_${userId}` : PREFS_STORAGE_PREFIX;
+    localStorage.setItem(key, JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEY, updated.enabled ? "true" : "false");
+
+    recordAudioLog("PREFERENCIA", `Preferências salvas: enabled=${updated.enabled}, volume=${updated.volume}%`, "info");
+  } catch (err: any) {
+    recordAudioLog("PREFERENCIA", `Erro ao salvar preferências: ${err?.message}`, "warn");
+  }
+}
 
 /**
  * Adiciona um log estruturado ao buffer de diagnóstico técnico e ao console do navegador.
@@ -179,44 +243,107 @@ async function preloadAudioBuffer(): Promise<void> {
 }
 
 /**
- * Desbloqueia o AudioContext e o subsistema de áudio sob interação real do usuário.
- * Dispara um buffer silencioso para retirar a restrição de autoplay do Chrome e iOS Safari.
+ * Detecta se o ambiente atual é iOS (iPhone, iPad, iPod) ou iPadOS.
  */
-export async function unlockAudioContext(): Promise<void> {
-  if (typeof window === "undefined") return;
+export function isIOS(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+/**
+ * Retorna ou inicializa o elemento HTMLAudioElement compartilhado (singleton).
+ */
+export function getOrCreateSharedAudioElement(): HTMLAudioElement | null {
+  if (typeof window === "undefined") return null;
+  if (!sharedAudioElement) {
+    try {
+      sharedAudioElement = new Audio(getNotificationSoundUrl());
+      sharedAudioElement.preload = "auto";
+    } catch {
+      sharedAudioElement = null;
+    }
+  }
+  return sharedAudioElement;
+}
+
+/**
+ * Desbloqueia o subsistema de áudio (HTMLAudioElement singleton + AudioContext).
+ * O Chrome libera o áudio da página inteira após qualquer interação do usuário (User Activation).
+ * A restrição de reaproveitar a mesma instância pré-ativada vale especificamente para o Safari/iOS.
+ * No iOS/Safari o volume do HTMLMediaElement não é ajustável. O desbloqueio DEVE usar muted = true (play + pause),
+ * nunca volume 0. O controle de volume no iOS utiliza o GainNode da Web Audio API.
+ */
+export async function unlockAudioSystem(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  let audioUnlocked = false;
+
+  // 1. Desbloqueia o elemento HTML5 Audio compartilhado
+  try {
+    const audioEl = getOrCreateSharedAudioElement();
+    if (audioEl) {
+      if (typeof audioEl.load === "function") {
+        try {
+          audioEl.load();
+        } catch {}
+      }
+      // Safari/iOS: volume é somente leitura e ignorado pelo WebKit.
+      // O silenciamento durante o desbloqueio DEVE usar muted = true, NUNCA volume 0.
+      audioEl.muted = true;
+      const playPromise = audioEl.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        audioEl.pause();
+        audioEl.currentTime = 0;
+        audioEl.muted = false; // Desmuta para permitir reprodução futura
+        audioUnlocked = true;
+        isSystemUnlocked = true;
+        recordAudioLog("3_DESBLOQUEIO", "HTMLAudioElement compartilhado desbloqueado com sucesso (muted=true)!", "success");
+      }
+    }
+  } catch (err: any) {
+    recordAudioLog("3_DESBLOQUEIO", `Erro ao desbloquear HTMLAudioElement: ${err?.message}`, "warn");
+  }
+
+  // 2. Desbloqueia AudioContext (retoma estado e dispara buffer silencioso)
   try {
     const ctx = getOrCreateAudioContext();
-    if (!ctx) return;
-
-    recordAudioLog("3_AUDIOCONTEXT", `unlockAudioContext invocado. Estado atual: ${ctx.state}`, "info");
-
-    if (ctx.state === "suspended") {
-      await ctx.resume().catch((err) => {
-        recordAudioLog("3_AUDIOCONTEXT", `ctx.resume() rejeitado: ${err?.message}`, "warn");
-      });
-      const isRunning = (ctx.state as string) === "running";
-      recordAudioLog("3_AUDIOCONTEXT", `ctx.resume() executado. Novo estado: ${ctx.state}`, isRunning ? "success" : "warn");
-    }
-
-    // Toca 1 sample de silêncio para desarmar a política de restrição de autoplay
-    try {
-      if (typeof ctx.createBuffer === "function" && typeof ctx.createBufferSource === "function") {
-        const buffer = ctx.createBuffer(1, 1, 22050);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start(0);
-        recordAudioLog("3_AUDIOCONTEXT", "Buffer silencioso de 1 sample disparado para autorização de mídia", "info");
+    if (ctx) {
+      if (ctx.state === "suspended") {
+        await ctx.resume().catch(() => {});
       }
-    } catch (silentErr: any) {
-      recordAudioLog("3_AUDIOCONTEXT", `Erro ao tocar buffer silencioso: ${silentErr?.message}`, "warn");
-    }
+      if ((ctx.state as string) === "running") {
+        audioUnlocked = true;
+        isSystemUnlocked = true;
+        recordAudioLog("3_DESBLOQUEIO", "AudioContext retomado com sucesso!", "success");
+      }
 
-    // Pré-carrega o buffer MP3 de forma não-bloqueante
+      // Reproduz 1 amostra de áudio silenciosa para destravar pipelines de áudio do sistema
+      if (typeof ctx.createBuffer === "function" && typeof ctx.createBufferSource === "function") {
+        try {
+          const silentBuffer = ctx.createBuffer(1, 1, 22050);
+          const silentSource = ctx.createBufferSource();
+          silentSource.buffer = silentBuffer;
+          silentSource.connect(ctx.destination);
+          silentSource.start(0);
+        } catch {}
+      }
+    }
     preloadAudioBuffer().catch(() => {});
-  } catch (err: any) {
-    recordAudioLog("3_AUDIOCONTEXT", `Exceção em unlockAudioContext: ${err?.message}`, "error");
+  } catch (ctxErr: any) {
+    recordAudioLog("3_DESBLOQUEIO", `Erro ao desbloquear AudioContext: ${ctxErr?.message}`, "warn");
   }
+
+  return audioUnlocked;
+}
+
+/**
+ * Desbloqueia o AudioContext sob interação real do usuário.
+ */
+export async function unlockAudioContext(): Promise<void> {
+  await unlockAudioSystem();
 }
 
 /**
@@ -268,6 +395,7 @@ export async function playCommissionChime(options?: {
   eventId?: string;
   force?: boolean;
   synchronousAudioInstance?: HTMLAudioElement | null;
+  volume?: number;
 }): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
@@ -277,7 +405,8 @@ export async function playCommissionChime(options?: {
   recordAudioLog("2_CHAMADA", `playCommissionChime chamada. eventId=${eventId || "nenhum"}, force=${force}`, "info");
 
   // 1. Respeitar preferência salva (a menos que seja um teste forçado)
-  if (!force && !isNotificationSoundEnabled()) {
+  const prefs = getNotificationSoundPreferences();
+  if (!force && !prefs.enabled) {
     recordAudioLog("2_CHAMADA", "Som desativado nas preferências do usuário. Abortando.", "warn");
     return false;
   }
@@ -291,34 +420,79 @@ export async function playCommissionChime(options?: {
     playedSoundEvents.add(eventId);
   }
 
-  // 3. Tentativa 1: HTMLAudioElement
-  try {
-    const audioEl = synchronousAudioInstance || cachedAudioElement || new Audio(COMMISSION_AUDIO_DATA_URI);
-    if (!cachedAudioElement) {
-      cachedAudioElement = audioEl;
+  const effectiveVolume = typeof options?.volume === "number" 
+    ? Math.max(0, Math.min(1, options.volume / 100))
+    : Math.max(0, Math.min(1, prefs.volume / 100));
+
+  const isIosDevice = isIOS();
+
+  // No iOS/Safari o volume do HTMLMediaElement não é ajustável (é ignorado pelo WebKit).
+  // Se for iOS, prioriza a reprodução via GainNode da Web Audio API para controle real de volume.
+  if (isIosDevice) {
+    try {
+      const ctx = getOrCreateAudioContext();
+      if (ctx) {
+        if (ctx.state === "suspended") {
+          await ctx.resume().catch(() => {});
+        }
+        if (!decodedAudioBuffer) {
+          await preloadAudioBuffer();
+        }
+        if (decodedAudioBuffer && ctx.state === "running") {
+          recordAudioLog("7_FALLBACK", "iOS detectado: reproduzindo com atenuação via GainNode (Web Audio API)...", "info");
+          const source = ctx.createBufferSource();
+          source.buffer = decodedAudioBuffer;
+          const gainNode = ctx.createGain();
+          gainNode.gain.setValueAtTime(effectiveVolume, ctx.currentTime);
+          source.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          source.start(0);
+
+          const elapsed = Date.now() - startTime;
+          lastSoundPlayedAt = Date.now();
+          recordAudioLog("8_RESULTADO", `Reprodução concluída com sucesso via Web Audio GainNode (${elapsed}ms)`, "success");
+          return true;
+        }
+      }
+    } catch (iosErr: any) {
+      recordAudioLog("7_FALLBACK", `Falha ao reproduzir via Web Audio no iOS: ${iosErr?.message}`, "warn");
     }
+  }
 
-    recordAudioLog("5_HTML5_PLAY", `Disparando HTMLAudioElement.play(). readyState=${audioEl.readyState}, volume=${audioEl.volume}, muted=${audioEl.muted}`, "info");
+  // 3. Tentativa 1: HTMLAudioElement compartilhado
+  try {
+    const audioEl = synchronousAudioInstance || getOrCreateSharedAudioElement() || new Audio(getNotificationSoundUrl());
+    if (audioEl) {
+      if (!isIosDevice) {
+        audioEl.volume = effectiveVolume;
+      }
+      audioEl.muted = false;
+      audioEl.currentTime = 0;
 
-    audioEl.currentTime = 0;
-    const playPromise = audioEl.play();
+      recordAudioLog("5_HTML5_PLAY", `Disparando HTMLAudioElement.play(). volume=${audioEl.volume}`, "info");
 
-    if (playPromise !== undefined) {
-      await playPromise;
-      const elapsed = Date.now() - startTime;
-      recordAudioLog("5_HTML5_PLAY", `HTMLAudioElement.play() resolvido com sucesso! (${elapsed}ms)`, "success");
-      recordAudioLog("8_RESULTADO", `Reprodução concluída com sucesso via HTML5 Audio (${elapsed}ms)`, "success");
-      return true;
+      const playPromise = audioEl.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        const elapsed = Date.now() - startTime;
+        lastSoundPlayedAt = Date.now();
+        recordAudioLog("5_HTML5_PLAY", `HTMLAudioElement.play() resolvido com sucesso! (${elapsed}ms)`, "success");
+        recordAudioLog("8_RESULTADO", `Reprodução concluída com sucesso via HTML5 Audio (${elapsed}ms)`, "success");
+        return true;
+      }
     }
   } catch (audioErr: any) {
     recordAudioLog("6_ERRO_REJEICAO", `HTMLAudioElement falhou: [${audioErr?.name || "Error"}] ${audioErr?.message || "Erro desconhecido"}`, "warn", {
       name: audioErr?.name,
       message: audioErr?.message,
     });
-    cachedAudioElement = null;
+    // Se for NotAllowedError, repassa o erro para permitir tratamento honesto pelo chamador
+    if (audioErr?.name === "NotAllowedError") {
+      throw audioErr;
+    }
   }
 
-  // 4. Tentativa 2: Web Audio API com Buffer Pré-decodificado em memória (zero latência)
+  // 4. Tentativa 2: Web Audio API com Buffer Pré-decodificado em memória (zero latência e controle de volume via GainNode)
   try {
     const ctx = getOrCreateAudioContext();
     if (ctx) {
@@ -327,38 +501,31 @@ export async function playCommissionChime(options?: {
         await ctx.resume().catch(() => {});
       }
 
-      // Se o buffer não estava carregado, tenta carregar imediatamente
       if (!decodedAudioBuffer) {
         await preloadAudioBuffer();
       }
 
       if (decodedAudioBuffer && ctx.state === "running") {
-        recordAudioLog("7_FALLBACK", "Reproduzindo via Web Audio AudioBufferSourceNode em memória...", "info");
+        recordAudioLog("7_FALLBACK", "Reproduzindo via Web Audio AudioBufferSourceNode em memória com GainNode...", "info");
         const source = ctx.createBufferSource();
         source.buffer = decodedAudioBuffer;
         const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(0.85, ctx.currentTime);
+        gainNode.gain.setValueAtTime(effectiveVolume, ctx.currentTime);
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
         source.start(0);
 
         const elapsed = Date.now() - startTime;
+        lastSoundPlayedAt = Date.now();
         recordAudioLog("8_RESULTADO", `Reprodução concluída com sucesso via Web Audio AudioBuffer (${elapsed}ms)`, "success");
         return true;
       }
 
       // 5. Tentativa 3: Sintetizador Harmônico senoidal
-      if (ctx.state === "running") {
-        const synthSuccess = await synthesizeChimeFallback(ctx);
-        if (synthSuccess) {
-          const elapsed = Date.now() - startTime;
-          recordAudioLog("8_RESULTADO", `Reprodução concluída com sucesso via Sintetizador Harmônico (${elapsed}ms)`, "success");
-          return true;
-        }
-      }
+      return await synthesizeChimeFallback(ctx);
     }
-  } catch (ctxErr: any) {
-    recordAudioLog("6_ERRO_REJEICAO", `Fallback Web Audio falhou: ${ctxErr?.message}`, "error");
+  } catch (webAudioErr: any) {
+    recordAudioLog("7_FALLBACK", `Web Audio API falhou: ${webAudioErr?.message}`, "warn");
   }
 
   const elapsed = Date.now() - startTime;
@@ -374,21 +541,45 @@ export function getNotificationSoundUrl(): string {
 }
 
 /**
+ * Emite evento na tela para avisar a UI sobre uma venda recebida.
+ */
+export function dispatchVisualSaleEvent(payload: any): void {
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    try {
+      window.dispatchEvent(new CustomEvent("webgran-sale-received", { detail: payload }));
+    } catch {}
+  }
+}
+
+/**
+ * Emite evento de bloqueio de autoplay para exibir aviso "Toque aqui para ativar o som".
+ */
+export function dispatchAutoplayBlockedEvent(payload: any): void {
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    try {
+      window.dispatchEvent(new CustomEvent("webgran-audio-autoplay-blocked", { detail: payload }));
+    } catch {}
+  }
+}
+
+/**
  * Reseta o estado interno de som para suítes de teste automatizadas.
  */
 export function _resetNotificationSoundStateForTesting(): void {
   playedSoundEvents.clear();
-  cachedAudioElement = null;
+  sharedAudioElement = null;
   audioContext = null;
   decodedAudioBuffer = null;
   isAudioBufferLoading = false;
   isForegroundListenerRegistered = false;
+  isSystemUnlocked = false;
+  lastSoundPlayedAt = 0;
   diagnosticLogs.length = 0;
 }
 
 /**
  * Registra o listener global para tocar o som de notificação no primeiro plano
- * quando o Service Worker receber um evento Web Push.
+ * quando o Service Worker receber um evento Web Push (SALE_SOUND ou WEBGRAN_PUSH_RECEIVED).
  */
 export function setupForegroundNotificationSoundListener(): void {
   if (typeof window === "undefined" || isForegroundListenerRegistered) return;
@@ -396,46 +587,127 @@ export function setupForegroundNotificationSoundListener(): void {
 
   recordAudioLog("INICIALIZACAO", "setupForegroundNotificationSoundListener ativado com sucesso.", "info");
 
-  // 1. Desbloqueio preventivo de autoplay sob primeira interação do usuário (toque, clique ou tecla)
-  if (typeof window.addEventListener === "function") {
-    const handleFirstInteraction = () => {
-      recordAudioLog("INTERACAO_USUARIO", "Primeira interação do usuário detectada (toque/clique). Destravando áudio...", "info");
-      unlockAudioContext().catch(() => {});
+  // 1. Desbloqueio em eventos de interação reais: click, pointerup, touchend e keydown
+  // O Chrome libera o áudio da página inteira após qualquer interação do usuário (User Activation).
+  // A restrição de exigir o reaproveitamento da mesma instância pré-ativada vale especificamente para o Safari/iOS.
+  // Não usa pointerdown/touchstart (gestos preliminares). Não usa { once: true }.
+  // Remove os listeners apenas DEPOIS de o desbloqueio ser bem-sucedido (play resolvido ou ctx.state === "running").
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    const unlockEvents = ["click", "pointerup", "touchend", "keydown"] as const;
 
-      // Prepara o elemento HTML5 Audio para compatibilidade com Chrome Android
-      try {
-        if (!cachedAudioElement) {
-          cachedAudioElement = new Audio(getNotificationSoundUrl());
-          cachedAudioElement.preload = "auto";
+    const handleUnlockInteraction = async () => {
+      recordAudioLog("INTERACAO_USUARIO", "Interação do usuário detectada. Tentando destravar subsistema de áudio...", "info");
+      const unlocked = await unlockAudioSystem().catch(() => false);
+      if (unlocked) {
+        recordAudioLog("INTERACAO_USUARIO", "Desbloqueio concluído com sucesso. Removendo listeners de ativação.", "success");
+        if (typeof window.removeEventListener === "function") {
+          for (const evt of unlockEvents) {
+            window.removeEventListener(evt, handleUnlockInteraction);
+          }
         }
-        if (typeof cachedAudioElement.load === "function") {
-          cachedAudioElement.load();
-        }
-      } catch {}
-
-      if (typeof window.removeEventListener === "function") {
-        window.removeEventListener("click", handleFirstInteraction);
-        window.removeEventListener("touchstart", handleFirstInteraction);
-        window.removeEventListener("keydown", handleFirstInteraction);
       }
     };
 
-    window.addEventListener("click", handleFirstInteraction, { once: true, passive: true });
-    window.addEventListener("touchstart", handleFirstInteraction, { once: true, passive: true });
-    window.addEventListener("keydown", handleFirstInteraction, { once: true, passive: true });
+    for (const evt of unlockEvents) {
+      window.addEventListener(evt, handleUnlockInteraction, { passive: true });
+    }
   }
 
-  // 2. Escutar eventos enviados pelo Service Worker
+  // 2. Escutar eventos enviados pelo Service Worker (SALE_SOUND e WEBGRAN_PUSH_RECEIVED)
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator && navigator.serviceWorker) {
-    navigator.serviceWorker.addEventListener("message", (event) => {
-      if (event.data && event.data.type === "WEBGRAN_PUSH_RECEIVED") {
-        const payload = event.data.payload;
-        const eventId = payload?.data?.orderId || payload?.tag || `push-${Date.now()}`;
-        recordAudioLog("1_EVENTO", `Mensagem WEBGRAN_PUSH_RECEIVED recebida do Service Worker para eventId=${eventId}`, "info", payload);
+    navigator.serviceWorker.addEventListener("message", async (event) => {
+      const type = event.data?.type;
+      if (type !== "SALE_SOUND" && type !== "WEBGRAN_PUSH_RECEIVED") {
+        return;
+      }
 
-        playCommissionChime({ eventId }).catch((err) => {
-          recordAudioLog("6_ERRO_REJEICAO", `Falha ao reproduzir áudio vindo de evento push: ${err?.message}`, "error");
+      const responsePort = event.ports && event.ports[0] ? event.ports[0] : null;
+      const payload = event.data.payload || event.data;
+      const notificationId = event.data.notificationId || payload?.data?.orderId || payload?.tag || `push-${Date.now()}`;
+
+      recordAudioLog("1_EVENTO", `Mensagem ${type} recebida para notificationId=${notificationId}`, "info", payload);
+
+      // Verificação honesta de visibilidade da página
+      const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+
+      // Regra 2: Se o documento estiver oculto (background/tela bloqueada), responde playedSound: false
+      // e NÃO toca som aqui, permitindo ao Service Worker disparar notificação com som do sistema (silent: false).
+      if (isHidden) {
+        recordAudioLog("2_VISIBILIDADE", "Página oculta ou sem foco. Deixando som a cargo do sistema operacional.", "info");
+        if (responsePort) {
+          responsePort.postMessage({ confirmed: false, playedSound: false, reason: "hidden_or_unfocused" });
+        }
+        return;
+      }
+
+      // Lê preferências do usuário
+      const prefs = getNotificationSoundPreferences();
+
+      // Se a preferência estiver DESLIGADA:
+      if (!prefs.enabled) {
+        // Documento visível e em foco + preferência desligada:
+        // Mostra aviso na tela e responde confirmed: true, playedSound: false, permitindo notificação silenciosa do SO.
+        const isFocused = typeof document === "undefined" || typeof document.hasFocus !== "function" || document.hasFocus();
+        if (isFocused) {
+          recordAudioLog("2_PREFERENCIA", "Som desativado pelo usuário. Exibindo apenas alerta visual na tela.", "info");
+          dispatchVisualSaleEvent(payload);
+          if (responsePort) {
+            responsePort.postMessage({ confirmed: true, playedSound: false, showedToast: true });
+          }
+          return;
+        } else {
+          if (responsePort) {
+            responsePort.postMessage({ confirmed: false, playedSound: false, reason: "unfocused_pref_disabled" });
+          }
+          return;
+        }
+      }
+
+      // Deduplicação e throttle de 2 segundos
+      const now = Date.now();
+      if (playedSoundEvents.has(notificationId)) {
+        recordAudioLog("2_DEDUP", `Notificação ${notificationId} já reproduzida anteriormente.`, "info");
+        if (responsePort) {
+          responsePort.postMessage({ confirmed: true, playedSound: false, duplicate: true });
+        }
+        return;
+      }
+
+      if (now - lastSoundPlayedAt < 2000) {
+        recordAudioLog("2_THROTTLE", "Som ignorado pelo throttle de 2s.", "info");
+        dispatchVisualSaleEvent(payload);
+        if (responsePort) {
+          responsePort.postMessage({ confirmed: true, playedSound: false, throttled: true });
+        }
+        return;
+      }
+
+      // Tenta tocar o áudio
+      try {
+        const played = await playCommissionChime({
+          eventId: notificationId,
+          volume: prefs.volume,
         });
+
+        if (played) {
+          dispatchVisualSaleEvent(payload);
+          if (responsePort) {
+            responsePort.postMessage({ confirmed: true, playedSound: true, showedToast: true });
+          }
+          return;
+        } else {
+          if (responsePort) {
+            responsePort.postMessage({ confirmed: false, playedSound: false, reason: "playback_failed" });
+          }
+        }
+      } catch (err: any) {
+        recordAudioLog("6_ERRO_REJEICAO", `Erro ao tocar áudio: ${err?.name} - ${err?.message}`, "warn");
+        if (err?.name === "NotAllowedError") {
+          dispatchAutoplayBlockedEvent(payload);
+        }
+        if (responsePort) {
+          responsePort.postMessage({ confirmed: false, playedSound: false, error: err?.name });
+        }
       }
     });
   }

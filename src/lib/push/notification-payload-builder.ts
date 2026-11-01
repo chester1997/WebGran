@@ -221,3 +221,87 @@ export function standardizePushPayload(payload: {
     },
   };
 }
+
+export interface WebGranServiceWorkerNotificationOptions {
+  body: string;
+  icon: string;
+  badge: string;
+  timestamp: number;
+  data: Record<string, any>;
+  tag?: string;
+  renotify?: boolean;
+  image?: string;
+  silent: boolean;
+  vibrate?: number[];
+}
+
+/**
+ * Monta as opções do showNotification respeitando estritamente a especificação W3C Notifications API:
+ * 1. silent: true NUNCA pode conter vibrate (a especificação lança TypeError caso vibrate esteja presente).
+ * 2. silent: false inclui o padrão de vibração [200, 100, 200] para dispositivos móveis / Android.
+ * 3. renotify: true SÓ pode ser incluído se houver tag válida e não-vazia.
+ */
+export function buildPushNotificationOptions(
+  data: {
+    title?: string;
+    body?: string;
+    icon?: string;
+    badge?: string;
+    url?: string;
+    tag?: string;
+    data?: Record<string, any>;
+    image?: string;
+    [key: string]: any;
+  },
+  clientHandledSilently: boolean,
+  origin: string = "https://webgran.com.br"
+): WebGranServiceWorkerNotificationOptions {
+  const notificationId = data.data?.orderId || data.tag || `push-${Date.now()}`;
+  const notificationTag = typeof data.tag === "string" && data.tag.trim().length > 0 ? data.tag.trim() : null;
+
+  const iconUrl = data.icon
+    ? (data.icon.startsWith("http") ? data.icon : `${origin}${data.icon.startsWith("/") ? "" : "/"}${data.icon}`)
+    : `${origin}/icons/icon-192x192.png`;
+
+  const badgeUrl = data.badge
+    ? (data.badge.startsWith("http") ? data.badge : `${origin}${data.badge.startsWith("/") ? "" : "/"}${data.badge}`)
+    : `${origin}/icons/badge-96x96.png`;
+
+  const baseOptions: Omit<WebGranServiceWorkerNotificationOptions, "silent" | "vibrate"> = {
+    body: data.body || "",
+    icon: iconUrl,
+    badge: badgeUrl,
+    timestamp: Date.now(),
+    data: {
+      url: data.url || "/seller/financeiro",
+      dateOfArrival: Date.now(),
+      notificationId,
+      ...(data.data || {}),
+    },
+  };
+
+  if (notificationTag) {
+    baseOptions.tag = notificationTag;
+    baseOptions.renotify = true;
+  }
+
+  if (data.image) {
+    baseOptions.image = data.image.startsWith("http")
+      ? data.image
+      : `${origin}${data.image.startsWith("/") ? "" : "/"}${data.image}`;
+  }
+
+  if (clientHandledSilently) {
+    // Ramo silencioso: NUNCA inclui vibrate (evita TypeError na spec W3C)
+    return {
+      ...baseOptions,
+      silent: true,
+    };
+  }
+
+  return {
+    ...baseOptions,
+    silent: false,
+    vibrate: [200, 100, 200],
+  };
+}

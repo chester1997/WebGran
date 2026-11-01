@@ -461,9 +461,9 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
 
       setupForegroundNotificationSoundListener();
 
-      expect(windowListeners["touchstart"]).toBeDefined();
-      // Simula primeiro toque do usuário
-      windowListeners["touchstart"]();
+      expect(windowListeners["touchend"]).toBeDefined();
+      // Simula primeiro toque do usuário (touchend)
+      windowListeners["touchend"]();
 
       expect(mockLoad).toHaveBeenCalled();
     });
