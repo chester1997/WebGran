@@ -33,6 +33,34 @@ interface AdminReportsClientProps {
   initialError?: string | null;
 }
 
+function formatYAxisTick(val: number, metric: "gmv" | "sales" | "fees"): string {
+  if (val <= 0) return metric === "sales" ? "0" : "R$ 0";
+  if (metric === "sales") {
+    return Math.round(val).toLocaleString("pt-BR");
+  }
+  if (val >= 1_000_000) {
+    return `R$ ${(val / 1_000_000).toFixed(1).replace(".", ",")}M`;
+  }
+  if (val >= 1_000) {
+    const k = val / 1000;
+    return `R$ ${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1).replace(".", ",")}k`;
+  }
+  return `R$ ${Math.round(val)}`;
+}
+
+function shouldShowXLabel(index: number, total: number): boolean {
+  if (total <= 10) return true;
+  if (index === 0 || index === total - 1) return true;
+
+  if (total <= 35) {
+    const stride = 4;
+    return index % stride === 0 && index < total - 2;
+  }
+
+  const stride = Math.ceil(total / 8);
+  return index % stride === 0 && index < total - Math.ceil(stride / 2);
+}
+
 export default function AdminReportsClient({
   adminUser,
   initialData,
@@ -66,6 +94,7 @@ export default function AdminReportsClient({
 
   // Active chart metric tab
   const [chartMetric, setChartMetric] = useState<"gmv" | "sales" | "fees">("gmv");
+  const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
 
   const fetchReports = (pageToFetch = 1, periodToUse = selectedPeriod, sellerToUse = selectedSeller) => {
     setError(null);
@@ -146,6 +175,40 @@ export default function AdminReportsClient({
     ),
     1
   );
+
+  const daysWithSales = timeSeries.filter((t) => t.salesCount > 0).length;
+
+  const totalMetricVal = timeSeries.reduce((acc, t) => {
+    return acc + (chartMetric === "gmv" ? t.gmv : chartMetric === "fees" ? t.platformFee : t.salesCount);
+  }, 0);
+
+  const bestPoint = timeSeries.reduce((prev, curr) => {
+    const prevVal = chartMetric === "gmv" ? prev.gmv : chartMetric === "fees" ? prev.platformFee : prev.salesCount;
+    const currVal = chartMetric === "gmv" ? curr.gmv : chartMetric === "fees" ? curr.platformFee : curr.salesCount;
+    return currVal > prevVal ? curr : prev;
+  }, timeSeries[0] || { label: "-", gmv: 0, salesCount: 0, platformFee: 0 });
+
+  const formattedTotalMetric =
+    chartMetric === "sales"
+      ? `${totalMetricVal} vendas`
+      : totalMetricVal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const bestPointVal =
+    chartMetric === "gmv" ? bestPoint.gmv : chartMetric === "fees" ? bestPoint.platformFee : bestPoint.salesCount;
+  const formattedBestPointVal =
+    chartMetric === "sales"
+      ? `${bestPointVal} vendas`
+      : bestPointVal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const chartMetricName =
+    chartMetric === "gmv" ? "Volume (GMV)" : chartMetric === "fees" ? "Taxas WebGran" : "Vendas";
+
+  const yTicks = [
+    { value: maxChartValue, label: formatYAxisTick(maxChartValue, chartMetric) },
+    { value: maxChartValue * 0.667, label: formatYAxisTick(maxChartValue * 0.667, chartMetric) },
+    { value: maxChartValue * 0.333, label: formatYAxisTick(maxChartValue * 0.333, chartMetric) },
+    { value: 0, label: formatYAxisTick(0, chartMetric) },
+  ];
 
   return (
     <div className="space-y-6 pb-12 text-zinc-100 w-full">
@@ -353,14 +416,22 @@ export default function AdminReportsClient({
       {/* 4. CHARTS & GATEWAY BREAKDOWN SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
         {/* Time Series Chart (Col-span 2) */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-xl space-y-4 w-full">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="lg:col-span-2 p-5 rounded-2xl bg-[#0F1014] border border-white/[0.08] shadow-xl flex flex-col justify-between w-full min-h-[380px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <h2 className="text-base font-bold text-white tracking-tight">Evolução ao Longo do Tempo</h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                {timeSeries.length > 0
-                  ? `Série com ${timeSeries.length} intervalo(s) registrados no período`
-                  : "Nenhum histórico no período selecionado"}
+                {timeSeries.length === 0
+                  ? "Nenhum histórico no período selecionado"
+                  : daysWithSales === 0
+                  ? "Nenhum dia com vendas no período selecionado"
+                  : selectedPeriod === "7d"
+                  ? `${daysWithSales} ${daysWithSales === 1 ? "dia" : "dias"} com vendas nos últimos 7 dias`
+                  : selectedPeriod === "30d"
+                  ? `${daysWithSales} ${daysWithSales === 1 ? "dia" : "dias"} com vendas nos últimos 30 dias`
+                  : selectedPeriod === "month"
+                  ? `${daysWithSales} ${daysWithSales === 1 ? "dia" : "dias"} com vendas neste mês`
+                  : `${daysWithSales} ${daysWithSales === 1 ? "dia" : "dias"} com vendas em ${timeSeries.length} dias analisados`}
               </p>
             </div>
 
@@ -404,63 +475,167 @@ export default function AdminReportsClient({
 
           {/* Chart Display */}
           {timeSeries.length === 0 ? (
-            <div className="h-56 flex flex-col items-center justify-center text-zinc-500 text-xs space-y-2">
+            <div className="flex-1 min-h-[280px] flex flex-col items-center justify-center text-zinc-500 text-xs space-y-2">
               <BarChart3 className="w-8 h-8 opacity-40" />
               <span>Sem dados de vendas para exibir no gráfico neste período.</span>
             </div>
           ) : (
-            <div className="h-60 pt-6 flex items-end gap-1.5 sm:gap-2 overflow-x-auto pb-2">
-              {timeSeries.map((point, idx) => {
-                const rawVal =
-                  chartMetric === "gmv"
-                    ? point.gmv
-                    : chartMetric === "fees"
-                    ? point.platformFee
-                    : point.salesCount;
-                const heightPercent = Math.max(8, Math.round((rawVal / maxChartValue) * 100));
+            <div
+              role="img"
+              aria-label={`Gráfico de evolução: ${chartMetricName}. Total de ${formattedTotalMetric} no período selecionado. Melhor dia: ${bestPoint.label} com ${formattedBestPointVal}. Pressione Tab para navegar dia a dia.`}
+              className="flex-1 min-h-[280px] w-full flex items-stretch relative"
+            >
+              {/* Discrete Y-Axis */}
+              <div
+                className="w-14 sm:w-16 shrink-0 flex flex-col justify-between items-end pr-2.5 pb-6 text-[10px] text-zinc-500 font-mono tabular-nums select-none pointer-events-none"
+                aria-hidden="true"
+              >
+                {yTicks.map((tick, i) => (
+                  <span key={i} className="leading-none transform -translate-y-1">
+                    {tick.label}
+                  </span>
+                ))}
+              </div>
 
-                const barColor =
-                  chartMetric === "gmv"
-                    ? "bg-emerald-500 hover:bg-emerald-400"
-                    : chartMetric === "fees"
-                    ? "bg-blue-500 hover:bg-blue-400"
-                    : "bg-sky-500 hover:bg-sky-400";
+              {/* Chart Plot Area with Grid Lines and Bars */}
+              <div className="relative flex-1 min-h-[280px] h-full flex flex-col justify-end pt-12">
+                {/* Horizontal Grid Lines */}
+                <div
+                  className="absolute inset-x-0 bottom-6 top-12 pointer-events-none flex flex-col justify-between"
+                  aria-hidden="true"
+                >
+                  <div className="border-b border-white/[0.04] w-full" />
+                  <div className="border-b border-white/[0.04] w-full" />
+                  <div className="border-b border-white/[0.04] w-full" />
+                  <div className="border-b border-white/[0.04] w-full" />
+                </div>
 
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 min-w-[28px] max-w-[48px] flex flex-col items-center gap-2 group relative cursor-pointer"
-                  >
-                    {/* Tooltip on Hover */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
-                      <div className="bg-zinc-950 border border-white/20 text-white text-[11px] rounded-lg px-2.5 py-1.5 shadow-xl whitespace-nowrap">
-                        <div className="font-semibold text-zinc-300">{point.label}</div>
-                        <div className="text-emerald-400 font-bold">
-                          GMV: {point.gmv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                {/* Bars Row */}
+                <div className="relative z-10 flex-1 min-h-[220px] h-full flex items-end gap-1 sm:gap-1.5 w-full pb-6">
+                  {timeSeries.map((point, idx) => {
+                    const rawVal =
+                      chartMetric === "gmv"
+                        ? point.gmv
+                        : chartMetric === "fees"
+                        ? point.platformFee
+                        : point.salesCount;
+
+                    const heightPercent =
+                      rawVal <= 0
+                        ? 0
+                        : Math.max(6, Math.round((rawVal / maxChartValue) * 100));
+
+                    const barColor =
+                      chartMetric === "gmv"
+                        ? "bg-emerald-500 hover:bg-emerald-400 group-hover:bg-emerald-400 group-focus-visible:bg-emerald-400"
+                        : chartMetric === "fees"
+                        ? "bg-blue-500 hover:bg-blue-400 group-hover:bg-blue-400 group-focus-visible:bg-blue-400"
+                        : "bg-sky-500 hover:bg-sky-400 group-hover:bg-sky-400 group-focus-visible:bg-sky-400";
+
+                    const isTooltipActive = activePointIndex === idx;
+                    const showLabel = shouldShowXLabel(idx, timeSeries.length);
+
+                    const pointFullDate = point.fullDate || (() => {
+                      if (point.date.length === 10) {
+                        const [y, m, d] = point.date.split("-").map(Number);
+                        const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+                        const str = new Intl.DateTimeFormat("pt-BR", {
+                          timeZone: "America/Recife",
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        }).format(dateObj);
+                        return str.charAt(0).toUpperCase() + str.slice(1);
+                      }
+                      return point.label;
+                    })();
+
+                    return (
+                      <div
+                        key={idx}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`${pointFullDate}: ${
+                          chartMetric === "gmv"
+                            ? point.gmv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                            : chartMetric === "fees"
+                            ? point.platformFee.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                            : `${point.salesCount} vendas`
+                        }, ${point.salesCount} pedidos pagos.`}
+                        onFocus={() => setActivePointIndex(idx)}
+                        onBlur={() => setActivePointIndex(null)}
+                        onMouseEnter={() => setActivePointIndex(idx)}
+                        onMouseLeave={() => setActivePointIndex(null)}
+                        className="flex-1 min-w-0 h-full flex flex-col justify-end items-center group relative cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/80 rounded-t-md"
+                      >
+                        {/* Tooltip on Hover or Focus */}
+                        <div
+                          className={`absolute bottom-full mb-2 ${
+                            isTooltipActive ? "flex" : "hidden group-hover:flex group-focus-visible:flex"
+                          } flex-col z-30 pointer-events-none transition-opacity duration-150 ${
+                            idx < 3
+                              ? "left-0 items-start"
+                              : idx >= timeSeries.length - 3
+                              ? "right-0 items-end"
+                              : "left-1/2 -translate-x-1/2 items-center"
+                          }`}
+                        >
+                          <div className="bg-[#0B0D12] border border-white/20 text-white text-[11px] rounded-xl px-3 py-2 shadow-2xl whitespace-nowrap space-y-1">
+                            <div className="font-semibold text-zinc-300 text-[11px] pb-1 border-b border-white/[0.08]">
+                              {pointFullDate}
+                            </div>
+                            <div className="text-emerald-400 font-bold font-mono text-xs">
+                              GMV: {point.gmv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </div>
+                            <div className="text-sky-300 font-mono text-[11px]">
+                              Vendas: {point.salesCount} {point.salesCount === 1 ? "pedido" : "pedidos"}
+                            </div>
+                            <div className="text-blue-300 font-mono text-[11px]">
+                              Taxa: {point.platformFee.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </div>
+                          </div>
+                          {/* Caret */}
+                          <div
+                            className={`w-2 h-2 bg-[#0B0D12] border-r border-b border-white/20 transform rotate-45 -mt-1 ${
+                              idx < 3 ? "ml-4" : idx >= timeSeries.length - 3 ? "mr-4" : ""
+                            }`}
+                          />
                         </div>
-                        <div className="text-sky-300">Vendas: {point.salesCount}</div>
-                        <div className="text-blue-300">
-                          Taxa: {point.platformFee.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+
+                        {/* Bar Graphic Element */}
+                        <div className="w-full h-full flex items-end justify-center">
+                          {rawVal > 0 ? (
+                            <div
+                              style={{ height: `${heightPercent}%` }}
+                              className={`w-full rounded-t-md transition-all duration-300 ${barColor}`}
+                            />
+                          ) : (
+                            <div
+                              style={{ height: "2px" }}
+                              className="w-full bg-zinc-800/80 rounded-full group-hover:bg-zinc-700 transition-colors"
+                            />
+                          )}
+                        </div>
+
+                        {/* Date Label (X-Axis) */}
+                        <div
+                          className="absolute bottom-0 inset-x-0 h-6 flex items-center justify-center pointer-events-none"
+                          aria-hidden="true"
+                        >
+                          {showLabel ? (
+                            <span className="text-[10px] text-zinc-500 font-mono truncate w-full text-center select-none">
+                              {point.label}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-transparent select-none">·</span>
+                          )}
                         </div>
                       </div>
-                      <div className="w-2 h-2 bg-zinc-950 border-r border-b border-white/20 transform rotate-45 -mt-1" />
-                    </div>
-
-                    {/* Bar */}
-                    <div className="w-full h-44 flex items-end justify-center">
-                      <div
-                        style={{ height: `${heightPercent}%` }}
-                        className={`w-full rounded-t-md transition-all duration-300 ${barColor}`}
-                      />
-                    </div>
-
-                    {/* Date Label */}
-                    <span className="text-[10px] text-zinc-500 font-mono truncate w-full text-center">
-                      {point.label}
-                    </span>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

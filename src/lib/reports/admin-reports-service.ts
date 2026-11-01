@@ -1,6 +1,14 @@
 import { db } from "@/db";
 import { orders, stores, users, products, telegramCustomers } from "@/db/schema";
 import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
+import {
+  BUSINESS_TIMEZONE,
+  getBusinessDateKey,
+  getBusinessDateLabel,
+  getBusinessParts,
+  getBusinessStartOfDay,
+  getBusinessStartOfMonth,
+} from "@/lib/analytics/timezone-utils";
 
 export interface ReportFilterParams {
   sellerId?: string | null;
@@ -40,6 +48,7 @@ export interface GatewayFeeBreakdown {
 export interface TimeSeriesPoint {
   date: string;
   label: string;
+  fullDate?: string;
   salesCount: number;
   gmv: number;
   platformFee: number;
@@ -92,38 +101,48 @@ export interface AdminReportResponse {
 
 export class AdminReportsService {
   /**
-   * Resolve o intervalo de datas de acordo com o período selecionado
+   * Resolve o intervalo de datas de acordo com o período selecionado (Fuso oficial America/Recife)
    */
   static resolveDateRange(period?: string, startDate?: string | null, endDate?: string | null): { start: Date; end: Date } {
     const now = new Date();
     const end = new Date(now);
 
     if (period === "custom" && startDate) {
-      const s = new Date(startDate);
-      const e = endDate ? new Date(endDate) : new Date(now);
-      e.setHours(23, 59, 59, 999);
+      const sParts = startDate.split("-").map(Number);
+      const s = sParts.length === 3 ? new Date(Date.UTC(sParts[0], sParts[1] - 1, sParts[2], 3, 0, 0, 0)) : new Date(startDate);
+      let e = now;
+      if (endDate) {
+        const eParts = endDate.split("-").map(Number);
+        e = eParts.length === 3 ? new Date(Date.UTC(eParts[0], eParts[1] - 1, eParts[2] + 1, 2, 59, 59, 999)) : new Date(endDate);
+      }
       return { start: isNaN(s.getTime()) ? new Date(now.getTime() - 30 * 86400000) : s, end: isNaN(e.getTime()) ? now : e };
     }
 
+    const startOfToday = getBusinessStartOfDay(now);
+
     if (period === "7d") {
-      const s = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      s.setHours(0, 0, 0, 0);
+      const s = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+      return { start: s, end };
+    }
+
+    if (period === "90d") {
+      const s = new Date(startOfToday.getTime() - 89 * 24 * 60 * 60 * 1000);
       return { start: s, end };
     }
 
     if (period === "month") {
-      const s = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const s = getBusinessStartOfMonth(now);
       return { start: s, end };
     }
 
     if (period === "year") {
-      const s = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      const parts = getBusinessParts(now);
+      const s = new Date(Date.UTC(parts.year, 0, 1, 3, 0, 0, 0));
       return { start: s, end };
     }
 
-    // Default: 30d
-    const s = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    s.setHours(0, 0, 0, 0);
+    // Default: 30d (29 dias anteriores + hoje = 30 dias contínuos)
+    const s = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
     return { start: s, end };
   }
 
@@ -289,15 +308,21 @@ export class AdminReportsService {
       console.warn("[AdminReportsService] Erro ao calcular breakdown por gateway:", err);
     }
 
-    // 6. Série temporal inteligente para gráfico
+    // 6. Série temporal contínua inteligente para gráfico (Fuso America/Recife)
     const timeSeries: TimeSeriesPoint[] = [];
     try {
       const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      const isMonthlyGrouping = diffDays > 65;
+      const isWeeklyGrouping = diffDays > 65 && diffDays <= 120;
+      const isMonthlyGrouping = diffDays > 120;
+
+      // Converter createdAt para o fuso comercial America/Recife
+      const recifeDateExpr = sql`${orders.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'America/Recife'`;
 
       const dateTruncSql = isMonthlyGrouping
-        ? sql<string>`to_char(${orders.createdAt}, 'YYYY-MM')`
-        : sql<string>`to_char(${orders.createdAt}, 'YYYY-MM-DD')`;
+        ? sql<string>`to_char(${recifeDateExpr}, 'YYYY-MM')`
+        : isWeeklyGrouping
+        ? sql<string>`to_char(date_trunc('week', ${recifeDateExpr}), 'YYYY-MM-DD')`
+        : sql<string>`to_char(${recifeDateExpr}, 'YYYY-MM-DD')`;
 
       const tsRows = await db
         .select({
@@ -311,24 +336,95 @@ export class AdminReportsService {
         .groupBy(dateTruncSql)
         .orderBy(dateTruncSql);
 
+      const dataMap = new Map<string, { salesCount: number; gmv: number; platformFee: number }>();
       for (const row of tsRows) {
-        const dateStr = String(row.timeBucket);
-        let label = dateStr;
-        if (!isMonthlyGrouping && dateStr.length === 10) {
-          const parts = dateStr.split("-");
-          label = `${parts[2]}/${parts[1]}`;
-        } else if (isMonthlyGrouping && dateStr.length === 7) {
-          const parts = dateStr.split("-");
-          label = `${parts[1]}/${parts[0]}`;
-        }
-
-        timeSeries.push({
-          date: dateStr,
-          label,
+        dataMap.set(String(row.timeBucket), {
           salesCount: Number(row.salesCount || 0),
           gmv: parseFloat(String(row.gmv || "0")),
           platformFee: parseFloat(String(row.platformFee || "0")),
         });
+      }
+
+      if (isMonthlyGrouping) {
+        const startParts = getBusinessParts(start);
+        const endParts = getBusinessParts(end);
+        let currY = startParts.year;
+        let currM = startParts.month;
+        while (currY < endParts.year || (currY === endParts.year && currM <= endParts.month)) {
+          const key = `${currY}-${String(currM).padStart(2, "0")}`;
+          const label = `${String(currM).padStart(2, "0")}/${String(currY).slice(2)}`;
+          const found = dataMap.get(key) || { salesCount: 0, gmv: 0, platformFee: 0 };
+          const monthDate = new Date(Date.UTC(currY, currM - 1, 1, 12, 0, 0));
+          const rawFullDate = new Intl.DateTimeFormat("pt-BR", {
+            timeZone: BUSINESS_TIMEZONE,
+            month: "long",
+            year: "numeric",
+          }).format(monthDate);
+
+          timeSeries.push({
+            date: key,
+            label,
+            fullDate: rawFullDate.charAt(0).toUpperCase() + rawFullDate.slice(1),
+            salesCount: found.salesCount,
+            gmv: found.gmv,
+            platformFee: found.platformFee,
+          });
+          currM++;
+          if (currM > 12) {
+            currM = 1;
+            currY++;
+          }
+        }
+      } else if (isWeeklyGrouping) {
+        let currInstant = new Date(start.getTime());
+        while (currInstant.getTime() <= end.getTime()) {
+          const key = getBusinessDateKey(currInstant);
+          const label = getBusinessDateLabel(currInstant);
+          const found = dataMap.get(key) || { salesCount: 0, gmv: 0, platformFee: 0 };
+          const rawFullDate = new Intl.DateTimeFormat("pt-BR", {
+            timeZone: BUSINESS_TIMEZONE,
+            day: "numeric",
+            month: "short",
+          }).format(currInstant);
+
+          timeSeries.push({
+            date: key,
+            label,
+            fullDate: `Semana de ${rawFullDate}`,
+            salesCount: found.salesCount,
+            gmv: found.gmv,
+            platformFee: found.platformFee,
+          });
+          currInstant = new Date(currInstant.getTime() + 7 * 24 * 60 * 60 * 1000);
+        }
+      } else {
+        const startDayInstant = getBusinessStartOfDay(start);
+        const endDayInstant = getBusinessStartOfDay(end);
+        const totalDays = Math.max(1, Math.round((endDayInstant.getTime() - startDayInstant.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+
+        for (let i = 0; i < totalDays; i++) {
+          const dayDate = new Date(startDayInstant.getTime() + i * 24 * 60 * 60 * 1000);
+          const key = getBusinessDateKey(dayDate);
+          const label = getBusinessDateLabel(dayDate);
+          const found = dataMap.get(key) || { salesCount: 0, gmv: 0, platformFee: 0 };
+
+          const rawFullDate = new Intl.DateTimeFormat("pt-BR", {
+            timeZone: BUSINESS_TIMEZONE,
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }).format(dayDate);
+
+          timeSeries.push({
+            date: key,
+            label,
+            fullDate: rawFullDate.charAt(0).toUpperCase() + rawFullDate.slice(1),
+            salesCount: found.salesCount,
+            gmv: found.gmv,
+            platformFee: found.platformFee,
+          });
+        }
       }
     } catch (err) {
       console.warn("[AdminReportsService] Erro ao gerar série temporal:", err);
