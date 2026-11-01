@@ -317,7 +317,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   isActive={isVideoActive}
                   icon={SolarVideoLibraryIcon}
                   onClick={() => setUserVideoToggled(!videoOpen)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium text-left transition-all duration-150 cursor-pointer ${
                     isVideoActive ? "bg-blue-500/10 text-white font-semibold" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
