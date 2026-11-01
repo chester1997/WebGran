@@ -35,7 +35,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             setTotalRevenue(Number(data.store.totalPaidRevenue));
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
 
     loadProfile();
@@ -98,9 +98,9 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       className="min-h-screen bg-[var(--seller-bg,#0B0D13)] text-zinc-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-200"
     >
       <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--seller-bg,#0B0D13)]">
-        
+
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
-        <aside className="w-72 bg-[var(--seller-bg,#0B0D13)] h-full border-r border-white/5 shrink-0 hidden md:block">
+        <aside className="w-72 bg-[var(--seller-bg,#0B0D13)] h-full shrink-0 hidden md:block">
           <SellerSidebar
             sellerProfile={sellerProfile}
             totalRevenue={totalRevenue}
@@ -112,7 +112,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         {mobileDrawerOpen && (
           <div
             onClick={() => setMobileDrawerOpen(false)}
-            className="fixed inset-0 bg-black/75 z-50 md:hidden transition-opacity duration-200"
+            className="fixed inset-0 bg-black/75 z-[60] md:hidden transition-opacity duration-200"
             aria-hidden="true"
           />
         )}
@@ -124,9 +124,8 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[288px] bg-[var(--seller-bg,#0B0D13)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out md:hidden ${
-            mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed inset-y-0 left-0 z-[70] w-[85vw] max-w-[288px] bg-[var(--seller-bg,#0B0D13)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out md:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <SellerSidebar
             sellerProfile={sellerProfile}
@@ -139,7 +138,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
 
         {/* Content Canvas Wrapper */}
         <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-[var(--seller-bg,#0B0D13)]">
-          
+
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
           <header className="shrink-0 w-full bg-[var(--seller-bg,#0B0D13)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
             {/* Linha Mobile Compacta (Menu + WebGran + Avatar): md:hidden */}

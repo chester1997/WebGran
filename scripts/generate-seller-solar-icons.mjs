@@ -19,37 +19,37 @@ if (!fs.existsSync(jsonPath)) {
 const iconsData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
 const infoData = fs.existsSync(infoPath) ? JSON.parse(fs.readFileSync(infoPath, "utf-8")) : {};
 
-// Mapeamento dos ícones Solar Line Duotone do Seller
+// Mapeamento dos ícones Solar Bold Duotone do Seller
 export const SELLER_ICON_MAPPING = [
   // 1. Principal
-  { id: "speedometer-middle-line-duotone", componentName: "SolarDashboardLineDuotone", alias: "SolarSellerDashboardIcon", label: "Dashboard", section: "Principal" },
+  { id: "speedometer-middle-bold-duotone", componentName: "SolarDashboardBoldDuotone", alias: "SolarSellerDashboardIcon", label: "Dashboard", section: "Principal" },
 
   // 2. Bot Telegram
-  { id: "bot-line-duotone", componentName: "SolarBotLineDuotone", alias: "SolarSellerBotIcon", label: "Configuração do Bot", section: "Bot Telegram" },
-  { id: "magic-stick-2-line-duotone", componentName: "SolarMagicStickLineDuotone", alias: "SolarSellerWelcomeIcon", label: "Boas-vindas", section: "Bot Telegram" },
-  { id: "gallery-wide-line-duotone", componentName: "SolarGalleryWideLineDuotone", alias: "SolarSellerBannersIcon", label: "Banners", section: "Bot Telegram" },
-  { id: "box-line-duotone", componentName: "SolarBoxLineDuotone", alias: "SolarSellerProductsIcon", label: "Produtos", section: "Bot Telegram" },
-  { id: "layers-minimalistic-line-duotone", componentName: "SolarLayersMinimalisticLineDuotone", alias: "SolarSellerCombosIcon", label: "Combos", section: "Bot Telegram" },
-  { id: "clapperboard-play-line-duotone", componentName: "SolarClapperboardPlayLineDuotone", alias: "SolarSellerVideosIcon", label: "Biblioteca de Vídeos", section: "Bot Telegram" },
-  { id: "slider-horizontal-line-duotone", componentName: "SolarSliderHorizontalLineDuotone", alias: "SolarSellerCarouselsIcon", label: "Carrosséis", section: "Bot Telegram" },
-  { id: "tag-price-line-duotone", componentName: "SolarTagPriceLineDuotone", alias: "SolarSellerCategoriesIcon", label: "Categorias", section: "Bot Telegram" },
-  { id: "videocamera-record-line-duotone", componentName: "SolarVideocameraRecordLineDuotone", alias: "SolarSellerClipsIcon", label: "Clips", section: "Bot Telegram" },
-  { id: "bell-line-duotone", componentName: "SolarBellLineDuotone", alias: "SolarSellerNotificationsIcon", label: "Notificações", section: "Bot Telegram" },
-  { id: "ticket-sale-line-duotone", componentName: "SolarTicketSaleLineDuotone", alias: "SolarSellerCouponsIcon", label: "Cupons", section: "Bot Telegram" },
+  { id: "bot-bold-duotone", componentName: "SolarBotBoldDuotone", alias: "SolarSellerBotIcon", label: "Configuração do Bot", section: "Bot Telegram" },
+  { id: "magic-stick-2-bold-duotone", componentName: "SolarMagicStickBoldDuotone", alias: "SolarSellerWelcomeIcon", label: "Boas-vindas", section: "Bot Telegram" },
+  { id: "gallery-wide-bold-duotone", componentName: "SolarGalleryWideBoldDuotone", alias: "SolarSellerBannersIcon", label: "Banners", section: "Bot Telegram" },
+  { id: "box-bold-duotone", componentName: "SolarBoxBoldDuotone", alias: "SolarSellerProductsIcon", label: "Produtos", section: "Bot Telegram" },
+  { id: "layers-minimalistic-bold-duotone", componentName: "SolarLayersMinimalisticBoldDuotone", alias: "SolarSellerCombosIcon", label: "Combos", section: "Bot Telegram" },
+  { id: "clapperboard-play-bold-duotone", componentName: "SolarClapperboardPlayBoldDuotone", alias: "SolarSellerVideosIcon", label: "Biblioteca de Vídeos", section: "Bot Telegram" },
+  { id: "slider-horizontal-bold-duotone", componentName: "SolarSliderHorizontalBoldDuotone", alias: "SolarSellerCarouselsIcon", label: "Carrosséis", section: "Bot Telegram" },
+  { id: "tag-price-bold-duotone", componentName: "SolarTagPriceBoldDuotone", alias: "SolarSellerCategoriesIcon", label: "Categorias", section: "Bot Telegram" },
+  { id: "videocamera-record-bold-duotone", componentName: "SolarVideocameraRecordBoldDuotone", alias: "SolarSellerClipsIcon", label: "Clips", section: "Bot Telegram" },
+  { id: "bell-bold-duotone", componentName: "SolarBellBoldDuotone", alias: "SolarSellerNotificationsIcon", label: "Notificações", section: "Bot Telegram" },
+  { id: "ticket-sale-bold-duotone", componentName: "SolarTicketSaleBoldDuotone", alias: "SolarSellerCouponsIcon", label: "Cupons", section: "Bot Telegram" },
 
   // 3. Vendas
-  { id: "cart-large-2-line-duotone", componentName: "SolarCartLarge2LineDuotone", alias: "SolarSellerOrdersIcon", label: "Pedidos", section: "Vendas" },
-  { id: "wallet-money-line-duotone", componentName: "SolarWalletMoneyLineDuotone", alias: "SolarSellerFinanceIcon", label: "Financeiro", section: "Vendas" },
-  { id: "users-group-rounded-line-duotone", componentName: "SolarUsersGroupRoundedLineDuotone", alias: "SolarSellerCustomersIcon", label: "Clientes", section: "Vendas" },
+  { id: "cart-large-2-bold-duotone", componentName: "SolarCartLarge2BoldDuotone", alias: "SolarSellerOrdersIcon", label: "Pedidos", section: "Vendas" },
+  { id: "wallet-money-bold-duotone", componentName: "SolarWalletMoneyBoldDuotone", alias: "SolarSellerFinanceIcon", label: "Financeiro", section: "Vendas" },
+  { id: "users-group-rounded-bold-duotone", componentName: "SolarUsersGroupRoundedBoldDuotone", alias: "SolarSellerCustomersIcon", label: "Clientes", section: "Vendas" },
 
   // 4. Conta
-  { id: "card-2-line-duotone", componentName: "SolarCard2LineDuotone", alias: "SolarSellerGatewaysIcon", label: "Gateways", section: "Conta" },
-  { id: "settings-line-duotone", componentName: "SolarSettingsLineDuotone", alias: "SolarSellerSettingsIcon", label: "Configurações", section: "Conta" },
+  { id: "card-2-bold-duotone", componentName: "SolarCard2BoldDuotone", alias: "SolarSellerGatewaysIcon", label: "Gateways", section: "Conta" },
+  { id: "settings-bold-duotone", componentName: "SolarSettingsBoldDuotone", alias: "SolarSellerSettingsIcon", label: "Configurações", section: "Conta" },
 
   // 5. Rodapé e Ações
-  { id: "arrow-left-line-duotone", componentName: "SolarArrowLeftLineDuotone", alias: "SolarSellerBackToAdminIcon", label: "Voltar ao Admin", section: "Rodapé" },
-  { id: "logout-2-line-duotone", componentName: "SolarLogout2LineDuotone", alias: "SolarSellerLogoutIcon", label: "Sair da Conta", section: "Rodapé" },
-  { id: "chart-2-line-duotone", componentName: "SolarChart2LineDuotone", alias: "SolarSellerSalesVolumeIcon", label: "Volume de Vendas", section: "Rodapé" },
+  { id: "arrow-left-bold-duotone", componentName: "SolarArrowLeftBoldDuotone", alias: "SolarSellerBackToAdminIcon", label: "Voltar ao Admin", section: "Rodapé" },
+  { id: "logout-2-bold-duotone", componentName: "SolarLogout2BoldDuotone", alias: "SolarSellerLogoutIcon", label: "Sair da Conta", section: "Rodapé" },
+  { id: "chart-2-bold-duotone", componentName: "SolarChart2BoldDuotone", alias: "SolarSellerSalesVolumeIcon", label: "Volume de Vendas", section: "Rodapé" },
 ];
 
 // Validação estrita: se algum identificador não existir, falhar imediatamente
@@ -62,7 +62,7 @@ for (const item of SELLER_ICON_MAPPING) {
 }
 
 if (missingIcons.length > 0) {
-  console.error("ERRO: Os seguintes identificadores Line Duotone não existem na coleção Solar:");
+  console.error("ERRO: Os seguintes identificadores Bold Duotone não existem na coleção Solar:");
   for (const m of missingIcons) {
     console.error(`  - ${m}`);
   }
@@ -74,7 +74,7 @@ const licenseTitle = infoData.license?.title || "CC BY 4.0";
 const authorName = infoData.author?.name || "480 Design";
 
 let code = `/**
- * Solar Icon Set (Line Duotone) by ${authorName}, ${licenseTitle}
+ * Solar Icon Set (Bold Duotone) by ${authorName}, ${licenseTitle}
  * Source: ${figmaUrl}
  * Auto-generated by scripts/generate-seller-solar-icons.mjs
  * Total extracted seller icons: ${SELLER_ICON_MAPPING.length}
@@ -155,5 +155,5 @@ if (!fs.existsSync(outputDir)) {
 }
 
 fs.writeFileSync(outputFile, code, "utf-8");
-console.log(`Sucesso: ${SELLER_ICON_MAPPING.length} ícones Solar Line Duotone gerados em ${outputFile}`);
+console.log(`Sucesso: ${SELLER_ICON_MAPPING.length} ícones Solar Bold Duotone gerados em ${outputFile}`);
 

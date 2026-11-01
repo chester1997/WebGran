@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { ChevronDown, ChevronUp, X, LogOut, ArrowLeft } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import SidebarNavItem from "@/components/layout/SidebarNavItem";
 import {
   SolarSellerDashboardIcon,
@@ -120,178 +121,206 @@ export default function SellerSidebar({
 
   return (
     <div className="flex-1 flex flex-col justify-between h-full min-h-0 bg-[var(--seller-bg,#0B0D13)]">
-      {/* Top Header: Logo WebGran com Badge Vendedor */}
-      <div className="h-16 px-4 sm:px-5 flex items-center justify-between border-b border-white/[0.06] shrink-0">
-        <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-[1px] shadow-sm shadow-emerald-500/20">
-            <div className="w-full h-full bg-[#0B0D13] rounded-[11px] flex items-center justify-center">
-              <span className="font-black text-xs text-white tracking-tighter">W</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-white tracking-tight group-hover:text-emerald-400 transition-colors">
-              WebGran
-            </span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Vendedor
-            </span>
-          </div>
+      {/* ==================================================== */}
+      {/* BRAND HEADER (Idêntico ao Admin: px-6 md:px-7)      */}
+      {/* ==================================================== */}
+      <div className="px-6 md:px-7 pt-6 md:pt-7 pb-4 md:pb-5 flex items-center justify-between shrink-0 select-none">
+        <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <Image
+            src="/logo-webgran-icon.png"
+            alt="WebGran"
+            width={40}
+            height={40}
+            priority
+            className="w-9 h-9 md:w-10 md:h-10 rounded-full object-contain shrink-0"
+          />
+          <span className="font-semibold text-[17px] md:text-[18px] text-white tracking-tight whitespace-nowrap">
+            WebGran
+          </span>
         </Link>
 
-        {isMobileDrawer && onCloseMobile && (
-          <button
-            type="button"
-            onClick={onCloseMobile}
-            className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
-            title="Fechar menu"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] md:text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg tracking-wider uppercase">
+            VENDEDOR
+          </span>
+          {isMobileDrawer && onCloseMobile && (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="md:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              aria-label="Fechar menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Navegação Principal com Scroll Invisível */}
+      {/* ==================================================== */}
+      {/* NAVEGAÇÃO PRINCIPAL (px-6 md:px-7 py-3 space-y-1)   */}
+      {/* ==================================================== */}
       <nav
         tabIndex={0}
         aria-label="Navegação do Vendedor"
-        className="flex-1 overflow-y-auto py-4 px-3 space-y-5 scrollbar-none focus-visible:outline-none"
+        className="flex-1 overflow-y-auto px-6 md:px-7 py-3 space-y-1 sidebar-scroll focus-visible:outline-none"
       >
         {/* ==================================================== */}
         {/* SEÇÃO 1: GERAL                                       */}
         {/* ==================================================== */}
-        <div className="space-y-1">
-          <p className="px-3 pb-1 text-xs font-semibold text-zinc-400 select-none">
-            Geral
-          </p>
-          <SidebarNavItem
-            href="/seller"
-            label="Dashboard"
-            isActive={pathname === "/seller"}
-            icon={SolarSellerDashboardIcon}
-            iconSize={18}
-            accent="emerald"
-            onClick={handleLinkClick}
-          />
+        <div className="pt-2">
+          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+              GERAL
+            </span>
+            <div className="h-px flex-1 bg-white/[0.08]" />
+          </div>
+          <div className="space-y-0.5">
+            <SidebarNavItem
+              href="/seller"
+              label="Dashboard"
+              isActive={pathname === "/seller"}
+              onClick={handleLinkClick}
+              icon={SolarSellerDashboardIcon}
+              accent="emerald"
+            />
+          </div>
         </div>
 
         {/* ==================================================== */}
         {/* SEÇÃO 2: BOT TELEGRAM                                */}
         {/* ==================================================== */}
-        <div className="space-y-1">
-          <p className="px-3 pb-1 text-xs font-semibold text-zinc-400 select-none">
-            Bot Telegram
-          </p>
+        <div className="pt-3 mt-2">
+          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+              BOT TELEGRAM
+            </span>
+            <div className="h-px flex-1 bg-white/[0.08]" />
+          </div>
 
-          {/* Acordeão do Bot Telegram */}
-          <button
-            type="button"
-            onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
-              isBotChildActive
-                ? "bg-emerald-500/10 text-white font-semibold"
-                : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <SolarSellerBotIcon
-                size={18}
-                className={`shrink-0 transition-colors ${
-                  isBotChildActive ? "text-emerald-400" : "text-zinc-400"
-                }`}
-              />
-              <span className="truncate">Configurações do Bot</span>
-            </div>
-            {botGroupOpen ? (
-              <ChevronUp className="w-3.5 h-3.5 shrink-0 text-zinc-400" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+          <div className="space-y-0.5">
+            {/* Acordeão do Bot Telegram estilizado idêntico ao Admin */}
+            <SidebarNavItem
+              label="Configurações do Bot"
+              isActive={isBotChildActive}
+              icon={SolarSellerBotIcon}
+              accent="emerald"
+              onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
+              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium text-left transition-all duration-150 cursor-pointer ${
+                isBotChildActive
+                  ? "bg-emerald-500/10 text-white font-semibold"
+                  : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+              }`}
+            >
+              {botGroupOpen ? (
+                <ChevronUp className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-150" strokeWidth={1.8} />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150" strokeWidth={1.8} />
+              )}
+            </SidebarNavItem>
+
+            {/* Subitens com árvore de conexão SVG idêntica ao Admin */}
+            {botGroupOpen && (
+              <div className="relative pl-6 space-y-1 my-1">
+                {visibleBotSubItems.map((item, index) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  const isLast = index === visibleBotSubItems.length - 1;
+
+                  return (
+                    <div key={item.href} className="relative flex items-center">
+                      <svg className="absolute -left-3.5 top-0 bottom-0 w-4 h-full pointer-events-none" overflow="visible">
+                        <line x1="0" y1="0" x2="0" y2={isLast ? "14" : "100%"} stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" />
+                        <path d="M 0 0 V 8 Q 0 14 6 14 H 12" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" strokeLinecap="round" />
+                      </svg>
+
+                      <SidebarNavItem
+                        href={item.href}
+                        label={item.name}
+                        isActive={isActive}
+                        onClick={handleLinkClick}
+                        icon={item.icon}
+                        iconSize={14}
+                        accent="emerald"
+                        iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-emerald-400" : "text-zinc-400"}`}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
+                          isActive
+                            ? "bg-emerald-500/10 text-white font-semibold"
+                            : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                        }`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </button>
-
-          {/* Subitens com recuo suave (sem linhas SVG manuais) */}
-          {botGroupOpen && (
-            <div className="pl-3 pt-1 space-y-0.5 border-l border-white/[0.06] ml-4 my-1">
-              {visibleBotSubItems.map((subItem) => {
-                const isSubActive =
-                  pathname === subItem.href || pathname.startsWith(subItem.href + "/");
-
-                return (
-                  <SidebarNavItem
-                    key={subItem.href}
-                    href={subItem.href}
-                    label={subItem.name}
-                    isActive={isSubActive}
-                    icon={subItem.icon}
-                    iconSize={16}
-                    accent="emerald"
-                    onClick={handleLinkClick}
-                  />
-                );
-              })}
-            </div>
-          )}
+          </div>
         </div>
 
         {/* ==================================================== */}
         {/* SEÇÃO 3: VENDAS                                      */}
         {/* ==================================================== */}
-        <div className="space-y-1">
-          <p className="px-3 pb-1 text-xs font-semibold text-zinc-400 select-none">
-            Vendas
-          </p>
-          {salesItems.map((item) => {
-            const isItemActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+        <div className="pt-3 mt-2">
+          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+              VENDAS
+            </span>
+            <div className="h-px flex-1 bg-white/[0.08]" />
+          </div>
+          <div className="space-y-0.5">
+            {salesItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
-            return (
-              <SidebarNavItem
-                key={item.href}
-                href={item.href}
-                label={item.name}
-                isActive={isItemActive}
-                icon={item.icon}
-                iconSize={18}
-                accent="emerald"
-                onClick={handleLinkClick}
-              />
-            );
-          })}
+              return (
+                <SidebarNavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.name}
+                  isActive={isActive}
+                  onClick={handleLinkClick}
+                  icon={item.icon}
+                  accent="emerald"
+                />
+              );
+            })}
+          </div>
         </div>
 
         {/* ==================================================== */}
         {/* SEÇÃO 4: CONTA                                       */}
         {/* ==================================================== */}
-        <div className="space-y-1">
-          <p className="px-3 pb-1 text-xs font-semibold text-zinc-400 select-none">
-            Conta
-          </p>
-          {accountItems.map((item) => {
-            const isItemActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+        <div className="pt-3 mt-2">
+          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+              CONTA
+            </span>
+            <div className="h-px flex-1 bg-white/[0.08]" />
+          </div>
+          <div className="space-y-0.5">
+            {accountItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
-            return (
-              <SidebarNavItem
-                key={item.href}
-                href={item.href}
-                label={item.name}
-                isActive={isItemActive}
-                icon={item.icon}
-                iconSize={18}
-                accent="emerald"
-                onClick={handleLinkClick}
-              />
-            );
-          })}
+              return (
+                <SidebarNavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.name}
+                  isActive={isActive}
+                  onClick={handleLinkClick}
+                  icon={item.icon}
+                  accent="emerald"
+                />
+              );
+            })}
+          </div>
         </div>
       </nav>
 
       {/* ==================================================== */}
       {/* RODAPÉ: CARD DE VOLUME, VOLTAR AO ADMIN & USUÁRIO    */}
       {/* ==================================================== */}
-      <div className="p-3 border-t border-white/[0.06] space-y-2 bg-[var(--seller-bg,#0B0D13)] shrink-0">
+      <div className="px-6 md:px-7 py-4 border-t border-white/[0.06] space-y-2.5 bg-[var(--seller-bg,#0B0D13)] shrink-0">
         
-        {/* Card de Volume de Vendas (Clean & Apple HIG) */}
-        <div className="p-3 rounded-xl bg-[#10121A] border border-white/[0.04] space-y-2 relative overflow-hidden">
+        {/* Card de Volume de Vendas */}
+        <div className="p-3 rounded-lg bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 text-zinc-300">
               <SolarSellerSalesVolumeIcon size={16} className="text-emerald-400 shrink-0" />
@@ -331,15 +360,15 @@ export default function SellerSidebar({
             onClick={handleLinkClick}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
           >
-            <SolarSellerBackToAdminIcon size={16} className="text-zinc-400 group-hover:text-emerald-400 shrink-0" />
+            <SolarSellerBackToAdminIcon size={16} className="text-zinc-400 shrink-0" />
             <span className="truncate flex-1">Voltar ao Admin</span>
           </Link>
         )}
 
         {/* Perfil do Vendedor & Logout */}
-        <div className="flex items-center justify-between p-2 rounded-xl bg-[#10121A] border border-white/[0.04]">
+        <div className="flex items-center justify-between p-2 rounded-lg bg-[#0F1014] border border-white/[0.06]">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center border border-white/10 shrink-0 font-bold text-xs text-white overflow-hidden">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center border border-emerald-500/30 shrink-0 font-bold text-[11px] text-white overflow-hidden">
               {sellerProfile?.avatarUrl ? (
                 <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -362,7 +391,7 @@ export default function SellerSidebar({
               if (isMobileDrawer && onCloseMobile) onCloseMobile();
               signOut({ callbackUrl: "/login" });
             }}
-            className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0 ml-1"
+            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0 ml-1"
             title="Sair da conta"
           >
             <SolarSellerLogoutIcon size={16} className="text-zinc-400 hover:text-rose-400 transition-colors" />
@@ -372,4 +401,3 @@ export default function SellerSidebar({
     </div>
   );
 }
-

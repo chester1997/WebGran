@@ -9,14 +9,14 @@ import {
   SolarSellerOrdersIcon,
 } from "../seller-icons";
 
-describe("Seller Solar Line Duotone Icons", () => {
+describe("Seller Solar Bold Duotone Icons", () => {
   it("contém exatamente os 20 ícones necessários mapeados", () => {
     expect(SELLER_MENU_ICONS.length).toBe(20);
   });
 
-  it("garante que cada ícone possui id line-duotone e componente SVG válido", () => {
+  it("garante que cada ícone possui id bold-duotone e componente SVG válido", () => {
     for (const item of SELLER_MENU_ICONS) {
-      expect(item.id).toContain("line-duotone");
+      expect(item.id).toContain("bold-duotone");
       expect(item.Component).toBeDefined();
       expect(item.label).toBeDefined();
       expect(item.section).toBeDefined();
