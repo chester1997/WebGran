@@ -163,7 +163,12 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
     const responders = clientResponders || (clientResponder ? [clientResponder] : []);
 
     // Simula MessageChannel do Service Worker
-    const channelPromise = new Promise<{ confirmed: boolean }>((resolve) => {
+    const channelPromise = new Promise<{
+      confirmed: boolean;
+      playedSound?: boolean;
+      soundDisabledByUser?: boolean;
+      [key: string]: any;
+    }>((resolve) => {
       let positiveResolved = false;
       let pendingResponses = responders.length;
 
@@ -200,7 +205,17 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
           pendingResponses--;
           const res = msgEvent.data;
 
-          if (!positiveResolved && res && res.confirmed) {
+          // Distinção fundamental:
+          // playedSound: true -> áudio efetivamente reproduzido na aba visível; pode silenciar a notificação
+          if (!positiveResolved && res && res.playedSound === true) {
+            positiveResolved = true;
+            clearTimeout(timeoutId);
+            resolve(res);
+            return;
+          }
+
+          // Preferência desativada pelo vendedor na página aberta:
+          if (!positiveResolved && res && res.soundDisabledByUser === true) {
             positiveResolved = true;
             clearTimeout(timeoutId);
             resolve(res);
@@ -209,7 +224,7 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
 
           if (!positiveResolved && pendingResponses <= 0) {
             clearTimeout(timeoutId);
-            resolve({ confirmed: false });
+            resolve(res || { confirmed: false, playedSound: false });
           }
         };
 
@@ -229,12 +244,19 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
     });
 
     const result = await channelPromise;
-    if (result && result.confirmed) {
-      clientHandledSilently = true;
+    let userDisabledSoundInClient = false;
+    if (result) {
+      if (result.playedSound === true) {
+        clientHandledSilently = true;
+      } else if (result.soundDisabledByUser === true) {
+        userDisabledSoundInClient = true;
+      }
     }
 
     let shouldPlaySoundWithAppClosed = true;
-    if (!clientHandledSilently) {
+    if (userDisabledSoundInClient) {
+      shouldPlaySoundWithAppClosed = false;
+    } else if (!clientHandledSilently) {
       try {
         const recipientId = data.data?.recipientUserId || data.data?.sellerId || data.data?.userId || data.data?.ownerId;
         const idbPrefs = await getPreferencesFromIndexedDB(recipientId);
@@ -972,6 +994,251 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
 
       expect(resLoud.silent).toBe(false);
       expect(resLoud.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+  });
+
+  describe("Validação Rigorosa da Correção de Causa Raiz (8 Casos Obrigatórios)", () => {
+    it("1. Página oculta responde playedSound: false -> notificação nativa com som", async () => {
+      vi.stubGlobal("document", {
+        visibilityState: "hidden",
+        hasFocus: () => false,
+      });
+
+      setupForegroundNotificationSoundListener();
+
+      const result = await simulateSwPushNegotiation({
+        clientResponder: async (event, port) => {
+          await swMessageListeners[0](event);
+        },
+      });
+
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("2. Throttle responde playedSound: false -> notificação nativa com som", async () => {
+      vi.stubGlobal("document", {
+        visibilityState: "visible",
+        hasFocus: () => true,
+      });
+
+      const mockPlay = vi.fn().mockResolvedValue(undefined);
+      class MockAudio {
+        volume = 1;
+        muted = false;
+        currentTime = 0;
+        play = mockPlay;
+        pause = vi.fn();
+      }
+      vi.stubGlobal("Audio", MockAudio);
+
+      setupForegroundNotificationSoundListener();
+
+      // Primeiro áudio toca normalmente
+      await playCommissionChime({ eventId: "sale-throttle-first" });
+
+      // Segundo evento chega imediatamente (< 2000ms), disparando o throttle na janela
+      const throttledPayload = buildSaleNotificationPayload({
+        orderId: "sale-throttle-second",
+        amount: 88,
+      });
+
+      const result = await simulateSwPushNegotiation({
+        customData: throttledPayload,
+        clientResponder: async (event, port) => {
+          await swMessageListeners[0](event);
+        },
+      });
+
+      // Como o áudio personalizado foi throttled (playedSound: false), a notificação nativa do SO toca com som e vibra
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("3. Duplicidade responde playedSound: false -> não presumir reprodução", async () => {
+      vi.stubGlobal("document", {
+        visibilityState: "visible",
+        hasFocus: () => true,
+      });
+
+      const mockPlay = vi.fn().mockResolvedValue(undefined);
+      class MockAudio {
+        volume = 1;
+        muted = false;
+        currentTime = 0;
+        play = mockPlay;
+        pause = vi.fn();
+      }
+      vi.stubGlobal("Audio", MockAudio);
+
+      setupForegroundNotificationSoundListener();
+
+      const eventTag = "sale-order-dup-3";
+      // Marca evento como tocado anteriormente
+      markEventAsPlayed(eventTag);
+      expect(isEventRecentlyPlayed(eventTag)).toBe(true);
+
+      const dupPayload = buildSaleNotificationPayload({
+        orderId: "order-dup-3",
+        amount: 150,
+      });
+      dupPayload.tag = eventTag;
+
+      const result = await simulateSwPushNegotiation({
+        customData: dupPayload,
+        clientResponder: async (event, port) => {
+          await swMessageListeners[0](event);
+        },
+      });
+
+      // O SW não presume que o áudio tocou nesta entrega; a notificação do SO não é silenciada
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("4. Autoplay bloqueado -> notificação nativa com som", async () => {
+      vi.stubGlobal("document", {
+        visibilityState: "visible",
+        hasFocus: () => true,
+      });
+
+      // Mock de áudio rejeitando por autoplay
+      class MockBlockedAudio {
+        volume = 1;
+        muted = false;
+        currentTime = 0;
+        play = vi.fn().mockRejectedValue(new DOMException("Autoplay blocked", "NotAllowedError"));
+        pause = vi.fn();
+      }
+      vi.stubGlobal("Audio", MockBlockedAudio);
+
+      // AudioContext suspenso
+      class MockBlockedAudioContext {
+        state = "suspended";
+        currentTime = 0;
+        destination = {};
+        resume = vi.fn().mockRejectedValue(new DOMException("Cannot resume", "NotAllowedError"));
+      }
+      vi.stubGlobal("AudioContext", MockBlockedAudioContext);
+      (window as any).AudioContext = MockBlockedAudioContext;
+
+      setupForegroundNotificationSoundListener();
+
+      const result = await simulateSwPushNegotiation({
+        clientResponder: async (event, port) => {
+          await swMessageListeners[0](event);
+        },
+      });
+
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("5. Áudio reproduzido com sucesso -> notificação nativa silenciosa", async () => {
+      vi.stubGlobal("document", {
+        visibilityState: "visible",
+        hasFocus: () => true,
+      });
+
+      const mockPlay = vi.fn().mockResolvedValue(undefined);
+      class MockAudio {
+        volume = 1;
+        muted = false;
+        currentTime = 0;
+        play = mockPlay;
+        pause = vi.fn();
+      }
+      vi.stubGlobal("Audio", MockAudio);
+
+      setupForegroundNotificationSoundListener();
+
+      const result = await simulateSwPushNegotiation({
+        clientResponder: async (event, port) => {
+          await swMessageListeners[0](event);
+        },
+      });
+
+      expect(result.silent).toBe(true);
+      expect(result.finalOptions.silent).toBe(true);
+      expect(result.finalOptions.vibrate).toBeUndefined();
+      expect(mockPlay).toHaveBeenCalled();
+    });
+
+    it("6. Preferência desativada -> notificação silenciosa", async () => {
+      vi.stubGlobal("document", {
+        visibilityState: "visible",
+        hasFocus: () => true,
+      });
+
+      saveNotificationSoundPreferences({ enabled: false });
+
+      setupForegroundNotificationSoundListener();
+
+      const result = await simulateSwPushNegotiation({
+        clientResponder: async (event, port) => {
+          await swMessageListeners[0](event);
+        },
+      });
+
+      expect(result.silent).toBe(true);
+      expect(result.finalOptions.silent).toBe(true);
+      expect(result.finalOptions.vibrate).toBeUndefined();
+    });
+
+    it("7. PWA completamente fechado -> notificação nativa com som", async () => {
+      await savePreferencesToIndexedDB(
+        { enabled: true, volume: 80, soundId: "commission" },
+        "seller-closed-user"
+      );
+
+      const salePayload = buildSaleNotificationPayload({
+        orderId: "ord-closed-7",
+        amount: 320,
+        sellerId: "seller-closed-user",
+      });
+
+      // 0 janelas abertas
+      const result = await simulateSwPushNegotiation({
+        customData: salePayload,
+        clientResponders: [],
+      });
+
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("8. Venda e comissão simultâneas -> tags independentes", async () => {
+      const salePayload = buildSaleNotificationPayload({
+        orderId: "ord-simul-8",
+        amount: 500,
+      });
+
+      const commPayload = buildPlatformCommissionPayload({
+        orderId: "ord-simul-8",
+        feeReais: 50,
+        eventType: "SPLIT_PROCESSED",
+      });
+
+      expect(salePayload.tag).toBe("sale-ord-simul-8");
+      expect(commPayload.tag).toBe("commission-ord-simul-8-split_processed");
+      expect(salePayload.tag).not.toBe(commPayload.tag);
+
+      const [resSale, resComm] = await Promise.all([
+        simulateSwPushNegotiation({ customData: salePayload, clientResponders: [] }),
+        simulateSwPushNegotiation({ customData: commPayload, clientResponders: [] }),
+      ]);
+
+      expect(resSale.finalOptions.tag).toBe("sale-ord-simul-8");
+      expect(resComm.finalOptions.tag).toBe("commission-ord-simul-8-split_processed");
+      expect(resSale.silent).toBe(false);
+      expect(resComm.silent).toBe(false);
+      expect(resSale.finalOptions.silent).toBe(false);
+      expect(resComm.finalOptions.silent).toBe(false);
     });
   });
 });

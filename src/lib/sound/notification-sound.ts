@@ -905,15 +905,20 @@ export function setupForegroundNotificationSoundListener(): void {
 
       recordAudioLog("1_EVENTO", `Mensagem ${type} recebida para notificationId=${notificationId}`, "info", payload);
 
-      // Verificação honesta de visibilidade da página
+      // Verificação honesta de visibilidade e foco da página
       const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+      const isFocused = typeof document === "undefined" || typeof document.hasFocus !== "function" || document.hasFocus();
 
-      // Regra 2: Se o documento estiver oculto (background/tela bloqueada), responde playedSound: false
-      // e NÃO toca som aqui, permitindo ao Service Worker disparar notificação com som do sistema (silent: false).
-      if (isHidden) {
-        recordAudioLog("2_VISIBILIDADE", "Página oculta ou sem foco. Deixando som a cargo do sistema operacional.", "info");
+      // Regra: Se o documento estiver oculto ou sem foco, não toca som personalizado na aba
+      // e responde playedSound: false para o Service Worker emitir a notificação nativa com som do sistema (silent: false).
+      if (isHidden || !isFocused) {
+        recordAudioLog("2_VISIBILIDADE", `Página ${isHidden ? "oculta" : "sem foco"}. Deixando som a cargo do sistema operacional.`, "info");
         if (responsePort) {
-          responsePort.postMessage({ confirmed: false, playedSound: false, reason: "hidden_or_unfocused" });
+          responsePort.postMessage({
+            confirmed: false,
+            playedSound: false,
+            reason: isHidden ? "hidden" : "unfocused",
+          });
         }
         return;
       }
@@ -923,39 +928,46 @@ export function setupForegroundNotificationSoundListener(): void {
 
       // Se a preferência estiver DESLIGADA:
       if (!prefs.enabled) {
-        // Documento visível e em foco + preferência desligada:
-        // Mostra aviso na tela e responde confirmed: true, playedSound: false, permitindo notificação silenciosa do SO.
-        const isFocused = typeof document === "undefined" || typeof document.hasFocus !== "function" || document.hasFocus();
-        if (isFocused) {
-          recordAudioLog("2_PREFERENCIA", "Som desativado pelo usuário. Exibindo apenas alerta visual na tela.", "info");
-          dispatchVisualSaleEvent(payload);
-          if (responsePort) {
-            responsePort.postMessage({ confirmed: true, playedSound: false, showedToast: true });
-          }
-          return;
-        } else {
-          if (responsePort) {
-            responsePort.postMessage({ confirmed: false, playedSound: false, reason: "unfocused_pref_disabled" });
-          }
-          return;
-        }
-      }
-
-      // Deduplicação e throttle de 2 segundos (suporte cross-tab e em memória)
-      const now = Date.now();
-      if (isEventRecentlyPlayed(notificationId)) {
-        recordAudioLog("2_DEDUP", `Notificação ${notificationId} já reproduzida anteriormente.`, "info");
+        recordAudioLog("2_PREFERENCIA", "Som desativado pelo usuário. Exibindo apenas alerta visual na tela.", "info");
+        dispatchVisualSaleEvent(payload);
         if (responsePort) {
-          responsePort.postMessage({ confirmed: true, playedSound: false, duplicate: true });
+          responsePort.postMessage({
+            confirmed: true,
+            playedSound: false,
+            soundDisabledByUser: true,
+            showedToast: true,
+            reason: "preference_disabled",
+          });
         }
         return;
       }
 
+      // Deduplicação (já reproduzido recentemente):
+      if (isEventRecentlyPlayed(notificationId)) {
+        recordAudioLog("2_DEDUP", `Notificação ${notificationId} já reproduzida anteriormente.`, "info");
+        if (responsePort) {
+          responsePort.postMessage({
+            confirmed: false,
+            playedSound: false,
+            duplicate: true,
+            reason: "duplicate",
+          });
+        }
+        return;
+      }
+
+      // Throttle de 2 segundos (suporte cross-tab e em memória):
+      const now = Date.now();
       if (now - lastSoundPlayedAt < 2000) {
         recordAudioLog("2_THROTTLE", "Som ignorado pelo throttle de 2s.", "info");
         dispatchVisualSaleEvent(payload);
         if (responsePort) {
-          responsePort.postMessage({ confirmed: true, playedSound: false, throttled: true });
+          responsePort.postMessage({
+            confirmed: false,
+            playedSound: false,
+            throttled: true,
+            reason: "throttled",
+          });
         }
         return;
       }
@@ -970,21 +982,35 @@ export function setupForegroundNotificationSoundListener(): void {
         if (played) {
           dispatchVisualSaleEvent(payload);
           if (responsePort) {
-            responsePort.postMessage({ confirmed: true, playedSound: true, showedToast: true });
+            responsePort.postMessage({
+              confirmed: true,
+              playedSound: true,
+              showedToast: true,
+              reason: "played_success",
+            });
           }
           return;
         } else {
           recordAudioLog("6_ERRO_REJEICAO", "Reprodução sonora não autorizada pelo navegador (autoplay).", "warn");
           dispatchAutoplayBlockedEvent(payload);
           if (responsePort) {
-            responsePort.postMessage({ confirmed: false, playedSound: false, reason: "playback_failed" });
+            responsePort.postMessage({
+              confirmed: false,
+              playedSound: false,
+              reason: "autoplay_blocked",
+            });
           }
         }
       } catch (err: any) {
         recordAudioLog("6_ERRO_REJEICAO", `Erro ao tocar áudio: ${err?.name} - ${err?.message}`, "warn");
         dispatchAutoplayBlockedEvent(payload);
         if (responsePort) {
-          responsePort.postMessage({ confirmed: false, playedSound: false, error: err?.name });
+          responsePort.postMessage({
+            confirmed: false,
+            playedSound: false,
+            reason: "playback_failed",
+            error: err?.name,
+          });
         }
       }
     });

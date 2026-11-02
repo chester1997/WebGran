@@ -1,5 +1,5 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v11';
+const CACHE_NAME = 'webgran-static-v12';
 
 // Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
@@ -210,6 +210,22 @@ function getSoundPreferenceFromIndexedDB(userId) {
   });
 }
 
+// Buffer em memória para diagnóstico técnico seguro de notificações push (sem dados sensíveis)
+self.__PUSH_DIAGNOSTICS = self.__PUSH_DIAGNOSTICS || [];
+
+function recordPushDiagnostic(entry) {
+  try {
+    if (!self.__PUSH_DIAGNOSTICS) {
+      self.__PUSH_DIAGNOSTICS = [];
+    }
+    self.__PUSH_DIAGNOSTICS.unshift(entry);
+    if (self.__PUSH_DIAGNOSTICS.length > 20) {
+      self.__PUSH_DIAGNOSTICS.pop();
+    }
+    console.info('[SW-DIAGNOSTIC]', JSON.stringify(entry));
+  } catch {}
+}
+
 // 6. WEB PUSH NOTIFICATIONS COM CONFIRMAÇÃO BIDIRECIONAL (MessageChannel)
 async function handlePushEvent(event) {
   let data = {
@@ -271,17 +287,32 @@ async function handlePushEvent(event) {
 
   // 1. Tentar obter confirmação honesta de clientes com janelas abertas
   let clientHandledSilently = false;
+  let userDisabledSoundInClient = false;
+  const clientDiagnostic = {
+    evaluatedClientsCount: 0,
+    visibleClientsCount: 0,
+    responseReceived: false,
+    confirmed: false,
+    playedSound: false,
+    reason: 'no_clients',
+  };
 
   try {
     const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clientDiagnostic.evaluatedClientsCount = windowClients ? windowClients.length : 0;
 
-    if (windowClients && windowClients.length > 0) {
-      // Ordena clientes: janelas focadas/visíveis primeiro para priorizar quem tem foco ativo
-      const sortedClients = [...windowClients].sort((a, b) => {
+    // Regra Crítica: Não delegar a reprodução personalizada para janelas ocultas ou sem foco.
+    // Apenas janelas visíveis no navegador/PWA podem tentar reproduzir áudio via HTML5/Web Audio.
+    const eligibleClients = (windowClients || []).filter(
+      (c) => c.visibilityState === 'visible'
+    );
+    clientDiagnostic.visibleClientsCount = eligibleClients.length;
+
+    if (eligibleClients.length > 0) {
+      // Prioriza janelas com foco ativo
+      const sortedClients = [...eligibleClients].sort((a, b) => {
         if (a.focused && !b.focused) return -1;
         if (!a.focused && b.focused) return 1;
-        if (a.visibilityState === 'visible' && b.visibilityState !== 'visible') return -1;
-        if (a.visibilityState !== 'visible' && b.visibilityState === 'visible') return 1;
         return 0;
       });
 
@@ -292,7 +323,7 @@ async function handlePushEvent(event) {
 
         const timeoutId = setTimeout(() => {
           if (!positiveResolved) {
-            resolve({ confirmed: false, reason: 'timeout' });
+            resolve({ confirmed: false, playedSound: false, reason: 'timeout' });
           }
         }, 1000);
 
@@ -302,8 +333,9 @@ async function handlePushEvent(event) {
             pendingResponses--;
             const res = msgEvent.data;
 
-            // Se qualquer janela confirmar positivamente a reprodução ou exibição em foco:
-            if (!positiveResolved && res && res.confirmed) {
+            // Distinção fundamental:
+            // playedSound: true -> áudio efetivamente reproduzido na aba visível; pode silenciar a notificação do sistema.
+            if (!positiveResolved && res && res.playedSound === true) {
               positiveResolved = true;
               clearTimeout(timeoutId);
               try { channel.port1.close(); } catch {}
@@ -311,11 +343,21 @@ async function handlePushEvent(event) {
               return;
             }
 
-            // Se todas as janelas responderam e nenhuma confirmou positivamente:
+            // Preferência desativada pelo vendedor na página visível:
+            if (!positiveResolved && res && res.soundDisabledByUser === true) {
+              positiveResolved = true;
+              clearTimeout(timeoutId);
+              try { channel.port1.close(); } catch {}
+              resolve(res);
+              return;
+            }
+
+            // Casos onde playedSound é false (throttle, duplicidade, falha de autoplay, página oculta, etc.):
+            // NÃO silenciam a notificação nativa. Continuamos esperando outra janela ou finalizamos negativo.
             if (!positiveResolved && pendingResponses <= 0) {
               clearTimeout(timeoutId);
               try { channel.port1.close(); } catch {}
-              resolve({ confirmed: false, reason: 'all_clients_negative' });
+              resolve(res || { confirmed: false, playedSound: false, reason: 'no_client_played' });
             }
           };
 
@@ -333,20 +375,35 @@ async function handlePushEvent(event) {
       });
 
       const result = await channelPromise;
-      if (result && result.confirmed) {
-        // Confirmação honesta: som tocou com sucesso OU preferência desligada com página visível em foco
-        clientHandledSilently = true;
+      if (result) {
+        clientDiagnostic.responseReceived = true;
+        clientDiagnostic.confirmed = !!result.confirmed;
+        clientDiagnostic.playedSound = !!result.playedSound;
+        clientDiagnostic.reason = result.reason || (result.throttled ? 'throttled' : (result.duplicate ? 'duplicate' : (result.playedSound ? 'played_success' : 'not_played')));
+
+        if (result.playedSound === true) {
+          // Áudio tocou com sucesso em primeiro plano: silencia notificação nativa para não duplicar som
+          clientHandledSilently = true;
+        } else if (result.soundDisabledByUser === true) {
+          // Vendedor desativou o som nas preferências
+          userDisabledSoundInClient = true;
+        }
       }
+    } else {
+      clientDiagnostic.reason = windowClients && windowClients.length > 0 ? 'all_windows_hidden' : 'pwa_closed';
     }
   } catch (err) {
+    clientDiagnostic.reason = `error: ${err?.message || err}`;
     console.warn('[SW] Erro na negociação de áudio com janela:', err);
   }
 
-  // 2. Quando o PWA estiver fechado (ou nenhuma janela confirmou o som em primeiro plano):
+  // 2. Quando o PWA estiver fechado, em background, ou quando nenhuma janela visível tocou o áudio:
   // Consulta IndexedDB para verificar se o usuário desligou o som de notificações
   let shouldPlaySoundWithAppClosed = true;
 
-  if (!clientHandledSilently) {
+  if (userDisabledSoundInClient) {
+    shouldPlaySoundWithAppClosed = false;
+  } else if (!clientHandledSilently) {
     try {
       const recipientId = data.data?.recipientUserId || data.data?.sellerId || data.data?.userId || data.data?.ownerId;
       const idbPrefs = await getSoundPreferenceFromIndexedDB(recipientId);
@@ -378,7 +435,31 @@ async function handlePushEvent(event) {
     };
   }
 
-  return self.registration.showNotification(data.title, finalOptions);
+  let showNotificationResult = 'PENDING';
+  try {
+    const showPromise = await self.registration.showNotification(data.title, finalOptions);
+    showNotificationResult = 'SUCCESS';
+    return showPromise;
+  } catch (err) {
+    showNotificationResult = `ERROR: ${err?.message || err}`;
+    throw err;
+  } finally {
+    recordPushDiagnostic({
+      timestamp: new Date().toISOString(),
+      notificationTag: notificationTag || null,
+      evaluatedClientsCount: clientDiagnostic.evaluatedClientsCount,
+      visibleClientsCount: clientDiagnostic.visibleClientsCount,
+      clientResponseReceived: clientDiagnostic.responseReceived,
+      clientConfirmed: clientDiagnostic.confirmed,
+      clientPlayedSound: clientDiagnostic.playedSound,
+      clientReason: clientDiagnostic.reason,
+      userDisabledSoundInClient,
+      shouldPlaySoundWithAppClosed,
+      finalOptionsSilent: finalOptions ? finalOptions.silent : true,
+      hasVibrate: finalOptions && Array.isArray(finalOptions.vibrate) && finalOptions.vibrate.length > 0,
+      showNotificationResult,
+    });
+  }
 }
 
 self.addEventListener('push', (event) => {
@@ -409,4 +490,16 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// 8. DIAGNÓSTICO TÉCNICO VIA SERVICE WORKER MESSAGE
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'GET_PUSH_DIAGNOSTICS') {
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({
+        type: 'PUSH_DIAGNOSTICS_RESPONSE',
+        diagnostics: self.__PUSH_DIAGNOSTICS || [],
+      });
+    }
+  }
 });
