@@ -50,8 +50,10 @@ export function buildSaleNotificationPayload(params: {
   amount: number | string;
   itemTitle?: string;
   storeId?: string;
+  sellerId?: string;
+  recipientUserId?: string;
 }): StandardPushPayload {
-  const { orderId, amount, itemTitle, storeId } = params;
+  const { orderId, amount, itemTitle, storeId, sellerId, recipientUserId } = params;
   const formattedAmount = formatNotificationBRL(amount);
   const title = "🛒 Nova venda no WebGran";
   const body = `Você recebeu ${formattedAmount}`;
@@ -67,6 +69,8 @@ export function buildSaleNotificationPayload(params: {
       type: "SALE",
       orderId,
       storeId: storeId || "",
+      sellerId: sellerId || recipientUserId || "",
+      recipientUserId: recipientUserId || sellerId || "",
       amount: typeof amount === "number" ? amount : parseFloat(String(amount)) || 0,
       itemTitle: itemTitle || "Produto",
       url: "/seller/financeiro",
@@ -163,8 +167,10 @@ export function buildPlatformCommissionPayload(params: {
   orderId: string;
   feeReais: number | string;
   eventType: "SPLIT_PROCESSED" | "COMMISSION_CONFIRMED" | "COMMISSION_SETTLED" | string;
+  ownerId?: string;
+  recipientUserId?: string;
 }): StandardPushPayload {
-  const { orderId, feeReais, eventType } = params;
+  const { orderId, feeReais, eventType, ownerId, recipientUserId } = params;
   const formattedFee = formatNotificationBRL(feeReais);
 
   let title = "💰 Comissão WebGran";
@@ -186,6 +192,7 @@ export function buildPlatformCommissionPayload(params: {
       type: "PLATFORM_COMMISSION",
       orderId,
       eventType,
+      recipientUserId: recipientUserId || ownerId || "",
       feeReais: typeof feeReais === "number" ? feeReais : parseFloat(String(feeReais)) || 0,
       url: "/admin/commission",
     },
