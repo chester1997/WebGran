@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
+import { isOrderNetConfirmed } from "@/lib/payments/split-reconciliation-service";
 import { CommercialMetricsService, CommercialMetrics, resolvePeriodDateRange } from "@/lib/analytics/commercial-metrics-service";
 import {
   BUSINESS_TIMEZONE,
@@ -119,6 +120,9 @@ export interface FinancialSummary {
   netFormatted: string;
   netMarginPercent: number;
   paidOrdersCount: number;
+  isEstimated?: boolean;
+  confirmedCount?: number;
+  estimatedCount?: number;
 }
 
 export interface StoreAnalyticsData {
@@ -868,13 +872,34 @@ export class AnalyticsService {
     combinedLog.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     const activityLog = combinedLog.slice(0, 30);
 
-    // 10. Financial Summary (Receita Bruta vs Taxa da Plataforma vs Receita Líquida)
+    // 10. Financial Summary (Harmonizado com /seller/financeiro)
     const platformFeeTotal = currentPaidOrders.reduce((sum, o) => {
       const fee = Number(o.platformFee || 0);
       if (fee > 0) return sum + fee;
       return sum + (Number(o.total || 0) > 0 ? 0.50 : 0);
     }, 0);
-    const netRevenue = Math.max(0, currRevenue - platformFeeTotal);
+
+    let confirmedCount = 0;
+    let estimatedCount = 0;
+
+    const netRevenue = currentPaidOrders.reduce((sum, o) => {
+      const orderTotal = Number(o.total || 0);
+      const orderPlatformFee = Number(o.platformFee || 0);
+      const isConfirmed = isOrderNetConfirmed(o);
+
+      if (isConfirmed && o.netAmount != null) {
+        confirmedCount++;
+        return sum + Number(o.netAmount);
+      } else {
+        estimatedCount++;
+        const fallbackNet = o.netAmount != null
+          ? Number(o.netAmount)
+          : Math.max(0, orderTotal - (orderPlatformFee > 0 ? orderPlatformFee : 0.50));
+        return sum + fallbackNet;
+      }
+    }, 0);
+
+    const isEstimated = estimatedCount > 0;
     const netMarginPercent = currRevenue > 0 ? Math.round((netRevenue / currRevenue) * 1000) / 10 : 100;
 
     const financialSummary: FinancialSummary = {
@@ -886,6 +911,9 @@ export class AnalyticsService {
       netFormatted: formatCurrency(netRevenue),
       netMarginPercent,
       paidOrdersCount: currSales,
+      isEstimated,
+      confirmedCount,
+      estimatedCount,
     };
 
     return {

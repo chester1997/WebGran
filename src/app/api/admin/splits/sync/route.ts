@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
     .select({
       id: orders.id,
       total: orders.total,
+      netAmount: orders.netAmount,
+      platformFee: orders.platformFee,
+      splitDetails: orders.splitDetails,
       paymentMethod: orders.paymentMethod,
       paymentId: orders.paymentId,
       storeId: orders.storeId,
@@ -289,11 +292,14 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────────────────────────────
       // MERCADO PAGO RECONCILIATION
       // ─────────────────────────────────────────────────────────────
-      if (gateway === 'mercado_pago' || gateway.startsWith('pix') || gateway === 'mp') {
+      if (gateway === 'mercado_pago' || gateway === 'mercadopago' || gateway.startsWith('pix') || gateway === 'mp') {
         const conn = await db.query.sellerPaymentConnections.findFirst({
           where: and(
             eq(sellerPaymentConnections.storeId, order.storeId),
-            eq(sellerPaymentConnections.provider, 'mercado_pago'),
+            or(
+              eq(sellerPaymentConnections.provider, 'mercado_pago'),
+              eq(sellerPaymentConnections.provider, 'mercadopago')
+            ),
             eq(sellerPaymentConnections.status, 'active')
           ),
         });
@@ -387,6 +393,8 @@ export async function POST(req: NextRequest) {
                     marketplace_fee: orderMpData.marketplace_fee || 0,
                     charges_details: firstTx?.charges_details || orderMpData.charges_details,
                     fee_details: firstTx?.fee_details || orderMpData.fee_details,
+                    transaction_details: firstTx?.transaction_details,
+                    net_received_amount: firstTx?.net_received_amount ?? firstTx?.transaction_details?.net_received_amount,
                   };
                 }
               }
@@ -448,7 +456,53 @@ export async function POST(req: NextRequest) {
             ? order.splitAmountCents
             : 50;
         const platformFeeNum = hasFeeEvidence ? splitAmountCents / 100 : 0;
-        const netAmountNum = Math.max(0, totalNum - platformFeeNum);
+
+        // 1. Consultar o pagamento aprovado e extrair transaction_details.net_received_amount
+        const officialNetReceived = (
+          typeof approvedPayment.transaction_details?.net_received_amount === 'number' &&
+          !isNaN(approvedPayment.transaction_details.net_received_amount) &&
+          approvedPayment.transaction_details.net_received_amount > 0
+        ) ? approvedPayment.transaction_details.net_received_amount
+          : (
+            typeof approvedPayment.net_received_amount === 'number' &&
+            !isNaN(approvedPayment.net_received_amount) &&
+            approvedPayment.net_received_amount > 0
+          ) ? approvedPayment.net_received_amount
+          : null;
+
+        // 2. Verificar se já possui valor confirmado anteriormente
+        const wasPreviouslyConfirmed = SplitReconciliationService.isNetConfirmed(order);
+        const existingNetNum = order.netAmount != null ? Number(order.netAmount) : null;
+
+        let netAmountNum: number;
+        let isNetConfirmed: boolean;
+
+        if (officialNetReceived !== null) {
+          // Priorizar o valor líquido oficial retornado pelo Mercado Pago
+          netAmountNum = officialNetReceived;
+          isNetConfirmed = true;
+        } else if (wasPreviouslyConfirmed && existingNetNum !== null && !isNaN(existingNetNum)) {
+          // Preservar o valor líquido real anteriormente conciliado se a nova sincronização não possuir dado oficial
+          netAmountNum = existingNetNum;
+          isNetConfirmed = true;
+        } else {
+          // Fallback quando não há conciliação oficial nem confirmação prévia: total - taxa
+          netAmountNum = Math.max(0, totalNum - platformFeeNum);
+          isNetConfirmed = false;
+        }
+
+        const baseEvidence =
+          approvedPayment.charges_details ||
+          approvedPayment.fee_details ||
+          (officialMpFee > 0 ? { marketplace_fee: officialMpFee } : null);
+
+        const newSplitDetails = {
+          ...(typeof baseEvidence === 'object' && baseEvidence !== null && !Array.isArray(baseEvidence)
+            ? baseEvidence
+            : { rawEvidence: baseEvidence }),
+          netConfirmed: isNetConfirmed,
+          netReceivedAmount: isNetConfirmed ? Number(netAmountNum.toFixed(2)) : undefined,
+        };
 
         await (db as any).transaction(async (tx: any) => {
           await tx
@@ -458,10 +512,7 @@ export async function POST(req: NextRequest) {
               platformFee: platformFeeNum.toFixed(2),
               netAmount: netAmountNum.toFixed(2),
               splitConfirmedAt: hasFeeEvidence ? new Date() : null,
-              splitDetails:
-                approvedPayment.charges_details ||
-                approvedPayment.fee_details ||
-                (officialMpFee > 0 ? { marketplace_fee: officialMpFee } : null),
+              splitDetails: newSplitDetails,
               updatedAt: new Date(),
             })
             .where(
@@ -480,10 +531,7 @@ export async function POST(req: NextRequest) {
                 action: 'ADMIN_SYNC_PROCESSED_BY_GATEWAY',
                 splitAmountCents,
                 platformAccountId: null,
-                evidenceDetails:
-                  approvedPayment.charges_details ||
-                  approvedPayment.fee_details ||
-                  { marketplace_fee: officialMpFee },
+                evidenceDetails: newSplitDetails,
                 reconciledBy: { id: adminId, name: adminName },
                 notes: 'Split confirmado via API oficial Mercado Pago na sincronização administrativa.',
               },

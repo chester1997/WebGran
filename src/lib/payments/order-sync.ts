@@ -34,7 +34,7 @@ export async function syncOrderWithMercadoPago(orderId: string) {
       if (isPaid && idMatches && valueMatches) {
         const { SplitReconciliationService } = await import('./split-reconciliation-service');
         const platformAccountId = process.env.PUSHINPAY_PLATFORM_ACCOUNT_ID?.trim() ||
-                                  process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
+          process.env.PUSHINPAY_COMMISSION_ACCOUNT_ID?.trim() || null;
 
         const evalResult = SplitReconciliationService.evaluatePushinPaySplit({
           order,
@@ -180,7 +180,9 @@ export async function syncOrderWithMercadoPago(orderId: string) {
     if (searchRes.ok) {
       const searchData = await searchRes.json();
       if (searchData.results && searchData.results.length > 0) {
-        approvedPayment = searchData.results.find((p: any) => p.status === 'approved' || p.status_detail === 'accredited');
+        approvedPayment = searchData.results.find((p: any) => p.status === 'approved' || p.status_detail === 'accredited')
+          || searchData.results.find((p: any) => p.status === 'refunded' || p.status === 'cancelled' || p.status === 'rejected')
+          || searchData.results[0];
       }
     }
   } catch (err) {
@@ -195,16 +197,18 @@ export async function syncOrderWithMercadoPago(orderId: string) {
       });
       if (orderMpRes.ok) {
         const orderMpData = await orderMpRes.json();
-        if (orderMpData.status === 'processed' || orderMpData.status === 'approved') {
-          const firstTx = orderMpData.transactions?.payments?.[0];
-          approvedPayment = {
-            id: firstTx?.id || orderMpData.id,
-            status: 'approved',
-            marketplace_fee: orderMpData.marketplace_fee || 0,
-            payment_method_id: firstTx?.payment_method?.id || 'pix',
-            paid_amount: orderMpData.total_amount
-          };
-        }
+        const firstTx = orderMpData.transactions?.payments?.[0];
+        approvedPayment = {
+          id: firstTx?.id || orderMpData.id,
+          status: firstTx?.status || orderMpData.status,
+          status_detail: firstTx?.status_detail || orderMpData.status_detail,
+          marketplace_fee: orderMpData.marketplace_fee || 0,
+          application_fee: firstTx?.application_fee || orderMpData.application_fee || 0,
+          payment_method_id: firstTx?.payment_method?.id || 'pix',
+          paid_amount: orderMpData.total_amount,
+          charges_details: orderMpData.charges_details || firstTx?.charges_details,
+          fee_details: orderMpData.fee_details || firstTx?.fee_details,
+        };
       }
     } catch {
       // Non-blocking fallback
@@ -216,10 +220,7 @@ export async function syncOrderWithMercadoPago(orderId: string) {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (payRes.ok) {
-          const payData = await payRes.json();
-          if (payData.status === 'approved' || payData.status_detail === 'accredited') {
-            approvedPayment = payData;
-          }
+          approvedPayment = await payRes.json();
         }
       } catch {
         // Non-blocking fallback
@@ -228,65 +229,102 @@ export async function syncOrderWithMercadoPago(orderId: string) {
   }
 
   if (approvedPayment) {
-    const totalNum = Number(order.total);
-    let platformFeeNum = 0;
-    let splitStatus: 'CONFIRMED' | 'REQUESTED' | 'FAILED' | 'SKIPPED' = 'REQUESTED';
-    let splitConfirmedAt: Date | null = null;
-
-    if (totalNum < 0.50 || order.splitStatus === 'SKIPPED') {
-      splitStatus = 'SKIPPED';
-      platformFeeNum = 0;
-    } else {
-      // Check official fee evidence in approvedPayment (charges_details, fee_details or marketplace_fee)
-      const officialMpFee = Number(approvedPayment.marketplace_fee || 0);
-      const hasFeeEvidence = officialMpFee > 0 || (
-        approvedPayment.charges_details && 
-        Array.isArray(approvedPayment.charges_details) &&
-        approvedPayment.charges_details.some((c: any) => c.type === 'marketplace_fee' || c.type === 'application_fee')
-      );
-
-      if (hasFeeEvidence || officialMpFee >= 0.50) {
-        platformFeeNum = 0.50;
-        splitStatus = 'CONFIRMED';
-        splitConfirmedAt = new Date();
-      } else {
-        // If marketplace_fee evidence is not yet confirmed by API, keep as REQUESTED without premature revenue recognition
-        platformFeeNum = 0;
-        splitStatus = 'REQUESTED';
-      }
-    }
-
-    const netAmountNum = Math.max(0, totalNum - platformFeeNum);
-
-    await db.update(orders)
-      .set({
-        status: 'paid',
-        paymentId: String(approvedPayment.id),
-        paymentMethod: approvedPayment.payment_method_id || approvedPayment.payment_type_id || 'pix',
-        platformFee: platformFeeNum.toFixed(2),
-        netAmount: netAmountNum.toFixed(2),
-        splitStatus,
-        splitConfirmedAt,
-        splitDetails: approvedPayment.charges_details || approvedPayment.fee_details || null,
-        paidAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, order.id));
-
-    // Delegate Access Delivery
-    const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
-
-    const accessList = await db.query.accesses.findMany({
-      where: eq(accesses.orderId, order.id),
+    const { SplitReconciliationService } = await import('./split-reconciliation-service');
+    const evalResult = SplitReconciliationService.evaluateMercadoPagoSplit({
+      order,
+      officialTx: approvedPayment,
     });
 
-    return {
-      success: true,
-      status: 'paid',
-      paymentId: String(approvedPayment.id),
-      accesses: accessList,
-      deliveries: deliveryResults
+    const isApproved = approvedPayment.status === 'approved' || approvedPayment.status_detail === 'accredited';
+    const isRefunded = approvedPayment.status === 'refunded' || approvedPayment.status === 'charged_back';
+    const isCancelledOrRejected = approvedPayment.status === 'cancelled' || approvedPayment.status === 'rejected';
+
+    let orderWasUpdated = false;
+
+    const runSyncTx = async (tx: any) => {
+      const updatePayload: Record<string, any> = {
+        paymentId: String(approvedPayment.id),
+        paymentMethod: approvedPayment.payment_method_id || approvedPayment.payment_type_id || 'mercadopago',
+        splitStatus: evalResult.status,
+        splitError: evalResult.splitError,
+        splitDetails: evalResult.splitDetails,
+        updatedAt: new Date(),
+      };
+
+      if (isApproved && order.status === 'pending') {
+        updatePayload.status = 'paid';
+        updatePayload.paidAt = new Date();
+      } else if (isRefunded && order.status !== 'refunded') {
+        updatePayload.status = 'refunded';
+      } else if (isCancelledOrRejected && order.status === 'pending') {
+        updatePayload.status = 'cancelled';
+      }
+
+      if (evalResult.platformFeeStr !== null) {
+        updatePayload.platformFee = evalResult.platformFeeStr;
+      }
+      if (evalResult.netAmountStr !== null) {
+        updatePayload.netAmount = evalResult.netAmountStr;
+      }
+      if (evalResult.splitConfirmedAt !== null) {
+        updatePayload.splitConfirmedAt = evalResult.splitConfirmedAt;
+      }
+
+      const updatedRows = await tx.update(orders)
+        .set(updatePayload)
+        .where(eq(orders.id, order.id))
+        .returning({ id: orders.id });
+
+      if (updatedRows && updatedRows.length > 0) {
+        orderWasUpdated = true;
+        if (evalResult.auditAction !== 'NONE') {
+          await SplitReconciliationService.recordAuditLog({
+            orderId: order.id,
+            previousStatus: order.splitStatus,
+            newStatus: evalResult.status,
+            action: evalResult.auditAction,
+            splitAmountCents: typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50,
+            evidenceDetails: evalResult.splitDetails,
+            notes: evalResult.divergenceReason || 'Reconciliação automática via polling/webhook Mercado Pago',
+          }, tx);
+        }
+      }
     };
+
+    await (db as any).transaction(runSyncTx);
+
+    if (orderWasUpdated && isApproved && order.status === 'pending') {
+      const deliveryResults = await AccessDeliveryService.processOrderDelivery(order.id);
+
+      if (evalResult.status === 'PROCESSED' || evalResult.status === 'CONFIRMED') {
+        try {
+          const { PlatformFinancialNotificationService } = await import('@/lib/push/platform-financial-notification-service');
+          await PlatformFinancialNotificationService.notifyOwnerOfCommission({
+            orderId: order.id,
+            eventType: 'SPLIT_PROCESSED',
+            platformFeeReais: evalResult.platformFeeStr || '0.50',
+            splitAmountCents: typeof order.splitAmountCents === 'number' ? order.splitAmountCents : 50,
+          });
+        } catch (notifErr) {
+          console.warn('[OrderSync] Falha não bloqueante ao notificar sobre comissão MP:', notifErr);
+        }
+      }
+
+      const accessList = await db.query.accesses.findMany({
+        where: eq(accesses.orderId, order.id),
+      });
+
+      return {
+        success: true,
+        status: 'paid',
+        paymentId: String(approvedPayment.id),
+        accesses: accessList,
+        deliveries: deliveryResults,
+      };
+    }
+
+    const currentStatus = isApproved ? 'paid' : (isRefunded ? 'refunded' : (isCancelledOrRejected ? 'cancelled' : order.status));
+    return { success: true, status: currentStatus, paymentId: String(approvedPayment.id) };
   }
 
   return { success: true, status: order.status };

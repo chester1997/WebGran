@@ -9,6 +9,8 @@ import { hasFeature } from "@/lib/entitlements/entitlement-service";
 import { DollarSign, Lock } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
+import { isOrderNetConfirmed } from "@/lib/payments/split-reconciliation-service";
+
 export default async function FinanceiroPage() {
   await connection();
   const seller = await requireSeller();
@@ -65,20 +67,25 @@ export default async function FinanceiroPage() {
     pendingCount: pendingOrders.length,
   };
 
-  const formattedTransactions = storeOrders.map((o) => ({
-    id: o.id,
-    paymentId: o.paymentId,
-    paymentMethod: o.paymentMethod || "mercadopago",
-    customerName: o.customer?.firstName
-      ? `${o.customer.firstName} ${o.customer.lastName || ""}`.trim()
-      : o.customer?.username || "Cliente",
-    total: Number(o.total || 0),
-    platformFee: Number(o.platformFee || 0),
-    netAmount: Number(o.netAmount || (Number(o.total) - Number(o.platformFee || 0))),
-    status: o.status,
-    createdAt: o.createdAt ? new Date(o.createdAt).toISOString() : new Date().toISOString(),
-    paidAt: o.paidAt ? new Date(o.paidAt).toISOString() : null,
-  }));
+  const formattedTransactions = storeOrders.map((o) => {
+    const isNetConfirmed = isOrderNetConfirmed(o);
+
+    return {
+      id: o.id,
+      paymentId: o.paymentId,
+      paymentMethod: o.paymentMethod || "mercadopago",
+      customerName: o.customer?.firstName
+        ? `${o.customer.firstName} ${o.customer.lastName || ""}`.trim()
+        : o.customer?.username || "Cliente",
+      total: Number(o.total || 0),
+      platformFee: Number(o.platformFee || 0),
+      netAmount: Number(o.netAmount || (Number(o.total) - Number(o.platformFee || 0))),
+      isNetConfirmed: !!isNetConfirmed,
+      status: o.status,
+      createdAt: o.createdAt ? new Date(o.createdAt).toISOString() : new Date().toISOString(),
+      paidAt: o.paidAt ? new Date(o.paidAt).toISOString() : null,
+    };
+  });
 
   return (
     <FinanceiroClient 

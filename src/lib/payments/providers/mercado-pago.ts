@@ -328,7 +328,7 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
     };
 
     if (platformFee > 0) {
-      prefPayload.marketplace_fee = platformFee;
+      prefPayload.marketplace_fee = Number(platformFee.toFixed(2));
     }
 
     const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -346,6 +346,25 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
     }
 
     const data = await res.json();
+
+    if (params.metadata?.orderId) {
+      const splitStatus = platformFee > 0 ? 'REQUESTED' : 'SKIPPED';
+      const splitError = platformFee > 0 ? null : 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
+      try {
+        await db.update(orders)
+          .set({
+            platformFee: '0.00',
+            splitStatus,
+            splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
+            splitError,
+            updatedAt: new Date(),
+          })
+          .where(eq(orders.id, params.metadata.orderId));
+      } catch {
+        // Non-blocking
+      }
+    }
+
     return {
       id: data.id,
       url: data.init_point || data.sandbox_init_point,
@@ -362,64 +381,56 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
   }
 
   /**
-   * Create transparent PIX Payment using Mercado Pago /v1/orders API
+   * Create transparent PIX Payment using official Mercado Pago /v1/payments API with application_fee
    */
   async createPixPayment(params: CreatePaymentParams): Promise<PixPaymentResponse> {
     const accessToken = await this.getValidAccessToken(params.sellerId);
     const platformFee = this.calculatePlatformFee(params.amount);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
-    const orderPayload: any = {
-      type: "online",
-      total_amount: params.amount.toFixed(2),
-      external_reference: params.orderId,
-      processing_mode: "automatic",
+    const idempotencyKey = `order_pix_${params.orderId}`;
+    const payerName = params.customer?.name || params.customer?.firstName || 'Cliente WebGran';
+    const nameParts = payerName.trim().split(/\s+/);
+    const firstName = nameParts[0] || 'Cliente';
+    const lastName = nameParts.slice(1).join(' ') || 'WebGran';
+
+    const paymentPayload: any = {
+      transaction_amount: Number(params.amount.toFixed(2)),
       description: params.description || `Pedido #${params.orderId.slice(0, 8)}`,
+      payment_method_id: 'pix',
       payer: {
         email: params.customer?.email || 'cliente@webgran.app',
-        first_name: params.customer?.name?.split(' ')[0] || params.customer?.firstName || 'Cliente',
-        last_name: params.customer?.name?.split(' ').slice(1).join(' ') || params.customer?.lastName || 'WebGran',
+        first_name: firstName,
+        last_name: lastName,
       },
-      transactions: {
-        payments: [
-          {
-            amount: params.amount.toFixed(2),
-            payment_method: {
-              id: "pix",
-              type: "bank_transfer"
-            }
-          }
-        ]
-      }
+      external_reference: params.orderId,
+      notification_url: `${appUrl}/api/webhooks/mercadopago`,
     };
 
     if (platformFee > 0) {
-      orderPayload.marketplace_fee = platformFee.toFixed(2);
+      paymentPayload.application_fee = Number(platformFee.toFixed(2));
     }
 
-    const idempotencyKey = `order_pix_${params.orderId}`;
-
-    const res = await fetch('https://api.mercadopago.com/v1/orders', {
+    const res = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Idempotency-Key': idempotencyKey,
       },
-      body: JSON.stringify(orderPayload),
+      body: JSON.stringify(paymentPayload),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      console.error('[MP Orders API createPixPayment error]', data);
-      // Register split failure if order exists
+      console.error('[MP Payments API createPixPayment error]', data);
       try {
         await db.update(orders)
           .set({
             splitStatus: 'FAILED',
             splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
-            splitError: `MP_ORDER_ERROR: ${data.message || JSON.stringify(data)}`,
+            splitError: `MP_PAYMENT_ERROR: ${data.message || JSON.stringify(data)}`,
             updatedAt: new Date(),
           })
           .where(eq(orders.id, params.orderId));
@@ -427,27 +438,36 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
         // Non-blocking error persistence
       }
 
-      throw new Error(`Mercado Pago Orders API PIX creation failed: ${data.message || JSON.stringify(data)}`);
+      throw new Error(`Mercado Pago PIX creation failed: ${data.message || JSON.stringify(data)}`);
     }
 
+    // Extract QR code data from /v1/payments (or fallback if /v1/orders format)
     const firstPayment = data.transactions?.payments?.[0] || data.payments?.[0];
-    const paymentMethodData = firstPayment?.payment_method || firstPayment?.point_of_interaction?.transaction_data;
+    const qrCode =
+      data.point_of_interaction?.transaction_data?.qr_code ||
+      data.qr_code ||
+      firstPayment?.point_of_interaction?.transaction_data?.qr_code ||
+      firstPayment?.payment_method?.qr_code;
 
-    const qrCode = paymentMethodData?.qr_code || firstPayment?.qr_code;
-    const qrCodeBase64 = paymentMethodData?.qr_code_base64 || firstPayment?.qr_code_base64;
-    const expiresAt = firstPayment?.date_of_expiration ? new Date(firstPayment.date_of_expiration) : new Date(Date.now() + 30 * 60 * 1000);
+    const qrCodeBase64 =
+      data.point_of_interaction?.transaction_data?.qr_code_base64 ||
+      data.qr_code_base64 ||
+      firstPayment?.point_of_interaction?.transaction_data?.qr_code_base64 ||
+      firstPayment?.payment_method?.qr_code_base64 ||
+      '';
 
-    if (!qrCode) {
-      console.warn('[MP Orders API] missing qr_code in response:', data);
-    }
+    const expiresAt = data.date_of_expiration
+      ? new Date(data.date_of_expiration)
+      : firstPayment?.date_of_expiration
+      ? new Date(firstPayment.date_of_expiration)
+      : new Date(Date.now() + 30 * 60 * 1000);
 
-    // Persist split requested state on order without booking premature revenue before approval
     const splitStatus = platformFee > 0 ? 'REQUESTED' : 'SKIPPED';
     const splitError = platformFee > 0 ? null : 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
     try {
       await db.update(orders)
         .set({
-          platformFee: '0.00', // Only recognized as revenue upon payment confirmation
+          platformFee: '0.00',
           splitStatus,
           splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
           splitError,
@@ -460,7 +480,7 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
 
     return {
       paymentId: String(firstPayment?.id || data.id),
-      status: firstPayment?.status || data.status || 'pending',
+      status: data.status || firstPayment?.status || 'pending',
       qrCode: qrCode || '',
       qrCodeBase64: qrCodeBase64 || '',
       expiresAt,

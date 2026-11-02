@@ -38,7 +38,66 @@ export interface SplitEvaluationResult {
   divergenceReason?: string;
 }
 
+/**
+ * Avalia de forma rigorosa e conservadora se o valor líquido (netAmount) de um pedido
+ * está comprovadamente confirmado por evidência financeira oficial.
+ *
+ * Regras:
+ * - Se `splitDetails.netConfirmed === true`, retorna true.
+ * - Se `splitDetails.netConfirmed === false`, retorna false.
+ * - Para Mercado Pago: NUNCA inferir confirmação apenas por status CONFIRMED/SETTLED/PROCESSED
+ *   sem evidência explícita do valor líquido (`netConfirmed === true`). Pedidos legados são
+ *   classificados de forma conservadora como não confirmados (estimados).
+ * - Para PushinPay: o split nativo PIX liquida diretamente (total - 0.50) ao lojista, portanto
+ *   status CONFIRMED/SETTLED/PROCESSED com netAmount preenchido é considerado confirmado.
+ * - Para demais cenários: fallback conservador (retorna false).
+ */
+export function isOrderNetConfirmed(order: {
+  paymentMethod?: string | null;
+  splitDetails?: any;
+  splitStatus?: string | null;
+  netAmount?: string | number | null;
+}): boolean {
+  const details = order.splitDetails as any;
+  if (details?.netConfirmed === true) {
+    return true;
+  }
+  if (details?.netConfirmed === false) {
+    return false;
+  }
+
+  const gateway = (order.paymentMethod || '').toLowerCase().trim();
+  const isMercadoPago =
+    gateway === 'mercadopago' ||
+    gateway === 'mercado_pago' ||
+    gateway === 'mp' ||
+    gateway.startsWith('pix');
+
+  // Para Mercado Pago, NUNCA inferir confirmação apenas por status CONFIRMED/SETTLED/PROCESSED sem evidência explícita
+  if (isMercadoPago) {
+    return false;
+  }
+
+  // Para PushinPay, o split nativo PIX liquida diretamente (total - 0.50) ao lojista
+  const isPushinPay = gateway === 'pushinpay';
+  if (isPushinPay) {
+    const statusUpper = String(order.splitStatus || '').toUpperCase();
+    return ['CONFIRMED', 'SETTLED', 'PROCESSED'].includes(statusUpper) && order.netAmount != null;
+  }
+
+  // Fallback seguro e conservador: se não tiver evidência explícita, considera não confirmado (estimado)
+  return false;
+}
+
 export class SplitReconciliationService {
+  static isNetConfirmed(order: {
+    paymentMethod?: string | null;
+    splitDetails?: any;
+    splitStatus?: string | null;
+    netAmount?: string | number | null;
+  }): boolean {
+    return isOrderNetConfirmed(order);
+  }
   /**
    * Strictly evaluates the official Pushin Pay transaction response against order split expectations.
    *
@@ -198,6 +257,247 @@ export class SplitReconciliationService {
   }
 
   /**
+   * Strictly evaluates the official Mercado Pago payment response against order split expectations.
+   *
+   * To achieve PROCESSED:
+   * 1. officialTx.status MUST be 'approved' (or status_detail === 'accredited')
+   * 2. Evidence of application_fee, marketplace_fee, or charges_details/fee_details MUST be present
+   * 3. The fee value in cents MUST match order.splitAmountCents
+   *
+   * If refunded or cancelled:
+   * Returns FAILED with zero fee and flags the refund event.
+   */
+  static evaluateMercadoPagoSplit(input: {
+    order: {
+      id: string;
+      total: string;
+      platformFee?: string | null;
+      netAmount?: string | null;
+      splitStatus?: string | null;
+      splitAmountCents?: number | null;
+      splitConfirmedAt?: Date | null;
+      splitError?: string | null;
+      splitDetails?: any;
+    };
+    officialTx: any;
+  }): SplitEvaluationResult {
+    const { order, officialTx } = input;
+
+    // 1. Preservar estados terminais ou liquidados
+    if (order.splitStatus === 'SETTLED') {
+      return {
+        status: 'SETTLED',
+        platformFeeStr: order.platformFee ?? null,
+        netAmountStr: order.netAmount ?? null,
+        splitConfirmedAt: order.splitConfirmedAt ?? null,
+        splitError: order.splitError ?? null,
+        splitDetails: order.splitDetails ?? null,
+        auditAction: 'NONE',
+      };
+    }
+
+    if (order.splitStatus === 'SKIPPED') {
+      return {
+        status: 'SKIPPED',
+        platformFeeStr: '0.00',
+        netAmountStr: order.total,
+        splitConfirmedAt: null,
+        splitError: order.splitError || 'COMISSAO_ZERO_OU_VALOR_INSUFICIENTE',
+        splitDetails: null,
+        auditAction: 'SKIPPED',
+      };
+    }
+
+    const orderSplitCents = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
+      ? order.splitAmountCents
+      : 50;
+    const orderSplitReais = (orderSplitCents / 100).toFixed(2);
+
+    // 2. Tratar reembolsos e cancelamentos
+    const rawStatus = String(officialTx?.status || '').toLowerCase().trim();
+    if (rawStatus === 'refunded' || rawStatus === 'charged_back' || rawStatus === 'cancelled') {
+      return {
+        status: 'FAILED',
+        platformFeeStr: '0.00',
+        netAmountStr: '0.00',
+        splitConfirmedAt: null,
+        splitError: rawStatus === 'refunded' ? 'PAGAMENTO_REEMBOLSADO' : 'PAGAMENTO_CANCELADO',
+        splitDetails: officialTx?.charges_details || officialTx?.fee_details || null,
+        auditAction: 'FAILED',
+        divergenceReason: `Transação no Mercado Pago possui status "${rawStatus}".`,
+      };
+    }
+
+    // 3. Tratar pagamentos rejeitados
+    if (rawStatus === 'rejected') {
+      return {
+        status: 'FAILED',
+        platformFeeStr: '0.00',
+        netAmountStr: order.total,
+        splitConfirmedAt: null,
+        splitError: 'PAGAMENTO_REJEITADO',
+        splitDetails: null,
+        auditAction: 'FAILED',
+        divergenceReason: 'O pagamento foi rejeitado pelo Mercado Pago.',
+      };
+    }
+
+    // 4. Verificar se a transação está efetivamente aprovada
+    const isApproved = rawStatus === 'approved' || officialTx?.status_detail === 'accredited';
+    if (!isApproved) {
+      return {
+        status: (order.splitStatus as SplitStatus) || 'REQUESTED',
+        platformFeeStr: '0.00',
+        netAmountStr: order.total,
+        splitConfirmedAt: null,
+        splitError: 'TRANSACAO_NAO_PAGA',
+        splitDetails: null,
+        auditAction: 'NONE',
+      };
+    }
+
+    // 5. Verificar valor mínimo da ordem
+    if (Number(order.total) < 0.50) {
+      return {
+        status: 'SKIPPED',
+        platformFeeStr: '0.00',
+        netAmountStr: order.total,
+        splitConfirmedAt: null,
+        splitError: 'VALOR_ABAIXO_DA_COMISSAO_MINIMA',
+        splitDetails: null,
+        auditAction: 'SKIPPED',
+      };
+    }
+
+    // 6. Extrair evidência da taxa da plataforma (application_fee, marketplace_fee, charges_details ou fee_details)
+    let feeFoundReais = 0;
+    let feeEvidenceSource: any = null;
+
+    if (typeof officialTx.application_fee === 'number' && officialTx.application_fee > 0) {
+      feeFoundReais = officialTx.application_fee;
+      feeEvidenceSource = { application_fee: officialTx.application_fee };
+    } else if (typeof officialTx.marketplace_fee === 'number' && officialTx.marketplace_fee > 0) {
+      feeFoundReais = officialTx.marketplace_fee;
+      feeEvidenceSource = { marketplace_fee: officialTx.marketplace_fee };
+    }
+
+    if (feeFoundReais === 0 && Array.isArray(officialTx.charges_details)) {
+      const splitCharge = officialTx.charges_details.find((c: any) =>
+        c.type === 'application_fee' || c.type === 'marketplace_fee'
+      );
+      if (splitCharge) {
+        feeFoundReais = Number(splitCharge.amounts?.original ?? splitCharge.amount ?? 0);
+        feeEvidenceSource = splitCharge;
+      }
+    }
+
+    if (feeFoundReais === 0 && Array.isArray(officialTx.fee_details)) {
+      const splitFee = officialTx.fee_details.find((f: any) =>
+        f.type === 'application_fee' || f.type === 'marketplace_fee'
+      );
+      if (splitFee) {
+        feeFoundReais = Number(splitFee.amount ?? 0);
+        feeEvidenceSource = splitFee;
+      }
+    }
+
+    const feeFoundCents = Math.round(feeFoundReais * 100);
+
+    // 7. Extrair valor líquido efetivamente recebido pelo vendedor da resposta oficial do gateway, se disponível
+    const officialNetReceived = (
+      typeof officialTx.transaction_details?.net_received_amount === 'number' &&
+      !isNaN(officialTx.transaction_details.net_received_amount) &&
+      officialTx.transaction_details.net_received_amount > 0
+    ) ? officialTx.transaction_details.net_received_amount
+      : (
+        typeof officialTx.net_received_amount === 'number' &&
+        !isNaN(officialTx.net_received_amount) &&
+        officialTx.net_received_amount > 0
+      ) ? officialTx.net_received_amount
+      : null;
+
+    // Verificar se o pedido já possuía valor líquido conciliado anteriormente
+    const wasPreviouslyConfirmed = isOrderNetConfirmed(order as any);
+    const existingNetAmount = typeof (order as any).netAmount === 'string' || typeof (order as any).netAmount === 'number'
+      ? Number((order as any).netAmount)
+      : null;
+
+    let resolvedNetAmountStr: string;
+    let isNetConfirmed: boolean;
+
+    if (officialNetReceived !== null) {
+      // Prioridade 1: valor oficial retornado pelo gateway
+      resolvedNetAmountStr = officialNetReceived.toFixed(2);
+      isNetConfirmed = true;
+    } else if (wasPreviouslyConfirmed && existingNetAmount !== null && !isNaN(existingNetAmount)) {
+      // Prioridade 2: preservar valor anteriormente confirmado se nova resposta não trouxer dado oficial
+      resolvedNetAmountStr = existingNetAmount.toFixed(2);
+      isNetConfirmed = true;
+    } else {
+      // Prioridade 3: fallback estimado (total - comissão da plataforma), marcado como não confirmado
+      resolvedNetAmountStr = Math.max(0, Number(order.total) - Number(orderSplitReais)).toFixed(2);
+      isNetConfirmed = false;
+    }
+
+    // 8. Se não houver evidência de taxa na resposta oficial
+    if (feeFoundCents === 0) {
+      return {
+        status: 'GATEWAY_ACCEPTED',
+        platformFeeStr: '0.00',
+        netAmountStr: resolvedNetAmountStr,
+        splitConfirmedAt: null,
+        splitError: 'SEM_EVIDENCIA_DE_SPLIT_NA_RESPOSTA_OFICIAL',
+        splitDetails: {
+          rawEvidence: feeEvidenceSource,
+          netConfirmed: isNetConfirmed,
+          netReceivedAmount: isNetConfirmed ? Number(resolvedNetAmountStr) : undefined,
+        },
+        auditAction: 'DIVERGENCE_FLAGGED',
+        divergenceReason: 'A transação foi quitada no Mercado Pago, mas nenhuma taxa de marketplace/application_fee foi encontrada na resposta oficial.',
+      };
+    }
+
+    // 9. Se o valor retornado divergir do esperado
+    if (feeFoundCents !== orderSplitCents) {
+      return {
+        status: 'GATEWAY_ACCEPTED',
+        platformFeeStr: '0.00',
+        netAmountStr: resolvedNetAmountStr,
+        splitConfirmedAt: null,
+        splitError: 'VALOR_DO_SPLIT_DIVERGENTE',
+        splitDetails: {
+          ...(typeof feeEvidenceSource === 'object' && feeEvidenceSource !== null && !Array.isArray(feeEvidenceSource)
+            ? feeEvidenceSource
+            : { rawEvidence: feeEvidenceSource }),
+          netConfirmed: isNetConfirmed,
+          netReceivedAmount: isNetConfirmed ? Number(resolvedNetAmountStr) : undefined,
+        },
+        auditAction: 'DIVERGENCE_FLAGGED',
+        divergenceReason: `O valor do split no Mercado Pago (${feeFoundCents} centavos) diverge da comissão esperada (${orderSplitCents} centavos).`,
+      };
+    }
+
+    // 10. Split aprovado e confirmado
+    const detailsPayload = (typeof feeEvidenceSource === 'object' && feeEvidenceSource !== null && !Array.isArray(feeEvidenceSource))
+      ? { ...feeEvidenceSource, netConfirmed: isNetConfirmed, netReceivedAmount: isNetConfirmed ? Number(resolvedNetAmountStr) : undefined }
+      : {
+          rawEvidence: feeEvidenceSource || { application_fee: feeFoundReais },
+          netConfirmed: isNetConfirmed,
+          netReceivedAmount: isNetConfirmed ? Number(resolvedNetAmountStr) : undefined,
+        };
+
+    return {
+      status: 'CONFIRMED',
+      platformFeeStr: orderSplitReais,
+      netAmountStr: resolvedNetAmountStr,
+      splitConfirmedAt: new Date(),
+      splitError: null,
+      splitDetails: detailsPayload,
+      auditAction: 'PROCESSED_BY_GATEWAY',
+    };
+  }
+
+  /**
    * Registers a dedicated audit log entry in platform_split_audit_logs.
    * Can be executed within a Drizzle transaction to guarantee atomicity.
    */
@@ -284,7 +584,9 @@ export class SplitReconciliationService {
 
       if (params.targetStatus === 'SETTLED' || params.targetStatus === 'PROCESSED') {
         platformFeeStr = splitFeeReais;
-        netAmountStr = Math.max(0, Number(order.total) - Number(splitFeeReais)).toFixed(2);
+        netAmountStr = order.netAmount && Number(order.netAmount) > 0
+          ? order.netAmount
+          : Math.max(0, Number(order.total) - Number(splitFeeReais)).toFixed(2);
       } else if (params.targetStatus === 'FAILED') {
         platformFeeStr = '0.00';
         netAmountStr = order.total;

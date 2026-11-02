@@ -99,7 +99,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       expect(mpProvider.calculatePlatformFee(0)).toBe(0);
     });
 
-    it('submits marketplace_fee: "0.50" in /v1/orders PIX creation and updates order to REQUESTED', async () => {
+    it('submits application_fee: 0.50 in /v1/payments PIX creation and updates order to REQUESTED', async () => {
       const dbModule = await import('@/db');
       vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
         id: 'conn-mp-1',
@@ -139,10 +139,10 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
 
       expect(res.paymentId).toBe('pay-123');
       expect(fetchSpy).toHaveBeenCalledWith(
-        'https://api.mercadopago.com/v1/orders',
+        'https://api.mercadopago.com/v1/payments',
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('"marketplace_fee":"0.50"'),
+          body: expect.stringContaining('"application_fee":0.5'),
         })
       );
 
@@ -156,7 +156,7 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
       );
     });
 
-    it('does not send marketplace_fee when order is below R$ 0,50 and tracks splitStatus as SKIPPED', async () => {
+    it('does not send application_fee when order is below R$ 0,50 and tracks splitStatus as SKIPPED', async () => {
       const dbModule = await import('@/db');
       vi.mocked(dbModule.db.query.sellerPaymentConnections.findFirst).mockResolvedValueOnce({
         id: 'conn-mp-1',
@@ -183,9 +183,9 @@ describe('WebGran Platform Commission Split — Rigorous Verification Suite', ()
         amount: 0.40,
       });
 
-      // Body must NOT contain marketplace_fee
+      // Body must NOT contain application_fee
       const requestBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
-      expect(requestBody.marketplace_fee).toBeUndefined();
+      expect(requestBody.application_fee).toBeUndefined();
     });
   });
 

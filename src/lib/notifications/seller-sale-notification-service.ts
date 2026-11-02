@@ -1,11 +1,11 @@
 import crypto from "crypto";
 import { db } from "@/db";
-import { 
-  orders, 
-  orderItems, 
-  products, 
-  telegramBots, 
-  stores, 
+import {
+  orders,
+  orderItems,
+  products,
+  telegramBots,
+  stores,
   botSaleNotificationRecipients,
   orderBotNotificationDeliveries
 } from "@/db/schema";
@@ -13,6 +13,7 @@ import { eq, and, sql, asc } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
 import { BUSINESS_TIMEZONE } from "@/lib/analytics/timezone-utils";
+import { isOrderNetConfirmed } from "@/lib/payments/split-reconciliation-service";
 
 export interface SaleNotificationResult {
   success: boolean;
@@ -258,7 +259,7 @@ export class SellerSaleNotificationService {
 
       // 9. Format Amounts & ID (com fallback rigoroso para netAmount)
       const grossAmount = formatBRL(order.total);
-      
+
       let netAmountNum: number;
       const totalNum = Number(order.total || 0);
       const platformFeeNum = Number(order.platformFee || 0);
@@ -271,20 +272,24 @@ export class SellerSaleNotificationService {
       } else {
         netAmountNum = Math.max(0, totalNum - platformFeeNum);
       }
-      
+
       const netAmount = formatBRL(netAmountNum);
+      const isNetConfirmed = isOrderNetConfirmed(order);
+
+      const netStatusSuffix = isNetConfirmed ? " (confirmado)" : " (estimado)";
+      const netAmountDisplay = `${netAmount}${netStatusSuffix}`;
       const shortOrderId = `#${order.id.slice(0, 8)}`;
       const confirmedDate = order.paidAt || order.updatedAt || new Date();
       const formattedDate = formatBrtDateTime(new Date(confirmedDate));
 
       // 10. Construct Message Text
-      const messageText = 
-`🛒 Nova venda realizada!
+      const messageText =
+        `🛒 Nova venda realizada!
 
 📦 Produto: ${productNames}
 👤 Cliente: ${customerName}
 💰 Valor Bruto: ${grossAmount}
-💵 Valor Líquido: ${netAmount}
+💵 Valor Líquido: ${netAmountDisplay}
 🆔 Pedido: ${shortOrderId}
 🤖 Bot: ${botName}
 📅 Data: ${formattedDate}`;
@@ -371,10 +376,10 @@ export class SellerSaleNotificationService {
               AND status = 'delivered'
             LIMIT 1
           `);
-          const isDelivered = Array.isArray(checkDelivered) 
-            ? checkDelivered.length > 0 
+          const isDelivered = Array.isArray(checkDelivered)
+            ? checkDelivered.length > 0
             : Boolean((checkDelivered as any)?.rows?.length > 0);
-          
+
           if (isDelivered) {
             deliveredCount++;
           }

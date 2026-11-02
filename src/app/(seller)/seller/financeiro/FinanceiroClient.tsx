@@ -36,6 +36,7 @@ interface Transaction {
   total: number;
   platformFee: number;
   netAmount: number;
+  isNetConfirmed?: boolean;
   status: string;
   createdAt: string;
   paidAt: string | null;
@@ -324,8 +325,17 @@ export default function FinanceiroClient({ metrics, transactions }: Props) {
                     </td>
 
                     {/* Valor Líquido */}
-                    <td className="py-3.5 px-4 text-right font-sans font-semibold text-emerald-400 tabular-nums">
-                      {formatCurrency(tx.netAmount)}
+                    <td className="py-3.5 px-4 text-right font-sans tabular-nums">
+                      <div className="font-semibold text-emerald-400">
+                        {formatCurrency(tx.netAmount)}
+                      </div>
+                      <div className="text-[10px] mt-0.5">
+                        {tx.isNetConfirmed ? (
+                          <span className="text-emerald-400/90 font-medium">Líquido confirmado</span>
+                        ) : (
+                          <span className="text-amber-400/90 font-medium">Líquido estimado</span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status */}
@@ -425,6 +435,13 @@ export default function FinanceiroClient({ metrics, transactions }: Props) {
                     <span className="text-emerald-400 font-sans font-bold tabular-nums text-xs">
                       {formatCurrency(tx.netAmount)}
                     </span>
+                    <div className="text-[9px] mt-0.5">
+                      {tx.isNetConfirmed ? (
+                        <span className="text-emerald-400/90 font-medium">Líquido confirmado</span>
+                      ) : (
+                        <span className="text-amber-400/90 font-medium">Líquido estimado</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

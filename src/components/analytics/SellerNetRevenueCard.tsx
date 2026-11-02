@@ -79,9 +79,20 @@ export function SellerNetRevenueCard({
           {/* Valor Líquido em Destaque Principal */}
           <div className="p-4 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-1 flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
-                Sua Receita Líquida
-              </span>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                  Sua Receita Líquida
+                </span>
+                {financialSummary?.isEstimated ? (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Líquido estimado
+                  </span>
+                ) : (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Líquido confirmado
+                  </span>
+                )}
+              </div>
               <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white mt-1">
                 {formatBRL(net)}
               </div>
@@ -119,7 +130,7 @@ export function SellerNetRevenueCard({
 
       {/* Rodapé informativo */}
       <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
-        <span>Pedidos calculados</span>
+        <span>{financialSummary?.isEstimated ? "Inclui pedidos aguardando conciliação de tarifas" : "Pedidos calculados"}</span>
         <span className="font-sans font-medium tabular-nums text-zinc-300">
           {count} {count === 1 ? "venda aprovada" : "vendas aprovadas"}
         </span>

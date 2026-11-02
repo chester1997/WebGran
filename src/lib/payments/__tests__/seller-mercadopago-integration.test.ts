@@ -228,8 +228,8 @@ describe('WebGran — Integração Completa do Mercado Pago para Lojistas', () =
     expect(json.message).toContain('Mercado Pago não conectado para este lojista');
   });
 
-  // 6. Criar uma cobrança usando a conta correta do lojista via /v1/orders
-  it('6. Criar uma cobrança usando a conta correta do lojista via /v1/orders', async () => {
+  // 6. Criar uma cobrança usando a conta correta do lojista via /v1/payments com application_fee
+  it('6. Criar uma cobrança usando a conta correta do lojista via /v1/payments com application_fee', async () => {
     const { MercadoPagoProvider } = await import('@/lib/payments/providers/mercado-pago');
     const { db } = await import('@/db');
     const provider = new MercadoPagoProvider();
@@ -257,19 +257,15 @@ describe('WebGran — Integração Completa do Mercado Pago para Lojistas', () =
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          id: 'mp-order-999',
-          transactions: {
-            payments: [
-              {
-                id: 'pay-999',
-                payment_method: {
-                  qr_code: '00020126580014br.gov.bcb.pix...',
-                  qr_code_base64: 'iVBORw0KGgoAAAANSUhEUg...',
-                },
-                date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-              },
-            ],
+          id: 999123456,
+          status: 'pending',
+          point_of_interaction: {
+            transaction_data: {
+              qr_code: '00020126580014br.gov.bcb.pix...',
+              qr_code_base64: 'iVBORw0KGgoAAAANSUhEUg...',
+            },
           },
+          date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         }),
       });
     }) as any;
@@ -283,11 +279,12 @@ describe('WebGran — Integração Completa do Mercado Pago para Lojistas', () =
         customer: { email: 'cliente@teste.com', name: 'João Silva' },
       });
 
-      expect(capturedUrl).toBe('https://api.mercadopago.com/v1/orders');
+      expect(capturedUrl).toBe('https://api.mercadopago.com/v1/payments');
       expect(capturedHeaders['Authorization']).toBe(`Bearer ${mockToken}`);
-      expect(capturedBody.total_amount).toBe('50.00');
+      expect(capturedHeaders['X-Idempotency-Key']).toBe('order_pix_order-webgran-123');
+      expect(capturedBody.transaction_amount).toBe(50.00);
       expect(capturedBody.external_reference).toBe('order-webgran-123');
-      expect(capturedBody.marketplace_fee).toBe('0.50');
+      expect(capturedBody.application_fee).toBe(0.50);
       expect(pixOrder.qrCode).toContain('00020126580014br.gov.bcb.pix');
     } finally {
       global.fetch = originalFetch;
