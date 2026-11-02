@@ -1,5 +1,5 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v9';
+const CACHE_NAME = 'webgran-static-v10';
 
 // Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
@@ -45,7 +45,9 @@ self.addEventListener('activate', (event) => {
       caches.keys().then((keys) => {
         return Promise.all(
           keys
-            .filter((key) => key !== CACHE_NAME)
+            .filter(
+              (key) => key.startsWith('webgran-') && key !== CACHE_NAME
+            )
             .map((key) => caches.delete(key))
         );
       })
@@ -132,8 +134,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(request));
 });
 
-// 6. WEB PUSH NOTIFICATIONS
-self.addEventListener('push', (event) => {
+// 6. WEB PUSH NOTIFICATIONS COM CONFIRMAÇÃO BIDIRECIONAL (MessageChannel)
+async function handlePushEvent(event) {
   let data = {
     title: 'WebGran',
     body: 'Você tem uma nova notificação.',
@@ -161,49 +163,132 @@ self.addEventListener('push', (event) => {
     ? (data.badge.startsWith('http') ? data.badge : new URL(data.badge, self.location.origin).href)
     : new URL('/icons/badge-96x96.png', self.location.origin).href;
 
-  const options = {
+  const notificationTag = typeof data.tag === 'string' && data.tag.trim().length > 0 ? data.tag.trim() : null;
+  // Prioriza data.tag para garantir identificadores independentes entre venda (sale-*) e comissão (commission-*)
+  const notificationId = notificationTag || data.data?.orderId || `push-${Date.now()}`;
+
+  // Base de opções (sem vibrate fixo para conformidade com a especificação W3C Notifications API)
+  const baseOptions = {
     body: data.body,
     icon: iconUrl,
     badge: badgeUrl,
-    silent: false,
-    vibrate: [200, 100, 200, 100, 200],
     timestamp: Date.now(),
     data: {
       url: data.url || '/seller/financeiro',
       dateOfArrival: Date.now(),
+      notificationId,
       ...(data.data || {}),
     },
-    tag: data.tag || 'webgran-general',
-    renotify: true,
   };
 
+  // Conforme a especificação W3C Notifications API: renotify SÓ pode ser true se tag for definida
+  if (notificationTag) {
+    baseOptions.tag = notificationTag;
+    baseOptions.renotify = true;
+  }
+
   if (data.image) {
-    options.image = data.image.startsWith('http')
+    baseOptions.image = data.image.startsWith('http')
       ? data.image
       : new URL(data.image, self.location.origin).href;
   }
 
-  // Notifica clientes com janelas abertas em primeiro plano para reprodução do som personalizado
-  const notifyForegroundClients = clients
-    .matchAll({ type: 'window', includeUncontrolled: true })
-    .then((windowClients) => {
-      for (const client of windowClients) {
-        client.postMessage({
-          type: 'WEBGRAN_PUSH_RECEIVED',
-          payload: data,
-        });
-      }
-    })
-    .catch((err) => {
-      console.warn('[SW] Falha ao enviar evento para clientes em primeiro plano:', err);
-    });
+  // 1. Tentar obter confirmação honesta de clientes com janelas abertas
+  let clientHandledSilently = false;
 
-  event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(data.title, options),
-      notifyForegroundClients,
-    ])
-  );
+  try {
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+    if (windowClients && windowClients.length > 0) {
+      // Ordena clientes: janelas focadas/visíveis primeiro para priorizar quem tem foco ativo
+      const sortedClients = [...windowClients].sort((a, b) => {
+        if (a.focused && !b.focused) return -1;
+        if (!a.focused && b.focused) return 1;
+        if (a.visibilityState === 'visible' && b.visibilityState !== 'visible') return -1;
+        if (a.visibilityState !== 'visible' && b.visibilityState === 'visible') return 1;
+        return 0;
+      });
+
+      // Timeout defensivo de 1.000 ms (1 segundo) para as páginas responderem
+      const channelPromise = new Promise((resolve) => {
+        let positiveResolved = false;
+        let pendingResponses = sortedClients.length;
+
+        const timeoutId = setTimeout(() => {
+          if (!positiveResolved) {
+            resolve({ confirmed: false, reason: 'timeout' });
+          }
+        }, 1000);
+
+        for (const client of sortedClients) {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = (msgEvent) => {
+            pendingResponses--;
+            const res = msgEvent.data;
+
+            // Se qualquer janela confirmar positivamente a reprodução ou exibição em foco:
+            if (!positiveResolved && res && res.confirmed) {
+              positiveResolved = true;
+              clearTimeout(timeoutId);
+              try { channel.port1.close(); } catch {}
+              resolve(res);
+              return;
+            }
+
+            // Se todas as janelas responderam e nenhuma confirmou positivamente:
+            if (!positiveResolved && pendingResponses <= 0) {
+              clearTimeout(timeoutId);
+              try { channel.port1.close(); } catch {}
+              resolve({ confirmed: false, reason: 'all_clients_negative' });
+            }
+          };
+
+          // Envia SALE_SOUND com canal de resposta dedicado
+          client.postMessage(
+            {
+              type: 'SALE_SOUND',
+              soundId: 'commission',
+              notificationId,
+              payload: data,
+            },
+            [channel.port2]
+          );
+        }
+      });
+
+      const result = await channelPromise;
+      if (result && result.confirmed) {
+        // Confirmação honesta: som tocou com sucesso OU preferência desligada com página visível em foco
+        clientHandledSilently = true;
+      }
+    }
+  } catch (err) {
+    console.warn('[SW] Erro na negociação de áudio com janela:', err);
+  }
+
+  // Decisão de notificação rigorosamente compatível com a especificação W3C:
+  // - silent: true NÃO PODE incluir vibrate (lança TypeError: vibrate cannot be set if silent is true).
+  //   Portanto, no ramo silencioso, as opções são montadas SEM a propriedade vibrate.
+  // - silent: false inclui vibrate [200, 100, 200] para alertar via hardware no Android / SO.
+  let finalOptions;
+  if (clientHandledSilently) {
+    finalOptions = {
+      ...baseOptions,
+      silent: true,
+    };
+  } else {
+    finalOptions = {
+      ...baseOptions,
+      silent: false,
+      vibrate: [200, 100, 200],
+    };
+  }
+
+  return self.registration.showNotification(data.title, finalOptions);
+}
+
+self.addEventListener('push', (event) => {
+  event.waitUntil(handlePushEvent(event));
 });
 
 // 7. NOTIFICATION CLICK HANDLING

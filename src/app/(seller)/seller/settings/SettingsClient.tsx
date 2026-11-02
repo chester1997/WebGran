@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   User,
   Mail,
@@ -25,16 +26,18 @@ import {
   Sparkles,
   Info,
   Volume2,
-  VolumeX
+  VolumeX,
+  ArrowRight
 } from "lucide-react";
 import {
   isNotificationSoundEnabled,
   setNotificationSoundEnabled,
+  getNotificationSoundPreferences,
+  saveNotificationSoundPreferences,
   playCommissionChime,
+  unlockAudioSystem,
   unlockAudioContext
 } from "@/lib/sound/notification-sound";
-import { COMMISSION_AUDIO_DATA_URI } from "@/lib/sound/commission-audio-data";
-import { AudioDiagnosticPanel } from "@/components/audio/AudioDiagnosticPanel";
 import { buildTestNotificationPayload } from "@/lib/push/notification-payload-builder";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,11 +124,23 @@ export default function SettingsClient({
   const [requestingPermission, setRequestingPermission] = useState(false);
   const [vapidConfigured, setVapidConfigured] = useState<boolean | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [soundVolume, setSoundVolume] = useState<number>(80);
+  const [soundId, setSoundId] = useState<string>("commission");
+  const [isIosDevice, setIsIosDevice] = useState<boolean>(false);
   const [isPlayingSoundTest, setIsPlayingSoundTest] = useState<boolean>(false);
 
   useEffect(() => {
-    setSoundEnabled(isNotificationSoundEnabled());
-  }, []);
+    const prefs = getNotificationSoundPreferences(sellerProfile.id);
+    setSoundEnabled(prefs.enabled);
+    setSoundVolume(prefs.volume);
+    setSoundId(prefs.soundId);
+
+    if (typeof navigator !== "undefined") {
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+        (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+      setIsIosDevice(isIos);
+    }
+  }, [sellerProfile.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -561,26 +576,37 @@ function urlBase64ToUint8Array(base64String: string) {
   const handleToggleSound = async () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
-    setNotificationSoundEnabled(next);
+    saveNotificationSoundPreferences({ enabled: next }, sellerProfile.id);
     if (next) {
-      await unlockAudioContext();
-      playCommissionChime({ force: true, eventId: `toggle-sound-${Date.now()}` });
+      await unlockAudioSystem();
+      playCommissionChime({ force: true, volume: soundVolume, eventId: `toggle-sound-${Date.now()}` }).catch(() => {});
     }
+  };
+
+  const handleVolumeChange = (newVol: number) => {
+    setSoundVolume(newVol);
+    saveNotificationSoundPreferences({ volume: newVol }, sellerProfile.id);
+  };
+
+  const handleSoundIdChange = (newSoundId: string) => {
+    setSoundId(newSoundId);
+    saveNotificationSoundPreferences({ soundId: newSoundId }, sellerProfile.id);
   };
 
   const handleTestSound = async () => {
     setIsPlayingSoundTest(true);
     try {
-      // Disparo com instância síncrona criada no primeiro tick do clique do usuário
-      const syncAudio = new Audio(COMMISSION_AUDIO_DATA_URI);
+      await unlockAudioSystem();
       const played = await playCommissionChime({
         force: true,
+        volume: soundVolume,
         eventId: `manual-test-chime-${Date.now()}`,
-        synchronousAudioInstance: syncAudio,
       });
       if (!played) {
-        showToast("Áudio indisponível ou bloqueado pelo navegador.");
+        showToast("Áudio bloqueado pelo navegador. Toque na tela para liberar.");
       }
+    } catch {
+      showToast("Áudio bloqueado pelo navegador. Toque na tela para liberar.");
     } finally {
       setTimeout(() => setIsPlayingSoundTest(false), 1200);
     }
@@ -1007,55 +1033,145 @@ function urlBase64ToUint8Array(base64String: string) {
               </div>
 
               {/* Som das Notificações */}
-              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5 min-w-0">
                     <div className="text-xs font-semibold text-white flex items-center gap-1.5">
                       {soundEnabled ? (
-                        <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <Volume2 className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--seller-accent)" }} />
                       ) : (
                         <VolumeX className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                       )}
-                      <span>Som das notificações</span>
+                      <span>Tocar som ao receber venda</span>
                     </div>
                     <p className="text-[11px] text-zinc-400 leading-tight">
-                      Toque sonoro com o painel aberto.
+                      Reproduz áudio instantâneo sempre que uma venda for confirmada com o painel aberto.
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                    <button
-                      type="button"
-                      onClick={handleTestSound}
-                      disabled={isPlayingSoundTest}
-                      title="Testar som agora"
-                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-zinc-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-                    >
-                      <Volume2 className={`w-3.5 h-3.5 ${isPlayingSoundTest ? "animate-bounce text-emerald-400" : ""}`} />
-                      <span>{isPlayingSoundTest ? "Tocando..." : "Testar Som"}</span>
-                    </button>
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={handleToggleSound}
+                      style={{
+                        backgroundColor: soundEnabled ? "var(--seller-accent)" : undefined,
+                      }}
                       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        soundEnabled ? "bg-emerald-500" : "bg-zinc-700"
+                        soundEnabled ? "" : "bg-zinc-700"
                       }`}
                       role="switch"
                       aria-checked={soundEnabled}
-                      aria-label="Ativar ou desativar som das notificações"
+                      aria-label="Tocar som ao receber venda"
                     >
                       <span
                         aria-hidden="true"
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
                           soundEnabled ? "translate-x-4" : "translate-x-0"
                         }`}
                       />
                     </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-zinc-500 leading-tight">
-                  Com o WebGran minimizado, o som é o padrão do sistema operacional.
-                </p>
+
+                {/* Controles de Som (Seletor, Volume e Testar Som) */}
+                {soundEnabled && (
+                  <div className="pt-2 border-t border-white/[0.04] space-y-3.5 animate-in fade-in-50 duration-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Seletor de Som */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-zinc-300 block">
+                          Som da Venda
+                        </label>
+                        <select
+                          value={soundId}
+                          onChange={(e) => handleSoundIdChange(e.target.value)}
+                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 text-zinc-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[var(--seller-accent)] transition-all cursor-pointer h-9"
+                        >
+                          <option value="commission">Caixa Registradora (Padrão WebGran)</option>
+                        </select>
+                      </div>
+
+                      {/* Controle de Volume */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] text-zinc-300 font-medium">
+                          <span>Volume</span>
+                          <span className="font-sans tabular-nums text-zinc-400">{soundVolume}%</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 h-9">
+                          <VolumeX className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={soundVolume}
+                            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                            style={{ accentColor: "var(--seller-accent)" }}
+                            className="w-full cursor-pointer h-1.5 bg-zinc-800 rounded-lg appearance-none"
+                            aria-label="Controle de volume do som de notificação"
+                          />
+                          <Volume2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                        </div>
+                        {isIosDevice && (
+                          <p className="text-[10px] text-zinc-400">
+                            No iOS, o volume é regulado via Web Audio e pelos botões físicos do aparelho.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Botão Testar Som */}
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={handleTestSound}
+                        disabled={isPlayingSoundTest}
+                        title="Testar som agora e desbloquear áudio"
+                        style={{
+                          borderColor: "var(--seller-accent)",
+                          color: "var(--seller-accent)",
+                        }}
+                        className="px-3 py-1.5 rounded-xl border bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Volume2 className={`w-3.5 h-3.5 ${isPlayingSoundTest ? "animate-bounce" : ""}`} />
+                        <span>{isPlayingSoundTest ? "Tocando amostra..." : "Testar som"}</span>
+                      </button>
+                      <span className="text-[10px] text-zinc-500">
+                        O clique também autoriza a reprodução no navegador
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Aviso Educativo em Português Simples + Link Telegram */}
+                <div className="pt-2 border-t border-white/[0.04] space-y-2">
+                  <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/15 text-[11px] text-zinc-300 leading-relaxed space-y-1.5">
+                    <p>
+                      {isIosDevice ? (
+                        <>
+                          <strong className="text-white font-medium">No iPhone/iPad: </strong>
+                          O som toca com o painel aberto após sua primeira interação. Com o app fechado ou bloqueado, o som emitido é o padrão do seu aparelho.
+                        </>
+                      ) : (
+                        <>
+                          O som toca com o painel aberto. Com o app fechado, o som é o padrão do seu aparelho.
+                        </>
+                      )}
+                    </p>
+                    <p className="text-zinc-400">
+                      Para ouvir seu som personalizado mesmo com tudo fechado, use os avisos pelo Telegram e escolha o som do chat nas configurações do Telegram.
+                    </p>
+                    <div className="pt-1">
+                      <Link
+                        href="/seller/store#notifications"
+                        style={{ color: "var(--seller-accent)" }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold hover:opacity-85 transition-opacity group"
+                      >
+                        <span>Configurar avisos de venda no Telegram</span>
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1114,11 +1230,6 @@ function urlBase64ToUint8Array(base64String: string) {
           </div>
         </div>
       </div>
-
-      {/* ========================================================================= */}
-      {/* PAINEL DE DIAGNÓSTICO TÉCNICO DE ÁUDIO */}
-      {/* ========================================================================= */}
-      <AudioDiagnosticPanel />
 
       {/* ==================================================== */}
       {/* RODAPÉ DE CRÉDITOS E LICENÇAS                        */}
