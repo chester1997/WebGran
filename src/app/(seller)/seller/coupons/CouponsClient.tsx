@@ -23,6 +23,7 @@ import {
   deleteCouponAction 
 } from "./actions";
 import { formatBusinessDate } from "@/lib/analytics/timezone-utils";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 interface CouponItem {
   id: string;
@@ -152,68 +153,65 @@ export default function CouponsClient({ initialCoupons }: { initialCoupons: Coup
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F0F12] border border-white/5 p-6 rounded-3xl shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-inner">
-              <Ticket className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Cupons de Desconto</h1>
-              <p className="text-xs text-zinc-400">Crie e gerencie códigos promocionais para seus clientes resgatarem no carrinho</p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            resetForm();
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 hover:shadow-red-500/40 transition-all cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Criar Novo Cupom</span>
-        </button>
-      </div>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Cupons de Desconto"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {couponsList.length} {couponsList.length === 1 ? "cupom" : "cupons"}
+          </span>
+        }
+        subtitle="Crie e gerencie códigos promocionais para seus clientes resgatarem no carrinho."
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-medium shadow-xs transition-all cursor-pointer shrink-0 h-9"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Criar Novo Cupom</span>
+          </button>
+        }
+      />
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[#0F0F12] border border-white/5 p-5 rounded-2xl flex items-center justify-between">
+        <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] p-5 rounded-[12px] flex items-center justify-between shadow-none">
           <div className="space-y-1">
             <span className="text-xs text-zinc-400 font-medium">Total de Cupons</span>
-            <p className="text-2xl font-black text-white">{couponsList.length}</p>
+            <p className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-white tracking-tight">{couponsList.length}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-zinc-800/60 border border-white/5 flex items-center justify-center text-zinc-400">
-            <Tag className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-[8px] bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-zinc-400 shrink-0">
+            <Tag className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-[#0F0F12] border border-white/5 p-5 rounded-2xl flex items-center justify-between">
+        <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] p-5 rounded-[12px] flex items-center justify-between shadow-none">
           <div className="space-y-1">
             <span className="text-xs text-zinc-400 font-medium">Cupons Ativos</span>
-            <p className="text-2xl font-black text-emerald-400">{totalActive}</p>
+            <p className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-emerald-400 tracking-tight">{totalActive}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-[8px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-[#0F0F12] border border-white/5 p-5 rounded-2xl flex items-center justify-between">
+        <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] p-5 rounded-[12px] flex items-center justify-between shadow-none">
           <div className="space-y-1">
             <span className="text-xs text-zinc-400 font-medium">Total de Resgates</span>
-            <p className="text-2xl font-black text-amber-400">{totalUsed}</p>
+            <p className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-amber-400 tracking-tight">{totalUsed}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <TrendingUp className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-[8px] bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <TrendingUp className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Coupons List Table / Cards */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] overflow-hidden shadow-none">
         {couponsList.length === 0 ? (
           <div className="p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center mx-auto text-zinc-500">

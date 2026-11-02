@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { NewProductModal } from "./NewProductModal";
 import { EditProductModal } from "./EditProductModal";
 import { deleteProductAction } from "./actions";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 import { getProductBadge } from "@/lib/product-badge";
 import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
@@ -146,29 +147,20 @@ export default function ProductsListClient({ storeName, products, categories, bo
 
   return (
     <div className="space-y-6 fade-in w-full max-w-[1600px] mx-auto">
-      
-      {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-            <Package className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-xl text-white">Produtos</h1>
-              <span className="bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                {products.length}
-              </span>
-            </div>
-            <p className="text-xs text-zinc-400">Gerencie o catálogo de produtos digitais da sua loja.</p>
-          </div>
-        </div>
-
-        <NewProductModal categories={categories} bots={bots} carousels={carousels} />
-      </div>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Produtos"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {products.length} {products.length === 1 ? "produto" : "produtos"}
+          </span>
+        }
+        subtitle="Gerencie o catálogo de produtos digitais da sua loja."
+        actions={<NewProductModal categories={categories} bots={bots} carousels={carousels} />}
+      />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-center gap-3 bg-[#0F0F12] p-3 border border-white/5 rounded-2xl shadow-lg">
+      <div className="flex flex-col md:flex-row items-center gap-3 bg-[var(--seller-surface,#101218)] p-3 border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none">
         {/* Search Input */}
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />

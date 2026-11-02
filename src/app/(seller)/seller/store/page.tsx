@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BotSettingsModal } from "./BotSettingsModal";
 import { BotCard } from "./BotCard";
 import { SupportContactForm } from "./SupportContactForm";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 import SetupStoreClient from "../SetupStoreClient";
 
@@ -47,15 +48,17 @@ export default async function SellerStorePage() {
 
   return (
     <div className="space-y-6 fade-in w-full">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Bots Telegram</h2>
-          <p className="text-zinc-400 text-sm mt-1">Plano BUSINESS — {bots.length}/5 bots</p>
-        </div>
-        <BotSettingsModal store={store} triggerText="+ Adicionar bot" />
-      </div>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Bots Telegram"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {bots.length} {bots.length === 1 ? "bot" : "bots"}
+          </span>
+        }
+        subtitle={`Plano BUSINESS — ${bots.length}/5 bots conectados à sua loja.`}
+        actions={<BotSettingsModal store={store} triggerText="+ Adicionar bot" />}
+      />
 
       <div className="space-y-6">
         

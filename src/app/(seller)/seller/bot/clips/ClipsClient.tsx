@@ -26,6 +26,7 @@ import {
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { TusVideoUploader, uploadVideoDirectly } from "@/lib/bunny/client-upload";
 import { getVideoDuration, formatDurationHuman, CLIP_MAX_DURATION_SECONDS } from "@/lib/clips/video-processor";
 
@@ -511,65 +512,67 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Clips</h1>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Clips"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {clipsList.length} {clipsList.length === 1 ? "clip" : "clips"}
+          </span>
+        }
+        subtitle="Gerencie os vídeos curtos exibidos na sua loja online."
+        actions={
+          <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => refreshClipsData()}
               disabled={isRefreshing}
               title="Atualizar lista"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5 transition-all cursor-pointer"
+              className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/10 transition-all cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-red-400" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#3984FF]" : ""}`} />
             </button>
-          </div>
-          <p className="text-sm text-zinc-400 mt-1">
-            Gerencie os vídeos exibidos na sua loja. Envie diretamente do navegador para o Bunny Stream.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {/* View Mode Switcher (Grid vs List) */}
-          <div className="flex items-center bg-[#121216] border border-white/10 rounded-xl p-1 gap-1">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              title="Visualização em Grade (Lado a lado)"
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-red-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              <span className="hidden sm:inline">Grade</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              title="Visualização em Lista"
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === "list"
-                  ? "bg-red-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <List className="w-4 h-4" />
-              <span className="hidden sm:inline">Lista</span>
-            </button>
-          </div>
+            {/* View Mode Switcher */}
+            <div className="flex items-center bg-[#151821] border border-white/[0.08] rounded-xl p-0.5 gap-0.5 h-9">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                title="Grade"
+                className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                  viewMode === "grid"
+                    ? "bg-[#3984FF] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Grade</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="Lista"
+                className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                  viewMode === "list"
+                    ? "bg-[#3984FF] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+            </div>
 
-          <Button
-            onClick={openAddModal}
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-red-600/20 flex items-center gap-2 cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar Clip
-          </Button>
-        </div>
-      </div>
+            <Button
+              onClick={openAddModal}
+              className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl px-3.5 h-9 text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar Clip</span>
+            </Button>
+          </div>
+        }
+      />
 
       {/* Real-time Summary Cards (Fetched directly from Neon) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

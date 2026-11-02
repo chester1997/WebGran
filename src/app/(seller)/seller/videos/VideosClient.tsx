@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
 import { TusVideoUploader } from "@/lib/bunny/client-upload";
 import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { VideoPlanUpgradeModal } from "@/components/billing/VideoPlanUpgradeModal";
 import { InlineVideoLibraryOnboarding } from "./InlineVideoLibraryOnboarding";
 import { GenerateDeepLinkModal } from "@/components/seller/GenerateDeepLinkModal";
@@ -695,48 +696,42 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
         </div>
       )}
 
-      {/* 5. HEADER (Standardized WebGran Header) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center font-bold">
-            <Film className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-xl text-white">BIBLIOTECA DE VÍDEOS</h1>
-              {usage.hasVideoSubscription && (
-                <span className="bg-violet-600/20 border border-violet-500/30 text-violet-400 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                  {videosList.length} vídeos
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-zinc-400">Gerencie seus vídeos e utilize-os na entrega automática de produtos digitais.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refreshData()}
-            disabled={isRefreshing}
-            className="bg-[#16161C] border-white/10 text-zinc-300 hover:bg-zinc-800 hover:text-white text-xs rounded-xl"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin text-violet-500" : ""}`} />
-            Atualizar
-          </Button>
-
-          {usage.hasVideoSubscription && (
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Biblioteca de Vídeos"
+        badge={
+          usage.hasVideoSubscription ? (
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-violet-500/10 text-violet-400 border border-violet-500/25">
+              {videosList.length} {videosList.length === 1 ? "vídeo" : "vídeos"}
+            </span>
+          ) : null
+        }
+        subtitle="Gerencie seus vídeos e utilize-os na entrega automática de produtos digitais."
+        actions={
+          <div className="flex items-center gap-2">
             <Button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-violet-600/20 transition-all"
+              variant="outline"
+              size="sm"
+              onClick={() => refreshData()}
+              disabled={isRefreshing}
+              className="bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white text-xs rounded-xl h-9 px-3"
             >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Adicionar vídeo
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin text-[#3984FF]" : ""}`} />
+              Atualizar
             </Button>
-          )}
-        </div>
-      </div>
+
+            {usage.hasVideoSubscription && (
+              <Button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium text-xs rounded-xl px-3.5 h-9 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Adicionar vídeo</span>
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* PAYWALL / LOCK SCREEN FOR UN-SUBSCRIBED SELLERS */}
       {!usage.hasVideoSubscription && !usage.isUnlimited ? (

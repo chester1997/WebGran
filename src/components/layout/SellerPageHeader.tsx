@@ -42,14 +42,14 @@ export default function SellerPageHeader({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           {title && (
-            <h1 className="text-sm sm:text-base md:text-2xl lg:text-3xl font-bold md:font-black text-white tracking-tight truncate">
+            <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight truncate">
               {title}
             </h1>
           )}
           {badge}
         </div>
         {subtitle && (
-          <p className="hidden sm:block text-zinc-400 text-xs sm:text-sm mt-0.5 md:mt-1">
+          <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 md:mt-1 truncate sm:whitespace-normal">
             {subtitle}
           </p>
         )}

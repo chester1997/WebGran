@@ -14,6 +14,7 @@ interface SellerLayoutProps {
 
 export default function SellerLayout({ children }: SellerLayoutProps) {
   const pathname = usePathname();
+  const isDashboard = pathname === "/seller";
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -208,20 +209,22 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
               }}
             />
 
-            {/* 2. Gradiente Ancorado Exclusivamente na Extremidade Inferior (45% a 50% da área visível) */}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-[48%] pointer-events-none z-0"
-              aria-hidden="true"
-              style={{
-                background: `linear-gradient(
-                  to top,
-                  rgba(20, 48, 88, 0.32) 0%,
-                  rgba(28, 65, 116, 0.20) 25%,
-                  rgba(35, 78, 135, 0.08) 60%,
-                  transparent 100%
-                )`,
-              }}
-            />
+            {/* 2. Gradiente Ancorado Exclusivamente na Extremidade Inferior da Dashboard (Regra: Apenas Dashboard) */}
+            {isDashboard && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-[48%] pointer-events-none z-0"
+                aria-hidden="true"
+                style={{
+                  background: `linear-gradient(
+                    to top,
+                    rgba(20, 48, 88, 0.32) 0%,
+                    rgba(28, 65, 116, 0.20) 25%,
+                    rgba(35, 78, 135, 0.08) 60%,
+                    transparent 100%
+                  )`,
+                }}
+              />
+            )}
 
             {/* 3. Área de Rolagem do Conteúdo */}
             <main

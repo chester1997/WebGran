@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BUSINESS_TIMEZONE } from "@/lib/analytics/timezone-utils";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 interface CustomerItem {
   id: string;
@@ -54,58 +55,58 @@ export default function CustomersClient({ customers, stats }: Props) {
   });
 
   return (
-    <div className="space-y-8 fade-in w-full">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-          <Users className="w-7 h-7 text-red-500" />
-          Clientes
-        </h2>
-        <p className="text-zinc-400 text-sm mt-1">
-          Gerencie a base de usuários do seu Mini App no Telegram.
-        </p>
-      </div>
+    <div className="space-y-6 fade-in w-full max-w-full">
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Clientes"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {stats.total} {stats.total === 1 ? "cliente" : "clientes"}
+          </span>
+        }
+        subtitle="Gerencie a base de usuários do seu Mini App no Telegram."
+      />
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex items-center justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-5 shadow-none flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Total de Clientes</span>
-            <p className="text-2xl font-bold text-white">{stats.total}</p>
-            <p className="text-[11px] text-zinc-500">Usuários cadastrados no Mini App</p>
+            <span className="text-xs font-medium text-zinc-400">Total de Clientes</span>
+            <p className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-white tracking-tight">{stats.total}</p>
+            <p className="text-[11px] text-zinc-400">Usuários cadastrados no Mini App</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6 text-red-500" />
+          <div className="w-10 h-10 rounded-[8px] bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 text-[#3984FF]" />
           </div>
         </div>
 
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex items-center justify-between">
+        <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-5 shadow-none flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Novos Este Mês</span>
-            <p className="text-2xl font-bold text-white">{stats.newThisMonth}</p>
+            <span className="text-xs font-medium text-zinc-400">Novos Este Mês</span>
+            <p className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-white tracking-tight">{stats.newThisMonth}</p>
             <p className="text-[11px] text-emerald-400 font-medium">Cadastros nos últimos 30 dias</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-            <UserCheck className="w-6 h-6 text-emerald-400" />
+          <div className="w-10 h-10 rounded-[8px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <UserCheck className="w-5 h-5 text-emerald-400" />
           </div>
         </div>
 
-        <div className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex items-center justify-between">
+        <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-5 shadow-none flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Com @Username</span>
-            <p className="text-2xl font-bold text-white">{stats.withUsername}</p>
-            <p className="text-[11px] text-zinc-500">
+            <span className="text-xs font-medium text-zinc-400">Com @Username</span>
+            <p className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-white tracking-tight">{stats.withUsername}</p>
+            <p className="text-[11px] text-zinc-400 font-sans tabular-nums">
               {stats.total > 0 ? `${Math.round((stats.withUsername / stats.total) * 100)}% da base` : "0% da base"}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-            <Send className="w-6 h-6 text-red-400" />
+          <div className="w-10 h-10 rounded-[8px] bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0">
+            <Send className="w-5 h-5 text-[#3984FF]" />
           </div>
         </div>
       </div>
 
       {/* Search Input Bar */}
-      <div className="bg-[#121214] border border-white/5 p-4 rounded-2xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] p-3 sm:p-4 rounded-[12px] shadow-none flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input 
@@ -121,7 +122,7 @@ export default function CustomersClient({ customers, stats }: Props) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, @username ou ID..." 
-            className="w-full bg-[#18181C] border border-white/10 rounded-xl py-2.5 pl-10 pr-9 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30 transition-all [&::-webkit-search-cancel-button]:hidden"
+            className="w-full bg-[#151821] border border-white/[0.08] hover:border-zinc-700 rounded-xl py-2 pl-10 pr-9 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#3984FF] focus:ring-1 focus:ring-[#3984FF]/25 transition-all [&::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
             <button
@@ -133,16 +134,16 @@ export default function CustomersClient({ customers, stats }: Props) {
           )}
         </div>
 
-        <div className="text-xs text-zinc-400 flex items-center gap-2 self-end sm:self-auto font-mono">
+        <div className="text-xs text-zinc-400 flex items-center gap-2 self-end sm:self-auto">
           <span>Exibindo:</span>
-          <span className="bg-red-500/10 text-red-400 px-2.5 py-1 rounded-lg border border-red-500/20 font-bold">
+          <span className="bg-[#3984FF]/10 text-[#3984FF] px-2.5 py-0.5 rounded-full border border-[#3984FF]/25 font-sans font-medium tabular-nums">
             {filteredCustomers.length} cliente{filteredCustomers.length === 1 ? "" : "s"}
           </span>
         </div>
       </div>
 
       {/* Customers List Container (Mobile Cards + Desktop Table) */}
-      <div className="bg-[#121214] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none overflow-hidden">
         {/* Mobile View: Cards */}
         <div className="block md:hidden p-4 space-y-3 divide-y divide-white/5">
           {filteredCustomers.length === 0 ? (

@@ -14,6 +14,7 @@ import { ReorderCarouselButtons } from "./ReorderCarouselButtons";
 import SetupStoreClient from "../SetupStoreClient";
 
 import { getProductBadge } from "@/lib/product-badge";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 export default async function SellerCarouselsPage() {
   await connection();
@@ -59,17 +60,18 @@ export default async function SellerCarouselsPage() {
     : [];
 
   return (
-    <div className="space-y-8 fade-in w-full pb-16">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Carrosséis & Ranking da Loja</h2>
-          <p className="text-zinc-400 text-sm mt-1">
-            Personalize a seção de Ranking (Top 15) e crie carrosséis de produtos exibidos no seu Mini App.
-          </p>
-        </div>
-        <CarouselModal products={storeProducts} />
-      </div>
+    <div className="space-y-6 fade-in w-full pb-16">
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Carrosséis"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {standardCarousels.length + 1} seções
+          </span>
+        }
+        subtitle="Personalize a seção de Ranking e crie carrosséis de produtos exibidos no seu Mini App."
+        actions={<CarouselModal products={storeProducts} />}
+      />
 
       {/* 🏆 Section 1: Special Editorial Ranking Carousel (Top 15) */}
       <div className="bg-gradient-to-r from-[#171018] via-[#15121A] to-[#121216] border border-amber-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-5">

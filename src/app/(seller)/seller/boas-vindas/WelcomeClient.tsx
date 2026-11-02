@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, Upload, Trash2, Loader2, Sparkles, MessageSquare, Send } from "lucide-react";
 import { updateWelcomeSettingsAction } from "./actions";
 import { parseSupportConfig } from "@/lib/support/support-helper";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 interface WelcomeClientProps {
   initialSettings: {
@@ -76,42 +77,37 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
-      {/* Page Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            Boas-vindas
-          </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Mensagem e banner exibidos no Mini App e no bot
-          </p>
-        </div>
-
-        <div className="flex flex-col items-end gap-1">
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 shrink-0"
-          >
-            {isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : savedSuccess ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Salvo com sucesso!</span>
-              </>
-            ) : (
-              <span>Salvar alterações</span>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Boas-vindas"
+        subtitle="Mensagem e banner exibidos no Mini App e no bot."
+        actions={
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={handleSave}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-2 bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-medium px-4 py-2 rounded-xl transition-all shadow-xs disabled:opacity-50 shrink-0 cursor-pointer h-9"
+            >
+              {isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : savedSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Salvo com sucesso!</span>
+                </>
+              ) : (
+                <span>Salvar alterações</span>
+              )}
+            </button>
+            {saveError && (
+              <span className="text-xs text-red-400 font-medium">{saveError}</span>
             )}
-          </button>
-          {saveError && (
-            <span className="text-xs text-red-400 font-medium">{saveError}</span>
-          )}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Card 1: Banner de boas-vindas */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">
         <div>
           <h2 className="text-base font-semibold text-white">Banner de boas-vindas</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -217,7 +213,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
       </div>
 
       {/* Card 2: Mensagem de boas-vindas */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-4 sm:p-6 space-y-4 shadow-xl">
         <div>
           <h2 className="text-base font-semibold text-white">Mensagem de boas-vindas no bot</h2>
         </div>
@@ -248,7 +244,7 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
       </div>
 
       {/* Card 3: Botao de suporte no Mini App */}
-      <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-6 space-y-4 shadow-xl">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-6 space-y-4 shadow-xl">
         <div>
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Send className="w-4 h-4 text-purple-400" />

@@ -10,6 +10,7 @@ import { NewCategoryModal } from "./NewCategoryModal";
 import { CategoryActionsMenu } from "./CategoryActionsMenu";
 import { CategoryStyleToggle } from "./CategoryStyleToggle";
 import SetupStoreClient from "../SetupStoreClient";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 export default async function SellerCategoriesPage() {
   await connection();
@@ -45,25 +46,27 @@ export default async function SellerCategoriesPage() {
   }));
 
   return (
-    <div className="space-y-8 fade-in w-full">
-      
-      {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Categorias</h2>
-          <p className="text-zinc-400 text-sm mt-1">Organize seus produtos e facilite a navegação no Mini App.</p>
-        </div>
-        <NewCategoryModal storeProducts={serializedProducts} />
-      </div>
+    <div className="space-y-6 fade-in w-full">
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Categorias"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {categoriesList.length} {categoriesList.length === 1 ? "categoria" : "categorias"}
+          </span>
+        }
+        subtitle="Organize seus produtos e facilite a navegação no Mini App."
+        actions={<NewCategoryModal storeProducts={serializedProducts} />}
+      />
 
       {/* Category Display Style Selector */}
       <CategoryStyleToggle initialStyle={(store.categoryDisplayStyle as "IMAGE" | "ICON") || "IMAGE"} />
 
       {/* Filters Area */}
-      <div className="flex flex-col md:flex-row gap-4 bg-[#121212] p-4 border border-white/5 rounded-2xl shadow-xl">
+      <div className="flex flex-col md:flex-row gap-4 bg-[var(--seller-surface,#101218)] p-3 sm:p-4 border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-          <input 
+          <input
             type="search"
             name="search"
             id="categories_search_input"
@@ -73,7 +76,7 @@ export default async function SellerCategoriesPage() {
             spellCheck={false}
             data-lpignore="true"
             data-form-type="other"
-            placeholder="Pesquisar categoria..." 
+            placeholder="Pesquisar categoria..."
             className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
@@ -87,7 +90,7 @@ export default async function SellerCategoriesPage() {
       </div>
 
       {/* Categories List — Desktop Table (>= md) & Mobile Cards (< md) */}
-      <div className="bg-[#121212] border border-white/5 rounded-2xl shadow-xl relative min-h-[260px]">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none relative min-h-[260px] overflow-hidden">
         {allCategories.length === 0 ? (
           <div className="py-16 text-center">
             <div className="flex flex-col items-center justify-center">
@@ -173,8 +176,8 @@ export default async function SellerCategoriesPage() {
               {allCategories.map((cat) => {
                 const productCount = serializedProducts.filter(p => p.categoryId === cat.id).length;
                 return (
-                  <div 
-                    key={cat.id} 
+                  <div
+                    key={cat.id}
                     className="bg-[#18181C] border border-white/5 rounded-xl p-3.5 space-y-3 shadow-md"
                   >
                     {/* Top Row: Image/Icon, Name & Actions Menu */}

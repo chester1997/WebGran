@@ -21,6 +21,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SellerPageHeader from '@/components/layout/SellerPageHeader';
 
 interface ConnectionInfo {
   id: string;
@@ -346,29 +347,19 @@ export default function RecebimentosClient({
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16 animate-in fade-in duration-300">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-300">
       
-      {/* PAGE HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0F0F12] border border-white/5 p-6 rounded-3xl shadow-2xl relative overflow-hidden">
-        <div className="space-y-1.5 z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
-              <CreditCard className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Gateways de Recebimento</h1>
-              <p className="text-xs text-zinc-400">Gerencie as credenciais e métodos de pagamento ativados na sua loja</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 z-10 self-start md:self-auto">
-          <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 font-semibold flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Criptografia de Credenciais
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Gateways de Recebimento"
+        badge={
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-semibold flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Criptografado</span>
           </span>
-        </div>
-      </div>
+        }
+        subtitle="Gerencie as credenciais e métodos de pagamento ativados na sua loja."
+      />
 
       {/* PARAM FEEDBACK TOASTS */}
       {successParam && (

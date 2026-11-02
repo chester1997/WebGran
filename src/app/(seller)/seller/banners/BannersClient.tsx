@@ -19,6 +19,7 @@ import {
   Link as LinkIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { optimizeBannerImage, OptimizedImageResult } from "@/lib/image-optimizer";
 import { 
   updateBannerAction, 
@@ -283,32 +284,29 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Banners</h1>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              {bannersList.length} de {maxLimit} banners
-            </span>
-          </div>
-          <p className="text-sm text-zinc-400 mt-1">
-            Faça upload ou configure os banners exibidos no topo da sua loja no Mini App. Suporta arquivos de até 20MB.
-          </p>
-        </div>
-
-        <Button
-          onClick={openAddModal}
-          disabled={isLimitReached}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-blue-600/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar Banner
-        </Button>
-      </div>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Banners"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {bannersList.length} de {maxLimit} banners
+          </span>
+        }
+        subtitle="Faça upload ou configure os banners exibidos no topo da sua loja no Mini App. Suporta arquivos de até 20MB."
+        actions={
+          <Button
+            onClick={openAddModal}
+            disabled={isLimitReached}
+            className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl px-4 py-2 text-xs flex items-center gap-1.5 cursor-pointer h-9 shadow-xs disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Adicionar Banner</span>
+          </Button>
+        }
+      />
 
       {/* Banner Size Recommendation Notice Card */}
-      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
             <ImageIcon className="w-5 h-5" />

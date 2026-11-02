@@ -28,6 +28,7 @@ import {
   seedDefaultFloatingNotificationsAction 
 } from "./actions";
 import { NotificationModal } from "./NotificationModal";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 interface ProductOption {
   id: string;
@@ -163,36 +164,33 @@ export function NotificationsClient({ initialSettings, notifications, products }
   const previewProductTitle = selectedForPreview.product?.title || (selectedForPreview.productId ? "Produto em Destaque" : null);
 
   return (
-    <div className="space-y-8 fade-in w-full pb-16">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
-        <div>
+    <div className="space-y-6 fade-in w-full pb-16">
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Notificações Flutuantes"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            {notifications.length} {notifications.length === 1 ? "aviso" : "avisos"}
+          </span>
+        }
+        subtitle="Exiba mensagens promocionais durante a navegação da loja para aumentar destaque e atividade."
+        actions={
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wider">
-              Recurso Promocional
-            </span>
+            {notifications.length === 0 && (
+              <button
+                type="button"
+                onClick={handleSeedDefaults}
+                className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 font-medium text-xs border border-white/10 transition-all flex items-center gap-1.5 cursor-pointer h-9"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>Carregar Modelos</span>
+              </button>
+            )}
+
+            <NotificationModal products={products} />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight mt-1">Notificações Flutuantes</h2>
-          <p className="text-zinc-400 text-sm mt-0.5">
-            Exiba pequenas mensagens promocionais durante a navegação da sua loja para aumentar destaque e sensação de atividade.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          {notifications.length === 0 && (
-            <button
-              type="button"
-              onClick={handleSeedDefaults}
-              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-bold text-xs border border-white/10 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4 text-amber-400" />
-              <span>Carregar Modelos Prontos</span>
-            </button>
-          )}
-
-          <NotificationModal products={products} />
-        </div>
-      </div>
+        }
+      />
 
       {/* Grid: 2 Columns on XL screens (Settings & Preview left, Messages CRUD right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

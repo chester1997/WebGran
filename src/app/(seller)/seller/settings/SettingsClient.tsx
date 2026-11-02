@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import {
   User,
   Mail,
@@ -625,16 +626,11 @@ function urlBase64ToUint8Array(base64String: string) {
         </div>
       )}
 
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-          <User className="w-7 h-7 text-red-500" />
-          Meu Perfil
-        </h1>
-        <p className="text-zinc-400 text-sm mt-1">
-          Gerencie as suas informações de vendedor, segurança e preferências na plataforma WebGran.
-        </p>
-      </div>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Meu Perfil"
+        subtitle="Gerencie as suas informações de vendedor, segurança e preferências na plataforma WebGran."
+      />
 
       {/* Global Error Banner */}
       {errorMessage && (

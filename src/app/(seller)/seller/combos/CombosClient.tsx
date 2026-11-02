@@ -20,6 +20,7 @@ import {
   Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { ComboModal } from "./ComboModal";
 import { 
   ComboItem, 
@@ -142,28 +143,25 @@ export default function CombosClient({
 
   return (
     <div className="w-full space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Combos e Ofertas</h1>
-            <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-medium">
-              Novidade
-            </span>
-          </div>
-          <p className="text-sm text-zinc-400 mt-1">
-            Crie combos tradicionais ou ofertas progressivas por quantidade (Leve Mais por Menos) para aumentar o ticket médio.
-          </p>
-        </div>
-
-        <Button
-          onClick={handleOpenCreate}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 h-10 rounded-xl shadow-lg shadow-emerald-950/20 flex items-center gap-2 shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nova Oferta</span>
-        </Button>
-      </div>
+      {/* Header Padronizado */}
+      <SellerPageHeader
+        title="Combos"
+        badge={
+          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+            {totalCombos} {totalCombos === 1 ? "oferta" : "ofertas"}
+          </span>
+        }
+        subtitle="Crie combos tradicionais ou ofertas progressivas para aumentar o ticket médio da sua loja."
+        actions={
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium px-4 h-9 rounded-xl flex items-center gap-1.5 shrink-0 text-xs shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nova Oferta</span>
+          </Button>
+        }
+      />
 
       {/* Alerts */}
       {successMessage && (
