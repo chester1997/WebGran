@@ -256,8 +256,9 @@ export function buildPushNotificationOptions(
   clientHandledSilently: boolean,
   origin: string = "https://webgran.com.br"
 ): WebGranServiceWorkerNotificationOptions {
-  const notificationId = data.data?.orderId || data.tag || `push-${Date.now()}`;
   const notificationTag = typeof data.tag === "string" && data.tag.trim().length > 0 ? data.tag.trim() : null;
+  // Prioriza tag única para distinguir vendas (sale-*) e comissões (commission-*)
+  const notificationId = notificationTag || data.data?.orderId || `push-${Date.now()}`;
 
   const iconUrl = data.icon
     ? (data.icon.startsWith("http") ? data.icon : `${origin}${data.icon.startsWith("/") ? "" : "/"}${data.icon}`)

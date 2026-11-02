@@ -34,6 +34,47 @@ let isSystemUnlocked = false;
 let lastSoundPlayedAt = 0;
 
 /**
+ * Verifica se um evento sonoro já foi reproduzido recentemente neste dispositivo (cross-tab / em memória).
+ */
+export function isEventRecentlyPlayed(eventId: string): boolean {
+  if (playedSoundEvents.has(eventId)) return true;
+  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+    try {
+      const val = localStorage.getItem(`webgran_sound_played_${eventId}`);
+      if (val) {
+        const diff = Date.now() - parseInt(val, 10);
+        if (diff < 15000) return true; // 15 segundos de retenção contra duplicatas
+      }
+    } catch {}
+  }
+  return false;
+}
+
+/**
+ * Marca o evento como reproduzido na memória e no storage compartilhado entre abas.
+ */
+export function markEventAsPlayed(eventId: string): void {
+  playedSoundEvents.add(eventId);
+  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(`webgran_sound_played_${eventId}`, Date.now().toString());
+      // Limpeza de chaves antigas se houver acúmulo
+      if (localStorage.length > 25) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith("webgran_sound_played_")) {
+            const v = localStorage.getItem(k);
+            if (v && Date.now() - parseInt(v, 10) > 60000) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+}
+
+/**
  * Retorna as preferências completas de som de notificação para o usuário (por dispositivo).
  */
 export function getNotificationSoundPreferences(userId?: string): NotificationSoundPreferences {
@@ -42,10 +83,24 @@ export function getNotificationSoundPreferences(userId?: string): NotificationSo
   }
 
   try {
-    const key = userId ? `${PREFS_STORAGE_PREFIX}_${userId}` : PREFS_STORAGE_PREFIX;
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed = JSON.parse(raw);
+    // 1. Tenta chave específica do usuário se userId for informado
+    if (userId) {
+      const userKey = `${PREFS_STORAGE_PREFIX}_${userId}`;
+      const rawUser = localStorage.getItem(userKey);
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        return {
+          enabled: parsed.enabled !== undefined ? Boolean(parsed.enabled) : true,
+          soundId: parsed.soundId || "commission",
+          volume: typeof parsed.volume === "number" ? Math.max(0, Math.min(100, parsed.volume)) : 80,
+        };
+      }
+    }
+
+    // 2. Tenta chave padrão/compartilhada sem sufixo
+    const rawGlobal = localStorage.getItem(PREFS_STORAGE_PREFIX);
+    if (rawGlobal) {
+      const parsed = JSON.parse(rawGlobal);
       return {
         enabled: parsed.enabled !== undefined ? Boolean(parsed.enabled) : true,
         soundId: parsed.soundId || "commission",
@@ -53,7 +108,27 @@ export function getNotificationSoundPreferences(userId?: string): NotificationSo
       };
     }
 
-    // Fallback legado
+    // 3. Se userId não foi informado, varre as chaves existentes de usuários para preservar volume customizado
+    if (!userId) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(`${PREFS_STORAGE_PREFIX}_`)) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              return {
+                enabled: parsed.enabled !== undefined ? Boolean(parsed.enabled) : true,
+                soundId: parsed.soundId || "commission",
+                volume: typeof parsed.volume === "number" ? Math.max(0, Math.min(100, parsed.volume)) : 80,
+              };
+            } catch {}
+          }
+        }
+      }
+    }
+
+    // 4. Fallback legado
     const legacyVal = localStorage.getItem(STORAGE_KEY);
     const enabled = legacyVal === null ? true : legacyVal === "true";
     return { enabled, soundId: "commission", volume: 80 };
@@ -78,8 +153,12 @@ export function saveNotificationSoundPreferences(
       ...prefs,
     };
 
-    const key = userId ? `${PREFS_STORAGE_PREFIX}_${userId}` : PREFS_STORAGE_PREFIX;
-    localStorage.setItem(key, JSON.stringify(updated));
+    const serialized = JSON.stringify(updated);
+    if (userId) {
+      localStorage.setItem(`${PREFS_STORAGE_PREFIX}_${userId}`, serialized);
+    }
+    // Salva também na chave global/ativa para que leitores sem userId encontrem a configuração atual
+    localStorage.setItem(PREFS_STORAGE_PREFIX, serialized);
     localStorage.setItem(STORAGE_KEY, updated.enabled ? "true" : "false");
 
     recordAudioLog("PREFERENCIA", `Preferências salvas: enabled=${updated.enabled}, volume=${updated.volume}%`, "info");
@@ -442,13 +521,13 @@ export async function playCommissionChime(options?: {
     return false;
   }
 
-  // 2. Prevenir reprodução duplicada para o mesmo evento
+  // 2. Prevenir reprodução duplicada para o mesmo evento (em memória e cross-tab)
   if (eventId) {
-    if (!force && playedSoundEvents.has(eventId)) {
+    if (!force && isEventRecentlyPlayed(eventId)) {
       recordAudioLog("2_CHAMADA", `Evento '${eventId}' já foi reproduzido anteriormente. Deduplicação ativa.`, "warn");
       return false;
     }
-    playedSoundEvents.add(eventId);
+    markEventAsPlayed(eventId);
   }
 
   const effectiveVolume = typeof options?.volume === "number" 
@@ -517,10 +596,7 @@ export async function playCommissionChime(options?: {
       name: audioErr?.name,
       message: audioErr?.message,
     });
-    // Se for NotAllowedError, repassa o erro para permitir tratamento honesto pelo chamador
-    if (audioErr?.name === "NotAllowedError") {
-      throw audioErr;
-    }
+    // Não aborta prematuramente: permite que o Web Audio API tente reproduzir caso o AudioContext esteja em estado running
   }
 
   // 4. Tentativa 2: Web Audio API com Buffer Pré-decodificado em memória (zero latência e controle de volume via GainNode)
@@ -553,7 +629,13 @@ export async function playCommissionChime(options?: {
       }
 
       // 5. Tentativa 3: Sintetizador Harmônico senoidal
-      return await synthesizeChimeFallback(ctx);
+      if (ctx.state === "running") {
+        const synthSuccess = await synthesizeChimeFallback(ctx);
+        if (synthSuccess) {
+          lastSoundPlayedAt = Date.now();
+          return true;
+        }
+      }
     }
   } catch (webAudioErr: any) {
     recordAudioLog("7_FALLBACK", `Web Audio API falhou: ${webAudioErr?.message}`, "warn");
@@ -606,6 +688,18 @@ export function _resetNotificationSoundStateForTesting(): void {
   isSystemUnlocked = false;
   lastSoundPlayedAt = 0;
   diagnosticLogs.length = 0;
+  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("webgran_sound_played_")) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+  }
 }
 
 /**
@@ -694,9 +788,9 @@ export function setupForegroundNotificationSoundListener(): void {
         }
       }
 
-      // Deduplicação e throttle de 2 segundos
+      // Deduplicação e throttle de 2 segundos (suporte cross-tab e em memória)
       const now = Date.now();
-      if (playedSoundEvents.has(notificationId)) {
+      if (isEventRecentlyPlayed(notificationId)) {
         recordAudioLog("2_DEDUP", `Notificação ${notificationId} já reproduzida anteriormente.`, "info");
         if (responsePort) {
           responsePort.postMessage({ confirmed: true, playedSound: false, duplicate: true });
@@ -727,15 +821,15 @@ export function setupForegroundNotificationSoundListener(): void {
           }
           return;
         } else {
+          recordAudioLog("6_ERRO_REJEICAO", "Reprodução sonora não autorizada pelo navegador (autoplay).", "warn");
+          dispatchAutoplayBlockedEvent(payload);
           if (responsePort) {
             responsePort.postMessage({ confirmed: false, playedSound: false, reason: "playback_failed" });
           }
         }
       } catch (err: any) {
         recordAudioLog("6_ERRO_REJEICAO", `Erro ao tocar áudio: ${err?.name} - ${err?.message}`, "warn");
-        if (err?.name === "NotAllowedError") {
-          dispatchAutoplayBlockedEvent(payload);
-        }
+        dispatchAutoplayBlockedEvent(payload);
         if (responsePort) {
           responsePort.postMessage({ confirmed: false, playedSound: false, error: err?.name });
         }

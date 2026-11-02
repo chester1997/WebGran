@@ -60,7 +60,7 @@ export function SaleNotificationSoundHandler() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-white group-hover:text-[#60A5FA] transition-colors">
-                Toque para ativar o som de vendas
+                Toque para ativar o som de notificações
               </p>
               <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
                 O navegador precisa de um toque para liberar a reprodução sonora.

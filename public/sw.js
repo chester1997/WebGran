@@ -163,8 +163,9 @@ async function handlePushEvent(event) {
     ? (data.badge.startsWith('http') ? data.badge : new URL(data.badge, self.location.origin).href)
     : new URL('/icons/badge-96x96.png', self.location.origin).href;
 
-  const notificationId = data.data?.orderId || data.tag || `push-${Date.now()}`;
   const notificationTag = typeof data.tag === 'string' && data.tag.trim().length > 0 ? data.tag.trim() : null;
+  // Prioriza data.tag para garantir identificadores independentes entre venda (sale-*) e comissão (commission-*)
+  const notificationId = notificationTag || data.data?.orderId || `push-${Date.now()}`;
 
   // Base de opções (sem vibrate fixo para conformidade com a especificação W3C Notifications API)
   const baseOptions = {
@@ -199,21 +200,46 @@ async function handlePushEvent(event) {
     const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
 
     if (windowClients && windowClients.length > 0) {
-      // Timeout defensivo de 1.000 ms (1 segundo) para a página responder
+      // Ordena clientes: janelas focadas/visíveis primeiro para priorizar quem tem foco ativo
+      const sortedClients = [...windowClients].sort((a, b) => {
+        if (a.focused && !b.focused) return -1;
+        if (!a.focused && b.focused) return 1;
+        if (a.visibilityState === 'visible' && b.visibilityState !== 'visible') return -1;
+        if (a.visibilityState !== 'visible' && b.visibilityState === 'visible') return 1;
+        return 0;
+      });
+
+      // Timeout defensivo de 1.000 ms (1 segundo) para as páginas responderem
       const channelPromise = new Promise((resolve) => {
+        let positiveResolved = false;
+        let pendingResponses = sortedClients.length;
+
         const timeoutId = setTimeout(() => {
-          resolve({ confirmed: false, reason: 'timeout' });
+          if (!positiveResolved) {
+            resolve({ confirmed: false, reason: 'timeout' });
+          }
         }, 1000);
 
-        let resolved = false;
-
-        for (const client of windowClients) {
+        for (const client of sortedClients) {
           const channel = new MessageChannel();
           channel.port1.onmessage = (msgEvent) => {
-            if (!resolved && msgEvent.data) {
-              resolved = true;
+            pendingResponses--;
+            const res = msgEvent.data;
+
+            // Se qualquer janela confirmar positivamente a reprodução ou exibição em foco:
+            if (!positiveResolved && res && res.confirmed) {
+              positiveResolved = true;
               clearTimeout(timeoutId);
-              resolve(msgEvent.data);
+              try { channel.port1.close(); } catch {}
+              resolve(res);
+              return;
+            }
+
+            // Se todas as janelas responderam e nenhuma confirmou positivamente:
+            if (!positiveResolved && pendingResponses <= 0) {
+              clearTimeout(timeoutId);
+              try { channel.port1.close(); } catch {}
+              resolve({ confirmed: false, reason: 'all_clients_negative' });
             }
           };
 

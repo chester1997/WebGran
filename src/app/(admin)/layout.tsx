@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import AdminSidebar from "./AdminSidebar";
 import AdminScrollReset from "./AdminScrollReset";
+import { SaleNotificationSoundHandler } from "@/components/audio/SaleNotificationSoundHandler";
 
 async function AdminSidebarWrapper() {
   const user = await requireAdmin();
@@ -66,6 +67,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             aria-label="Conteúdo Principal"
             className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[var(--admin-bg,#0B0D13)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-admin-scrollbar relative"
           >
+            <SaleNotificationSoundHandler />
             <div className="w-full space-y-6">
               <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse">Carregando painel admin...</div>}>
                 {children}
