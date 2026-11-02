@@ -23,8 +23,6 @@ import { StoreAnalyticsData } from "@/lib/analytics/analytics-service";
 import { SellerMetricsOverview } from "@/components/analytics/SellerMetricsOverview";
 import { SellerSetupChecklist, SellerSetupChecklistData } from "@/components/analytics/SellerSetupChecklist";
 import { SellerActivityAndChannels } from "@/components/analytics/SellerActivityAndChannels";
-import { SellerConversionFunnel } from "@/components/analytics/SellerConversionFunnel";
-import { SellerNetRevenueCard } from "@/components/analytics/SellerNetRevenueCard";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import {
   BUSINESS_TIMEZONE,
@@ -387,15 +385,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
           periodLabel={activePeriodLabel}
         />
 
-        {/* 3. Bloco Analítico Financeiro: Receita Líquida vs. Bruta */}
-        <SellerNetRevenueCard
-          financialSummary={data.financialSummary}
-          totalGrossFallback={data.kpis?.revenue?.value || 0}
-          salesCountFallback={data.kpis?.salesCount?.value || 0}
-          isPending={isPending}
-        />
-
-        {/* 4. Atividade recente, Mais Vendidos e Desempenho por Bot */}
+        {/* 3. Atividade recente, Mais Vendidos e Desempenho por Bot */}
         <SellerActivityAndChannels
           activityLog={data.activityLog}
           topProducts={data.topProducts}
