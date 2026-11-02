@@ -1,15 +1,12 @@
 import React from "react";
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SellerKpiCards } from "../SellerKpiCards";
-import { SellerRevenueBarChart } from "../SellerRevenueBarChart";
+import { SellerMetricsOverview } from "../SellerMetricsOverview";
 import { SellerConversionFunnel } from "../SellerConversionFunnel";
 import { SellerNetRevenueCard } from "../SellerNetRevenueCard";
-import { SellerTopProductsCard } from "../SellerTopProductsCard";
-import { SellerTopBotsCard } from "../SellerTopBotsCard";
-import { SellerRealtimeActivity } from "../SellerRealtimeActivity";
+import { SellerActivityAndChannels } from "../SellerActivityAndChannels";
 
-describe("Seller Dashboard Redesign Suite (Frontend Design & Apple HIG)", () => {
+describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
   const mockKpis = {
     revenue: {
       value: 12500.5,
@@ -87,16 +84,22 @@ describe("Seller Dashboard Redesign Suite (Frontend Design & Apple HIG)", () => 
     last7DaysPerformance: mockChartSeries,
   };
 
-  it("1. KPI Cards: renderiza os 4 cards com tabular-nums, tooltips '?' e badges de variação", () => {
+  it("1. SellerMetricsOverview: renderiza Hero 'Vendas de hoje', os 4 cards compactos e o gráfico de largura total", () => {
     const html = renderToStaticMarkup(
-      <SellerKpiCards
+      <SellerMetricsOverview
+        metrics={mockCommercialMetrics}
         kpis={mockKpis}
-        commercialMetrics={mockCommercialMetrics}
         chartSeries={mockChartSeries}
+        periodLabel="Últimos 30 dias"
       />
     ).replace(/\u00a0/g, " ");
 
-    expect(html).toContain("Receita bruta");
+    // Hero
+    expect(html).toContain("Vendas de hoje");
+    expect(html).toContain("Total do período (Últimos 30 dias)");
+
+    // 4 Cards de Indicadores
+    expect(html).toContain("Receita aprovada");
     expect(html).toContain("R$ 12.500,50");
     expect(html).toContain("+18%");
 
@@ -104,41 +107,51 @@ describe("Seller Dashboard Redesign Suite (Frontend Design & Apple HIG)", () => 
     expect(html).toContain("85");
     expect(html).toContain("+12%");
 
-    expect(html).toContain("Ticket médio");
+    expect(html).toContain("Valor médio por venda");
     expect(html).toContain("R$ 147,06");
 
-    expect(html).toContain("Conversão Pix");
+    expect(html).toContain("Pagamentos concluídos");
     expect(html).toContain("68%");
-    // Tooltip trigger
+    expect(html).toContain("85/125");
+
+    // Tooltip trigger "?"
     expect(html).toContain("?");
+
+    // Starts line
+    expect(html).toContain("pessoas iniciaram conversa");
+
+    // Gráfico de Receita em destaque com seletores Curva e Barras
+    expect(html).toContain("Receita");
+    expect(html).toContain("Curva");
+    expect(html).toContain("Barras");
   });
 
-  it("2. Gráfico de Barras: renderiza cabeçalho, total e empty state quando zerado", () => {
-    // Com vendas
-    const htmlComVendas = renderToStaticMarkup(
-      <SellerRevenueBarChart chartSeries={mockChartSeries} periodLabel="Últimos 30 dias" />
-    ).replace(/\u00a0/g, " ");
-    expect(htmlComVendas).toContain("Evolução da receita");
-    expect(htmlComVendas).toContain("R$ 8.000,00");
-
-    // Sem vendas: exibe empty state amigável
-    const htmlSemVendas = renderToStaticMarkup(
-      <SellerRevenueBarChart chartSeries={[]} periodLabel="Últimos 30 dias" />
-    );
-    expect(htmlSemVendas).toContain("Sem vendas no período");
-  });
-
-  it("3. Funil de Conversão: renderiza as 3 etapas (Conversas, Pix gerados, Pagos) com percentuais", () => {
+  it("2. Funil de Conversão: renderiza as 3 etapas com percentuais e layout discreto", () => {
     const html = renderToStaticMarkup(
       <SellerConversionFunnel metrics={mockCommercialMetrics} />
     );
 
     expect(html).toContain("Funil de conversão");
     expect(html).toContain("1. Conversas iniciadas");
-    expect(html).toContain("2. Pix gerados no checkout");
-    expect(html).toContain("3. Pagamentos confirmados");
+    expect(html).toContain("2. Pix gerados");
+    expect(html).toContain("3. Vendas confirmadas");
     expect(html).toContain("85 vendas pagas");
-    expect(html).toContain("27% conv. global"); // 85 / 310 * 100 = 27%
+    expect(html).toContain("27% conv. global");
+  });
+
+  it("3. Funil de Conversão: renderiza empty state amigável quando zerado", () => {
+    const emptyMetrics = {
+      ...mockCommercialMetrics,
+      approvedSales: { ...mockCommercialMetrics.approvedSales, count: 0, total: 0 },
+      conversionRate: { ...mockCommercialMetrics.conversionRate, totalPixGerados: 0, totalPixPagos: 0, ratePercent: null },
+      botStarts: { ...mockCommercialMetrics.botStarts, totalStarts: 0, uniqueUsers: 0 },
+    };
+    const html = renderToStaticMarkup(
+      <SellerConversionFunnel metrics={emptyMetrics} />
+    );
+
+    expect(html).toContain("Funil sem atividades");
+    expect(html).toContain("Ver link do bot");
   });
 
   it("4. Receita Líquida vs. Bruta: calcula e exibe split de R$ 0,50 por venda aprovada", () => {
@@ -158,115 +171,89 @@ describe("Seller Dashboard Redesign Suite (Frontend Design & Apple HIG)", () => 
     ).replace(/\u00a0/g, " ");
 
     expect(html).toContain("Receita líquida vs. bruta");
+    expect(html).toContain("Sua Receita Líquida");
     expect(html).toContain("R$ 990,00");
-    expect(html).toContain("R$ 1.000,00");
-    expect(html).toContain("- R$ 10,00");
     expect(html).toContain("99%");
+    expect(html).toContain("R$ 1.000,00");
+    expect(html).toContain("R$ 10,00");
   });
 
-  it("5. Top Produtos: renderiza lista de ranking e empty state", () => {
-    const products = [
-      {
-        id: "prod-1",
-        title: "Pack VIP de Conteúdo",
-        coverUrl: "https://images.unsplash.com/photo-1.jpg",
-        salesCount: 42,
-        revenue: 4200,
-        percentage: 60,
-      },
-      {
-        id: "prod-2",
-        title: "Acesso Vitalício",
-        coverUrl: null,
-        salesCount: 18,
-        revenue: 2800,
-        percentage: 40,
-      },
-    ];
-
-    const htmlComProdutos = renderToStaticMarkup(
-      <SellerTopProductsCard topProducts={products} />
-    ).replace(/\u00a0/g, " ");
-    expect(htmlComProdutos).toContain("Top produtos");
-    expect(htmlComProdutos).toContain("Pack VIP de Conteúdo");
-    expect(htmlComProdutos).toContain("42 vendas");
-    expect(htmlComProdutos).toContain("R$ 4.200,00");
-
-    // Empty state
-    const htmlSemProdutos = renderToStaticMarkup(
-      <SellerTopProductsCard topProducts={[]} />
+  it("5. Receita Líquida vs. Bruta: exibe empty state amigável quando não há faturamento", () => {
+    const html = renderToStaticMarkup(
+      <SellerNetRevenueCard totalGrossFallback={0} salesCountFallback={0} />
     );
-    expect(htmlSemProdutos).toContain("Nenhum produto vendido");
+
+    expect(html).toContain("Sem faturamento no período");
   });
 
-  it("6. Top Bots: renderiza ranking de canais do Telegram e empty state", () => {
-    const channels = [
-      {
-        channel: "bot-alpha",
-        label: "VIP Bot Principal",
-        revenue: 7500,
-        salesCount: 50,
-        percentage: 75,
-        photoUrl: null,
-        username: "@vip_alpha_bot",
-        conversionRate: 15.4,
-      },
-    ];
-
-    const htmlComBots = renderToStaticMarkup(
-      <SellerTopBotsCard channels={channels} />
-    ).replace(/\u00a0/g, " ");
-    expect(htmlComBots).toContain("Top bots");
-    expect(htmlComBots).toContain("VIP Bot Principal");
-    expect(htmlComBots).toContain("R$ 7.500,00");
-    expect(htmlComBots).toContain("15.4% conv.");
-
-    // Empty state
-    const htmlSemBots = renderToStaticMarkup(
-      <SellerTopBotsCard channels={[]} />
-    );
-    expect(htmlSemBots).toContain("Nenhum bot conectado");
-  });
-
-  it("7. Atividades em Tempo Real: exibe badges de eventos (Venda, Lead, Pix)", () => {
-    const activityLog = [
+  it("6. SellerActivityAndChannels: renderiza tempo real, mais vendidos e desempenho por bot", () => {
+    const mockActivity = [
       {
         id: "act-1",
         type: "sale_approved" as const,
-        title: "Venda aprovada",
-        targetName: "Pack VIP",
+        title: "Venda Aprovada",
+        targetName: "Curso VIP",
         description: "Pagou R$ 97,00",
         timestamp: new Date().toISOString(),
         dateFormatted: "02/11/2026",
-        timeFormatted: "11:20",
-        botName: "VIP Bot",
-      },
-      {
-        id: "act-2",
-        type: "lead" as const,
-        title: "Novo lead",
-        targetName: "Lucas S.",
-        description: "Iniciou conversa",
-        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        dateFormatted: "02/11/2026",
-        timeFormatted: "11:15",
-        botName: "VIP Bot",
+        timeFormatted: "14:30",
+        botName: "@meubot",
+        statusBadge: "success" as const,
       },
     ];
 
-    const htmlComLog = renderToStaticMarkup(
-      <SellerRealtimeActivity activityLog={activityLog} />
-    );
-    expect(htmlComLog).toContain("Atividades em tempo real");
-    expect(htmlComLog).toContain("Pack VIP");
-    expect(htmlComLog).toContain("Pagou R$ 97,00");
-    expect(htmlComLog).toContain("Lucas S.");
-    expect(htmlComLog).toContain("Iniciou conversa");
+    const mockTopProducts = [
+      {
+        id: "prod-1",
+        title: "Pack VIP Completo",
+        coverUrl: "https://example.com/cover.jpg",
+        salesCount: 42,
+        revenue: 4074,
+        percentage: 65,
+      },
+    ];
 
-    // Empty state
-    const htmlSemLog = renderToStaticMarkup(
-      <SellerRealtimeActivity activityLog={[]} />
-    );
-    expect(htmlSemLog).toContain("Nenhuma atividade registrada");
+    const mockChannels = [
+      {
+        channel: "bot-1",
+        label: "Bot Principal",
+        revenue: 8000,
+        salesCount: 50,
+        percentage: 70,
+        username: "meubot_vip",
+        uniqueStarts: 180,
+      },
+      {
+        channel: "bot-2",
+        label: "Bot Secundário",
+        revenue: 3500,
+        salesCount: 20,
+        percentage: 30,
+        username: "meubot_promo",
+        uniqueStarts: 70,
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      <SellerActivityAndChannels
+        activityLog={mockActivity}
+        topProducts={mockTopProducts}
+        channels={mockChannels}
+        totalBotsCount={2}
+      />
+    ).replace(/\u00a0/g, " ");
+
+    expect(html).toContain("Atividade recente");
+    expect(html).toContain("Tempo real");
+    expect(html).toContain("Venda aprovada");
+    expect(html).toContain("Curso VIP");
+
+    expect(html).toContain("Produtos mais vendidos");
+    expect(html).toContain("Pack VIP Completo");
+    expect(html).toContain("42 unidades vendidas");
+
+    expect(html).toContain("Desempenho por bot");
+    expect(html).toContain("Bot Principal");
+    expect(html).toContain("@meubot_vip");
   });
 });

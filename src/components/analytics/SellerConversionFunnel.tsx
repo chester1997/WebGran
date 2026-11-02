@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Filter, Bot, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
+import { Filter, Bot, QrCode, CheckCircle2 } from "lucide-react";
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { DashboardEmptyState } from "./DashboardEmptyState";
 
@@ -36,15 +36,15 @@ export function SellerConversionFunnel({
 
   if (isPending) {
     return (
-      <div className="rounded-2xl bg-[var(--seller-surface,#101218)] border border-white/[0.06] p-5 sm:p-6 min-h-[360px] animate-pulse flex flex-col justify-between">
+      <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 min-h-[340px] animate-pulse flex flex-col justify-between">
         <div className="space-y-2">
           <div className="h-4 bg-white/[0.04] rounded w-36" />
           <div className="h-3 bg-white/[0.03] rounded w-24" />
         </div>
-        <div className="space-y-4 my-auto">
-          <div className="h-14 bg-white/[0.02] rounded-xl w-full" />
-          <div className="h-14 bg-white/[0.02] rounded-xl w-full" />
-          <div className="h-14 bg-white/[0.02] rounded-xl w-full" />
+        <div className="space-y-3 my-auto">
+          <div className="h-12 bg-white/[0.02] rounded-[8px] w-full" />
+          <div className="h-12 bg-white/[0.02] rounded-[8px] w-full" />
+          <div className="h-12 bg-white/[0.02] rounded-[8px] w-full" />
         </div>
       </div>
     );
@@ -53,7 +53,7 @@ export function SellerConversionFunnel({
   return (
     <section
       aria-label="Funil de conversão"
-      className="relative overflow-hidden rounded-2xl bg-[var(--seller-surface,#101218)] border border-white/[0.06] p-5 sm:p-6 shadow-none flex flex-col justify-between before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-blue-500/25 before:to-transparent min-h-[360px]"
+      className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-h-[340px]"
     >
       {/* Topo do Card */}
       <div className="flex items-center justify-between gap-2 mb-4">
@@ -66,7 +66,7 @@ export function SellerConversionFunnel({
         </div>
 
         {overallRate !== null && (
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#3984FF] text-[11px] font-bold tabular-nums">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] text-[11px] font-semibold tabular-nums">
             <span>{overallRate}% conv. global</span>
           </div>
         )}
@@ -82,95 +82,90 @@ export function SellerConversionFunnel({
           className="my-auto"
         />
       ) : (
-        <div className="space-y-3.5 my-auto">
+        <div className="space-y-3 my-auto">
           {/* Etapa 1: Conversas Iniciadas */}
-          <div className="p-3.5 rounded-xl bg-[var(--seller-surface-raised,#151821)] border border-white/[0.04] space-y-2">
+          <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 text-zinc-300 font-medium">
-                <div className="w-6 h-6 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#3984FF] flex items-center justify-center shrink-0">
-                  <Bot className="w-3.5 h-3.5" />
+                <div className="w-5 h-5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] flex items-center justify-center shrink-0">
+                  <Bot className="w-3 h-3" />
                 </div>
                 <span>1. Conversas iniciadas</span>
               </div>
-              <span className="font-bold text-white tabular-nums">
+              <span className="font-bold text-white font-sans tabular-nums">
                 {totalStarts} {totalStarts === 1 ? "lead" : "leads"}
               </span>
             </div>
-            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
               <div className="h-full bg-[#3984FF] rounded-full w-full" />
             </div>
           </div>
 
-          {/* Seta de Transição 1 -> 2 */}
-          <div className="flex items-center justify-between px-3 text-[11px] text-zinc-400">
-            <div className="flex items-center gap-1.5">
-              <ArrowRight className="w-3 h-3 text-[#3984FF]" />
-              <span>Geração de cobrança</span>
-            </div>
-            <span className="font-semibold text-zinc-300 tabular-nums">
-              {startToPixRate !== null ? `${startToPixRate}%` : "—"}
-            </span>
+          {/* Taxa intermediária 1 -> 2 */}
+          <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-sans tabular-nums -my-1">
+            <div className="h-px w-8 bg-white/[0.04]" />
+            <span>{startToPixRate !== null ? `${startToPixRate}% geraram Pix` : "—"}</span>
+            <div className="h-px w-8 bg-white/[0.04]" />
           </div>
 
-          {/* Etapa 2: Pix Gerados */}
-          <div className="p-3.5 rounded-xl bg-[var(--seller-surface-raised,#151821)] border border-white/[0.04] space-y-2">
+          {/* Etapa 2: Cobranças Pix Geradas */}
+          <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 text-zinc-300 font-medium">
-                <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                  <QrCode className="w-3.5 h-3.5" />
+                <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <QrCode className="w-3 h-3" />
                 </div>
-                <span>2. Pix gerados no checkout</span>
+                <span>2. Pix gerados</span>
               </div>
-              <span className="font-bold text-white tabular-nums">
+              <span className="font-bold text-white font-sans tabular-nums">
                 {totalPixGenerated} {totalPixGenerated === 1 ? "cobrança" : "cobranças"}
               </span>
             </div>
-            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
               <div
                 className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(startToPixRate || (totalPixGenerated > 0 ? 100 : 0), 100)}%`,
-                }}
+                style={{ width: `${Math.min(startToPixRate ?? 0, 100)}%` }}
               />
             </div>
           </div>
 
-          {/* Seta de Transição 2 -> 3 */}
-          <div className="flex items-center justify-between px-3 text-[11px] text-zinc-400">
-            <div className="flex items-center gap-1.5">
-              <ArrowRight className="w-3 h-3 text-emerald-400" />
-              <span>Taxa de pagamento</span>
-            </div>
-            <span className="font-semibold text-emerald-400 tabular-nums">
-              {pixToPaidRate !== null ? `${pixToPaidRate}%` : "—"}
-            </span>
+          {/* Taxa intermediária 2 -> 3 */}
+          <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-sans tabular-nums -my-1">
+            <div className="h-px w-8 bg-white/[0.04]" />
+            <span>{pixToPaidRate !== null ? `${pixToPaidRate}% converteram em pagamento` : "—"}</span>
+            <div className="h-px w-8 bg-white/[0.04]" />
           </div>
 
-          {/* Etapa 3: Pagamentos Concluídos */}
-          <div className="p-3.5 rounded-xl bg-[var(--seller-surface-raised,#151821)] border border-white/[0.04] space-y-2">
+          {/* Etapa 3: Vendas Aprovadas */}
+          <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 text-zinc-300 font-medium">
-                <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-3 h-3" />
                 </div>
-                <span>3. Pagamentos confirmados</span>
+                <span>3. Vendas confirmadas</span>
               </div>
-              <span className="font-bold text-emerald-400 tabular-nums">
+              <span className="font-bold text-emerald-400 font-sans tabular-nums">
                 {totalPaid} {totalPaid === 1 ? "venda paga" : "vendas pagas"}
               </span>
             </div>
-            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-400 rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(pixToPaidRate || (totalPaid > 0 ? 100 : 0), 100)}%`,
-                }}
+                style={{ width: `${Math.min(overallRate ?? 0, 100)}%` }}
               />
             </div>
           </div>
         </div>
       )}
+
+      {/* Rodapé informativo */}
+      <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
+        <span>Eficiência do fluxo</span>
+        <span className="font-sans font-medium tabular-nums text-zinc-300">
+          {totalPaid} de {totalStarts} conversas
+        </span>
+      </div>
     </section>
   );
 }
-

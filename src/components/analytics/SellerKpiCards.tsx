@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  DollarSign, 
-  ShoppingBag, 
-  CreditCard, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  Zap 
+import {
+  DollarSign,
+  ShoppingBag,
+  CreditCard,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Zap
 } from "lucide-react";
 import { KpiMetric, ChartPoint } from "@/lib/analytics/analytics-service";
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";

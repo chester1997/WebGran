@@ -9,8 +9,11 @@ import {
   Clock, 
   UserPlus, 
   ArrowRight,
+  Activity,
+  ShoppingBag
 } from "lucide-react";
 import { ActivityLogItem, TopProductItem, ChannelItem } from "@/lib/analytics/analytics-service";
+import { DashboardEmptyState } from "./DashboardEmptyState";
 
 interface SellerActivityAndChannelsProps {
   activityLog?: ActivityLogItem[];
@@ -108,16 +111,14 @@ export function SellerActivityAndChannels({
               <div className="h-12 bg-white/[0.03] rounded-[8px]" />
             </div>
           ) : activityLog.length === 0 ? (
-            <div className="py-12 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.04] p-6 space-y-3">
-              <p className="text-xs text-zinc-400">Nenhuma atividade recente registrada no período.</p>
-              <Link
-                href="/seller/store"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-[#3984FF]"
-              >
-                <span>Ver link do bot</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
+            <DashboardEmptyState
+              icon={Activity}
+              title="Sem atividades recentes"
+              description="Quando novas conversas ou compras forem realizadas, elas aparecerão aqui em tempo real."
+              actionText="Ver link do bot"
+              actionHref="/seller/store"
+              className="my-auto"
+            />
           ) : (
             <div 
               tabIndex={0}
@@ -163,7 +164,6 @@ export function SellerActivityAndChannels({
                             <p className="text-xs font-medium text-white leading-tight">
                               {titleLabel}
                             </p>
-                            {/* Nome do bot só aparece se a loja tiver mais de um bot */}
                             {hasMultipleBots && event.botName && (
                               <span className="text-[10px] text-zinc-400 bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.2 rounded shrink-0">
                                 {event.botName}
@@ -242,7 +242,10 @@ export function SellerActivityAndChannels({
               <div className="h-12 bg-white/[0.03] rounded-[8px]" />
             </div>
           ) : topProducts.length === 0 ? (
-            <div className="py-12 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.04] p-6 space-y-3">
+            <div className="py-12 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.04] p-6 space-y-3 my-auto">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#3984FF] flex items-center justify-center mx-auto mb-1 shrink-0">
+                <ShoppingBag className="w-5 h-5 stroke-[1.75]" />
+              </div>
               <p className="text-xs text-zinc-400">
                 Você ainda não vendeu. Veja como divulgar o seu bot
               </p>
@@ -361,16 +364,14 @@ export function SellerActivityAndChannels({
                 <div className="h-16 bg-white/[0.03] rounded-[8px]" />
               </div>
             ) : channels.length === 0 ? (
-              <div className="py-12 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.04] p-6 space-y-3">
-                <p className="text-xs text-zinc-400">Nenhum bot ativo registrado.</p>
-                <Link
-                  href="/seller/store"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-[#3984FF]"
-                >
-                  <span>Conectar bot</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
+              <DashboardEmptyState
+                icon={Bot}
+                title="Nenhum bot conectado"
+                description="Conecte seu robô do Telegram para acompanhar as vendas por canal."
+                actionText="Conectar bot"
+                actionHref="/seller/store"
+                className="my-auto"
+              />
             ) : (
               <div 
                 tabIndex={0}
