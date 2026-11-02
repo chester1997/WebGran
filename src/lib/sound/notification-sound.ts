@@ -89,7 +89,35 @@ export function saveNotificationSoundPreferences(
 }
 
 /**
- * Adiciona um log estruturado ao buffer de diagnóstico técnico e ao console do navegador.
+ * Verifica se os logs de diagnóstico de áudio no console estão ativados.
+ * Padrão: DESLIGADO (ativado somente se localStorage.getItem("webgran_debug_audio") === "1").
+ */
+export function isAudioDebugEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem("webgran_debug_audio") === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ativa ou desativa a exibição dos logs [AudioDiag:*] no console do navegador.
+ */
+export function setAudioDebugEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (enabled) {
+      localStorage.setItem("webgran_debug_audio", "1");
+    } else {
+      localStorage.removeItem("webgran_debug_audio");
+    }
+  } catch {}
+}
+
+/**
+ * Adiciona um log estruturado ao buffer de diagnóstico técnico e ao console do navegador
+ * (apenas se a flag de depuração estiver ativada).
  */
 export function recordAudioLog(
   step: string,
@@ -119,13 +147,16 @@ export function recordAudioLog(
     } catch {}
   }
 
-  const prefix = `[AudioDiag:${step}]`;
-  if (level === "error") {
-    console.error(prefix, message, details || "");
-  } else if (level === "warn") {
-    console.warn(prefix, message, details || "");
-  } else {
-    console.log(prefix, message, details || "");
+  // Logs no console são silenciados por padrão; só exibem se webgran_debug_audio === "1"
+  if (isAudioDebugEnabled()) {
+    const prefix = `[AudioDiag:${step}]`;
+    if (level === "error") {
+      console.error(prefix, message, details || "");
+    } else if (level === "warn") {
+      console.warn(prefix, message, details || "");
+    } else {
+      console.log(prefix, message, details || "");
+    }
   }
 }
 

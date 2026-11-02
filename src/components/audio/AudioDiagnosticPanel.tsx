@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   XCircle,
   Info,
+  Bug,
 } from "lucide-react";
 import {
   DiagnosticLogEntry,
@@ -20,9 +21,9 @@ import {
   clearAudioDiagnosticLogs,
   recordAudioLog,
   getOrCreateAudioContext,
-  unlockAudioContext,
   playCommissionChime,
-  synthesizeChimeFallback,
+  isAudioDebugEnabled,
+  setAudioDebugEnabled,
 } from "@/lib/sound/notification-sound";
 import { COMMISSION_AUDIO_DATA_URI } from "@/lib/sound/commission-audio-data";
 
@@ -30,12 +31,14 @@ export function AudioDiagnosticPanel() {
   const [logs, setLogs] = useState<DiagnosticLogEntry[]>([]);
   const [contextState, setContextState] = useState<string>("desconhecido");
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
+  const [consoleDebugEnabled, setConsoleDebugEnabled] = useState<boolean>(false);
 
   const refreshState = () => {
     setLogs(getAudioDiagnosticLogs());
     if (typeof window !== "undefined") {
       const ctx = getOrCreateAudioContext();
       setContextState(ctx?.state || "não suportado");
+      setConsoleDebugEnabled(isAudioDebugEnabled());
     }
   };
 
@@ -65,13 +68,25 @@ export function AudioDiagnosticPanel() {
     };
   }, []);
 
+  const handleToggleConsoleDebug = () => {
+    const next = !consoleDebugEnabled;
+    setConsoleDebugEnabled(next);
+    setAudioDebugEnabled(next);
+    recordAudioLog(
+      "CONFIG",
+      next
+        ? "Depuração no console ATIVADA (webgran_debug_audio = 1)"
+        : "Depuração no console DESATIVADA (webgran_debug_audio removido)",
+      "info"
+    );
+  };
+
   // 1. TESTE 1: Reprodução Direta MP3 (HTML5 Audio Síncrono)
   const handleTestDirectMp3 = async () => {
     setIsPlaying("direct");
     recordAudioLog("TESTE_ISOLADO", "Iniciando Teste 1: Reprodução Direta HTML5 Audio (síncrona)...", "info");
 
     try {
-      // Disparo síncrono no primeiro tick do clique do usuário
       const audio = new Audio(COMMISSION_AUDIO_DATA_URI);
       audio.volume = 1.0;
       audio.muted = false;
@@ -91,10 +106,10 @@ export function AudioDiagnosticPanel() {
     }
   };
 
-  // 2. TESTE 2: Reprodução via Web Audio Context (Buffer decodificado)
+  // 2. TESTE 2: Reprodução via Web Audio Context (Buffer decodificado com GainNode)
   const handleTestWebAudio = async () => {
     setIsPlaying("webaudio");
-    recordAudioLog("TESTE_ISOLADO", "Iniciando Teste 2: Reprodução via Web Audio Context (Buffer)...", "info");
+    recordAudioLog("TESTE_ISOLADO", "Iniciando Teste 2: Reprodução via Web Audio Context (Buffer decodificado)...", "info");
 
     try {
       const ctx = getOrCreateAudioContext();
@@ -107,7 +122,6 @@ export function AudioDiagnosticPanel() {
       }
       setContextState(ctx.state);
 
-      // Decodifica a partir do Base64
       const base64Data = COMMISSION_AUDIO_DATA_URI.split(",")[1];
       const binary = atob(base64Data);
       const bytes = new Uint8Array(binary.length);
@@ -126,7 +140,7 @@ export function AudioDiagnosticPanel() {
       gainNode.connect(ctx.destination);
       source.start(0);
 
-      recordAudioLog("8_RESULTADO", `Teste 2 (Web Audio Buffer) disparado com sucesso (${audioBuffer.duration.toFixed(2)}s)!`, "success");
+      recordAudioLog("8_RESULTADO", `Teste 2 (Web Audio Buffer + GainNode) disparado com sucesso (${audioBuffer.duration.toFixed(2)}s)!`, "success");
     } catch (err: any) {
       recordAudioLog("6_ERRO_REJEICAO", `Teste 2 (Web Audio Buffer) falhou: [${err?.name}] ${err?.message}`, "error");
     } finally {
@@ -141,7 +155,6 @@ export function AudioDiagnosticPanel() {
     recordAudioLog("TESTE_ISOLADO", "Iniciando Teste 3: Invocação de playCommissionChime({ force: true })...", "info");
 
     try {
-      // Cria instância síncrona no primeiro tick do clique
       const audioInstance = new Audio(COMMISSION_AUDIO_DATA_URI);
       const success = await playCommissionChime({
         force: true,
@@ -162,16 +175,15 @@ export function AudioDiagnosticPanel() {
     }
   };
 
-  // 4. TESTE 4: Simulação de Evento Real de Notificação (Push disparado pelo Service Worker)
+  // 4. TESTE 4: Simulação de Evento Real de Notificação (Push vindo do Service Worker)
   const handleTestSimulatedRealEvent = async () => {
     setIsPlaying("real");
     recordAudioLog("1_EVENTO", "Iniciando Teste 4: Simulando evento real WEBGRAN_PUSH_RECEIVED vindo do Service Worker...", "info");
 
     try {
-      // Simula a chegada da mensagem que o sw.js envia para a janela aberta
       const simulatedPayload = {
-        title: "💰 Venda Aprovada! R$ 97,00",
-        body: "WebGran • Comprovante recebido no split Pix",
+        title: "🛒 Nova venda no WebGran",
+        body: "Você recebeu R$ 97,00",
         tag: `test-sale-${Date.now()}`,
         data: {
           orderId: `diag-order-${Date.now()}`,
@@ -181,7 +193,6 @@ export function AudioDiagnosticPanel() {
 
       recordAudioLog("1_EVENTO", `Payload de evento simulado recebido no cliente (Pedido: ${simulatedPayload.data.orderId})`, "info", simulatedPayload);
 
-      // Dispara a reprodução exatamente como o listener de primeiro plano faz
       const played = await playCommissionChime({ eventId: simulatedPayload.data.orderId });
 
       if (played) {
@@ -198,9 +209,9 @@ export function AudioDiagnosticPanel() {
   };
 
   return (
-    <div className="bg-[#121214] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4">
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
             <Activity className="w-5 h-5" />
@@ -213,19 +224,36 @@ export function AudioDiagnosticPanel() {
               </span>
             </h3>
             <p className="text-xs text-zinc-400">
-              Teste isolado por etapas para identificar exatamente onde o som falha no seu navegador/Android.
+              Ferramenta técnica para auditoria isolada de pipelines de áudio, Web Audio e Service Worker.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={clearAudioDiagnosticLogs}
-          className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors self-start sm:self-auto cursor-pointer"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Limpar Logs</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Toggle para Logs no Console */}
+          <button
+            type="button"
+            onClick={handleToggleConsoleDebug}
+            className={`text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+              consoleDebugEnabled
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                : "bg-zinc-800/80 border-zinc-700/60 text-zinc-400 hover:text-zinc-200"
+            }`}
+            title="Ativa/desativa console.log de [AudioDiag:*] via localStorage webgran_debug_audio"
+          >
+            <Bug className="w-3.5 h-3.5" />
+            <span>Console Debug: {consoleDebugEnabled ? "ON" : "OFF"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={clearAudioDiagnosticLogs}
+            className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 border border-zinc-700/60 hover:bg-zinc-750 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Limpar Logs</span>
+          </button>
+        </div>
       </div>
 
       {/* Grade de 4 Testes Comparativos */}
@@ -235,7 +263,7 @@ export function AudioDiagnosticPanel() {
           type="button"
           onClick={handleTestDirectMp3}
           disabled={isPlaying !== null}
-          className="p-3.5 rounded-xl bg-[#18181C] hover:bg-[#202026] border border-white/5 hover:border-blue-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
+          className="p-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 hover:border-blue-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
         >
           <div className="flex items-center justify-between text-blue-400">
             <Music className="w-4 h-4" />
@@ -256,7 +284,7 @@ export function AudioDiagnosticPanel() {
           type="button"
           onClick={handleTestWebAudio}
           disabled={isPlaying !== null}
-          className="p-3.5 rounded-xl bg-[#18181C] hover:bg-[#202026] border border-white/5 hover:border-emerald-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
+          className="p-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 hover:border-emerald-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
         >
           <div className="flex items-center justify-between text-emerald-400">
             <Volume2 className="w-4 h-4" />
@@ -267,7 +295,7 @@ export function AudioDiagnosticPanel() {
               {isPlaying === "webaudio" ? "Reproduzindo..." : "2. Web Audio (Buffer)"}
             </span>
             <span className="text-[11px] text-zinc-400 block leading-tight mt-0.5">
-              Decodificação em memória via AudioContext.
+              Decodificação em memória via GainNode.
             </span>
           </div>
         </button>
@@ -277,7 +305,7 @@ export function AudioDiagnosticPanel() {
           type="button"
           onClick={handleTestCommissionChime}
           disabled={isPlaying !== null}
-          className="p-3.5 rounded-xl bg-[#18181C] hover:bg-[#202026] border border-white/5 hover:border-purple-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
+          className="p-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 hover:border-purple-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
         >
           <div className="flex items-center justify-between text-purple-400">
             <Play className="w-4 h-4" />
@@ -298,7 +326,7 @@ export function AudioDiagnosticPanel() {
           type="button"
           onClick={handleTestSimulatedRealEvent}
           disabled={isPlaying !== null}
-          className="p-3.5 rounded-xl bg-[#18181C] hover:bg-[#202026] border border-white/5 hover:border-amber-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
+          className="p-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 hover:border-amber-500/30 text-left transition-all space-y-2 cursor-pointer disabled:opacity-50"
         >
           <div className="flex items-center justify-between text-amber-400">
             <Radio className="w-4 h-4" />
@@ -320,14 +348,14 @@ export function AudioDiagnosticPanel() {
         <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
           <span className="flex items-center gap-1.5 font-mono text-[11px]">
             <Terminal className="w-3.5 h-3.5 text-zinc-500" />
-            Registro de Execução e Erros ({logs.length} eventos)
+            Registro de Execução ({logs.length} eventos no buffer)
           </span>
           <span className="text-[10px] text-zinc-500 font-mono">
-            Últimas chamadas gravadas
+            Console: {consoleDebugEnabled ? "Logs ativos (webgran_debug_audio=1)" : "Silenciado (padrão)"}
           </span>
         </div>
 
-        <div className="bg-[#0A0A0C] border border-white/5 rounded-xl p-3 max-h-56 overflow-y-auto font-mono text-[11px] space-y-1.5 shadow-inner">
+        <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-3 max-h-56 overflow-y-auto font-mono text-[11px] space-y-1.5 shadow-inner">
           {logs.length === 0 ? (
             <div className="text-zinc-600 italic py-3 text-center">
               Nenhum evento registrado ainda. Clique em um dos botões acima para executar os testes.
@@ -374,4 +402,3 @@ export function AudioDiagnosticPanel() {
     </div>
   );
 }
-

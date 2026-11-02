@@ -38,8 +38,6 @@ import {
   unlockAudioSystem,
   unlockAudioContext
 } from "@/lib/sound/notification-sound";
-import { COMMISSION_AUDIO_DATA_URI } from "@/lib/sound/commission-audio-data";
-import { AudioDiagnosticPanel } from "@/components/audio/AudioDiagnosticPanel";
 import { buildTestNotificationPayload } from "@/lib/push/notification-payload-builder";
 import { Button } from "@/components/ui/button";
 import {
@@ -1232,11 +1230,6 @@ function urlBase64ToUint8Array(base64String: string) {
           </div>
         </div>
       </div>
-
-      {/* ========================================================================= */}
-      {/* PAINEL DE DIAGNÓSTICO TÉCNICO DE ÁUDIO */}
-      {/* ========================================================================= */}
-      <AudioDiagnosticPanel />
 
       {/* ==================================================== */}
       {/* RODAPÉ DE CRÉDITOS E LICENÇAS                        */}
