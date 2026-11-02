@@ -8,11 +8,13 @@ import { DashboardEmptyState } from "./DashboardEmptyState";
 interface SellerConversionFunnelProps {
   metrics?: CommercialMetrics | null;
   isPending?: boolean;
+  className?: string;
 }
 
 export function SellerConversionFunnel({
   metrics,
   isPending = false,
+  className = "",
 }: SellerConversionFunnelProps) {
   const conversionRate = metrics?.conversionRate;
   const botStarts = metrics?.botStarts;
@@ -36,7 +38,7 @@ export function SellerConversionFunnel({
 
   if (isPending) {
     return (
-      <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 min-h-[340px] animate-pulse flex flex-col justify-between">
+      <div className={`bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 min-h-[340px] animate-pulse flex flex-col justify-between min-w-0 ${className}`}>
         <div className="space-y-2">
           <div className="h-4 bg-white/[0.04] rounded w-36" />
           <div className="h-3 bg-white/[0.03] rounded w-24" />
@@ -53,20 +55,20 @@ export function SellerConversionFunnel({
   return (
     <section
       aria-label="Funil de conversão"
-      className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-h-[340px]"
+      className={`bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-h-[340px] min-w-0 ${className}`}
     >
       {/* Topo do Card */}
       <div className="flex items-center justify-between gap-2 mb-4">
-        <div>
-          <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-2">
-            <Filter className="w-4 h-4 text-[#3984FF]" />
-            <span>Funil de conversão</span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-[#3984FF] shrink-0" />
+            <span className="truncate">Funil de conversão</span>
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">Da primeira conversa ao pagamento</p>
+          <p className="text-xs text-zinc-400 mt-0.5 truncate">Da primeira conversa ao pagamento</p>
         </div>
 
         {overallRate !== null && (
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] text-[11px] font-semibold tabular-nums">
+          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] text-[10px] font-semibold tabular-nums shrink-0 whitespace-nowrap">
             <span>{overallRate}% conv. global</span>
           </div>
         )}
@@ -85,43 +87,43 @@ export function SellerConversionFunnel({
         <div className="space-y-3 my-auto">
           {/* Etapa 1: Conversas Iniciadas */}
           <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 text-zinc-300 font-medium">
+            <div className="flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-1.5 text-zinc-300 font-medium truncate min-w-0">
                 <div className="w-5 h-5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] flex items-center justify-center shrink-0">
                   <Bot className="w-3 h-3" />
                 </div>
-                <span>1. Conversas iniciadas</span>
+                <span className="truncate">1. Conversas iniciadas</span>
               </div>
-              <span className="font-bold text-white font-sans tabular-nums">
+              <span className="font-bold text-white font-sans tabular-nums shrink-0 whitespace-nowrap">
                 {totalStarts} {totalStarts === 1 ? "lead" : "leads"}
               </span>
             </div>
-            <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
               <div className="h-full bg-[#3984FF] rounded-full w-full" />
             </div>
           </div>
 
           {/* Taxa intermediária 1 -> 2 */}
           <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-sans tabular-nums -my-1">
-            <div className="h-px w-8 bg-white/[0.04]" />
-            <span>{startToPixRate !== null ? `${startToPixRate}% geraram Pix` : "—"}</span>
-            <div className="h-px w-8 bg-white/[0.04]" />
+            <div className="h-px w-6 bg-white/[0.04]" />
+            <span className="truncate">{startToPixRate !== null ? `${startToPixRate}% geraram Pix` : "—"}</span>
+            <div className="h-px w-6 bg-white/[0.04]" />
           </div>
 
           {/* Etapa 2: Cobranças Pix Geradas */}
           <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 text-zinc-300 font-medium">
+            <div className="flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-1.5 text-zinc-300 font-medium truncate min-w-0">
                 <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
                   <QrCode className="w-3 h-3" />
                 </div>
-                <span>2. Pix gerados</span>
+                <span className="truncate">2. Pix gerados</span>
               </div>
-              <span className="font-bold text-white font-sans tabular-nums">
+              <span className="font-bold text-white font-sans tabular-nums shrink-0 whitespace-nowrap">
                 {totalPixGenerated} {totalPixGenerated === 1 ? "cobrança" : "cobranças"}
               </span>
             </div>
-            <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
               <div
                 className="h-full bg-amber-400 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(startToPixRate ?? 0, 100)}%` }}
@@ -131,25 +133,25 @@ export function SellerConversionFunnel({
 
           {/* Taxa intermediária 2 -> 3 */}
           <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-sans tabular-nums -my-1">
-            <div className="h-px w-8 bg-white/[0.04]" />
-            <span>{pixToPaidRate !== null ? `${pixToPaidRate}% converteram em pagamento` : "—"}</span>
-            <div className="h-px w-8 bg-white/[0.04]" />
+            <div className="h-px w-6 bg-white/[0.04]" />
+            <span className="truncate">{pixToPaidRate !== null ? `${pixToPaidRate}% converteram em pagamento` : "—"}</span>
+            <div className="h-px w-6 bg-white/[0.04]" />
           </div>
 
           {/* Etapa 3: Vendas Aprovadas */}
           <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 text-zinc-300 font-medium">
+            <div className="flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-1.5 text-zinc-300 font-medium truncate min-w-0">
                 <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-3 h-3" />
                 </div>
-                <span>3. Vendas confirmadas</span>
+                <span className="truncate">3. Vendas confirmadas</span>
               </div>
-              <span className="font-bold text-emerald-400 font-sans tabular-nums">
+              <span className="font-bold text-emerald-400 font-sans tabular-nums shrink-0 whitespace-nowrap">
                 {totalPaid} {totalPaid === 1 ? "venda paga" : "vendas pagas"}
               </span>
             </div>
-            <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-400 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(overallRate ?? 0, 100)}%` }}
@@ -160,9 +162,9 @@ export function SellerConversionFunnel({
       )}
 
       {/* Rodapé informativo */}
-      <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
-        <span>Eficiência do fluxo</span>
-        <span className="font-sans font-medium tabular-nums text-zinc-300">
+      <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between gap-2">
+        <span className="truncate">Eficiência do fluxo</span>
+        <span className="font-sans font-medium tabular-nums text-zinc-300 shrink-0 whitespace-nowrap">
           {totalPaid} de {totalStarts} conversas
         </span>
       </div>

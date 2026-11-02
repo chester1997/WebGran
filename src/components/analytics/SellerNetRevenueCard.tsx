@@ -50,7 +50,7 @@ export function SellerNetRevenueCard({
   return (
     <section
       aria-label="Receita líquida versus bruta"
-      className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-h-[340px]"
+      className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-h-[200px]"
     >
       {/* Topo do Card */}
       <div className="flex items-center justify-between gap-2 mb-3">
@@ -75,16 +75,18 @@ export function SellerNetRevenueCard({
           className="my-auto"
         />
       ) : (
-        <div className="space-y-3.5 my-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 my-auto">
           {/* Valor Líquido em Destaque Principal */}
-          <div className="p-4 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-1">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
-              Sua Receita Líquida
-            </span>
-            <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
-              {formatBRL(net)}
+          <div className="p-4 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-1 flex flex-col justify-between">
+            <div>
+              <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                Sua Receita Líquida
+              </span>
+              <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white mt-1">
+                {formatBRL(net)}
+              </div>
             </div>
-            <div className="flex items-center justify-between text-xs text-zinc-400 pt-1">
+            <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-white/[0.04]">
               <span>Margem líquida retida:</span>
               <span className="font-bold text-emerald-400 font-sans tabular-nums">
                 {marginPct}%
@@ -93,9 +95,9 @@ export function SellerNetRevenueCard({
           </div>
 
           {/* Comparativo de Detalhamento */}
-          <div className="space-y-2 pt-1 text-xs">
+          <div className="space-y-2 flex flex-col justify-center text-xs">
             {/* Receita Bruta */}
-            <div className="flex items-center justify-between p-2.5 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))]">
+            <div className="flex items-center justify-between p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))]">
               <span className="text-zinc-400">Receita bruta paga pelos clientes:</span>
               <span className="font-semibold text-white font-sans tabular-nums">
                 {formatBRL(gross)}
@@ -103,7 +105,7 @@ export function SellerNetRevenueCard({
             </div>
 
             {/* Taxa da Plataforma */}
-            <div className="flex items-center justify-between p-2.5 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))]">
+            <div className="flex items-center justify-between p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))]">
               <div className="flex items-center gap-1.5 text-zinc-400">
                 <span>Taxa da plataforma (R$ 0,50 / venda):</span>
               </div>

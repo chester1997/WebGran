@@ -29,6 +29,7 @@ import {
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { getBusinessDateKey } from "@/lib/analytics/timezone-utils";
 import { MiniSparkline } from "./MiniSparkline";
+import { SellerConversionFunnel } from "./SellerConversionFunnel";
 
 interface KpiDataPoint {
   value: number;
@@ -54,6 +55,7 @@ interface SellerMetricsOverviewProps {
   }>;
   isPending?: boolean;
   periodLabel?: string;
+  funnelSlot?: React.ReactNode;
 }
 
 function formatBRL(value: number): string {
@@ -153,6 +155,7 @@ export function SellerMetricsOverview({
   chartSeries = [],
   isPending = false,
   periodLabel = "Últimos 30 dias",
+  funnelSlot,
 }: SellerMetricsOverviewProps) {
   const [chartMode, setChartMode] = useState<"area" | "bar">("area");
 
@@ -270,9 +273,14 @@ export function SellerMetricsOverview({
           ))}
         </div>
 
-        {/* Gráfico Skeleton */}
-        <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-6 min-h-[280px] flex items-center justify-center">
-          <div className="h-48 w-full bg-white/[0.02] rounded-lg" />
+        {/* Gráfico (65%) + Funil (35%) Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-5 w-full items-stretch">
+          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-6 min-h-[320px] flex items-center justify-center">
+            <div className="h-48 w-full bg-white/[0.02] rounded-lg" />
+          </div>
+          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-6 min-h-[320px] flex items-center justify-center">
+            <div className="h-48 w-full bg-white/[0.02] rounded-lg" />
+          </div>
         </div>
       </div>
     );
@@ -483,166 +491,180 @@ export function SellerMetricsOverview({
       </section>
 
       {/* =========================================================================
-          3. GRÁFICO: RECEITA EM DESTAQUE (Largura Total com Seletor Curva / Barras)
+          3. GRÁFICO DE RECEITA (65%) + FUNIL DE CONVERSÃO (35%)
          ========================================================================= */}
-      <section
-        aria-label="Evolução da receita"
-        className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none"
-      >
-        {/* Topo do Card de Gráfico */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white tracking-tight">Receita</h3>
-            <p className="text-xs text-zinc-400 mt-0.5">{periodLabel}</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <span className="text-xs text-zinc-400">Total: </span>
-              <span className="text-sm font-bold font-sans tabular-nums text-white">
-                {formatBRL(totalPeriodRevenue)}
-              </span>
-            </div>
-
-            {/* Alternador discreto de visualização */}
-            <div className="flex items-center gap-0.5 bg-white/[0.04] p-0.5 rounded-lg border border-white/[0.06]">
-              <button
-                type="button"
-                onClick={() => setChartMode("area")}
-                className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1 ${
-                  chartMode === "area"
-                    ? "bg-[#3984FF] text-white shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-                title="Ver como curva contínua"
-              >
-                <LineChart className="w-3 h-3" />
-                <span>Curva</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartMode("bar")}
-                className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1 ${
-                  chartMode === "bar"
-                    ? "bg-[#3984FF] text-white shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-                title="Ver como barras diárias"
-              >
-                <BarChart2 className="w-3 h-3" />
-                <span>Barras</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Área do Gráfico */}
-        <div
-          role="img"
-          aria-label={`Gráfico de evolução da receita: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
-          className="w-full h-[220px] sm:min-h-[240px] sm:h-64 flex items-center justify-center overflow-hidden"
+      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-5 w-full items-stretch">
+        {/* Card de Receita (65%) */}
+        <section
+          aria-label="Evolução da receita"
+          className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-w-0 h-full"
         >
-          {!hasSeriesSales ? (
-            <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-1.5 my-auto">
-              <p className="text-zinc-300 text-xs font-semibold">Sem vendas neste período</p>
-              <p className="text-zinc-400 text-[11px] max-w-xs leading-relaxed">
-                Quando novos pedidos forem confirmados, a curva de receita aparecerá aqui.
-              </p>
+          {/* Topo do Card de Gráfico */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-white tracking-tight">Receita</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">{periodLabel}</p>
             </div>
-          ) : (
-            <div className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {chartMode === "area" ? (
-                  <AreaChart
-                    data={normalizedSeries}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="azureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3984FF" stopOpacity={0.24} />
-                        <stop offset="100%" stopColor="#3984FF" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                    <XAxis
-                      dataKey="dateLabel"
-                      stroke="#71717A"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      dy={5}
-                    />
-                    <YAxis
-                      stroke="#71717A"
-                      fontSize={10}
-                      domain={[0, "auto"]}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(val) =>
-                        val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
-                      }
-                    />
-                    <RechartsTooltip content={<RevenueTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#3984FF"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#azureRevenueGrad)"
-                      dot={{ r: 2.5, fill: "#3984FF", stroke: "#12141A", strokeWidth: 1.5 }}
-                      activeDot={{
-                        r: 4.5,
-                        stroke: "#FFFFFF",
-                        strokeWidth: 2,
-                        fill: "#3984FF",
-                      }}
-                    />
-                  </AreaChart>
-                ) : (
-                  <BarChart
-                    data={normalizedSeries}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="azureBarGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3984FF" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#2563EB" stopOpacity={0.8} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                    <XAxis
-                      dataKey="dateLabel"
-                      stroke="#71717A"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      dy={5}
-                    />
-                    <YAxis
-                      stroke="#71717A"
-                      fontSize={10}
-                      domain={[0, "auto"]}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(val) =>
-                        val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
-                      }
-                    />
-                    <RechartsTooltip content={<RevenueTooltip />} />
-                    <Bar
-                      dataKey="revenue"
-                      fill="url(#azureBarGrad)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
+
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
+              <div className="text-left sm:text-right">
+                <span className="text-xs text-zinc-400">Total: </span>
+                <span className="text-sm font-bold font-sans tabular-nums text-white">
+                  {formatBRL(totalPeriodRevenue)}
+                </span>
+              </div>
+
+              {/* Alternador discreto de visualização */}
+              <div className="flex items-center gap-0.5 bg-white/[0.04] p-0.5 rounded-lg border border-white/[0.06] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setChartMode("area")}
+                  className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                    chartMode === "area"
+                      ? "bg-[#3984FF] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                  title="Ver como curva contínua"
+                >
+                  <LineChart className="w-3 h-3" />
+                  <span>Curva</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartMode("bar")}
+                  className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                    chartMode === "bar"
+                      ? "bg-[#3984FF] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                  title="Ver como barras diárias"
+                >
+                  <BarChart2 className="w-3 h-3" />
+                  <span>Barras</span>
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Área do Gráfico */}
+          <div
+            role="img"
+            aria-label={`Gráfico de evolução da receita: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
+            className="w-full flex-1 min-h-[220px] sm:min-h-[250px] flex items-center justify-center overflow-hidden"
+          >
+            {!hasSeriesSales ? (
+              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-1.5 my-auto">
+                <p className="text-zinc-300 text-xs font-semibold">Sem vendas neste período</p>
+                <p className="text-zinc-400 text-[11px] max-w-xs leading-relaxed">
+                  Quando novos pedidos forem confirmados, a curva de receita aparecerá aqui.
+                </p>
+              </div>
+            ) : (
+              <div className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartMode === "area" ? (
+                    <AreaChart
+                      data={normalizedSeries}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="azureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3984FF" stopOpacity={0.24} />
+                          <stop offset="100%" stopColor="#3984FF" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+                      <XAxis
+                        dataKey="dateLabel"
+                        stroke="#71717A"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        dy={5}
+                      />
+                      <YAxis
+                        stroke="#71717A"
+                        fontSize={10}
+                        domain={[0, "auto"]}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) =>
+                          val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
+                        }
+                      />
+                      <RechartsTooltip content={<RevenueTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#3984FF"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#azureRevenueGrad)"
+                        dot={{ r: 2.5, fill: "#3984FF", stroke: "#12141A", strokeWidth: 1.5 }}
+                        activeDot={{
+                          r: 4.5,
+                          stroke: "#FFFFFF",
+                          strokeWidth: 2,
+                          fill: "#3984FF",
+                        }}
+                      />
+                    </AreaChart>
+                  ) : (
+                    <BarChart
+                      data={normalizedSeries}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="azureBarGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3984FF" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#2563EB" stopOpacity={0.8} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+                      <XAxis
+                        dataKey="dateLabel"
+                        stroke="#71717A"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        dy={5}
+                      />
+                      <YAxis
+                        stroke="#71717A"
+                        fontSize={10}
+                        domain={[0, "auto"]}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) =>
+                          val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
+                        }
+                      />
+                      <RechartsTooltip content={<RevenueTooltip />} />
+                      <Bar
+                        dataKey="revenue"
+                        fill="url(#azureBarGrad)"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Card do Funil de Conversão (35%) */}
+        <div className="w-full min-w-0 h-full">
+          {funnelSlot ?? (
+            <SellerConversionFunnel
+              metrics={metrics}
+              isPending={isPending}
+              className="h-full"
+            />
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

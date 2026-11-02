@@ -378,7 +378,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
         {/* 1. Checklist de primeiros passos (contextual, desaparece quando 100% concluído) */}
         <SellerSetupChecklist checklist={setupChecklist} isPending={isPending} />
 
-        {/* 2. Destaque Principal (Hero), 4 Indicadores Compactos e Gráfico de Receita em Destaque */}
+        {/* 2. Destaque Principal (Hero), 4 Indicadores Compactos, Gráfico de Receita (65%) e Funil de Conversão (35%) */}
         <SellerMetricsOverview
           metrics={data.commercialMetrics}
           kpis={data.kpis}
@@ -387,19 +387,13 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
           periodLabel={activePeriodLabel}
         />
 
-        {/* 3. Blocos Analíticos Abaixo do Gráfico: Funil de Conversão e Receita Líquida vs Bruta */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full">
-          <SellerConversionFunnel
-            metrics={data.commercialMetrics}
-            isPending={isPending}
-          />
-          <SellerNetRevenueCard
-            financialSummary={data.financialSummary}
-            totalGrossFallback={data.kpis?.revenue?.value || 0}
-            salesCountFallback={data.kpis?.salesCount?.value || 0}
-            isPending={isPending}
-          />
-        </div>
+        {/* 3. Bloco Analítico Financeiro: Receita Líquida vs. Bruta */}
+        <SellerNetRevenueCard
+          financialSummary={data.financialSummary}
+          totalGrossFallback={data.kpis?.revenue?.value || 0}
+          salesCountFallback={data.kpis?.salesCount?.value || 0}
+          isPending={isPending}
+        />
 
         {/* 4. Atividade recente, Mais Vendidos e Desempenho por Bot */}
         <SellerActivityAndChannels
