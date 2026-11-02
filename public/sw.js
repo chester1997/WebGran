@@ -1,5 +1,5 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v10';
+const CACHE_NAME = 'webgran-static-v11';
 
 // Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
@@ -134,6 +134,82 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(request));
 });
 
+/**
+ * Consulta assíncrona ao IndexedDB para obter preferências de som mesmo quando o PWA está fechado.
+ * Retorna { soundEnabled, volume, soundId } ou null em caso de falha/inexistência.
+ */
+function getSoundPreferenceFromIndexedDB(userId) {
+  return new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve(null);
+      return;
+    }
+
+    try {
+      const openReq = indexedDB.open('webgran_notifications_db', 1);
+
+      openReq.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('sound_preferences')) {
+          db.createObjectStore('sound_preferences', { keyPath: 'key' });
+        }
+      };
+
+      openReq.onsuccess = (e) => {
+        const db = e.target.result;
+        try {
+          if (!db.objectStoreNames.contains('sound_preferences')) {
+            db.close();
+            resolve(null);
+            return;
+          }
+
+          const tx = db.transaction('sound_preferences', 'readonly');
+          const store = tx.objectStore('sound_preferences');
+          const queryKey = userId ? `user_${userId}` : 'active_preference';
+          const getReq = store.get(queryKey);
+
+          getReq.onsuccess = () => {
+            const res = getReq.result;
+            if (res) {
+              db.close();
+              resolve(res);
+            } else if (userId) {
+              // Fallback para chave ativa se o usuário específico não estiver registrado
+              const fallbackReq = store.get('active_preference');
+              fallbackReq.onsuccess = () => {
+                db.close();
+                resolve(fallbackReq.result || null);
+              };
+              fallbackReq.onerror = () => {
+                db.close();
+                resolve(null);
+              };
+            } else {
+              db.close();
+              resolve(null);
+            }
+          };
+
+          getReq.onerror = () => {
+            db.close();
+            resolve(null);
+          };
+        } catch {
+          try { db.close(); } catch {}
+          resolve(null);
+        }
+      };
+
+      openReq.onerror = () => {
+        resolve(null);
+      };
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
 // 6. WEB PUSH NOTIFICATIONS COM CONFIRMAÇÃO BIDIRECIONAL (MessageChannel)
 async function handlePushEvent(event) {
   let data = {
@@ -266,12 +342,30 @@ async function handlePushEvent(event) {
     console.warn('[SW] Erro na negociação de áudio com janela:', err);
   }
 
+  // 2. Quando o PWA estiver fechado (ou nenhuma janela confirmou o som em primeiro plano):
+  // Consulta IndexedDB para verificar se o usuário desligou o som de notificações
+  let shouldPlaySoundWithAppClosed = true;
+
+  if (!clientHandledSilently) {
+    try {
+      const recipientId = data.data?.recipientUserId || data.data?.sellerId || data.data?.userId || data.data?.ownerId;
+      const idbPrefs = await getSoundPreferenceFromIndexedDB(recipientId);
+      if (idbPrefs && typeof idbPrefs.soundEnabled === 'boolean') {
+        shouldPlaySoundWithAppClosed = idbPrefs.soundEnabled;
+      }
+    } catch (err) {
+      // Fallback seguro documentado: em caso de erro no IndexedDB,
+      // mantém shouldPlaySoundWithAppClosed = true para não silenciar alertas importantes de vendas.
+      shouldPlaySoundWithAppClosed = true;
+    }
+  }
+
   // Decisão de notificação rigorosamente compatível com a especificação W3C:
   // - silent: true NÃO PODE incluir vibrate (lança TypeError: vibrate cannot be set if silent is true).
   //   Portanto, no ramo silencioso, as opções são montadas SEM a propriedade vibrate.
   // - silent: false inclui vibrate [200, 100, 200] para alertar via hardware no Android / SO.
   let finalOptions;
-  if (clientHandledSilently) {
+  if (clientHandledSilently || !shouldPlaySoundWithAppClosed) {
     finalOptions = {
       ...baseOptions,
       silent: true,

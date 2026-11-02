@@ -1142,31 +1142,65 @@ function urlBase64ToUint8Array(base64String: string) {
                   </div>
                 )}
 
-                {/* Aviso Educativo em Português Simples + Link Telegram */}
-                <div className="pt-2 border-t border-white/[0.04] space-y-2">
-                  <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/15 text-[11px] text-zinc-300 leading-relaxed space-y-1.5">
-                    <p>
-                      {isIosDevice ? (
-                        <>
-                          <strong className="text-white font-medium">No iPhone/iPad: </strong>
-                          O som toca com o painel aberto após sua primeira interação. Com o app fechado ou bloqueado, o som emitido é o padrão do seu aparelho.
-                        </>
-                      ) : (
-                        <>
-                          O som toca com o painel aberto. Com o app fechado, o som é o padrão do seu aparelho.
-                        </>
-                      )}
-                    </p>
-                    <p className="text-zinc-400">
-                      Para ouvir seu som personalizado mesmo com tudo fechado, use os avisos pelo Telegram e escolha o som do chat nas configurações do Telegram.
-                    </p>
-                    <div className="pt-1">
+                {/* Comportamento de Áudio e Instruções por Plataforma */}
+                <div className="pt-3 border-t border-white/[0.04] space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {/* Modo 1: WebGran Aberto */}
+                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] space-y-1">
+                      <div className="font-semibold text-white flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span>Com WebGran aberto</span>
+                      </div>
+                      <p className="text-zinc-400 leading-relaxed">
+                        Reproduz o som personalizado (Caixa Registradora) escolhido acima no volume configurado.
+                      </p>
+                    </div>
+
+                    {/* Modo 2: WebGran Fechado ou Bloqueado */}
+                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] space-y-1">
+                      <div className="font-semibold text-white flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                        <span>Com app fechado / bloqueado</span>
+                      </div>
+                      <p className="text-zinc-400 leading-relaxed">
+                        Emite a notificação sonoro padrão configurada no seu sistema operacional (Android ou iOS).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Instruções Específicas para Android e iOS */}
+                  <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/15 text-[11px] text-zinc-300 leading-relaxed space-y-2">
+                    <div className="font-medium text-white flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span>Como personalizar o som no seu aparelho:</span>
+                    </div>
+
+                    {isIosDevice ? (
+                      <div className="space-y-1 text-zinc-300">
+                        <p>
+                          <strong className="text-white font-medium">No iPhone / iPad (iOS): </strong>
+                          Acesse <span className="text-white font-mono text-[10px] bg-white/10 px-1 py-0.5 rounded">Ajustes &gt; Notificações &gt; WebGran</span> e certifique-se de que a opção <strong className="text-white">Sons</strong> está ligada. Por restrição do iOS, PWAs utilizam o toque de alerta padrão do sistema quando fechados.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 text-zinc-300">
+                        <p>
+                          <strong className="text-white font-medium">No Android: </strong>
+                          Acesse <span className="text-white font-mono text-[10px] bg-white/10 px-1 py-0.5 rounded">Configurações &gt; Apps &gt; WebGran &gt; Notificações</span>. Selecione a categoria do aplicativo e escolha o toque sonoro de sua preferência no seu aparelho.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="text-zinc-400">
+                        Deseja ouvir um som personalizado mesmo com tela apagada?
+                      </span>
                       <Link
                         href="/seller/store#notifications"
                         style={{ color: "var(--seller-accent)" }}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold hover:opacity-85 transition-opacity group"
+                        className="inline-flex items-center gap-1 font-semibold hover:opacity-85 transition-opacity shrink-0 group"
                       >
-                        <span>Configurar avisos de venda no Telegram</span>
+                        <span>Avisos de venda no Telegram</span>
                         <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                       </Link>
                     </div>

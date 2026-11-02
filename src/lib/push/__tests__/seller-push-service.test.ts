@@ -237,7 +237,7 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
       expect(res.sentCount).toBe(1);
 
       // Garante que o payload enviado para o webpush segue o padrão Sharkbot
-      const [subArg, payloadArg] = vi.mocked(webpush.sendNotification).mock.calls[0];
+      const [subArg, payloadArg, optionsArg] = vi.mocked(webpush.sendNotification).mock.calls[0];
       const parsedPayload = JSON.parse(payloadArg as string);
 
       expect(parsedPayload.title).toBe("🛒 Nova venda no WebGran");
@@ -249,6 +249,8 @@ describe("WebGran Web Push Notifications Suite (Etapa 2)", () => {
       // Nunca expõe senhas ou tokens
       expect(payloadArg).not.toContain("password");
       expect(payloadArg).not.toContain("token");
+      // Valida opções de entrega prioritária Web Push (RFC 8030)
+      expect(optionsArg).toEqual({ TTL: 86400, urgency: "high" });
     });
 
     it("garante idempotência e não dispara notificação duplicada para o mesmo pedido já notificado", async () => {

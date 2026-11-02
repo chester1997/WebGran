@@ -223,6 +223,12 @@ export class SellerPushService {
     const standardized = standardizePushPayload(payload);
     const payloadString = JSON.stringify(standardized);
 
+    // Configuração de entrega prioritária Web Push (RFC 8030)
+    const pushOptions: webpush.RequestOptions = {
+      TTL: 86400, // Retenção máxima de 24h nos servidores de push
+      urgency: "high", // Solicita prioridade alta de entrega mesmo em Doze Mode do SO
+    };
+
     let sentCount = 0;
     let failedCount = 0;
     let deactivatedCount = 0;
@@ -238,7 +244,7 @@ export class SellerPushService {
         };
 
         try {
-          await webpush.sendNotification(pushSubscription, payloadString);
+          await webpush.sendNotification(pushSubscription, payloadString, pushOptions);
           sentCount++;
 
           // Atualiza status de sucesso
@@ -385,6 +391,8 @@ export class SellerPushService {
         amount: rawNum,
         itemTitle,
         storeId: store.id,
+        sellerId: store.ownerId,
+        recipientUserId: store.ownerId,
       });
 
       const result = await this.sendToSeller(store.ownerId, payload);

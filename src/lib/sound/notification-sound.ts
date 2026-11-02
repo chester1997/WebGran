@@ -140,6 +140,156 @@ export function getNotificationSoundPreferences(userId?: string): NotificationSo
 /**
  * Salva as preferências de som de notificação no localStorage.
  */
+
+export const WEBGRAN_NOTIFICATIONS_DB_NAME = "webgran_notifications_db";
+export const WEBGRAN_NOTIFICATIONS_DB_VERSION = 1;
+export const SOUND_PREFS_STORE_NAME = "sound_preferences";
+
+/**
+ * Abre ou cria o banco IndexedDB para armazenamento persistente de preferências
+ * acessível tanto pela página (window) quanto pelo Service Worker (sw.js com PWA fechado).
+ */
+export function openNotificationsDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("IndexedDB não suportado neste ambiente."));
+      return;
+    }
+
+    const request = indexedDB.open(WEBGRAN_NOTIFICATIONS_DB_NAME, WEBGRAN_NOTIFICATIONS_DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(SOUND_PREFS_STORE_NAME)) {
+        db.createObjectStore(SOUND_PREFS_STORE_NAME, { keyPath: "key" });
+      }
+    };
+
+    request.onsuccess = (event) => {
+      resolve((event.target as IDBOpenDBRequest).result);
+    };
+
+    request.onerror = (event) => {
+      reject((event.target as IDBOpenDBRequest).error || new Error("Falha ao abrir IndexedDB"));
+    };
+  });
+}
+
+/**
+ * Salva as preferências no IndexedDB para consulta do Service Worker quando o PWA estiver fechado.
+ */
+export async function savePreferencesToIndexedDB(
+  prefs: NotificationSoundPreferences,
+  userId?: string
+): Promise<boolean> {
+  try {
+    const db = await openNotificationsDB();
+    const tx = db.transaction(SOUND_PREFS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(SOUND_PREFS_STORE_NAME);
+
+    const now = Date.now();
+    const records = [
+      {
+        key: "active_preference",
+        userId: userId || undefined,
+        soundEnabled: prefs.enabled,
+        volume: prefs.volume,
+        soundId: prefs.soundId,
+        updatedAt: now,
+      },
+    ];
+
+    if (userId) {
+      records.push({
+        key: `user_${userId}`,
+        userId,
+        soundEnabled: prefs.enabled,
+        volume: prefs.volume,
+        soundId: prefs.soundId,
+        updatedAt: now,
+      });
+    }
+
+    for (const record of records) {
+      store.put(record);
+    }
+
+    return new Promise((resolve) => {
+      tx.oncomplete = () => {
+        db.close();
+        resolve(true);
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve(false);
+      };
+    });
+  } catch (err: any) {
+    recordAudioLog("INDEXEDDB", `Falha ao salvar preferências no IndexedDB: ${err?.message}`, "warn");
+    return false;
+  }
+}
+
+/**
+ * Consulta as preferências no IndexedDB.
+ */
+export async function getPreferencesFromIndexedDB(
+  userId?: string
+): Promise<NotificationSoundPreferences | null> {
+  try {
+    const db = await openNotificationsDB();
+    const tx = db.transaction(SOUND_PREFS_STORE_NAME, "readonly");
+    const store = tx.objectStore(SOUND_PREFS_STORE_NAME);
+
+    const queryKey = userId ? `user_${userId}` : "active_preference";
+    const request = store.get(queryKey);
+
+    return new Promise((resolve) => {
+      request.onsuccess = () => {
+        const res = request.result;
+        if (res) {
+          db.close();
+          resolve({
+            enabled: typeof res.soundEnabled === "boolean" ? res.soundEnabled : true,
+            volume: typeof res.volume === "number" ? res.volume : 80,
+            soundId: res.soundId || "commission",
+          });
+        } else if (userId) {
+          // Fallback para active_preference
+          const fallbackReq = store.get("active_preference");
+          fallbackReq.onsuccess = () => {
+            db.close();
+            const fallbackRes = fallbackReq.result;
+            if (fallbackRes) {
+              resolve({
+                enabled: typeof fallbackRes.soundEnabled === "boolean" ? fallbackRes.soundEnabled : true,
+                volume: typeof fallbackRes.volume === "number" ? fallbackRes.volume : 80,
+                soundId: fallbackRes.soundId || "commission",
+              });
+            } else {
+              resolve(null);
+            }
+          };
+          fallbackReq.onerror = () => {
+            db.close();
+            resolve(null);
+          };
+        } else {
+          db.close();
+          resolve(null);
+        }
+      };
+
+      request.onerror = () => {
+        db.close();
+        resolve(null);
+      };
+    });
+  } catch (err: any) {
+    return null;
+  }
+}
+
 export function saveNotificationSoundPreferences(
   prefs: Partial<NotificationSoundPreferences>,
   userId?: string
@@ -160,6 +310,9 @@ export function saveNotificationSoundPreferences(
     // Salva também na chave global/ativa para que leitores sem userId encontrem a configuração atual
     localStorage.setItem(PREFS_STORAGE_PREFIX, serialized);
     localStorage.setItem(STORAGE_KEY, updated.enabled ? "true" : "false");
+
+    // Sincroniza imediatamente com o IndexedDB para o Service Worker consultar com o app fechado
+    savePreferencesToIndexedDB(updated, userId).catch(() => {});
 
     recordAudioLog("PREFERENCIA", `Preferências salvas: enabled=${updated.enabled}, volume=${updated.volume}%`, "info");
   } catch (err: any) {

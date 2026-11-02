@@ -192,6 +192,8 @@ export class PlatformFinancialNotificationService {
         orderId,
         feeReais: resolvedFeeCents / 100,
         eventType,
+        ownerId,
+        recipientUserId: ownerId,
       });
 
       // 6. Guarda de Idempotência Prévia no Banco de Dados (Verifica se já foi entregue anteriormente)

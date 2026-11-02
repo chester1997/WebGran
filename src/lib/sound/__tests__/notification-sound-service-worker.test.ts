@@ -9,6 +9,11 @@ import {
   isIOS,
   isEventRecentlyPlayed,
   markEventAsPlayed,
+  savePreferencesToIndexedDB,
+  getPreferencesFromIndexedDB,
+  openNotificationsDB,
+  WEBGRAN_NOTIFICATIONS_DB_NAME,
+  SOUND_PREFS_STORE_NAME,
 } from "../notification-sound";
 import {
   buildPushNotificationOptions,
@@ -46,6 +51,53 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
         return Object.keys(localStorageMock).length;
       },
     });
+
+
+    // Mock in-memory IndexedDB
+    const inMemoryIdbStore = new Map<string, any>();
+    const mockIndexedDB = {
+      open: (dbName: string, version: number) => {
+        const req: any = {
+          result: {
+            objectStoreNames: {
+              contains: (name: string) => name === SOUND_PREFS_STORE_NAME,
+            },
+            createObjectStore: vi.fn(),
+            transaction: (storeName: string, mode: string) => {
+              const tx: any = {
+                objectStore: () => ({
+                  put: (record: any) => {
+                    inMemoryIdbStore.set(record.key, record);
+                  },
+                  get: (key: string) => {
+                    const getReq: any = {
+                      result: inMemoryIdbStore.get(key) || null,
+                    };
+                    setTimeout(() => {
+                      if (getReq.onsuccess) getReq.onsuccess();
+                    }, 0);
+                    return getReq;
+                  },
+                }),
+                oncomplete: null as any,
+                onerror: null as any,
+              };
+              setTimeout(() => {
+                if (tx.oncomplete) tx.oncomplete();
+              }, 0);
+              return tx;
+            },
+            close: vi.fn(),
+          },
+        };
+        setTimeout(() => {
+          if (req.onsuccess) req.onsuccess({ target: req });
+        }, 0);
+        return req;
+      },
+    };
+    vi.stubGlobal("indexedDB", mockIndexedDB);
+
 
     // Mock document & window
     vi.stubGlobal("document", {
@@ -181,7 +233,21 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
       clientHandledSilently = true;
     }
 
-    const finalOptions = buildPushNotificationOptions(data, clientHandledSilently, "https://webgran.com.br");
+    let shouldPlaySoundWithAppClosed = true;
+    if (!clientHandledSilently) {
+      try {
+        const recipientId = data.data?.recipientUserId || data.data?.sellerId || data.data?.userId || data.data?.ownerId;
+        const idbPrefs = await getPreferencesFromIndexedDB(recipientId);
+        if (idbPrefs && typeof idbPrefs.enabled === "boolean") {
+          shouldPlaySoundWithAppClosed = idbPrefs.enabled;
+        }
+      } catch {
+        shouldPlaySoundWithAppClosed = true;
+      }
+    }
+
+    const isSilent = clientHandledSilently || !shouldPlaySoundWithAppClosed;
+    const finalOptions = buildPushNotificationOptions(data, isSilent, "https://webgran.com.br");
 
     return {
       silent: finalOptions.silent,
@@ -723,6 +789,189 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
       const second = await playCommissionChime({ eventId: eventTag });
       expect(second).toBe(false); // Ignorado por deduplicação
       expect(mockPlay).toHaveBeenCalledTimes(1); // Não tocou novamente
+    });
+  });
+  describe("PWA Fechado & IndexedDB Persistent Preferences Suite (Fase 2)", () => {
+    it("1. Persiste e sincroniza preferências no IndexedDB com chave específica e ativa", async () => {
+      await savePreferencesToIndexedDB(
+        { enabled: false, volume: 50, soundId: "commission" },
+        "seller-user-abc"
+      );
+
+      const userPrefs = await getPreferencesFromIndexedDB("seller-user-abc");
+      expect(userPrefs).not.toBeNull();
+      expect(userPrefs?.enabled).toBe(false);
+      expect(userPrefs?.volume).toBe(50);
+
+      // Active preference fallback
+      const activePrefs = await getPreferencesFromIndexedDB();
+      expect(activePrefs).not.toBeNull();
+      expect(activePrefs?.enabled).toBe(false);
+    });
+
+    it("2. PWA fechado + som ativado: showNotification com silent: false e vibrate [200, 100, 200]", async () => {
+      await savePreferencesToIndexedDB(
+        { enabled: true, volume: 80, soundId: "commission" },
+        "seller-user-open"
+      );
+
+      const salePayload = buildSaleNotificationPayload({
+        orderId: "ord-closed-sound-on",
+        amount: 250,
+        itemTitle: "Produto Teste",
+        sellerId: "seller-user-open",
+      });
+
+      // 0 clientes abertos (PWA completamente fechado / tela bloqueada)
+      const result = await simulateSwPushNegotiation({
+        customData: salePayload,
+        clientResponders: [],
+      });
+
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+      expect(result.finalOptions.tag).toBe("sale-ord-closed-sound-on");
+      expect(result.finalOptions.renotify).toBe(true);
+    });
+
+    it("3. PWA fechado + som desativado pelo vendedor: showNotification com silent: true SEM vibrate", async () => {
+      await savePreferencesToIndexedDB(
+        { enabled: false, volume: 0, soundId: "commission" },
+        "seller-user-muted"
+      );
+
+      const salePayload = buildSaleNotificationPayload({
+        orderId: "ord-closed-sound-off",
+        amount: 99.9,
+        itemTitle: "Produto Mudo",
+        sellerId: "seller-user-muted",
+      });
+
+      // PWA fechado
+      const result = await simulateSwPushNegotiation({
+        customData: salePayload,
+        clientResponders: [],
+      });
+
+      expect(result.silent).toBe(true);
+      expect(result.finalOptions.silent).toBe(true);
+      // Especificação W3C: vibrate deve ser undefined quando silent: true
+      expect(result.finalOptions.vibrate).toBeUndefined();
+      expect(result.finalOptions.tag).toBe("sale-ord-closed-sound-off");
+    });
+
+    it("4. Fallback seguro: falha ou ausência no IndexedDB mantém notificação sonoro padrão ativa", async () => {
+      // Stub do IndexedDB lançando erro para simular banco corrompido ou inacessível
+      vi.stubGlobal("indexedDB", {
+        open: () => {
+          const req: any = {};
+          setTimeout(() => {
+            if (req.onerror) req.onerror({ target: req });
+          }, 0);
+          return req;
+        },
+      });
+
+      const salePayload = buildSaleNotificationPayload({
+        orderId: "ord-idb-corrupt",
+        amount: 320,
+        itemTitle: "Fallback Seguro",
+      });
+
+      const result = await simulateSwPushNegotiation({
+        customData: salePayload,
+        clientResponders: [],
+      });
+
+      // Fallback seguro documentado: em caso de erro, não silencia
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.silent).toBe(false);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("5. Notificação de comissão com PWA fechado preserva identificador independente e tag distinta", async () => {
+      await savePreferencesToIndexedDB(
+        { enabled: true, volume: 90, soundId: "commission" },
+        "admin-owner-uuid"
+      );
+
+      const commPayload = buildPlatformCommissionPayload({
+        orderId: "ord-comm-closed-123",
+        feeReais: 25.5,
+        eventType: "SPLIT_PROCESSED",
+        ownerId: "admin-owner-uuid",
+      });
+
+      const result = await simulateSwPushNegotiation({
+        customData: commPayload,
+        clientResponders: [],
+      });
+
+      expect(result.silent).toBe(false);
+      expect(result.finalOptions.tag).toBe("commission-ord-comm-closed-123-split_processed");
+      expect(result.finalOptions.data.notificationId).toBe("commission-ord-comm-closed-123-split_processed");
+      expect(result.finalOptions.renotify).toBe(true);
+      expect(result.finalOptions.vibrate).toEqual([200, 100, 200]);
+    });
+
+    it("6. Duas notificações simultâneas com PWA fechado são processadas sem colisão", async () => {
+      await savePreferencesToIndexedDB(
+        { enabled: true, volume: 80, soundId: "commission" },
+        "user-shared-123"
+      );
+
+      const salePayload = buildSaleNotificationPayload({
+        orderId: "ord-simul-1",
+        amount: 150,
+        sellerId: "user-shared-123",
+      });
+
+      const commPayload = buildPlatformCommissionPayload({
+        orderId: "ord-simul-1",
+        feeReais: 15,
+        eventType: "SPLIT_PROCESSED",
+        ownerId: "user-shared-123",
+      });
+
+      const [resSale, resComm] = await Promise.all([
+        simulateSwPushNegotiation({ customData: salePayload, clientResponders: [] }),
+        simulateSwPushNegotiation({ customData: commPayload, clientResponders: [] }),
+      ]);
+
+      expect(resSale.finalOptions.tag).toBe("sale-ord-simul-1");
+      expect(resComm.finalOptions.tag).toBe("commission-ord-simul-1-split_processed");
+      expect(resSale.finalOptions.tag).not.toBe(resComm.finalOptions.tag);
+      expect(resSale.finalOptions.silent).toBe(false);
+      expect(resComm.finalOptions.silent).toBe(false);
+    });
+
+    it("7. Isolamento entre vendedores no IndexedDB: preferência de um vendedor não afeta outro", async () => {
+      // Vendedor 1 silencia som
+      await savePreferencesToIndexedDB({ enabled: false, volume: 0, soundId: "commission" }, "seller-silent");
+      // Vendedor 2 mantém som ligado
+      await savePreferencesToIndexedDB({ enabled: true, volume: 100, soundId: "commission" }, "seller-loud");
+
+      const saleSilent = buildSaleNotificationPayload({
+        orderId: "ord-sil",
+        amount: 50,
+        sellerId: "seller-silent",
+      });
+
+      const saleLoud = buildSaleNotificationPayload({
+        orderId: "ord-loud",
+        amount: 80,
+        sellerId: "seller-loud",
+      });
+
+      const resSilent = await simulateSwPushNegotiation({ customData: saleSilent, clientResponders: [] });
+      const resLoud = await simulateSwPushNegotiation({ customData: saleLoud, clientResponders: [] });
+
+      expect(resSilent.silent).toBe(true);
+      expect(resSilent.finalOptions.vibrate).toBeUndefined();
+
+      expect(resLoud.silent).toBe(false);
+      expect(resLoud.finalOptions.vibrate).toEqual([200, 100, 200]);
     });
   });
 });
