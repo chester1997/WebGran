@@ -110,6 +110,17 @@ export interface ActivityLogItem {
   statusBadge?: 'success' | 'pending' | 'info';
 }
 
+export interface FinancialSummary {
+  grossRevenue: number;
+  grossFormatted: string;
+  platformFeeTotal: number;
+  platformFeeFormatted: string;
+  netRevenue: number;
+  netFormatted: string;
+  netMarginPercent: number;
+  paidOrdersCount: number;
+}
+
 export interface StoreAnalyticsData {
   period: string;
   storeName: string;
@@ -130,6 +141,7 @@ export interface StoreAnalyticsData {
   catalog: CatalogOverview;
   hasSales: boolean;
   commercialMetrics: CommercialMetrics;
+  financialSummary?: FinancialSummary;
 }
 
 function calcChange(curr: number, prev: number): { changePercent: number | null; trend: 'up' | 'down' | 'neutral' | 'none' } {
@@ -856,10 +868,31 @@ export class AnalyticsService {
     combinedLog.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     const activityLog = combinedLog.slice(0, 30);
 
+    // 10. Financial Summary (Receita Bruta vs Taxa da Plataforma vs Receita Líquida)
+    const platformFeeTotal = currentPaidOrders.reduce((sum, o) => {
+      const fee = Number(o.platformFee || 0);
+      if (fee > 0) return sum + fee;
+      return sum + (Number(o.total || 0) > 0 ? 0.50 : 0);
+    }, 0);
+    const netRevenue = Math.max(0, currRevenue - platformFeeTotal);
+    const netMarginPercent = currRevenue > 0 ? Math.round((netRevenue / currRevenue) * 1000) / 10 : 100;
+
+    const financialSummary: FinancialSummary = {
+      grossRevenue: currRevenue,
+      grossFormatted: formatCurrency(currRevenue),
+      platformFeeTotal,
+      platformFeeFormatted: formatCurrency(platformFeeTotal),
+      netRevenue,
+      netFormatted: formatCurrency(netRevenue),
+      netMarginPercent,
+      paidOrdersCount: currSales,
+    };
+
     return {
       period,
       storeName,
       userName,
+      financialSummary,
       kpis: {
         revenue: {
           value: currRevenue,

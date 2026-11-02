@@ -107,6 +107,16 @@ export default async function SellerDashboardPage() {
           performanceSeries: [],
           last7DaysPerformance: [],
         },
+        financialSummary: {
+          grossRevenue: 0,
+          grossFormatted: "R$ 0,00",
+          platformFeeTotal: 0,
+          platformFeeFormatted: "R$ 0,00",
+          netRevenue: 0,
+          netFormatted: "R$ 0,00",
+          netMarginPercent: 100,
+          paidOrdersCount: 0,
+        },
       };
     }
   }

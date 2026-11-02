@@ -28,9 +28,14 @@ import {
   BarChart2
 } from "lucide-react";
 import { StoreAnalyticsData } from "@/lib/analytics/analytics-service";
-import { SellerMetricsOverview } from "@/components/analytics/SellerMetricsOverview";
 import { SellerSetupChecklist, SellerSetupChecklistData } from "@/components/analytics/SellerSetupChecklist";
-import { SellerActivityAndChannels } from "@/components/analytics/SellerActivityAndChannels";
+import { SellerKpiCards } from "@/components/analytics/SellerKpiCards";
+import { SellerRevenueBarChart } from "@/components/analytics/SellerRevenueBarChart";
+import { SellerConversionFunnel } from "@/components/analytics/SellerConversionFunnel";
+import { SellerNetRevenueCard } from "@/components/analytics/SellerNetRevenueCard";
+import { SellerTopProductsCard } from "@/components/analytics/SellerTopProductsCard";
+import { SellerTopBotsCard } from "@/components/analytics/SellerTopBotsCard";
+import { SellerRealtimeActivity } from "@/components/analytics/SellerRealtimeActivity";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { 
   BUSINESS_TIMEZONE, 
@@ -446,22 +451,63 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
       {/* 1. Checklist de primeiros passos (contextual, desaparece quando 100% concluído) */}
       <SellerSetupChecklist checklist={setupChecklist} isPending={isPending} />
 
-      {/* 2. Destaque Principal (Hero), 3 Indicadores e Gráfico de Receita */}
-      <SellerMetricsOverview 
-        metrics={data.commercialMetrics} 
-        isPending={isPending}
+      {/* 2. LINHA 1: CARDS DE KPI (4 cards em grid de 12 colunas / 4 colunas responsivas) */}
+      <SellerKpiCards
+        kpis={data.kpis}
+        commercialMetrics={data.commercialMetrics}
+        chartSeries={data.chartSeries}
         periodLabel={activePeriodLabel}
+        isPending={isPending}
       />
 
-      {/* 3. Atividade recente, Mais Vendidos e Desempenho por Bot */}
-      <SellerActivityAndChannels 
-        activityLog={data.activityLog}
-        topProducts={data.topProducts}
-        channels={data.channels}
-        totalBotsCount={bots.length}
-        isPending={isPending}
-        selectedBotId={selectedBot}
-      />
+      {/* 3. LINHA 2: GRÁFICO DE BARRAS DE RECEITA (8 cols) + FUNIL DE CONVERSÃO (4 cols) */}
+      <div className="grid grid-cols-12 gap-4 lg:gap-6 w-full">
+        <div className="col-span-12 lg:col-span-8">
+          <SellerRevenueBarChart
+            chartSeries={data.chartSeries}
+            periodLabel={activePeriodLabel}
+            isPending={isPending}
+          />
+        </div>
+        <div className="col-span-12 lg:col-span-4">
+          <SellerConversionFunnel
+            metrics={data.commercialMetrics}
+            isPending={isPending}
+          />
+        </div>
+      </div>
+
+      {/* 4. LINHA 3: RECEITA LÍQUIDA VS BRUTA (4 cols) + TOP PRODUTOS (4 cols) + TOP BOTS (4 cols) */}
+      <div className="grid grid-cols-12 gap-4 lg:gap-6 w-full">
+        <div className="col-span-12 md:col-span-6 lg:col-span-4">
+          <SellerNetRevenueCard
+            financialSummary={data.financialSummary}
+            totalGrossFallback={data.kpis?.revenue?.value || 0}
+            salesCountFallback={data.kpis?.salesCount?.value || 0}
+            isPending={isPending}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-6 lg:col-span-4">
+          <SellerTopProductsCard
+            topProducts={data.topProducts}
+            isPending={isPending}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-12 lg:col-span-4">
+          <SellerTopBotsCard
+            channels={data.channels}
+            isPending={isPending}
+          />
+        </div>
+      </div>
+
+      {/* 5. LINHA 4: ATIVIDADES EM TEMPO REAL (12 cols) */}
+      <div className="w-full">
+        <SellerRealtimeActivity
+          activityLog={data.activityLog}
+          isPending={isPending}
+        />
+      </div>
     </div>
   </>
 );
