@@ -52,7 +52,7 @@ export default async function SellerCategoriesPage() {
         title="Categorias"
         badge={
           <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {categoriesList.length} {categoriesList.length === 1 ? "categoria" : "categorias"}
+            {allCategories.length} {allCategories.length === 1 ? "categoria" : "categorias"}
           </span>
         }
         subtitle="Organize seus produtos e facilite a navegação no Mini App."
