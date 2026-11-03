@@ -602,6 +602,7 @@ export class CheckoutService {
           sellerId: sellerId!,
           orderId: newOrder.id,
           amount: finalTotal,
+          splitAmountCents: snapshotSplitAmountCents,
           description: `Pedido #${newOrder.id.slice(0, 8)} - ${storeRecord?.name || "WebGran"}`,
           customer: {
             name: "Cliente Telegram",

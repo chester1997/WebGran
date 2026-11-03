@@ -277,21 +277,201 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
   }
 
   /**
-   * Fixed platform commission in BRL (50 centavos)
+   * Fixed platform commission in BRL (50 centavos) - preserved for backward compatibility
    */
   public static readonly PLATFORM_FIXED_FEE_BRL = 0.50;
   public static readonly PLATFORM_FIXED_FEE_CENTS = 50;
 
   /**
    * Calculate platform fee (WebGran split)
-   * Fixed R$ 0.50 per transaction. If order amount < 0.50, split is skipped
-   * to avoid gateway rejection, while keeping audit trail.
+   * Deprecated for hardcoded usage: resolves fee dynamically or uses provided custom fee.
    */
-  calculatePlatformFee(amount: number): number {
-    if (typeof amount !== 'number' || isNaN(amount) || amount < MercadoPagoProvider.PLATFORM_FIXED_FEE_BRL) {
+  calculatePlatformFee(amount: number, customFeeReais?: number): number {
+    const fee = typeof customFeeReais === 'number' && !isNaN(customFeeReais)
+      ? customFeeReais
+      : MercadoPagoProvider.PLATFORM_FIXED_FEE_BRL;
+    if (typeof amount !== 'number' || isNaN(amount) || amount < fee || fee <= 0) {
       return 0;
     }
-    return MercadoPagoProvider.PLATFORM_FIXED_FEE_BRL;
+    return fee;
+  }
+
+  /**
+   * Resolves the effective commission for a transaction following the priority:
+   * 1. Order snapshot (`order.splitAmountCents` / `order.splitError`) from database or params
+   * 2. Dynamic resolution via `SellerCommissionService.resolveEffectiveFee` for the sellerId
+   * 3. Fallback to platform default fee if service is unavailable
+   */
+  async resolveEffectiveCommission(params: {
+    sellerId: string;
+    orderId?: string;
+    providedSplitCents?: number;
+    amount?: number;
+  }): Promise<{
+    effectiveFeeCents: number;
+    effectiveFeeReais: number;
+    isExempt: boolean;
+    splitStatus: 'REQUESTED' | 'SKIPPED';
+    splitError: string | null;
+  }> {
+    const { sellerId, orderId, providedSplitCents, amount } = params;
+    let orderRecord: any = null;
+
+    if (orderId) {
+      try {
+        orderRecord = await db.query.orders.findFirst({
+          where: eq(orders.id, orderId),
+        });
+      } catch {
+        // Non-blocking DB lookup
+      }
+    }
+
+    // 1. Try order snapshot from database (validating seller association)
+    if (orderRecord) {
+      let isOrderForSeller = true;
+      if (orderRecord.storeId) {
+        try {
+          const storeRec = await db.query.stores.findFirst({
+            where: eq(stores.id, orderRecord.storeId),
+          });
+          if (storeRec && storeRec.ownerId && storeRec.ownerId !== sellerId) {
+            isOrderForSeller = false;
+          }
+        } catch {
+          // Non-blocking
+        }
+      }
+
+      if (isOrderForSeller) {
+        if (orderRecord.splitError === 'ISENCAO_TEMPORARIA') {
+          return {
+            effectiveFeeCents: 0,
+            effectiveFeeReais: 0,
+            isExempt: true,
+            splitStatus: 'SKIPPED',
+            splitError: 'ISENCAO_TEMPORARIA',
+          };
+        }
+        if (orderRecord.splitError === 'COMISSAO_ZERO') {
+          return {
+            effectiveFeeCents: 0,
+            effectiveFeeReais: 0,
+            isExempt: false,
+            splitStatus: 'SKIPPED',
+            splitError: 'COMISSAO_ZERO',
+          };
+        }
+        if (typeof orderRecord.splitAmountCents === 'number' && !isNaN(orderRecord.splitAmountCents)) {
+          const feeCents = orderRecord.splitAmountCents;
+          if (feeCents === 0) {
+            return {
+              effectiveFeeCents: 0,
+              effectiveFeeReais: 0,
+              isExempt: false,
+              splitStatus: 'SKIPPED',
+              splitError: orderRecord.splitError || 'COMISSAO_ZERO',
+            };
+          }
+          if (amount !== undefined && amount * 100 <= feeCents) {
+            return {
+              effectiveFeeCents: feeCents,
+              effectiveFeeReais: 0,
+              isExempt: false,
+              splitStatus: 'SKIPPED',
+              splitError: 'VALOR_ABAIXO_DA_COMISSAO_MINIMA',
+            };
+          }
+          return {
+            effectiveFeeCents: feeCents,
+            effectiveFeeReais: Number((feeCents / 100).toFixed(2)),
+            isExempt: false,
+            splitStatus: 'REQUESTED',
+            splitError: null,
+          };
+        }
+      }
+    }
+
+    // 2. Try provided split snapshot in params
+    if (typeof providedSplitCents === 'number' && !isNaN(providedSplitCents)) {
+      if (providedSplitCents === 0) {
+        return {
+          effectiveFeeCents: 0,
+          effectiveFeeReais: 0,
+          isExempt: false,
+          splitStatus: 'SKIPPED',
+          splitError: 'COMISSAO_ZERO',
+        };
+      }
+      if (amount !== undefined && amount * 100 <= providedSplitCents) {
+        return {
+          effectiveFeeCents: providedSplitCents,
+          effectiveFeeReais: 0,
+          isExempt: false,
+          splitStatus: 'SKIPPED',
+          splitError: 'VALOR_ABAIXO_DA_COMISSAO_MINIMA',
+        };
+      }
+      return {
+        effectiveFeeCents: providedSplitCents,
+        effectiveFeeReais: Number((providedSplitCents / 100).toFixed(2)),
+        isExempt: false,
+        splitStatus: 'REQUESTED',
+        splitError: null,
+      };
+    }
+
+    // 3. Resolve dynamically from central SellerCommissionService
+    try {
+      const { SellerCommissionService } = await import('@/lib/commission/seller-commission-service');
+      const feeResolution = await SellerCommissionService.resolveEffectiveFee(
+        sellerId,
+        orderRecord?.createdAt ? new Date(orderRecord.createdAt) : new Date()
+      );
+
+      if (feeResolution.isExempt) {
+        return {
+          effectiveFeeCents: 0,
+          effectiveFeeReais: 0,
+          isExempt: true,
+          splitStatus: 'SKIPPED',
+          splitError: 'ISENCAO_TEMPORARIA',
+        };
+      }
+
+      if (feeResolution.effectiveFeeCents <= 0) {
+        return {
+          effectiveFeeCents: 0,
+          effectiveFeeReais: 0,
+          isExempt: false,
+          splitStatus: 'SKIPPED',
+          splitError: 'COMISSAO_ZERO',
+        };
+      }
+
+      const feeCents = feeResolution.effectiveFeeCents;
+      if (amount !== undefined && amount * 100 <= feeCents) {
+        return {
+          effectiveFeeCents: feeCents,
+          effectiveFeeReais: 0,
+          isExempt: false,
+          splitStatus: 'SKIPPED',
+          splitError: 'VALOR_ABAIXO_DA_COMISSAO_MINIMA',
+        };
+      }
+
+      return {
+        effectiveFeeCents: feeCents,
+        effectiveFeeReais: Number((feeCents / 100).toFixed(2)),
+        isExempt: false,
+        splitStatus: 'REQUESTED',
+        splitError: null,
+      };
+    } catch (err: any) {
+      console.error('[MercadoPagoProvider] Erro ao resolver comissão do vendedor:', err?.message || err);
+      throw new Error('Parâmetros de cobrança temporariamente indisponíveis. Tente novamente em instantes.');
+    }
   }
 
   /**
@@ -301,7 +481,17 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
     const accessToken = await this.getValidAccessToken(params.sellerId);
 
     const totalAmount = params.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const platformFee = this.calculatePlatformFee(totalAmount);
+    const orderId = params.metadata?.orderId;
+    const providedSplitCents = params.splitAmountCents ?? (
+      params.metadata?.splitAmountCents ? Number(params.metadata.splitAmountCents) : undefined
+    );
+
+    const commission = await this.resolveEffectiveCommission({
+      sellerId: params.sellerId,
+      orderId,
+      providedSplitCents,
+      amount: totalAmount,
+    });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
@@ -323,12 +513,12 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
         failure: params.failureUrl,
       },
       auto_return: 'approved',
-      external_reference: params.metadata?.orderId,
+      external_reference: orderId,
       notification_url: `${appUrl}/api/webhooks/mercadopago`,
     };
 
-    if (platformFee > 0) {
-      prefPayload.marketplace_fee = Number(platformFee.toFixed(2));
+    if (commission.effectiveFeeReais > 0) {
+      prefPayload.marketplace_fee = Number(commission.effectiveFeeReais.toFixed(2));
     }
 
     const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -347,19 +537,17 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
 
     const data = await res.json();
 
-    if (params.metadata?.orderId) {
-      const splitStatus = platformFee > 0 ? 'REQUESTED' : 'SKIPPED';
-      const splitError = platformFee > 0 ? null : 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
+    if (orderId) {
       try {
         await db.update(orders)
           .set({
             platformFee: '0.00',
-            splitStatus,
-            splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
-            splitError,
+            splitStatus: commission.splitStatus,
+            splitAmountCents: commission.effectiveFeeCents,
+            splitError: commission.splitError,
             updatedAt: new Date(),
           })
-          .where(eq(orders.id, params.metadata.orderId));
+          .where(eq(orders.id, orderId));
       } catch {
         // Non-blocking
       }
@@ -385,7 +573,14 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
    */
   async createPixPayment(params: CreatePaymentParams): Promise<PixPaymentResponse> {
     const accessToken = await this.getValidAccessToken(params.sellerId);
-    const platformFee = this.calculatePlatformFee(params.amount);
+
+    const commission = await this.resolveEffectiveCommission({
+      sellerId: params.sellerId,
+      orderId: params.orderId,
+      providedSplitCents: params.splitAmountCents,
+      amount: params.amount,
+    });
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
     const idempotencyKey = `order_pix_${params.orderId}`;
@@ -407,8 +602,8 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
       notification_url: `${appUrl}/api/webhooks/mercadopago`,
     };
 
-    if (platformFee > 0) {
-      paymentPayload.application_fee = Number(platformFee.toFixed(2));
+    if (commission.effectiveFeeReais > 0) {
+      paymentPayload.application_fee = Number(commission.effectiveFeeReais.toFixed(2));
     }
 
     const res = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -429,7 +624,7 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
         await db.update(orders)
           .set({
             splitStatus: 'FAILED',
-            splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
+            splitAmountCents: commission.effectiveFeeCents,
             splitError: `MP_PAYMENT_ERROR: ${data.message || JSON.stringify(data)}`,
             updatedAt: new Date(),
           })
@@ -462,15 +657,13 @@ export class MercadoPagoProvider implements MarketplacePaymentProvider {
       ? new Date(firstPayment.date_of_expiration)
       : new Date(Date.now() + 30 * 60 * 1000);
 
-    const splitStatus = platformFee > 0 ? 'REQUESTED' : 'SKIPPED';
-    const splitError = platformFee > 0 ? null : 'VALOR_ABAIXO_DA_COMISSAO_MINIMA';
     try {
       await db.update(orders)
         .set({
           platformFee: '0.00',
-          splitStatus,
-          splitAmountCents: MercadoPagoProvider.PLATFORM_FIXED_FEE_CENTS,
-          splitError,
+          splitStatus: commission.splitStatus,
+          splitAmountCents: commission.effectiveFeeCents,
+          splitError: commission.splitError,
           updatedAt: new Date(),
         })
         .where(eq(orders.id, params.orderId));

@@ -34,6 +34,7 @@ export interface CreateCheckoutParams {
   successUrl: string;
   failureUrl: string;
   metadata?: Record<string, string>;
+  splitAmountCents?: number;
 }
 
 export interface CheckoutResponse {
@@ -49,6 +50,7 @@ export interface CreatePaymentParams {
   description?: string;
   orderId: string;
   token?: string;
+  splitAmountCents?: number;
   customer?: {
     email?: string;
     name?: string;

@@ -296,20 +296,22 @@ export class SplitReconciliationService {
       };
     }
 
-    if (order.splitStatus === 'SKIPPED') {
+    if (order.splitStatus === 'SKIPPED' && (order as any).status === 'paid') {
       return {
         status: 'SKIPPED',
-        platformFeeStr: '0.00',
-        netAmountStr: order.total,
-        splitConfirmedAt: null,
+        platformFeeStr: order.platformFee ?? '0.00',
+        netAmountStr: order.netAmount ?? order.total,
+        splitConfirmedAt: order.splitConfirmedAt ?? null,
         splitError: order.splitError || 'COMISSAO_ZERO_OU_VALOR_INSUFICIENTE',
-        splitDetails: null,
-        auditAction: 'SKIPPED',
+        splitDetails: order.splitDetails ?? null,
+        auditAction: 'NONE',
       };
     }
 
     const orderSplitCents = typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
       ? order.splitAmountCents
+      : (order.splitError === 'ISENCAO_TEMPORARIA' || order.splitError === 'COMISSAO_ZERO')
+      ? 0
       : 50;
     const orderSplitReais = (orderSplitCents / 100).toFixed(2);
 
@@ -441,6 +443,28 @@ export class SplitReconciliationService {
 
     // 8. Se não houver evidência de taxa na resposta oficial
     if (feeFoundCents === 0) {
+      if (orderSplitCents === 0) {
+        // Vendedor isento ou comissão zero aprovada: ausência de retenção é o comportamento correto!
+        const detailsPayload = (typeof feeEvidenceSource === 'object' && feeEvidenceSource !== null && !Array.isArray(feeEvidenceSource))
+          ? { ...feeEvidenceSource, netConfirmed: isNetConfirmed, netReceivedAmount: isNetConfirmed ? Number(resolvedNetAmountStr) : undefined, exemption: true }
+          : {
+              rawEvidence: feeEvidenceSource || { exemption: true },
+              netConfirmed: isNetConfirmed,
+              netReceivedAmount: isNetConfirmed ? Number(resolvedNetAmountStr) : undefined,
+              exemption: true,
+            };
+
+        return {
+          status: 'CONFIRMED',
+          platformFeeStr: '0.00',
+          netAmountStr: resolvedNetAmountStr,
+          splitConfirmedAt: new Date(),
+          splitError: order.splitError || null,
+          splitDetails: detailsPayload,
+          auditAction: 'PROCESSED_BY_GATEWAY',
+        };
+      }
+
       return {
         status: 'GATEWAY_ACCEPTED',
         platformFeeStr: '0.00',

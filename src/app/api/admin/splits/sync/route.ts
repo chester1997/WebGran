@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       storeId: orders.storeId,
       splitStatus: orders.splitStatus,
       splitAmountCents: orders.splitAmountCents,
+      splitError: orders.splitError,
       createdAt: orders.createdAt,
     })
     .from(orders)
@@ -454,6 +455,8 @@ export async function POST(req: NextRequest) {
         const splitAmountCents =
           typeof order.splitAmountCents === 'number' && !isNaN(order.splitAmountCents)
             ? order.splitAmountCents
+            : (order.splitError === 'ISENCAO_TEMPORARIA' || order.splitError === 'COMISSAO_ZERO')
+            ? 0
             : 50;
         const platformFeeNum = hasFeeEvidence ? splitAmountCents / 100 : 0;
 
