@@ -37,8 +37,8 @@ export default function AdminPageHeader({
   const content = children ? (
     children
   ) : (
-    <header className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full ${className}`}>
-      <div className="min-w-0">
+    <header className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full h-full ${className}`}>
+      <div className="min-w-0 flex flex-col justify-center">
         <div className="flex flex-wrap items-center gap-2.5">
           {title && (
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">

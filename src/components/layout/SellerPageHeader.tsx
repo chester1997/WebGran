@@ -37,9 +37,9 @@ export default function SellerPageHeader({
   const content = children ? (
     children
   ) : (
-    <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 w-full relative z-30 overflow-visible ${className}`}>
+    <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 w-full h-full relative z-30 overflow-visible ${className}`}>
       {/* Título e Subtítulo */}
-      <div className="min-w-0">
+      <div className="min-w-0 flex flex-col justify-center">
         <div className="flex flex-wrap items-center gap-2">
           {title && (
             <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight truncate">

@@ -114,7 +114,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
-        <aside className="w-[282px] xl:w-[290px] bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden lg:block">
+        <aside className="w-[var(--sidebar-w,320px)] bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden lg:block">
           <SellerSidebar
             sellerProfile={sellerProfile}
             totalRevenue={totalRevenue}
@@ -138,7 +138,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-[70] w-[290px] max-w-[85vw] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out lg:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          className={`fixed inset-y-0 left-0 z-[70] w-[var(--sidebar-w,320px)] max-w-[85vw] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out lg:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
             }`}
         >
           <SellerSidebar
@@ -196,10 +196,10 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
               </div>
             </div>
 
-            {/* External Header Slot para Páginas do Seller (Portal) */}
+            {/* External Header Slot para Páginas do Seller (Portal) com altura uniforme de 112px */}
             <div
               id="seller-page-header-portal"
-              className="w-full px-6 md:px-7 lg:px-8 py-2 md:py-3.5 min-h-0 flex items-center relative z-30 overflow-visible"
+              className="w-full px-6 md:px-7 lg:px-8 py-0 h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] flex items-center relative z-30 overflow-visible"
             />
           </header>
 

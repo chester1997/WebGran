@@ -44,9 +44,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       style={{ "--admin-bg": "#0B0D13" } as React.CSSProperties}
       className="min-h-screen bg-[var(--admin-bg,#0B0D13)] text-white selection:bg-blue-500/30 selection:text-blue-200 antialiased"
     >
-      <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--admin-bg,#0B0D13)]">
+      <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-[var(--admin-bg,#0B0D13)]">
         {/* Modern Sidebar Component wrapped in Suspense */}
-        <Suspense fallback={<div className="w-72 bg-[var(--admin-bg,#0B0D13)] h-full animate-pulse hidden md:block" />}>
+        <Suspense fallback={<div className="w-[var(--sidebar-w,320px)] bg-[var(--admin-bg,#0B0D13)] h-full animate-pulse hidden lg:block" />}>
           <AdminSidebarWrapper />
         </Suspense>
 
@@ -55,7 +55,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {/* External Header Slot for Admin Pages (rendered via AdminPageHeader portal) */}
           <div
             id="admin-page-header-portal"
-            className="shrink-0 w-full px-4 sm:px-6 lg:px-8 md:pl-[25px] lg:pl-[33px] py-3.5 sm:py-4 bg-[var(--admin-bg,#0B0D13)] min-h-[76px] md:min-h-[88px] flex items-center"
+            className="shrink-0 w-full px-6 md:px-7 lg:px-8 py-0 bg-[var(--admin-bg,#0B0D13)] h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] flex items-center relative z-30 overflow-visible"
           />
 
           <Suspense fallback={null}>
@@ -65,7 +65,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <main
             tabIndex={0}
             aria-label="Conteúdo Principal"
-            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[var(--admin-bg,#0B0D13)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-admin-scrollbar relative"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[var(--admin-bg,#0B0D13)] rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-admin-scrollbar relative"
           >
             <SaleNotificationSoundHandler />
             <div className="w-full space-y-6">

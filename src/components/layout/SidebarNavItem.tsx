@@ -46,7 +46,7 @@ export default function SidebarNavItem({
   isActive = false,
   icon: StaticIcon,
   animatedIcon: AnimatedIcon,
-  iconSize = 19,
+  iconSize = 20,
   iconClassName,
   className,
   children,
@@ -81,9 +81,9 @@ export default function SidebarNavItem({
     ? "bg-emerald-500/10 text-white font-medium"
     : "bg-[#3984FF]/10 text-white font-medium";
 
-  const defaultClasses = `flex items-center gap-3 px-3 h-[44px] min-h-[44px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${isActive
+  const defaultClasses = `flex items-center gap-3 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium transition-all duration-150 relative ${isActive
     ? activeBgClass
-    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+    : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
     }`;
 
   const defaultIconColor = isActive
@@ -98,7 +98,7 @@ export default function SidebarNavItem({
         <div
           className={
             iconClassName ||
-            `w-[19px] h-[19px] shrink-0 flex items-center justify-center transition-colors ${defaultIconColor}`
+            `w-5 h-5 shrink-0 flex items-center justify-center transition-colors ${defaultIconColor}`
           }
         >
           <AnimatedIcon ref={iconRef} size={iconSize} />
@@ -111,7 +111,7 @@ export default function SidebarNavItem({
           size={iconSize}
           className={
             iconClassName ||
-            `w-[19px] h-[19px] shrink-0 transition-colors ${defaultIconColor}`
+            `w-5 h-5 shrink-0 transition-colors ${defaultIconColor}`
           }
         />
       );
@@ -121,7 +121,7 @@ export default function SidebarNavItem({
           animate={motionControls}
           initial="normal"
           variants={MOTION_VARIANTS}
-          className="w-[19px] h-[19px] shrink-0 flex items-center justify-center pointer-events-none"
+          className="w-5 h-5 shrink-0 flex items-center justify-center pointer-events-none"
           style={{ originX: 0.5, originY: 0.5 }}
         >
           {staticEl}

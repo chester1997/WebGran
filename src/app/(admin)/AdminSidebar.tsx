@@ -19,7 +19,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import SidebarNavItem from "./SidebarNavItem";
+import SidebarNavItem from "@/components/layout/SidebarNavItem";
 import {
   SolarSpeedometerMiddleIcon,
   SolarBotIcon,
@@ -118,10 +118,19 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     (i) => pathname === i.href || (i.href !== "/admin/video-library" && pathname.startsWith(i.href))
   );
   const [userVideoToggled, setUserVideoToggled] = useState<boolean | null>(null);
+
+  // Auto-expand if active, unless user explicitly toggled
   const videoOpen = userVideoToggled !== null ? userVideoToggled : isVideoActive;
 
+  // Reset toggle override when navigating away from video section
   useEffect(() => {
-    setUserVideoToggled(null);
+    if (!isVideoActive) {
+      setUserVideoToggled(null);
+    }
+  }, [pathname, isVideoActive]);
+
+  // Close mobile drawer on navigation
+  useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
@@ -135,8 +144,8 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
 
   return (
     <>
-      {/* Mobile Header Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--admin-bg,#0B0D13)] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-none">
+      {/* Mobile Header Bar (< 1024px) */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[var(--admin-bg,#0B0D13)] border-b border-white/[0.07] text-white z-30 w-full flex-shrink-0 shadow-none">
         <Link href="/admin" className="flex items-center gap-2.5 min-w-0" onClick={() => setMobileOpen(false)}>
           <Image
             src="/logo-webgran-icon.png"
@@ -170,28 +179,28 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
       {mobileOpen && (
         <div
           aria-hidden="true"
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden transition-opacity duration-200"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-200"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Container: Largura padronizada de 320px (--sidebar-w) */}
       <aside
         id="admin-sidebar-drawer"
         ref={sidebarRef}
         tabIndex={-1}
         aria-label="Navegação Administrativa"
         className={`
-          fixed md:static inset-y-0 left-0 z-50
-          w-72 h-full bg-[var(--admin-bg,#0B0D13)]
-          border-0 md:border-0 rounded-none md:rounded-none shadow-none md:shadow-none
-          flex-shrink-0 flex flex-col overflow-hidden
+          fixed lg:static inset-y-0 left-0 z-50
+          w-[var(--sidebar-w,320px)] max-w-[85vw] lg:max-w-none h-full bg-[var(--admin-bg,#0B0D13)]
+          border-0 rounded-none shadow-none
+          flex-shrink-0 flex flex-col justify-between overflow-hidden
           transition-transform duration-200 ease-in-out outline-none
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
-        {/* Brand Header */}
-        <div className="px-7 pt-7 pb-5 flex items-center justify-between">
+        {/* Brand Header: Altura padronizada de 112px (--header-h), alinhando a divisória com o portal */}
+        <div className="h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] px-[var(--sidebar-pad-x,28px)] flex items-center justify-between shrink-0 select-none">
           <Link href="/admin" className="flex items-center gap-3 min-w-0" onClick={() => setMobileOpen(false)}>
             <Image
               src="/logo-webgran-icon.png"
@@ -201,7 +210,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               priority
               className="w-10 h-10 rounded-full object-contain shrink-0"
             />
-            <span className="font-semibold text-[18px] text-white tracking-tight truncate">
+            <span className="font-[700] text-[20px] text-white tracking-tight truncate">
               WebGran
             </span>
           </Link>
@@ -212,7 +221,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             <button
               ref={closeButtonRef}
               onClick={() => setMobileOpen(false)}
-              className="md:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="lg:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
               aria-label="Fechar menu"
             >
               <X className="w-4 h-4" />
@@ -220,8 +229,8 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-7 py-3 space-y-1 sidebar-scroll">
+        {/* Navigation Links: Padding lateral de 28px (--sidebar-pad-x) e gap de 4px (--nav-item-gap) */}
+        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-[var(--sidebar-pad-x,28px)] py-4 space-y-[var(--nav-item-gap,4px)] sidebar-scroll focus-visible:outline-none">
           {/* Dashboard (Root Item) */}
           <SidebarNavItem
             href="/admin"
@@ -234,14 +243,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: BOT */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2">
-            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+          <div className="mt-[var(--section-label-margin-top,28px)]">
+            <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
+              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
                 BOT
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
               {botItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
@@ -261,14 +270,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: VENDAS */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2">
-            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+          <div className="mt-[var(--section-label-margin-top,28px)]">
+            <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
+              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
                 VENDAS
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
               {salesItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
@@ -288,14 +297,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: PLATAFORMA */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2">
-            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+          <div className="mt-[var(--section-label-margin-top,28px)]">
+            <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
+              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
                 PLATAFORMA
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
               {platformItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
@@ -311,25 +320,25 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               })}
 
               {/* Submenu Expansível: Biblioteca de Vídeos */}
-              <div className="space-y-0.5">
+              <div className="space-y-[var(--nav-item-gap,4px)]">
                 <SidebarNavItem
                   label="Biblioteca de Vídeos"
                   isActive={isVideoActive}
                   icon={SolarVideoLibraryIcon}
                   onClick={() => setUserVideoToggled(!videoOpen)}
-                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium text-left transition-all duration-150 cursor-pointer ${
-                    isVideoActive ? "bg-blue-500/10 text-white font-semibold" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                  className={`w-full flex items-center justify-between gap-3 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium text-left transition-all duration-150 cursor-pointer ${
+                    isVideoActive ? "bg-blue-500/10 text-white font-medium" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
                   {videoOpen ? (
-                    <ChevronUp className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-150" strokeWidth={1.8} />
+                    <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
                   ) : (
-                    <ChevronDown className="w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150" strokeWidth={1.8} />
+                    <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
                   )}
                 </SidebarNavItem>
 
                 {videoOpen && (
-                  <div className="relative pl-6 space-y-1 my-1">
+                  <div className="relative pl-6 space-y-[var(--nav-item-gap,4px)] my-1">
                     {videoLibraryItems.map((item, index) => {
                       const isActive = pathname === item.href || (item.href !== "/admin/video-library" && pathname.startsWith(item.href));
                       const isLast = index === videoLibraryItems.length - 1;
@@ -337,8 +346,8 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                       return (
                         <div key={item.href} className="relative flex items-center">
                           <svg className="absolute -left-3.5 top-0 bottom-0 w-4 h-full pointer-events-none" overflow="visible">
-                            <line x1="0" y1="0" x2="0" y2={isLast ? "14" : "100%"} stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" />
-                            <path d="M 0 0 V 8 Q 0 14 6 14 H 12" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" strokeLinecap="round" />
+                            <line x1="0" y1="0" x2="0" y2={isLast ? "16" : "100%"} stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" />
+                            <path d="M 0 0 V 8 Q 0 16 6 16 H 12" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" strokeLinecap="round" />
                           </svg>
 
                           <SidebarNavItem
@@ -347,11 +356,11 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                             isActive={isActive}
                             onClick={() => setMobileOpen(false)}
                             icon={item.icon}
-                            iconSize={14}
-                            iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
+                            iconSize={17}
+                            iconClassName={`w-[17px] h-[17px] shrink-0 transition-colors ${isActive ? "text-blue-500" : "text-zinc-400"}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
                               isActive
-                                ? "bg-blue-500/10 text-white font-semibold"
+                                ? "bg-blue-500/10 text-white font-medium"
                                 : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                             }`}
                           />
@@ -376,14 +385,14 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           {/* SECTION: CONTA */}
           {/* ==================================================== */}
-          <div className="pt-3 mt-2">
-            <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+          <div className="mt-[var(--section-label-margin-top,28px)]">
+            <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
+              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
                 CONTA
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
               {/* Configurações */}
               <SidebarNavItem
                 href="/admin/settings"
@@ -399,9 +408,10 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 label="Painel do Vendedor"
                 onClick={() => setMobileOpen(false)}
                 icon={SolarShop2Icon}
-                iconClassName="w-4 h-4 text-emerald-400 group-hover:scale-105 transition-all shrink-0"
+                accent="emerald"
+                iconClassName="w-5 h-5 text-emerald-400 group-hover:scale-105 transition-all shrink-0"
                 className="
-                  flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium
+                  flex items-center gap-3 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium
                   text-emerald-400 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/35
                   transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 group
                 "
@@ -410,35 +420,35 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           </div>
         </nav>
 
-        {/* User Footer Card */}
-        <div className="px-7 py-4 border-t border-white/[0.06]">
+        {/* User Footer Card: Fixo na parte inferior com px padronizado */}
+        <div className="px-[var(--sidebar-pad-x,28px)] py-4 border-t border-white/[0.06] bg-[var(--admin-bg,#0B0D13)] shrink-0">
           <div
             onClick={() => setProfileModalOpen(true)}
-            className="flex items-center justify-between p-2 rounded-lg bg-[#0F1014] hover:bg-[#15171D] border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer group"
+            className="flex items-center justify-between p-3 rounded-[12px] bg-[#0F1014] hover:bg-[#15171D] border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               {currentUser?.avatarUrl ? (
                 <img
                   src={currentUser.avatarUrl}
                   alt={currentUser.name || "Avatar"}
-                  className="w-7 h-7 rounded-lg object-cover shrink-0 border border-blue-500/30 bg-[#0E0E12]"
+                  className="w-[38px] h-[38px] rounded-xl object-cover shrink-0 border border-blue-500/30 bg-[#0E0E12]"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-[11px] shrink-0 border border-white/20">
+                <div className="w-[38px] h-[38px] rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-[14px] shrink-0 border border-white/20">
                   {currentUser?.name?.[0]?.toUpperCase() || "A"}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate group-hover:text-blue-300 transition-colors">
+                <p className="text-[14px] font-bold text-white truncate group-hover:text-blue-300 transition-colors leading-tight">
                   {currentUser?.name || "Administrador"}
                 </p>
-                <p className="text-[10px] text-zinc-400 truncate">
+                <p className="text-[12px] text-zinc-400 truncate mt-0.5 leading-tight">
                   {currentUser?.email || "admin@webgran.online"}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0 ml-1">
               <button
                 type="button"
                 onClick={(e) => {
@@ -446,9 +456,9 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   setProfileModalOpen(true);
                 }}
                 title="Editar Perfil"
-                className="p-1 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-white/10 transition-colors cursor-pointer"
               >
-                <UserCog className="w-3.5 h-3.5" />
+                <UserCog className="w-4 h-4" />
               </button>
               <button
                 type="button"
@@ -457,9 +467,9 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                   signOut({ callbackUrl: "/login" });
                 }}
                 title="Sair"
-                className="p-1 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>

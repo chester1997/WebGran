@@ -117,6 +117,27 @@
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #3B82F6;
+
+  /* ==================================================== */
+  /* WebGran Standardized Unified Sidebar & Header System */
+  /* Shared across Seller and Admin dashboards            */
+  /* ==================================================== */
+  --sidebar-w: 320px;
+  --sidebar-w-collapsed: 80px;
+  --sidebar-pad-x: 28px;
+  --nav-item-h: 44px;
+  --nav-item-gap: 4px;
+  --nav-font: 15px;
+  --nav-weight: 500;
+  --nav-icon: 20px;
+  --nav-radius: 12px;
+  --section-label-size: 11px;
+  --section-label-spacing: 0.06em;
+  --section-label-margin-top: 28px;
+  --header-h: 112px;
+  --logo-size: 40px;
+  --logo-text-size: 20px;
+  --logo-text-weight: 700;
 }
 
 .dark {
@@ -152,6 +173,27 @@
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #3B82F6;
+
+  /* ==================================================== */
+  /* WebGran Standardized Unified Sidebar & Header System */
+  /* Shared across Seller and Admin dashboards            */
+  /* ==================================================== */
+  --sidebar-w: 320px;
+  --sidebar-w-collapsed: 80px;
+  --sidebar-pad-x: 28px;
+  --nav-item-h: 44px;
+  --nav-item-gap: 4px;
+  --nav-font: 15px;
+  --nav-weight: 500;
+  --nav-icon: 20px;
+  --nav-radius: 12px;
+  --section-label-size: 11px;
+  --section-label-spacing: 0.06em;
+  --section-label-margin-top: 28px;
+  --header-h: 112px;
+  --logo-size: 40px;
+  --logo-text-size: 20px;
+  --logo-text-weight: 700;
 }
 
 @layer base {
