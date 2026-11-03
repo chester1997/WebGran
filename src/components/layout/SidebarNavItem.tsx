@@ -81,7 +81,7 @@ export default function SidebarNavItem({
     ? "bg-emerald-500/10 text-white font-medium"
     : "bg-[#3984FF]/10 text-white font-medium";
 
-  const defaultClasses = `flex items-center gap-3 px-3 h-10 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
+  const defaultClasses = `flex items-center gap-3.5 px-3 h-10 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
     isActive
       ? activeBgClass
       : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
@@ -135,7 +135,7 @@ export default function SidebarNavItem({
   const content = (
     <>
       {renderIcon()}
-      <span className="truncate flex-1">{label}</span>
+      <span className="truncate flex-1 whitespace-nowrap">{label}</span>
       {children}
     </>
   );
