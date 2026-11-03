@@ -84,6 +84,15 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     prevMobileOpenRef.current = mobileDrawerOpen;
   }, [mobileDrawerOpen]);
 
+  useEffect(() => {
+    document.documentElement.classList.add("overflow-hidden");
+    document.body.classList.add("overflow-hidden");
+    return () => {
+      document.documentElement.classList.remove("overflow-hidden");
+      document.body.classList.remove("overflow-hidden");
+    };
+  }, []);
+
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
 
   return (
@@ -100,9 +109,9 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           "--seller-accent-glow": "rgba(57, 132, 255, 0.12)",
         } as React.CSSProperties
       }
-      className="min-h-screen bg-[var(--seller-bg,#0B0F14)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
+      className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
     >
-      <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
+      <div className="flex flex-col md:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
         <aside className="w-72 bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden md:block">
@@ -145,7 +154,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-[var(--seller-bg,#0B0F14)]">
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
-          <header className="shrink-0 w-full bg-[var(--seller-bg,#0B0F14)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
+          <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0B0F14)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
             {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): md:hidden */}
             <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0B0F14]">
               <div className="flex items-center gap-2.5 shrink-0 min-w-0">
@@ -190,7 +199,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             {/* External Header Slot para Páginas do Seller (Portal) */}
             <div
               id="seller-page-header-portal"
-              className="w-full px-6 md:px-7 lg:px-8 py-2 md:py-4 min-h-0 md:min-h-[88px] flex items-center relative z-30 overflow-visible"
+              className="w-full px-6 md:px-7 lg:px-8 py-2 md:py-3.5 min-h-0 flex items-center relative z-30 overflow-visible"
             />
           </header>
 
@@ -200,10 +209,10 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             <main
               tabIndex={0}
               aria-label="Painel do Vendedor"
-              className="flex-1 overflow-y-auto px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 sm:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
+              className="flex-1 min-h-0 overflow-y-auto px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
             >
               <SaleNotificationSoundHandler />
-              <div className="w-full space-y-6 relative z-10">
+              <div className="w-full relative z-10">
                 <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
                   {children}
                 </Suspense>
