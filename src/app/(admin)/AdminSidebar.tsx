@@ -245,7 +245,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           <div className="mt-[var(--section-label-margin-top,28px)]">
             <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
-              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
                 BOT
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
@@ -272,7 +272,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           <div className="mt-[var(--section-label-margin-top,28px)]">
             <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
-              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
                 VENDAS
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
@@ -299,7 +299,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           <div className="mt-[var(--section-label-margin-top,28px)]">
             <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
-              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
                 PLATAFORMA
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
@@ -387,7 +387,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           {/* ==================================================== */}
           <div className="mt-[var(--section-label-margin-top,28px)]">
             <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
-              <span className="text-[var(--section-label-size,11px)] font-semibold uppercase tracking-[var(--section-label-spacing,0.06em)] text-zinc-400 shrink-0">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
                 CONTA
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
