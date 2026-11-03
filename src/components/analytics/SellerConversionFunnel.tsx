@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Filter, Bot, QrCode, CheckCircle2 } from "lucide-react";
+import { Filter } from "lucide-react";
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { DashboardEmptyState } from "./DashboardEmptyState";
 
@@ -31,44 +31,52 @@ export function SellerConversionFunnel({
 
   // Percentuais de conversão entre etapas
   const startToPixRate = totalStarts > 0 ? Math.round((totalPixGenerated / totalStarts) * 100) : null;
-  const pixToPaidRate = totalPixGenerated > 0 ? Math.round((totalPaid / totalPixGenerated) * 100) : null;
+  const pixToPaidRate = totalPixGenerated > 0 ? Math.round((totalPaid / totalPixGenerated) * 100) : 0;
   const overallRate = totalStarts > 0 ? Math.round((totalPaid / totalStarts) * 100) : null;
+
+  // Média de Pix por pessoa
+  const avgPixPerPerson = totalStarts > 0 ? (totalPixGenerated / totalStarts).toFixed(1).replace(".", ",") : "0";
 
   const hasData = totalStarts > 0 || totalPixGenerated > 0 || totalPaid > 0;
 
   if (isPending) {
     return (
-      <div className={`bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 min-h-[340px] animate-pulse flex flex-col justify-between min-w-0 ${className}`}>
-        <div className="space-y-2">
-          <div className="h-4 bg-white/[0.04] rounded w-36" />
-          <div className="h-3 bg-white/[0.03] rounded w-24" />
-        </div>
-        <div className="space-y-3 my-auto">
-          <div className="h-12 bg-white/[0.02] rounded-[8px] w-full" />
-          <div className="h-12 bg-white/[0.02] rounded-[8px] w-full" />
-          <div className="h-12 bg-white/[0.02] rounded-[8px] w-full" />
+      <div className={`bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 animate-pulse ${className}`}>
+        <div className="h-5 bg-white/[0.04] rounded w-48 mb-6" />
+        <div className="space-y-4">
+          <div className="h-10 bg-white/[0.02] rounded-lg w-full" />
+          <div className="h-10 bg-white/[0.02] rounded-lg w-full" />
+          <div className="h-10 bg-white/[0.02] rounded-lg w-full" />
         </div>
       </div>
     );
   }
 
+  // Larguras das barras baseadas na escala do maior valor (ou totalStarts)
+  const maxScale = Math.max(totalStarts, totalPixGenerated, totalPaid, 1);
+  const widthStarts = Math.round((totalStarts / maxScale) * 100);
+  const widthPix = Math.round((totalPixGenerated / maxScale) * 100);
+  const widthPaid = Math.round((totalPaid / maxScale) * 100);
+
   return (
     <section
       aria-label="Funil de conversão"
-      className={`bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-h-[340px] min-w-0 ${className}`}
+      title="Funil de conversão"
+      className={`bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between ${className}`}
     >
-      {/* Topo do Card */}
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-[#3984FF] shrink-0" />
-            <span className="truncate">Funil de conversão</span>
+      {/* Topo do Funil */}
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div>
+          <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+            Da conversa ao pagamento
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5 truncate">Da primeira conversa ao pagamento</p>
+          <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+            Jornada do visitante pelo bot até a compra confirmada
+          </p>
         </div>
 
         {overallRate !== null && (
-          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] text-[10px] font-semibold tabular-nums shrink-0 whitespace-nowrap">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--apple-surface-2,#2c2c2e)] text-[12px] font-semibold text-[var(--apple-blue,#0a84ff)] tabular-nums shrink-0">
             <span>{overallRate}% conv. global</span>
           </div>
         )}
@@ -84,89 +92,80 @@ export function SellerConversionFunnel({
           className="my-auto"
         />
       ) : (
-        <div className="space-y-3 my-auto">
-          {/* Etapa 1: Conversas Iniciadas */}
-          <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
-            <div className="flex items-center justify-between text-xs gap-2">
-              <div className="flex items-center gap-1.5 text-zinc-300 font-medium truncate min-w-0">
-                <div className="w-5 h-5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[#3984FF] flex items-center justify-center shrink-0">
-                  <Bot className="w-3 h-3" />
-                </div>
-                <span className="truncate">1. Conversas iniciadas</span>
-              </div>
-              <span className="font-bold text-white font-sans tabular-nums shrink-0 whitespace-nowrap">
+        <div className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))] my-auto">
+          {/* Linha 1: Conversas iniciadas */}
+          <div className="py-3.5 space-y-2">
+            <div className="flex items-center justify-between text-[14px]">
+              <span className="font-medium text-[var(--apple-text,#fff)]">
+                1. Conversas iniciadas
+              </span>
+              <span className="font-bold text-[var(--apple-text,#fff)] tabular-nums">
                 {totalStarts} {totalStarts === 1 ? "lead" : "leads"}
               </span>
             </div>
-            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
-              <div className="h-full bg-[#3984FF] rounded-full w-full" />
-            </div>
-          </div>
-
-          {/* Taxa intermediária 1 -> 2 */}
-          <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-sans tabular-nums -my-1">
-            <div className="h-px w-6 bg-white/[0.04]" />
-            <span className="truncate">{startToPixRate !== null ? `${startToPixRate}% geraram Pix` : "—"}</span>
-            <div className="h-px w-6 bg-white/[0.04]" />
-          </div>
-
-          {/* Etapa 2: Cobranças Pix Geradas */}
-          <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
-            <div className="flex items-center justify-between text-xs gap-2">
-              <div className="flex items-center gap-1.5 text-zinc-300 font-medium truncate min-w-0">
-                <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                  <QrCode className="w-3 h-3" />
-                </div>
-                <span className="truncate">2. Pix gerados</span>
-              </div>
-              <span className="font-bold text-white font-sans tabular-nums shrink-0 whitespace-nowrap">
-                {totalPixGenerated} {totalPixGenerated === 1 ? "cobrança" : "cobranças"}
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-[8px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
               <div
-                className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(startToPixRate ?? 0, 100)}%` }}
+                className="h-full bg-[var(--apple-blue,#0a84ff)] rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(widthStarts, 2)}%` }}
               />
             </div>
           </div>
 
-          {/* Taxa intermediária 2 -> 3 */}
-          <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-sans tabular-nums -my-1">
-            <div className="h-px w-6 bg-white/[0.04]" />
-            <span className="truncate">{pixToPaidRate !== null ? `${pixToPaidRate}% converteram em pagamento` : "—"}</span>
-            <div className="h-px w-6 bg-white/[0.04]" />
+          {/* Linha 2: Pix gerados */}
+          <div className="py-3.5 space-y-2">
+            <div className="flex items-center justify-between text-[14px]">
+              <span className="font-medium text-[var(--apple-text,#fff)]">
+                2. Pix gerados
+              </span>
+              <div className="flex items-center gap-2">
+                {startToPixRate !== null && (
+                  <span className="text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                    ({startToPixRate}%)
+                  </span>
+                )}
+                <span className="font-bold text-[var(--apple-text,#fff)] tabular-nums">
+                  {totalPixGenerated} {totalPixGenerated === 1 ? "cobrança" : "cobranças"}
+                </span>
+              </div>
+            </div>
+            <div className="h-[8px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[var(--apple-blue,#0a84ff)] rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(widthPix, 2)}%` }}
+              />
+            </div>
           </div>
 
-          {/* Etapa 3: Vendas Aprovadas */}
-          <div className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] space-y-2">
-            <div className="flex items-center justify-between text-xs gap-2">
-              <div className="flex items-center gap-1.5 text-zinc-300 font-medium truncate min-w-0">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-3 h-3" />
-                </div>
-                <span className="truncate">3. Vendas confirmadas</span>
-              </div>
-              <span className="font-bold text-emerald-400 font-sans tabular-nums shrink-0 whitespace-nowrap">
-                {totalPaid} {totalPaid === 1 ? "venda paga" : "vendas pagas"}
+          {/* Linha 3: Vendas pagas */}
+          <div className="py-3.5 space-y-2">
+            <div className="flex items-center justify-between text-[14px]">
+              <span className="font-medium text-[var(--apple-text,#fff)]">
+                3. Vendas confirmadas
               </span>
+              <div className="flex items-center gap-2">
+                {pixToPaidRate > 0 && (
+                  <span className="text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                    ({pixToPaidRate}%)
+                  </span>
+                )}
+                <span className="font-bold text-[var(--apple-green,#30d158)] tabular-nums">
+                  {totalPaid} {totalPaid === 1 ? "venda paga" : "vendas pagas"}
+                </span>
+              </div>
             </div>
-            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-[8px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-400 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(overallRate ?? 0, 100)}%` }}
+                className="h-full bg-[var(--apple-green,#30d158)] rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(widthPaid, 2)}%` }}
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* Rodapé informativo */}
-      <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between gap-2">
-        <span className="truncate">Eficiência do fluxo</span>
-        <span className="font-sans font-medium tabular-nums text-zinc-300 shrink-0 whitespace-nowrap">
-          {totalPaid} de {totalStarts} conversas
-        </span>
+      {/* Rodapé Apple */}
+      <div className="pt-4 mt-4 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+        Cada pessoa gerou em média {avgPixPerPerson} Pix, e {pixToPaidRate}% dos Pix foram pagos.
       </div>
     </section>
   );

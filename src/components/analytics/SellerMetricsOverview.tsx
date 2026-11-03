@@ -1,41 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { 
-  CheckCircle2, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  CreditCard, 
-  Bot, 
-  ArrowUpRight, 
-  DollarSign, 
-  QrCode,
-  HelpCircle,
-  BarChart2,
-  LineChart
-} from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts";
+import React, { useMemo, useState, useRef, useCallback } from "react";
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { getBusinessDateKey } from "@/lib/analytics/timezone-utils";
 import { SellerConversionFunnel } from "./SellerConversionFunnel";
+import { LineChart as LineIcon, BarChart2 as BarIcon } from "lucide-react";
 
 interface KpiDataPoint {
   value: number;
   formatted: string;
-  changePercent: number | null;
-  trend: 'up' | 'down' | 'neutral' | 'none';
-  subtitle: string;
+  changePercent?: number | null;
+  trend?: "up" | "down" | "neutral" | "none";
+  subtitle?: string;
 }
 
 interface SellerMetricsOverviewProps {
@@ -43,15 +19,20 @@ interface SellerMetricsOverviewProps {
   kpis?: {
     revenue?: KpiDataPoint;
     salesCount?: KpiDataPoint;
-    customersCount?: KpiDataPoint;
     averageTicket?: KpiDataPoint;
-  };
-  chartSeries?: Array<{
+    conversionRate?: KpiDataPoint;
+  } | null;
+  chartSeries?: {
+    dateStr?: string;
     dateLabel: string;
-    fullDate: string;
+    fullDate?: string;
+    fullDateLabel?: string;
+    dayName?: string;
     revenue: number;
-    salesCount: number;
-  }>;
+    salesCount?: number;
+    ticket?: number;
+    formattedRevenue?: string;
+  }[];
   isPending?: boolean;
   periodLabel?: string;
   funnelSlot?: React.ReactNode;
@@ -61,62 +42,29 @@ function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function RevenueTooltip({ active, payload }: any) {
-  if (active && payload && payload.length) {
-    const item = payload[0].payload;
-    const rev = Number(item.revenue || 0);
-    const count = Number(item.salesCount || 0);
-
-    return (
-      <div className="bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.08))] text-white p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[150px] pointer-events-none select-none z-50">
-        <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-1.5 mb-1">
-          <span className="font-medium text-zinc-300 text-[11px]">{item.fullDate || item.dateLabel}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3984FF]" />
-        </div>
-        <div className="flex items-center justify-between text-xs gap-3">
-          <span className="text-zinc-400">Receita:</span>
-          <span className="font-bold text-white font-sans tabular-nums">
-            {formatBRL(rev)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-xs gap-3">
-          <span className="text-zinc-400">Pedidos:</span>
-          <span className="font-medium text-zinc-300 font-sans tabular-nums">
-            {count} {count === 1 ? "pedido" : "pedidos"}
-          </span>
-        </div>
-      </div>
-    );
+function generateSmoothPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
   }
-  return null;
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? 0 : i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
 }
-
-function IndicatorTooltip({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative inline-flex items-center">
-      <button
-        type="button"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        className="w-4 h-4 rounded-full bg-white/[0.04] hover:bg-white/[0.1] text-zinc-400 hover:text-zinc-200 flex items-center justify-center text-[10px] font-bold cursor-help transition-colors"
-        aria-label="Mais informações"
-      >
-        ?
-      </button>
-      {open && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 rounded-lg bg-[var(--seller-surface-raised,#181A20)] border border-white/10 text-zinc-200 text-[11px] shadow-2xl whitespace-nowrap z-40 pointer-events-none">
-          {text}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
 
 export function SellerMetricsOverview({
   metrics,
@@ -127,472 +75,492 @@ export function SellerMetricsOverview({
   funnelSlot,
 }: SellerMetricsOverviewProps) {
   const [chartMode, setChartMode] = useState<"area" | "bar">("area");
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const approvedSales = metrics?.approvedSales;
   const conversionRate = metrics?.conversionRate;
-  const botStarts = metrics?.botStarts;
   const averageTicket = metrics?.averageTicket;
+  const botStarts = metrics?.botStarts;
+  const performanceSeries = metrics?.performanceSeries || [];
+  const last7Days = metrics?.last7DaysPerformance || [];
 
-  const performanceSeries = metrics?.performanceSeries || metrics?.last7DaysPerformance || chartSeries || [];
-  const last7DaysPerformance = metrics?.last7DaysPerformance || [];
+  // Vendas de hoje e ontem (extraídas de last7DaysPerformance)
+  const todayKey = getBusinessDateKey(new Date());
+  const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const yesterdayKey = getBusinessDateKey(yesterdayDate);
 
+  const todayPerformance = last7Days.find(
+    (p) => p.dateKey === todayKey || p.dateStr === todayKey || p.dayName === "Hoje"
+  );
+  const yesterdayPerformance = last7Days.find(
+    (p) => p.dateKey === yesterdayKey || p.dateStr === yesterdayKey || p.dayName === "Ontem"
+  );
+
+  const todayRevenue = todayPerformance?.revenue ?? 0;
+  const yesterdayRevenue = yesterdayPerformance?.revenue ?? 0;
+  const todayFormatted = todayPerformance?.formattedRevenue ?? formatBRL(todayRevenue);
+  const yesterdayFormatted = yesterdayPerformance?.formattedRevenue ?? formatBRL(yesterdayRevenue);
+
+  // Pílula acessível de crescimento Hoje vs Ontem
+  let growthPill: string | null = null;
+  if (todayRevenue > yesterdayRevenue && yesterdayRevenue > 0) {
+    const diff = todayRevenue - yesterdayRevenue;
+    const pct = Math.round((diff / yesterdayRevenue) * 100);
+    growthPill = pct > 999 ? "+999%+ vs ontem" : `+${pct}% vs ontem`;
+  }
+
+  // Normalização da série de dados para o gráfico
   const normalizedSeries = useMemo(() => {
-    const series = performanceSeries || [];
-    return series.map((p: any) => ({
-      dateLabel: String(p.dateLabel || ""),
-      fullDate: String(p.fullDate || p.dateLabel || ""),
-      revenue: Number(p.revenue || 0),
-      salesCount: Number(p.salesCount || 0),
-    }));
-  }, [performanceSeries]);
-
-  // 1. Cálculo de "Hoje" e "Ontem" pelo fuso America/Recife
-  const { todayRevenue, yesterdayRevenue, growthPercent } = useMemo(() => {
-    const now = new Date();
-    const todayKey = getBusinessDateKey(now);
-    const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayKey = getBusinessDateKey(yesterdayDate);
-
-    const todayPoint =
-      last7DaysPerformance.find((p: any) => p.dateKey === todayKey || p.dateStr === todayKey) ||
-      performanceSeries.find((p: any) => p.dateKey === todayKey || p.dateStr === todayKey);
-
-    const yesterdayPoint =
-      last7DaysPerformance.find((p: any) => p.dateKey === yesterdayKey || p.dateStr === yesterdayKey) ||
-      performanceSeries.find((p: any) => p.dateKey === yesterdayKey || p.dateStr === yesterdayKey);
-
-    const todayRev = todayPoint ? Number(todayPoint.revenue || 0) : 0;
-    const yesterdayRev = yesterdayPoint ? Number(yesterdayPoint.revenue || 0) : 0;
-
-    let pctLabel: string | null = null;
-    if (yesterdayRev > 0 && todayRev > yesterdayRev) {
-      const diff = todayRev - yesterdayRev;
-      const pct = Math.round((diff / yesterdayRev) * 100);
-      pctLabel = pct > 999 ? "+999%+" : `+${pct}%`;
+    if (chartSeries && chartSeries.length > 0) {
+      return chartSeries.map((item) => ({
+        dateLabel: item.dateLabel || item.dateStr || "",
+        fullDateLabel: item.fullDate || item.fullDateLabel || item.dateStr || item.dateLabel,
+        dayName: item.dayName || "",
+        revenue: Number(item.revenue || 0),
+        salesCount: Number(item.salesCount || 0),
+      }));
     }
+    if (performanceSeries && performanceSeries.length > 0) {
+      return performanceSeries.map((item: any) => ({
+        dateLabel: item.dateLabel || item.dateStr || "—",
+        fullDateLabel: item.fullDateLabel || item.dateStr || "",
+        dayName: item.dayName || "",
+        revenue: Number(item.revenue || 0),
+        salesCount: Number(item.salesCount || 0),
+      }));
+    }
+    return [];
+  }, [chartSeries, performanceSeries]);
 
-    return {
-      todayRevenue: todayRev,
-      yesterdayRevenue: yesterdayRev,
-      growthPercent: pctLabel,
-    };
-  }, [last7DaysPerformance, performanceSeries]);
-
-  // Total de receita do período
   const totalPeriodRevenue = useMemo(() => {
-    return performanceSeries.reduce((sum, p) => sum + (p.revenue || 0), 0);
-  }, [performanceSeries]);
+    if (approvedSales?.total !== undefined && approvedSales.total !== null) {
+      return approvedSales.total;
+    }
+    return normalizedSeries.reduce((acc, curr) => acc + curr.revenue, 0);
+  }, [approvedSales, normalizedSeries]);
 
-  const hasSeriesSales = totalPeriodRevenue > 0 || performanceSeries.some((p) => (p.salesCount || 0) > 0);
+  const totalConfirmedSales = approvedSales?.count ?? normalizedSeries.reduce((acc, curr) => acc + curr.salesCount, 0);
+  const totalStartsCount = botStarts?.uniqueUsers || botStarts?.totalStarts || 0;
 
-  // Pagamentos Pix
+  // Valores dos 4 indicadores
+  const receitaValue = kpis?.revenue?.formatted || approvedSales?.formatted || formatBRL(totalPeriodRevenue);
+  const vendasValue = kpis?.salesCount?.value ?? approvedSales?.count ?? 0;
+  const ticketValue = kpis?.averageTicket?.formatted || averageTicket?.formatted || "R$ 0,00";
+
   const totalPixGenerated = conversionRate?.totalPixGerados ?? 0;
   const totalPixPaid = conversionRate?.totalPixPagos ?? approvedSales?.count ?? 0;
   const conversionRatePercent = conversionRate?.ratePercent ?? (totalPixGenerated > 0 ? Math.round((totalPixPaid / totalPixGenerated) * 100) : null);
+  const pixValue = conversionRatePercent !== null ? `${conversionRatePercent}%` : `${totalPixPaid}/${totalPixGenerated || 0}`;
 
-  // Starts
-  const totalStartsCount = botStarts?.uniqueUsers || botStarts?.totalStarts || 0;
+  // Dimensões SVG e coordenadas do gráfico
+  const SVG_WIDTH = 1000;
+  const SVG_HEIGHT = 280;
+  const PAD_LEFT = 75;
+  const PAD_RIGHT = 25;
+  const PAD_TOP = 20;
+  const PAD_BOTTOM = 40;
+  const PLOT_W = SVG_WIDTH - PAD_LEFT - PAD_RIGHT;
+  const PLOT_H = SVG_HEIGHT - PAD_TOP - PAD_BOTTOM;
 
-  // SKELETON LOADING
+  const maxRevenue = useMemo(() => {
+    const max = Math.max(...normalizedSeries.map((p) => p.revenue), 0);
+    if (max <= 0) return 100;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+    return Math.ceil(max / magnitude) * magnitude;
+  }, [normalizedSeries]);
+
+  const chartPoints = useMemo(() => {
+    if (normalizedSeries.length === 0) return [];
+    const count = normalizedSeries.length;
+    const stepX = count > 1 ? PLOT_W / (count - 1) : PLOT_W;
+
+    return normalizedSeries.map((item, idx) => {
+      const x = PAD_LEFT + (count > 1 ? idx * stepX : PLOT_W / 2);
+      const ratio = Math.min(Math.max(item.revenue / maxRevenue, 0), 1);
+      const y = PAD_TOP + PLOT_H - ratio * PLOT_H;
+      return { x, y, data: item };
+    });
+  }, [normalizedSeries, maxRevenue, PLOT_W, PLOT_H, PAD_LEFT, PAD_TOP]);
+
+  const smoothCurvePath = useMemo(() => {
+    return generateSmoothPath(chartPoints);
+  }, [chartPoints]);
+
+  const smoothAreaPath = useMemo(() => {
+    if (chartPoints.length === 0) return "";
+    const baseY = PAD_TOP + PLOT_H;
+    const firstX = chartPoints[0].x;
+    const lastX = chartPoints[chartPoints.length - 1].x;
+    return `${smoothCurvePath} L ${lastX.toFixed(1)} ${baseY} L ${firstX.toFixed(1)} ${baseY} Z`;
+  }, [chartPoints, smoothCurvePath, PAD_TOP, PLOT_H]);
+
+  // Scrubber Interativo (Apple Stocks / Bolsa)
+  const handleScrubberMove = useCallback(
+    (clientX: number) => {
+      if (!svgRef.current || chartPoints.length === 0) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const relativeX = clientX - rect.left;
+      const scaleX = SVG_WIDTH / rect.width;
+      const svgX = relativeX * scaleX;
+
+      let closestIdx = 0;
+      let minDistance = Infinity;
+
+      chartPoints.forEach((pt, idx) => {
+        const dist = Math.abs(pt.x - svgX);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestIdx = idx;
+        }
+      });
+
+      setHoveredIndex(closestIdx);
+    },
+    [chartPoints, SVG_WIDTH]
+  );
+
+  const activePoint = hoveredIndex !== null && chartPoints[hoveredIndex] ? chartPoints[hoveredIndex] : null;
+
+  // Total e legenda dinâmicos sob interação
+  const displayRevenue = activePoint ? formatBRL(activePoint.data.revenue) : formatBRL(totalPeriodRevenue);
+  const displaySubtitle = activePoint
+    ? `${activePoint.data.dayName ? `${activePoint.data.dayName}, ` : ""}${activePoint.data.fullDateLabel || activePoint.data.dateLabel} · ${activePoint.data.salesCount} ${
+        activePoint.data.salesCount === 1 ? "venda confirmada" : "vendas confirmadas"
+      }`
+    : `${periodLabel} · ${totalConfirmedSales} ${totalConfirmedSales === 1 ? "venda confirmada" : "vendas confirmadas"}`;
+
+  // Skeleton Loading elegante
   if (isPending) {
     return (
-      <div className="w-full space-y-5 animate-pulse">
-        {/* Hero Skeleton */}
-        <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="h-4 bg-white/[0.04] rounded w-28" />
-            <div className="h-10 bg-white/[0.06] rounded w-56" />
-            <div className="h-4 bg-white/[0.04] rounded w-36" />
-          </div>
-          <div className="space-y-2 sm:text-right">
-            <div className="h-4 bg-white/[0.04] rounded w-32" />
-            <div className="h-8 bg-white/[0.06] rounded w-44" />
-          </div>
-        </div>
-
-        {/* 4 Indicadores Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 space-y-3">
-              <div className="h-4 bg-white/[0.04] rounded w-28" />
-              <div className="h-8 bg-white/[0.06] rounded w-36" />
-              <div className="h-3.5 bg-white/[0.04] rounded w-24" />
-            </div>
-          ))}
-        </div>
-
-        {/* Gráfico (65%) + Funil (35%) Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-5 w-full items-stretch">
-          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-6 min-h-[320px] flex items-center justify-center">
-            <div className="h-48 w-full bg-white/[0.02] rounded-lg" />
-          </div>
-          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-6 min-h-[320px] flex items-center justify-center">
-            <div className="h-48 w-full bg-white/[0.02] rounded-lg" />
-          </div>
-        </div>
+      <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] animate-pulse">
+        <div className="h-10 bg-white/[0.04] rounded-[14px] w-64" />
+        <div className="h-32 bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px]" />
+        <div className="h-96 bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px]" />
       </div>
     );
   }
 
+  // Ticks do eixo Y
+  const yTicks = [
+    { value: maxRevenue, y: PAD_TOP, label: formatBRL(maxRevenue) },
+    { value: maxRevenue / 2, y: PAD_TOP + PLOT_H / 2, label: formatBRL(maxRevenue / 2) },
+    { value: 0, y: PAD_TOP + PLOT_H, label: "R$ 0" },
+  ];
+
+  // Ticks do eixo X (amostra de 5 a 6 pontos espaçados)
+  const xTicks = chartPoints.filter((_, idx) => {
+    if (chartPoints.length <= 6) return true;
+    const step = Math.ceil(chartPoints.length / 5);
+    return idx % step === 0 || idx === chartPoints.length - 1;
+  });
+
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
-          1. DESTAQUE PRINCIPAL (HERO): VENDAS DE HOJE
+          1. CABEÇALHO (Título Vendas + Resumo Hoje/Ontem)
+         ========================================================================= */}
+      <header className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pt-1 px-1">
+        <h1 className="text-[34px] font-bold leading-tight tracking-[-0.022em] text-[var(--apple-text,#fff)]">
+          Vendas
+        </h1>
+        <div className="text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1.5 flex-wrap">
+          <span className="sr-only">Vendas de hoje</span>
+          <span>Hoje </span>
+          <strong className="font-bold text-[var(--apple-text,#fff)] tabular-nums">{todayFormatted}</strong>
+          <span> · </span>
+          <span className="sr-only">Ontem: </span>
+          <span>ontem </span>
+          <strong className="font-bold text-[var(--apple-text,#fff)] tabular-nums">{yesterdayFormatted}</strong>
+          {growthPill && <span className="sr-only">{growthPill}</span>}
+        </div>
+      </header>
+
+      {/* =========================================================================
+          2. UMA ÚNICA SUPERFÍCIE: OS 4 INDICADORES EM GRID DE 4 COLUNAS
          ========================================================================= */}
       <section
-        aria-label="Destaque de vendas"
-        className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none"
+        aria-label="Indicadores de desempenho"
+        className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-6">
-          {/* Lado Esquerdo: Vendas de hoje */}
-          <div className="space-y-1.5 min-w-0">
-            <span className="text-[13px] text-zinc-400 font-normal block leading-tight">
-              Vendas de hoje
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-[var(--apple-separator,rgba(84,84,88,0.35))]">
+          {/* Indicador 1: Receita aprovada */}
+          <div className="lg:px-6 first:pl-0 flex flex-col justify-between">
+            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
+              <span>Receita aprovada</span>
+              <span className="text-[11px] text-zinc-500 cursor-help" title="Faturamento total bruto obtido no período">?</span>
             </span>
-            <div className="flex flex-wrap items-baseline gap-3">
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-bold font-sans tracking-tight tabular-nums text-white leading-none">
-                {formatBRL(todayRevenue)}
-              </span>
-              {growthPercent && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 tabular-nums">
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>{growthPercent} vs ontem</span>
-                </span>
-              )}
+            <div className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5">
+              {receitaValue}
             </div>
-            <p className="text-xs text-zinc-400 pt-0.5">
-              Ontem: <span className="text-zinc-300 font-medium font-sans tabular-nums">{formatBRL(yesterdayRevenue)}</span>
-            </p>
-          </div>
-
-          {/* Lado Direito: Total do período selecionado */}
-          <div className="pt-3 sm:pt-0 sm:border-l sm:border-white/[0.06] sm:pl-6 sm:text-right shrink-0">
-            <span className="text-[13px] text-zinc-400 font-normal block leading-tight">
-              Total do período ({periodLabel})
-            </span>
-            <div className="text-xl sm:text-2xl lg:text-3xl font-bold font-sans tracking-tight tabular-nums text-white mt-1">
-              {kpis?.revenue?.formatted || approvedSales?.formatted || formatBRL(totalPeriodRevenue)}
-            </div>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
               {approvedSales?.count || 0} {(approvedSales?.count || 0) === 1 ? "venda confirmada" : "vendas confirmadas"}
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          2. QUATRO INDICADORES DE DESEMPENHO (Compactos, no estilo original)
-         ========================================================================= */}
-      <section aria-label="Indicadores de desempenho" className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {/* Indicador 1: Receita aprovada / Receita bruta */}
-          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 flex flex-col justify-between hover:border-white/10 transition-colors">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-[13px] text-zinc-400 font-normal flex items-center gap-1.5 leading-tight">
-                  <span>Receita aprovada</span>
-                  <IndicatorTooltip text="Receita bruta: Faturamento total bruto obtido no período selecionado." />
-                </span>
-                <div className="w-6 h-6 rounded-md bg-white/[0.03] text-zinc-400 flex items-center justify-center shrink-0">
-                  <DollarSign className="w-3.5 h-3.5 text-[#3984FF]" />
-                </div>
-              </div>
-
-              <div className="pt-1.5">
-                <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
-                  {kpis?.revenue?.formatted || approvedSales?.formatted || formatBRL(totalPeriodRevenue)}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 mt-3 border-t border-white/[0.04]">
-              <p className="text-xs text-zinc-400">
-                {approvedSales?.count || 0} {(approvedSales?.count || 0) === 1 ? "venda confirmada" : "vendas confirmadas"}
-              </p>
-            </div>
-          </div>
 
           {/* Indicador 2: Vendas aprovadas */}
-          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 flex flex-col justify-between hover:border-white/10 transition-colors">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-[13px] text-zinc-400 font-normal flex items-center gap-1.5 leading-tight">
-                  <span>Vendas aprovadas</span>
-                  <IndicatorTooltip text="Quantidade de pedidos com pagamento confirmado via Pix no período." />
-                </span>
-                <div className="w-6 h-6 rounded-md bg-white/[0.03] text-zinc-400 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-              </div>
-
-              <div className="pt-1.5">
-                <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
-                  {kpis?.salesCount?.value ?? approvedSales?.count ?? 0}
-                </div>
-              </div>
+          <div className="lg:px-6 flex flex-col justify-between">
+            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
+              <span>Vendas aprovadas</span>
+              <span className="text-[11px] text-zinc-500 cursor-help" title="Quantidade de pedidos com pagamento confirmado">?</span>
+            </span>
+            <div className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5">
+              {vendasValue}
             </div>
-
-            <div className="pt-3 mt-3 border-t border-white/[0.04]">
-              <p className="text-xs text-zinc-400">
-                Volume de pedidos concluídos
-              </p>
-            </div>
+            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+              Volume de pedidos concluídos
+            </p>
           </div>
 
-          {/* Indicador 3: Valor médio por venda / Ticket médio */}
-          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 flex flex-col justify-between hover:border-white/10 transition-colors">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-[13px] text-zinc-400 font-normal flex items-center gap-1.5 leading-tight">
-                  <span>Valor médio por venda</span>
-                  <IndicatorTooltip text="Ticket médio: Valor médio recebido por cada venda aprovada." />
-                </span>
-                <div className="w-6 h-6 rounded-md bg-white/[0.03] text-zinc-400 flex items-center justify-center shrink-0">
-                  <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-                </div>
-              </div>
-
-              <div className="pt-1.5">
-                <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
-                  {kpis?.averageTicket?.formatted || averageTicket?.formatted || "R$ 0,00"}
-                </div>
-              </div>
+          {/* Indicador 3: Valor médio */}
+          <div className="lg:px-6 flex flex-col justify-between">
+            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
+              <span>Valor médio por venda</span>
+              <span className="text-[11px] text-zinc-500 cursor-help" title="Ticket médio por venda aprovada">?</span>
+            </span>
+            <div className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5">
+              {ticketValue}
             </div>
-
-            <div className="pt-3 mt-3 border-t border-white/[0.04]">
-              <p className="text-xs text-zinc-400">
-                {averageTicket?.consideredSalesCount
-                  ? `Média de ${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? 'venda aprovada' : 'vendas aprovadas'}`
-                  : "Média por pedido aprovado"}
-              </p>
-            </div>
+            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+              {averageTicket?.consideredSalesCount
+                ? `Média de ${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? "venda aprovada" : "vendas aprovadas"}`
+                : "Média por pedido aprovado"}
+            </p>
           </div>
 
-          {/* Indicador 4: Pagamentos concluídos / Conversão Pix */}
-          <div className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 flex flex-col justify-between hover:border-white/10 transition-colors">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-[13px] text-zinc-400 font-normal flex items-center gap-1.5 leading-tight">
-                  <span>Pagamentos concluídos</span>
-                  <IndicatorTooltip text="Conversão Pix: Percentual de cobranças Pix geradas que foram efetivamente pagas." />
-                </span>
-                <div className="w-6 h-6 rounded-md bg-white/[0.03] text-zinc-400 flex items-center justify-center shrink-0">
-                  <QrCode className="w-3.5 h-3.5 text-purple-400" />
-                </div>
-              </div>
-
-              <div className="flex items-baseline justify-between gap-2 pt-1.5">
-                <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
-                  {conversionRatePercent !== null ? `${conversionRatePercent}%` : "—"}
-                </div>
-                <span className="text-[10px] text-zinc-400 font-sans tabular-nums">
-                  {totalPixPaid}/{totalPixGenerated || 0}
-                </span>
-              </div>
+          {/* Indicador 4: Pix pagos */}
+          <div className="lg:px-6 last:pr-0 flex flex-col justify-between">
+            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
+              <span>Pix pagos</span>
+              <span className="sr-only">Pagamentos concluídos</span>
+              <span className="text-[11px] text-zinc-500 cursor-help" title="Taxa de conversão de Pix">?</span>
+            </span>
+            <div className="flex items-baseline justify-between gap-2 my-1.5">
+              <span className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums">
+                {pixValue}
+              </span>
+              <span className="text-[11px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                {totalPixPaid}/{totalPixGenerated || 0}
+              </span>
             </div>
-
-            <div className="pt-3 mt-3 border-t border-white/[0.04] space-y-1.5">
-              <p className="text-xs text-zinc-400">
-                {totalPixGenerated > 0
-                  ? `De ${totalPixGenerated} Pix gerados, ${totalPixPaid} foram pagos`
-                  : "Nenhuma cobrança Pix gerada"}
-              </p>
-              {conversionRatePercent !== null && (
-                <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#3984FF] rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(conversionRatePercent, 100)}%` }}
-                  />
-                </div>
-              )}
-            </div>
+            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+              De {totalPixGenerated} Pix gerados, {totalPixPaid} foram pagos
+            </p>
           </div>
         </div>
 
-        {/* Linha menor de starts */}
-        <div className="px-1 flex items-center gap-2 text-xs text-zinc-400">
-          <Bot className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+        {/* Linha de starts */}
+        <div className="px-1 pt-4 mt-4 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
           <span>
-            <strong className="text-zinc-200 font-medium font-sans tabular-nums">{totalStartsCount}</strong>{" "}
-            {totalStartsCount === 1 ? "pessoa iniciou conversa" : "pessoas iniciaram conversa"} no período
+            <strong className="text-[var(--apple-text,#fff)] font-medium tabular-nums">{totalStartsCount}</strong>{" "}
+            pessoas iniciaram conversa no período
           </span>
+          <span className="sr-only">Total do período ({periodLabel})</span>
         </div>
       </section>
 
       {/* =========================================================================
-          3. GRÁFICO DE RECEITA (65%) + FUNIL DE CONVERSÃO (35%)
+          3. SUPERFÍCIE DO GRÁFICO DE RECEITA (Apple Stocks / Bolsa Scrubber)
          ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-5 w-full items-stretch">
-        {/* Card de Receita (65%) */}
-        <section
-          aria-label="Evolução da receita"
-          className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 shadow-none flex flex-col justify-between min-w-0 h-full"
-        >
-          {/* Topo do Card de Gráfico */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-white tracking-tight">Receita</h3>
-              <p className="text-xs text-zinc-400 mt-0.5">{periodLabel}</p>
-            </div>
-
-            <div className="flex items-center gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
-              <div className="text-left sm:text-right">
-                <span className="text-xs text-zinc-400">Total: </span>
-                <span className="text-sm font-bold font-sans tabular-nums text-white">
-                  {formatBRL(totalPeriodRevenue)}
-                </span>
-              </div>
-
-              {/* Alternador discreto de visualização */}
-              <div className="flex items-center gap-0.5 bg-white/[0.04] p-0.5 rounded-lg border border-white/[0.06] shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setChartMode("area")}
-                  className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                    chartMode === "area"
-                      ? "bg-[#3984FF] text-white shadow-xs"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                  title="Ver como curva contínua"
-                >
-                  <LineChart className="w-3 h-3" />
-                  <span>Curva</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChartMode("bar")}
-                  className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                    chartMode === "bar"
-                      ? "bg-[#3984FF] text-white shadow-xs"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                  title="Ver como barras diárias"
-                >
-                  <BarChart2 className="w-3 h-3" />
-                  <span>Barras</span>
-                </button>
-              </div>
+      <section
+        aria-label="Evolução da receita"
+        className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col gap-4 select-none"
+      >
+        {/* Topo: Legenda, Total grande (56px) e Controle Segmentado Curva/Barras */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <span className="sr-only">Receita</span>
+            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal transition-colors">
+              {displaySubtitle}
+            </p>
+            <div className="text-[40px] sm:text-[56px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1">
+              {displayRevenue}
             </div>
           </div>
 
-          {/* Área do Gráfico */}
-          <div
-            role="img"
-            aria-label={`Gráfico de evolução da receita: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
-            className="w-full flex-1 min-h-[220px] sm:min-h-[250px] flex items-center justify-center overflow-hidden"
-          >
-            {!hasSeriesSales ? (
-              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-1.5 my-auto">
-                <p className="text-zinc-300 text-xs font-semibold">Sem vendas neste período</p>
-                <p className="text-zinc-400 text-[11px] max-w-xs leading-relaxed">
-                  Quando novos pedidos forem confirmados, a curva de receita aparecerá aqui.
-                </p>
-              </div>
-            ) : (
-              <div className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  {chartMode === "area" ? (
-                    <AreaChart
-                      data={normalizedSeries}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="azureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3984FF" stopOpacity={0.24} />
-                          <stop offset="100%" stopColor="#3984FF" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                      <XAxis
-                        dataKey="dateLabel"
-                        stroke="#71717A"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={5}
-                      />
-                      <YAxis
-                        stroke="#71717A"
-                        fontSize={10}
-                        domain={[0, "auto"]}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(val) =>
-                          val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
-                        }
-                      />
-                      <RechartsTooltip content={<RevenueTooltip />} />
-                      <Area
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#3984FF"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#azureRevenueGrad)"
-                        dot={{ r: 2.5, fill: "#3984FF", stroke: "#12141A", strokeWidth: 1.5 }}
-                        activeDot={{
-                          r: 4.5,
-                          stroke: "#FFFFFF",
-                          strokeWidth: 2,
-                          fill: "#3984FF",
-                        }}
-                      />
-                    </AreaChart>
-                  ) : (
-                    <BarChart
-                      data={normalizedSeries}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="azureBarGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3984FF" stopOpacity={1} />
-                          <stop offset="100%" stopColor="#2563EB" stopOpacity={0.8} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                      <XAxis
-                        dataKey="dateLabel"
-                        stroke="#71717A"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={5}
-                      />
-                      <YAxis
-                        stroke="#71717A"
-                        fontSize={10}
-                        domain={[0, "auto"]}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(val) =>
-                          val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`
-                        }
-                      />
-                      <RechartsTooltip content={<RevenueTooltip />} />
-                      <Bar
-                        dataKey="revenue"
-                        fill="url(#azureBarGrad)"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40}
-                      />
-                    </BarChart>
-                  )}
-                </ResponsiveContainer>
-              </div>
-            )}
+          {/* Controle Segmentado iOS (Curva / Barras) */}
+          <div className="inline-flex items-center self-start sm:self-auto bg-[var(--apple-surface-2,#2c2c2e)] p-1 rounded-[12px] border border-[var(--apple-separator,rgba(84,84,88,0.25))]">
+            <button
+              type="button"
+              onClick={() => setChartMode("area")}
+              className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
+                chartMode === "area"
+                  ? "bg-[var(--apple-surface,#1c1c1e)] text-[var(--apple-text,#fff)] shadow-xs"
+                  : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
+              }`}
+              title="Curva suave"
+            >
+              <LineIcon className="w-3.5 h-3.5" />
+              <span>Curva</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartMode("bar")}
+              className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
+                chartMode === "bar"
+                  ? "bg-[var(--apple-surface,#1c1c1e)] text-[var(--apple-text,#fff)] shadow-xs"
+                  : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
+              }`}
+              title="Barras"
+            >
+              <BarIcon className="w-3.5 h-3.5" />
+              <span>Barras</span>
+            </button>
           </div>
-        </section>
-
-        {/* Card do Funil de Conversão (35%) */}
-        <div className="w-full min-w-0 h-full">
-          {funnelSlot ?? (
-            <SellerConversionFunnel
-              metrics={metrics}
-              isPending={isPending}
-              className="h-full"
-            />
-          )}
         </div>
+
+        {/* Gráfico SVG com Scrubber e Suporte a Touch e Teclado */}
+        <div
+          role="img"
+          aria-label={`Gráfico de evolução da receita: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (chartPoints.length === 0) return;
+            if (e.key === "ArrowRight") {
+              setHoveredIndex((prev) => (prev === null ? 0 : Math.min(prev + 1, chartPoints.length - 1)));
+            } else if (e.key === "ArrowLeft") {
+              setHoveredIndex((prev) => (prev === null ? chartPoints.length - 1 : Math.max(prev - 1, 0)));
+            } else if (e.key === "Escape") {
+              setHoveredIndex(null);
+            }
+          }}
+          className="w-full relative touch-none focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
+        >
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+            className="w-full h-[220px] sm:h-[280px] overflow-visible"
+            onMouseMove={(e) => handleScrubberMove(e.clientX)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            onTouchMove={(e) => {
+              if (e.touches && e.touches[0]) {
+                handleScrubberMove(e.touches[0].clientX);
+              }
+            }}
+            onTouchEnd={() => setHoveredIndex(null)}
+          >
+            <defs>
+              <linearGradient id="appleAzureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Linhas de Grade Horizontais e Eixo Y em R$ */}
+            {yTicks.map((tick, i) => (
+              <g key={i}>
+                <line
+                  x1={PAD_LEFT}
+                  y1={tick.y}
+                  x2={SVG_WIDTH - PAD_RIGHT}
+                  y2={tick.y}
+                  stroke="var(--apple-separator, rgba(84, 84, 88, 0.25))"
+                  strokeWidth="1"
+                />
+                <text
+                  x={PAD_LEFT - 10}
+                  y={tick.y + 4}
+                  textAnchor="end"
+                  fill="var(--apple-text-secondary, rgba(235, 235, 245, 0.6))"
+                  fontSize="11"
+                  className="tabular-nums"
+                >
+                  {tick.label}
+                </text>
+              </g>
+            ))}
+
+            {/* Modo Curva Suave */}
+            {chartMode === "area" && chartPoints.length > 0 && (
+              <>
+                <path d={smoothAreaPath} fill="url(#appleAzureRevenueGrad)" />
+                <path
+                  d={smoothCurvePath}
+                  fill="none"
+                  stroke="var(--apple-blue, #0a84ff)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </>
+            )}
+
+            {/* Modo Barras */}
+            {chartMode === "bar" &&
+              chartPoints.map((pt, i) => {
+                const barWidth = Math.max(Math.min(PLOT_W / chartPoints.length - 4, 28), 4);
+                const barHeight = Math.max(PAD_TOP + PLOT_H - pt.y, 2);
+                return (
+                  <rect
+                    key={i}
+                    x={pt.x - barWidth / 2}
+                    y={pt.y}
+                    width={barWidth}
+                    height={barHeight}
+                    rx="3"
+                    fill={hoveredIndex === i ? "#ffffff" : "var(--apple-blue, #0a84ff)"}
+                    opacity={hoveredIndex === null || hoveredIndex === i ? 1 : 0.45}
+                    className="transition-opacity duration-150"
+                  />
+                );
+              })}
+
+            {/* Eixo X com Rótulos de Data */}
+            {xTicks.map((pt, i) => (
+              <text
+                key={i}
+                x={pt.x}
+                y={SVG_HEIGHT - 12}
+                textAnchor="middle"
+                fill="var(--apple-text-secondary, rgba(235, 235, 245, 0.6))"
+                fontSize="11"
+              >
+                {pt.data.dateLabel}
+              </text>
+            ))}
+
+            {/* Linha Vertical do Scrubber e Ponto Circular (Bolsa / Stocks) */}
+            {activePoint && (
+              <g pointerEvents="none">
+                <line
+                  x1={activePoint.x}
+                  y1={PAD_TOP}
+                  x2={activePoint.x}
+                  y2={PAD_TOP + PLOT_H}
+                  stroke="rgba(255, 255, 255, 0.45)"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                />
+                <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="var(--apple-blue, #0a84ff)" opacity="0.3" />
+                <circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r="4.5"
+                  fill="var(--apple-blue, #0a84ff)"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                />
+              </g>
+            )}
+
+            {/* Overlay transparente para captura de ponteiro */}
+            <rect
+              x={PAD_LEFT}
+              y={PAD_TOP}
+              width={PLOT_W}
+              height={PLOT_H}
+              fill="transparent"
+              className="cursor-crosshair"
+            />
+          </svg>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          4. SUPERFÍCIE DO FUNIL "DA CONVERSA AO PAGAMENTO"
+         ========================================================================= */}
+      <div className="w-full">
+        {funnelSlot ?? <SellerConversionFunnel metrics={metrics} isPending={isPending} />}
       </div>
     </div>
   );

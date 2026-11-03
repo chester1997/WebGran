@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Bot, 
   Package, 
-  CheckCircle2, 
+  Check, 
   Clock, 
   UserPlus, 
   ArrowRight,
@@ -26,6 +26,26 @@ interface SellerActivityAndChannelsProps {
 
 function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function toTitleCase(str: string): string {
+  if (!str) return "";
+  const preserveUpper = ["VIP", "PRO", "PLUS", "MAX", "AI", "API", "BRL", "PIX", "CLUB", "ADM"];
+  const lowercaseWords = ["de", "da", "do", "das", "dos", "e", "em", "por", "com", "a", "o", "as", "os", "um", "uma", "para"];
+  return str
+    .split(/\s+/)
+    .map((word, idx) => {
+      if (!word) return "";
+      if (word === "VIP" || word === "PRO" || word === "PLUS" || word === "MAX" || word === "3D") {
+        return word.toUpperCase();
+      }
+      const lower = word.toLowerCase();
+      if (idx > 0 && lowercaseWords.includes(lower)) {
+        return lower;
+      }
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
 }
 
 function formatRelativeTime(isoString: string): string {
@@ -70,367 +90,140 @@ export function SellerActivityAndChannels({
   isPending = false,
   selectedBotId = null,
 }: SellerActivityAndChannelsProps) {
-  // Apenas exibe "Desempenho por bot" se a loja tiver mais de um bot cadastrado/canal
   const effectiveBotsCount = Math.max(channels.length, totalBotsCount);
   const hasMultipleBots = effectiveBotsCount > 1;
 
   return (
-    <div
-      className={`grid grid-cols-1 ${
-        hasMultipleBots ? "lg:grid-cols-3" : "lg:grid-cols-2"
-      } gap-5`}
-    >
+    <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
-          1. ATIVIDADE RECENTE (Lado Esquerdo)
+          5. DUAS SUPERFÍCIES LADO A LADO (UMA COLUNA ABAIXO DE 860px)
          ========================================================================= */}
-      <section
-        aria-label="Atividade recente"
-        className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 flex flex-col justify-between min-h-[380px]"
+      <div
+        className={`grid grid-cols-1 ${
+          hasMultipleBots ? "lg:grid-cols-3" : "lg:grid-cols-2"
+        } gap-[20px]`}
       >
-        <div>
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-white tracking-tight">Atividade recente</h3>
-              <p className="text-xs text-zinc-400 mt-0.5">Acontecimentos em tempo real</p>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 text-[10px] font-medium text-[#3984FF] shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3984FF] animate-pulse motion-reduce:animate-none" />
-              <span>Tempo real</span>
-            </div>
-          </div>
-
-          {isPending ? (
-            <div 
-              aria-busy="true" 
-              aria-label="Carregando atividade recente"
-              className="space-y-2 py-2 animate-pulse motion-reduce:animate-none"
-            >
-              <div className="h-12 bg-white/[0.03] rounded-[8px]" />
-              <div className="h-12 bg-white/[0.03] rounded-[8px]" />
-              <div className="h-12 bg-white/[0.03] rounded-[8px]" />
-            </div>
-          ) : activityLog.length === 0 ? (
-            <DashboardEmptyState
-              icon={Activity}
-              title="Sem atividades recentes"
-              description="Quando novas conversas ou compras forem realizadas, elas aparecerão aqui em tempo real."
-              actionText="Ver link do bot"
-              actionHref="/seller/store"
-              className="my-auto"
-            />
-          ) : (
-            <div 
-              tabIndex={0}
-              role="region"
-              aria-label="Lista de atividades recentes rolável"
-              className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-[#3984FF]/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
-            >
-              <ul role="list" className="space-y-2 pb-6">
-                {activityLog.map((event) => {
-                  const isSale = event.type === "sale_approved";
-                  const isPendingPay = event.type === "payment_pending";
-
-                  const iconBoxClass = isSale
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    : isPendingPay
-                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                    : "bg-white/[0.06] text-zinc-300 border-white/10";
-
-                  const relativeTime = formatRelativeTime(event.timestamp);
-                  const fullDateTime = `${event.dateFormatted} às ${event.timeFormatted}`;
-                  const titleLabel = getActivityLabel(event.type);
-
-                  return (
-                    <li
-                      key={event.id}
-                      className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] hover:border-white/10 transition-colors flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div
-                          className={`w-7 h-7 rounded-[6px] border flex items-center justify-center shrink-0 ${iconBoxClass}`}
-                        >
-                          {isSale ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : isPendingPay ? (
-                            <Clock className="w-3.5 h-3.5" />
-                          ) : (
-                            <UserPlus className="w-3.5 h-3.5" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-xs font-medium text-white leading-tight">
-                              {titleLabel}
-                            </p>
-                            {hasMultipleBots && event.botName && (
-                              <span className="text-[10px] text-zinc-400 bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.2 rounded shrink-0">
-                                {event.botName}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-zinc-400 truncate mt-0.5">
-                            <span className="text-zinc-300">{event.targetName}</span>
-                            {event.description && (
-                              <>
-                                <span className="mx-1 text-zinc-600">—</span>
-                                <span
-                                  className={
-                                    isSale
-                                      ? "text-emerald-400 font-medium"
-                                      : isPendingPay
-                                      ? "text-amber-400"
-                                      : "text-zinc-400"
-                                  }
-                                >
-                                  {event.description}
-                                </span>
-                              </>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <time
-                          dateTime={event.timestamp}
-                          title={fullDateTime}
-                          className="text-[11px] text-zinc-400 hover:text-zinc-300 transition-colors cursor-default select-none font-sans tabular-nums"
-                        >
-                          {relativeTime}
-                        </time>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
-          <span>Registros no período</span>
-          <span className="font-sans font-medium tabular-nums text-zinc-300">
-            {activityLog.length} {activityLog.length === 1 ? "registro" : "registros"}
-          </span>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          2. PRODUTOS MAIS VENDIDOS (Meio)
-         ========================================================================= */}
-      <section
-        aria-label="Produtos mais vendidos"
-        className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 flex flex-col justify-between min-h-[380px]"
-      >
-        <div>
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-white tracking-tight">Produtos mais vendidos</h3>
-              <p className="text-xs text-zinc-400 mt-0.5">Ranking por receita aprovada no período</p>
-            </div>
-          </div>
-
-          {isPending ? (
-            <div 
-              aria-busy="true" 
-              aria-label="Carregando produtos mais vendidos"
-              className="space-y-2.5 py-2 animate-pulse motion-reduce:animate-none"
-            >
-              <div className="h-12 bg-white/[0.03] rounded-[8px]" />
-              <div className="h-12 bg-white/[0.03] rounded-[8px]" />
-            </div>
-          ) : topProducts.length === 0 ? (
-            <div className="py-12 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.04] p-6 space-y-3 my-auto">
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#3984FF] flex items-center justify-center mx-auto mb-1 shrink-0">
-                <ShoppingBag className="w-5 h-5 stroke-[1.75]" />
-              </div>
-              <p className="text-xs text-zinc-400">
-                Você ainda não vendeu. Veja como divulgar o seu bot
-              </p>
-              <Link
-                href="/seller/store"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-[#3984FF]"
-              >
-                <span>Divulgar meu bot</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          ) : (
-            <div 
-              tabIndex={0}
-              role="region"
-              aria-label="Lista de produtos mais vendidos rolável"
-              className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-[#3984FF]/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
-            >
-              <ul role="list" className="space-y-2 pb-6">
-                {topProducts.map((prod) => {
-                  const percentage = prod.percentage ?? 0;
-                  return (
-                    <li
-                      key={prod.id}
-                      className="p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border border-[var(--seller-border,rgba(255,255,255,0.06))] hover:border-white/10 transition-colors space-y-2"
-                    >
-                      <div className="flex items-center justify-between gap-3 min-w-0">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          {/* Miniatura do produto */}
-                          <div className="w-9 h-9 rounded-[6px] overflow-hidden bg-black/40 border border-white/[0.06] shrink-0 flex items-center justify-center text-zinc-500">
-                            {prod.coverUrl ? (
-                              <img
-                                src={prod.coverUrl}
-                                alt={prod.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Package className="w-4 h-4 text-zinc-500" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-white truncate leading-tight">
-                              {prod.title}
-                            </p>
-                            <p className="text-[11px] text-zinc-400 mt-0.5 font-sans tabular-nums">
-                              {prod.salesCount} {prod.salesCount === 1 ? "unidade vendida" : "unidades vendidas"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="text-right shrink-0">
-                          <p className="text-xs font-bold text-white font-sans tabular-nums">
-                            {formatBRL(prod.revenue)}
-                          </p>
-                          {percentage > 0 && (
-                            <span className="text-[10px] text-zinc-400 font-sans tabular-nums">
-                              {percentage}% do total
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Barra discreta de participação em azul */}
-                      {percentage > 0 && (
-                        <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[#3984FF] rounded-full transition-all duration-500 motion-reduce:transition-none"
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
-          <span>Catálogo vendido</span>
-          <span className="font-sans font-medium tabular-nums text-zinc-300">
-            {topProducts.length} {topProducts.length === 1 ? "produto" : "produtos"}
-          </span>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          3. DESEMPENHO POR BOT (SÓ APARECE SE HOUVER MAIS DE UM BOT)
-         ========================================================================= */}
-      {hasMultipleBots && (
+        {/* =========================================================================
+            SUPERFÍCIE 1: ATIVIDADE RECENTE (Lista Estilo iOS)
+           ========================================================================= */}
         <section
-          aria-label="Desempenho por bot"
-          className="bg-[var(--seller-surface,#12141A)] border border-[var(--seller-border,rgba(255,255,255,0.05))] rounded-[12px] p-5 sm:p-6 flex flex-col justify-between min-h-[380px]"
+          aria-label="Atividade recente"
+          className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-white tracking-tight">Desempenho por bot</h3>
-                <p className="text-xs text-zinc-400 mt-0.5">Métricas e conversão por canal</p>
+                <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+                  Atividade recente
+                </h3>
+                <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+                  Acontecimentos em tempo real
+                </p>
               </div>
 
-              <div className="px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[10px] font-sans tabular-nums text-zinc-300 font-medium">
-                {channels.length} {channels.length === 1 ? "bot" : "bots"}
+              {/* Selo "Ao vivo" com bolinha verde */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--apple-surface-2,#2c2c2e)] text-[12px] font-medium text-[var(--apple-text,#fff)] shrink-0">
+                <span className="w-2 h-2 rounded-full bg-[var(--apple-green,#30d158)] animate-pulse" />
+                <span>Ao vivo</span>
+                <span className="sr-only">Tempo real</span>
               </div>
             </div>
 
             {isPending ? (
-              <div 
-                aria-busy="true"
-                aria-label="Carregando desempenho por bot"
-                className="space-y-2.5 py-2 animate-pulse motion-reduce:animate-none"
-              >
-                <div className="h-16 bg-white/[0.03] rounded-[8px]" />
-                <div className="h-16 bg-white/[0.03] rounded-[8px]" />
+              <div aria-busy="true" className="space-y-3 py-2 animate-pulse">
+                <div className="h-12 bg-white/[0.03] rounded-[12px]" />
+                <div className="h-12 bg-white/[0.03] rounded-[12px]" />
+                <div className="h-12 bg-white/[0.03] rounded-[12px]" />
               </div>
-            ) : channels.length === 0 ? (
+            ) : activityLog.length === 0 ? (
               <DashboardEmptyState
-                icon={Bot}
-                title="Nenhum bot conectado"
-                description="Conecte seu robô do Telegram para acompanhar as vendas por canal."
-                actionText="Conectar bot"
+                icon={Activity}
+                title="Sem atividades recentes"
+                description="Quando novas conversas ou compras forem realizadas, elas aparecerão aqui em tempo real."
+                actionText="Ver link do bot"
                 actionHref="/seller/store"
                 className="my-auto"
               />
             ) : (
-              <div 
+              <div
                 tabIndex={0}
                 role="region"
-                aria-label="Lista de desempenho por bot rolável"
-                className="max-h-[360px] overflow-y-auto no-scrollbar pr-0.5 focus:outline-none focus:ring-1 focus:ring-[#3984FF]/30 rounded-[8px] [mask-image:linear-gradient(to_bottom,black_85%,transparent)]"
+                aria-label="Lista de atividades recentes"
+                className="max-h-[420px] overflow-y-auto no-scrollbar focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
               >
-                <ul role="list" className="space-y-2 pb-6">
-                  {channels.map((chan) => {
-                    const isSelected = selectedBotId === chan.channel;
-                    const percentage = chan.percentage ?? 0;
+                <ul role="list" className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))]">
+                  {activityLog.map((event) => {
+                    const isSale = event.type === "sale_approved";
+                    const isPendingPay = event.type === "payment_pending";
+                    const isLead = event.type === "lead";
+
+                    const relativeTime = formatRelativeTime(event.timestamp);
+                    const fullDateTime = `${event.dateFormatted} às ${event.timeFormatted}`;
+                    const labelText = getActivityLabel(event.type);
 
                     return (
-                      <li
-                        key={chan.channel}
-                        className={`p-3 rounded-[8px] bg-[var(--seller-surface-raised,#181A20)] border transition-all space-y-2.5 ${
-                          isSelected
-                            ? "border-[#3984FF]/60 ring-1 ring-[#3984FF]/30"
-                            : "border-[var(--seller-border,rgba(255,255,255,0.06))] hover:border-white/10"
-                        }`}
-                      >
-                        {/* Top row: Bot info e receita */}
-                        <div className="flex items-center justify-between text-xs gap-2">
-                          <span className="font-medium text-white flex items-center gap-2 min-w-0">
-                            <div className="w-5 h-5 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center text-[#3984FF] shrink-0">
-                              <Bot className="w-3 h-3" />
-                            </div>
-                            <span className="truncate">{chan.label}</span>
-                            {chan.username && (
-                              <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">
-                                @{chan.username.replace(/^@/, "")}
-                              </span>
-                            )}
-                          </span>
-
-                          <span className="font-bold text-white font-sans tabular-nums shrink-0">
-                            {formatBRL(chan.revenue)}
-                          </span>
-                        </div>
-
-                        {/* Barra de progresso de receita relativa */}
-                        <div className="h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                      <li key={event.id} className="py-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {/* Ícone Circular de 36px */}
                           <div
-                            className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
-                              isSelected ? "bg-[#3984FF]" : "bg-[#3984FF]/70"
+                            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                              isSale
+                                ? "bg-[rgba(48,209,88,0.15)] text-[var(--apple-green,#30d158)]"
+                                : "bg-[var(--apple-surface-2,#2c2c2e)] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]"
                             }`}
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
+                          >
+                            {isSale ? (
+                              <Check className="w-4 h-4 stroke-[2.5]" />
+                            ) : isPendingPay ? (
+                              <Clock className="w-4 h-4 stroke-[2]" />
+                            ) : (
+                              <UserPlus className="w-4 h-4 stroke-[2]" />
+                            )}
+                          </div>
+
+                          {/* Textos da Linha */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-[15px] font-bold text-[var(--apple-text,#fff)] truncate">
+                                {event.targetName || "Cliente"}
+                              </p>
+                              {hasMultipleBots && event.botName && (
+                                <span className="text-[10px] text-zinc-400 bg-white/[0.04] px-2 py-0.5 rounded-full shrink-0">
+                                  {event.botName}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] truncate mt-0.5">
+                              {isSale ? (
+                                <>
+                                  <span className="text-[var(--apple-green,#30d158)] font-medium">Venda aprovada</span>
+                                  {event.description && <span> · {event.description}</span>}
+                                </>
+                              ) : isPendingPay ? (
+                                <>
+                                  <span>Cobrança aguardando pagamento</span>
+                                  {event.description && <span> · {event.description}</span>}
+                                </>
+                              ) : (
+                                <span>Iniciou uma conversa</span>
+                              )}
+                              <span className="sr-only">
+                                {isLead ? "Nova pessoa iniciou conversa" : labelText}
+                              </span>
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Detalhes inferiores: Vendas e starts */}
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5 font-sans tabular-nums">
-                          <span>
-                            {chan.salesCount} {chan.salesCount === 1 ? "venda" : "vendas"}
-                          </span>
-                          {typeof chan.uniqueStarts === "number" && (
-                            <span>{chan.uniqueStarts} conversas</span>
-                          )}
-                          <span>{percentage}% da receita</span>
+                        {/* Tempo relativo à direita */}
+                        <div className="text-right shrink-0">
+                          <time
+                            dateTime={event.timestamp}
+                            title={fullDateTime}
+                            className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal tabular-nums cursor-default select-none"
+                          >
+                            {relativeTime}
+                          </time>
                         </div>
                       </li>
                     );
@@ -440,14 +233,179 @@ export function SellerActivityAndChannels({
             )}
           </div>
 
-          <div className="pt-3 mt-3 border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
-            <span>Bots ativos</span>
-            <span className="font-sans font-medium tabular-nums text-zinc-300">
-              {channels.length} {channels.length === 1 ? "bot conectado" : "bots conectados"}
+          {/* Rodapé com "Registros no período" e o total */}
+          <div className="pt-3.5 mt-3.5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] flex items-center justify-between">
+            <span>Registros no período</span>
+            <span className="font-bold text-[var(--apple-text,#fff)] tabular-nums">
+              {activityLog.length} {activityLog.length === 1 ? "registro" : "registros"}
             </span>
           </div>
         </section>
-      )}
+
+        {/* =========================================================================
+            SUPERFÍCIE 2: MAIS VENDIDOS (Ranking Numerado com Barra Azul de 4px)
+           ========================================================================= */}
+        <section
+          aria-label="Produtos mais vendidos"
+          className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between"
+        >
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+                  Mais vendidos
+                  <span className="sr-only">Produtos mais vendidos</span>
+                </h3>
+                <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+                  Ranking por receita aprovada no período
+                </p>
+              </div>
+            </div>
+
+            {isPending ? (
+              <div aria-busy="true" className="space-y-3 py-2 animate-pulse">
+                <div className="h-12 bg-white/[0.03] rounded-[12px]" />
+                <div className="h-12 bg-white/[0.03] rounded-[12px]" />
+              </div>
+            ) : topProducts.length === 0 ? (
+              <div className="py-12 text-center bg-[var(--apple-surface-2,#2c2c2e)] rounded-[16px] p-6 space-y-3 my-auto">
+                <div className="w-10 h-10 rounded-full bg-[var(--apple-blue,#0a84ff)]/15 text-[var(--apple-blue,#0a84ff)] flex items-center justify-center mx-auto mb-1 shrink-0">
+                  <ShoppingBag className="w-5 h-5 stroke-[1.75]" />
+                </div>
+                <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+                  Você ainda não vendeu. Veja como divulgar o seu bot
+                </p>
+                <Link
+                  href="/seller/store"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] bg-[var(--apple-blue,#0a84ff)] hover:opacity-90 text-white text-[13px] font-medium transition-opacity"
+                >
+                  <span>Divulgar meu bot</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <div
+                tabIndex={0}
+                role="region"
+                aria-label="Lista de mais vendidos"
+                className="max-h-[420px] overflow-y-auto no-scrollbar focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
+              >
+                <ul role="list" className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))]">
+                  {topProducts.map((prod, index) => {
+                    const percentage = prod.percentage ?? 0;
+                    return (
+                      <li key={prod.id} className="py-3 flex flex-col gap-2.5">
+                        <div className="flex items-center justify-between gap-3 min-w-0">
+                          {/* Miniatura ou Número do Ranking */}
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {prod.coverUrl ? (
+                              <img
+                                src={prod.coverUrl}
+                                alt={prod.title}
+                                className="w-9 h-9 rounded-[8px] object-cover shrink-0 border border-white/10"
+                              />
+                            ) : (
+                              <div className="w-7 h-7 rounded-[8px] bg-[var(--apple-surface-2,#2c2c2e)] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-bold text-[13px] flex items-center justify-center shrink-0 tabular-nums">
+                                {index + 1}
+                              </div>
+                            )}
+
+                            {/* Título em Title Case */}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[15px] font-medium text-[var(--apple-text,#fff)] truncate leading-tight">
+                                {toTitleCase(prod.title)}
+                              </p>
+                              <p className="text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5 tabular-nums">
+                                {prod.salesCount} {prod.salesCount === 1 ? "unidade vendida" : "unidades vendidas"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Receita e % à direita */}
+                          <div className="text-right shrink-0">
+                            <p className="text-[15px] font-bold text-[var(--apple-text,#fff)] tabular-nums">
+                              {formatBRL(prod.revenue)}
+                            </p>
+                            {percentage > 0 && (
+                              <span className="text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                                {percentage}% do total
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Barra azul fina de 4px embaixo, com largura proporcional à % */}
+                        {percentage > 0 && (
+                          <div className="h-[4px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[var(--apple-blue,#0a84ff)] bg-[#3984FF] rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(percentage, 100)}%` }}
+                            />
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Rodapé com "Produtos vendidos no período" e o total */}
+          <div className="pt-3.5 mt-3.5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] flex items-center justify-between">
+            <span>Produtos vendidos no período</span>
+            <span className="font-bold text-[var(--apple-text,#fff)] tabular-nums">
+              {topProducts.length} {topProducts.length === 1 ? "produto" : "produtos"}
+            </span>
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SUPERFÍCIE 3: DESEMPENHO POR BOT (Exibida se houver mais de um bot)
+           ========================================================================= */}
+        {hasMultipleBots && (
+          <section
+            aria-label="Desempenho por bot"
+            className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+                    Desempenho por bot
+                  </h3>
+                  <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+                    Métricas e conversão por canal
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {channels.map((ch) => (
+                  <div
+                    key={ch.channel}
+                    className="p-3.5 rounded-[16px] bg-[var(--apple-surface-2,#2c2c2e)] border border-[var(--apple-separator,rgba(84,84,88,0.25))] space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[14px] text-[var(--apple-text,#fff)] truncate">{ch.label}</span>
+                      <span className="text-[13px] font-bold text-[var(--apple-blue,#0a84ff)] tabular-nums">
+                        {formatBRL(ch.revenue)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+                      <span>{ch.salesCount} vendas</span>
+                      {ch.username && (
+                        <span>@{ch.username.replace(/^@/, "")}</span>
+                      )}
+                      <span>{ch.uniqueStarts || 0} conversas</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

@@ -125,8 +125,8 @@ describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
     expect(html).toContain("Curva");
     expect(html).toContain("Barras");
 
-    // Proporção 65% / 35% com Funil de Conversão lado a lado no desktop
-    expect(html).toContain("lg:grid-cols-[65fr_35fr]");
+    // Funil de Conversão na sequência da hierarquia Apple
+    expect(html).toContain("Da conversa ao pagamento");
     expect(html).toContain("Funil de conversão");
     expect(html).toContain("1. Conversas iniciadas");
   });

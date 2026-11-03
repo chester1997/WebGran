@@ -353,7 +353,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
         }
       />
 
-      <div className="space-y-6 fade-in w-full max-w-full overflow-hidden min-w-0 pb-20">
+      <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] min-w-0 pb-20">
 
         {/* Error Banner */}
         {errorMsg && (
