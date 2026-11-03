@@ -46,7 +46,7 @@ export default function SidebarNavItem({
   isActive = false,
   icon: StaticIcon,
   animatedIcon: AnimatedIcon,
-  iconSize = 18,
+  iconSize = 19,
   iconClassName,
   className,
   children,
@@ -81,7 +81,7 @@ export default function SidebarNavItem({
     ? "bg-emerald-500/10 text-white font-medium"
     : "bg-[#3984FF]/10 text-white font-medium";
 
-  const defaultClasses = `flex items-center gap-3.5 px-3 h-10 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
+  const defaultClasses = `flex items-center gap-3.5 px-3 h-[42px] min-h-[42px] rounded-[10px] text-[15px] font-medium transition-all duration-150 relative ${
     isActive
       ? activeBgClass
       : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
@@ -99,7 +99,7 @@ export default function SidebarNavItem({
         <div
           className={
             iconClassName ||
-            `w-[18px] h-[18px] shrink-0 flex items-center justify-center transition-colors ${defaultIconColor}`
+            `w-[19px] h-[19px] shrink-0 flex items-center justify-center transition-colors ${defaultIconColor}`
           }
         >
           <AnimatedIcon ref={iconRef} size={iconSize} />
@@ -112,7 +112,7 @@ export default function SidebarNavItem({
           size={iconSize}
           className={
             iconClassName ||
-            `w-[18px] h-[18px] shrink-0 transition-colors ${defaultIconColor}`
+            `w-[19px] h-[19px] shrink-0 transition-colors ${defaultIconColor}`
           }
         />
       );
@@ -122,7 +122,7 @@ export default function SidebarNavItem({
           animate={motionControls}
           initial="normal"
           variants={MOTION_VARIANTS}
-          className="w-[18px] h-[18px] shrink-0 flex items-center justify-center pointer-events-none"
+          className="w-[19px] h-[19px] shrink-0 flex items-center justify-center pointer-events-none"
           style={{ originX: 0.5, originY: 0.5 }}
         >
           {staticEl}

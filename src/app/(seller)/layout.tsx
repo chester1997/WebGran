@@ -114,7 +114,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
-        <aside className="w-[260px] xl:w-[270px] bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden lg:block">
+        <aside className="w-[276px] xl:w-[286px] bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden lg:block">
           <SellerSidebar
             sellerProfile={sellerProfile}
             totalRevenue={totalRevenue}
@@ -138,7 +138,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-[70] w-[270px] max-w-[85vw] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out lg:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          className={`fixed inset-y-0 left-0 z-[70] w-[286px] max-w-[85vw] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out lg:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
             }`}
         >
           <SellerSidebar
