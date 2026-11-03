@@ -122,32 +122,32 @@ export default function SellerSidebar({
   return (
     <div className="flex-1 flex flex-col justify-between h-full min-h-0 bg-[var(--seller-bg,#0B0F14)]">
       {/* ==================================================== */}
-      {/* BRAND HEADER (Idêntico ao Admin: px-6 md:px-7)      */}
+      {/* BRAND HEADER (Logo 32px, WebGran 20px/700, Vendedor 10px) */}
       {/* ==================================================== */}
-      <div className="px-6 md:px-7 pt-6 md:pt-7 pb-4 md:pb-5 flex items-center justify-between shrink-0 select-none">
-        <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+      <div className="px-4 pt-5 pb-3 flex items-center justify-between shrink-0 select-none">
+        <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-2.5 min-w-0">
           <Image
             src="/logo-webgran-icon.png"
             alt="WebGran"
-            width={40}
-            height={40}
+            width={32}
+            height={32}
             priority
-            className="w-9 h-9 md:w-10 md:h-10 rounded-full object-contain shrink-0"
+            className="w-8 h-8 rounded-full object-contain shrink-0"
           />
-          <span className="font-semibold text-[17px] md:text-[18px] text-white tracking-tight whitespace-nowrap">
+          <span className="font-[700] text-[20px] text-white tracking-tight whitespace-nowrap">
             WebGran
           </span>
         </Link>
 
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] md:text-[10px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 rounded-lg tracking-wider uppercase">
+          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 rounded-lg tracking-wider uppercase">
             VENDEDOR
           </span>
           {isMobileDrawer && onCloseMobile && (
             <button
               type="button"
               onClick={onCloseMobile}
-              className="md:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="lg:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
               aria-label="Fechar menu"
             >
               <X className="w-4 h-4" />
@@ -157,30 +157,31 @@ export default function SellerSidebar({
       </div>
 
       {/* ==================================================== */}
-      {/* NAVEGAÇÃO PRINCIPAL (px-6 md:px-7 py-3 space-y-1)   */}
+      {/* NAVEGAÇÃO PRINCIPAL (px-4 py-2 space-y-1)           */}
       {/* ==================================================== */}
       <nav
         tabIndex={0}
         aria-label="Navegação do Vendedor"
-        className="flex-1 overflow-y-auto px-6 md:px-7 py-3 space-y-1 sidebar-scroll focus-visible:outline-none"
+        className="flex-1 overflow-y-auto px-4 py-2 space-y-1 sidebar-scroll focus-visible:outline-none"
       >
         {/* ==================================================== */}
         {/* SEÇÃO 1: GERAL                                       */}
         {/* ==================================================== */}
-        <div className="pt-2">
-          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+        <div className="pt-1">
+          <div className="px-3 pb-1.5 flex items-center gap-2.5 select-none">
+            <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               GERAL
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             <SidebarNavItem
               href="/seller"
               label="Dashboard"
               isActive={pathname === "/seller"}
               onClick={handleLinkClick}
               icon={SolarSellerDashboardIcon}
+              iconSize={18}
               accent="blue"
             />
           </div>
@@ -189,36 +190,37 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* SEÇÃO 2: BOT TELEGRAM                                */}
         {/* ==================================================== */}
-        <div className="pt-3 mt-2">
-          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+        <div className="mt-[28px]">
+          <div className="px-3 pb-1.5 flex items-center gap-2.5 select-none">
+            <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               BOT TELEGRAM
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
 
-          <div className="space-y-0.5">
-            {/* Acordeão do Bot Telegram estilizado idêntico ao Admin */}
+          <div className="space-y-1">
+            {/* Acordeão do Bot Telegram estilizado */}
             <SidebarNavItem
               label="Configurações do Bot"
               isActive={isBotChildActive}
               icon={SolarSellerBotIcon}
+              iconSize={18}
               accent="blue"
               onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
-              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 min-h-[40px] rounded-lg text-xs font-medium text-left transition-all duration-150 cursor-pointer ${
+              className={`w-full flex items-center justify-between gap-3 px-3 h-10 min-h-[40px] rounded-[10px] text-[14px] font-medium text-left transition-all duration-150 cursor-pointer ${
                 isBotChildActive
-                  ? "bg-[#3984FF]/10 text-white font-semibold"
+                  ? "bg-[#3984FF]/10 text-white font-medium"
                   : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
               {botGroupOpen ? (
-                <ChevronUp className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-150" strokeWidth={1.8} />
+                <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-150" strokeWidth={1.8} />
               ) : (
-                <ChevronDown className="w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150" strokeWidth={1.8} />
+                <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-150" strokeWidth={1.8} />
               )}
             </SidebarNavItem>
 
-            {/* Subitens com árvore de conexão SVG idêntica ao Admin */}
+            {/* Subitens com árvore de conexão SVG */}
             {botGroupOpen && (
               <div className="relative pl-6 space-y-1 my-1">
                 {visibleBotSubItems.map((item, index) => {
@@ -238,12 +240,12 @@ export default function SellerSidebar({
                         isActive={isActive}
                         onClick={handleLinkClick}
                         icon={item.icon}
-                        iconSize={14}
+                        iconSize={16}
                         accent="blue"
-                        iconClassName={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-lg text-xs font-medium transition-all duration-150 relative ${
+                        iconClassName={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 min-h-[38px] rounded-[10px] text-[13px] font-medium transition-all duration-150 relative ${
                           isActive
-                            ? "bg-[#3984FF]/10 text-white font-semibold"
+                            ? "bg-[#3984FF]/10 text-white font-medium"
                             : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                         }`}
                       />
@@ -258,14 +260,14 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* SEÇÃO 3: VENDAS                                      */}
         {/* ==================================================== */}
-        <div className="pt-3 mt-2">
-          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+        <div className="mt-[28px]">
+          <div className="px-3 pb-1.5 flex items-center gap-2.5 select-none">
+            <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               VENDAS
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {salesItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
@@ -277,6 +279,7 @@ export default function SellerSidebar({
                   isActive={isActive}
                   onClick={handleLinkClick}
                   icon={item.icon}
+                  iconSize={18}
                   accent="blue"
                 />
               );
@@ -287,14 +290,14 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* SEÇÃO 4: CONTA                                       */}
         {/* ==================================================== */}
-        <div className="pt-3 mt-2">
-          <div className="px-3 pb-1 flex items-center gap-2.5 select-none">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+        <div className="mt-[28px]">
+          <div className="px-3 pb-1.5 flex items-center gap-2.5 select-none">
+            <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               CONTA
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {accountItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
@@ -306,6 +309,7 @@ export default function SellerSidebar({
                   isActive={isActive}
                   onClick={handleLinkClick}
                   icon={item.icon}
+                  iconSize={18}
                   accent="blue"
                 />
               );
@@ -317,34 +321,34 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* RODAPÉ: CARD DE VOLUME, VOLTAR AO ADMIN & USUÁRIO    */}
       {/* ==================================================== */}
-      <div className="px-6 md:px-7 py-4 border-t border-white/[0.06] space-y-2.5 bg-[var(--seller-bg,#0B0F14)] shrink-0">
+      <div className="px-4 py-3 border-t border-white/[0.06] space-y-2.5 bg-[var(--seller-bg,#0B0F14)] shrink-0">
         
         {/* Card de Volume de Vendas */}
-        <div className="p-3 rounded-lg bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-zinc-300">
-              <SolarSellerSalesVolumeIcon size={16} className="text-[#3984FF] shrink-0" />
-              <span className="text-[11px] font-semibold text-zinc-200">
+        <div className="p-3 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-zinc-300">
+              <SolarSellerSalesVolumeIcon size={18} className="text-[#3984FF] shrink-0" />
+              <span className="text-[13px] font-medium text-zinc-200">
                 Volume de vendas
               </span>
             </div>
-            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/20">
+            <span className="text-[12px] font-bold font-mono px-2 py-0.5 rounded-md bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/20 tabular-nums">
               {percentage.toFixed(0)}%
             </span>
           </div>
 
-          <div className="space-y-1">
-            <div className="flex items-baseline justify-between text-xs font-mono tabular-nums">
-              <span className="font-bold text-white text-xs tracking-tight">
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between font-mono tabular-nums">
+              <span className="font-bold text-white text-[13px] tracking-tight">
                 {formattedRevenue}
               </span>
-              <span className="text-[10px] text-zinc-400">
+              <span className="text-[12px] text-zinc-400">
                 / {formattedGoal}
               </span>
             </div>
 
             {/* Barra de Progresso Fina Azul */}
-            <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#3984FF] rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${percentage}%` }}
@@ -353,22 +357,22 @@ export default function SellerSidebar({
           </div>
         </div>
 
-        {/* Botão Sutil "Voltar ao Admin" (para administradores em impersonação) */}
+        {/* Botão "Voltar ao Admin" */}
         {isAdminOrSuperAdmin && (
           <Link
             href="/admin"
             onClick={handleLinkClick}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
+            className="flex items-center gap-3 px-3 h-10 min-h-[40px] rounded-[10px] text-[14px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
           >
-            <SolarSellerBackToAdminIcon size={16} className="text-zinc-400 shrink-0" />
+            <SolarSellerBackToAdminIcon size={18} className="text-zinc-400 shrink-0" />
             <span className="truncate flex-1">Voltar ao Admin</span>
           </Link>
         )}
 
         {/* Perfil do Vendedor & Logout */}
-        <div className="flex items-center justify-between p-2 rounded-lg bg-[#0F1014] border border-white/[0.06]">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-[#1D4ED8] flex items-center justify-center border border-[#3984FF]/30 shrink-0 font-bold text-[11px] text-white overflow-hidden">
+        <div className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-[36px] h-[36px] rounded-xl bg-[#1D4ED8] flex items-center justify-center border border-[#3984FF]/30 shrink-0 font-bold text-[13px] text-white overflow-hidden">
               {sellerProfile?.avatarUrl ? (
                 <img src={sellerProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -376,10 +380,10 @@ export default function SellerSidebar({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate leading-tight">
+              <p className="text-[14px] font-bold text-white truncate leading-tight">
                 {sellerProfile?.name || "Vendedor"}
               </p>
-              <p className="text-[10px] text-zinc-400 truncate mt-0.5">
+              <p className="text-[12px] text-zinc-400 truncate mt-0.5 leading-tight">
                 {sellerProfile?.email || "vendedor@webgran.online"}
               </p>
             </div>
@@ -391,10 +395,10 @@ export default function SellerSidebar({
               if (isMobileDrawer && onCloseMobile) onCloseMobile();
               signOut({ callbackUrl: "/login" });
             }}
-            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0 ml-1"
+            className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0 ml-1"
             title="Sair da conta"
           >
-            <SolarSellerLogoutIcon size={16} className="text-zinc-400 hover:text-rose-400 transition-colors" />
+            <SolarSellerLogoutIcon size={18} className="text-zinc-400 hover:text-rose-400 transition-colors" />
           </button>
         </div>
       </div>

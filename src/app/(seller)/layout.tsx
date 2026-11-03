@@ -111,10 +111,10 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       }
       className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
     >
-      <div className="flex flex-col md:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
+      <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
-        <aside className="w-72 bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden md:block">
+        <aside className="w-[272px] bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden lg:block">
           <SellerSidebar
             sellerProfile={sellerProfile}
             totalRevenue={totalRevenue}
@@ -126,7 +126,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         {mobileDrawerOpen && (
           <div
             onClick={() => setMobileDrawerOpen(false)}
-            className="fixed inset-0 bg-black/75 z-[60] md:hidden transition-opacity duration-200"
+            className="fixed inset-0 bg-black/75 z-[60] lg:hidden transition-opacity duration-200"
             aria-hidden="true"
           />
         )}
@@ -138,7 +138,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-[70] w-[85vw] max-w-[288px] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out md:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          className={`fixed inset-y-0 left-0 z-[70] w-[272px] max-w-[272px] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out lg:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
             }`}
         >
           <SellerSidebar
@@ -154,9 +154,9 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-[var(--seller-bg,#0B0F14)]">
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
-          <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0B0F14)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
-            {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): md:hidden */}
-            <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0B0F14]">
+          <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0B0F14)] border-b border-white/[0.08] lg:border-b-0 z-30 relative overflow-visible">
+            {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): lg:hidden */}
+            <div className="lg:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0B0F14]">
               <div className="flex items-center gap-2.5 shrink-0 min-w-0">
                 <button
                   ref={hamburgerButtonRef}
@@ -204,7 +204,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           </header>
 
           {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado e Fundo Sólido Uniforme */}
-          <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0B0F14)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 z-10">
+          <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0B0F14)] rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10 z-10">
             {/* Área de Rolagem do Conteúdo */}
             <main
               tabIndex={0}
