@@ -108,15 +108,15 @@ export function SellerActivityAndChannels({
            ========================================================================= */}
         <section
           aria-label="Atividade recente"
-          className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between"
+          className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+                <h3 className="text-[18px] sm:text-[20px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
                   Atividade recente
                 </h3>
-                <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+                <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
                   Acontecimentos em tempo real
                 </p>
               </div>
@@ -247,16 +247,16 @@ export function SellerActivityAndChannels({
            ========================================================================= */}
         <section
           aria-label="Produtos mais vendidos"
-          className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between"
+          className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+                <h3 className="text-[18px] sm:text-[20px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
                   Mais vendidos
                   <span className="sr-only">Produtos mais vendidos</span>
                 </h3>
-                <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+                <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
                   Ranking por receita aprovada no período
                 </p>
               </div>
@@ -366,15 +366,15 @@ export function SellerActivityAndChannels({
         {hasMultipleBots && (
           <section
             aria-label="Desempenho por bot"
-            className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between"
+            className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+                  <h3 className="text-[18px] sm:text-[20px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
                     Desempenho por bot
                   </h3>
-                  <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+                  <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
                     Métricas e conversão por canal
                   </p>
                 </div>

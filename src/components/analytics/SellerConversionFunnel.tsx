@@ -62,21 +62,21 @@ export function SellerConversionFunnel({
     <section
       aria-label="Funil de conversão"
       title="Funil de conversão"
-      className={`bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between ${className}`}
+      className={`bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between ${className}`}
     >
       {/* Topo do Funil */}
       <div className="flex items-center justify-between gap-3 mb-6">
         <div>
-          <h3 className="text-[17px] sm:text-[19px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
+          <h3 className="text-[18px] sm:text-[20px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
             Da conversa ao pagamento
           </h3>
-          <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
+          <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] mt-0.5">
             Jornada do visitante pelo bot até a compra confirmada
           </p>
         </div>
 
         {overallRate !== null && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--apple-surface-2,#2c2c2e)] text-[12px] font-semibold text-[var(--apple-blue,#0a84ff)] tabular-nums shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--apple-surface-2,#2c2c2e)] text-[12px] sm:text-[13px] font-semibold text-[var(--apple-blue,#0a84ff)] tabular-nums shrink-0">
             <span>{overallRate}% conv. global</span>
           </div>
         )}
@@ -92,10 +92,10 @@ export function SellerConversionFunnel({
           className="my-auto"
         />
       ) : (
-        <div className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))] my-auto">
+        <div className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))] my-auto flex-1 flex flex-col justify-around py-2">
           {/* Linha 1: Conversas iniciadas */}
-          <div className="py-3.5 space-y-2">
-            <div className="flex items-center justify-between text-[14px]">
+          <div className="py-4 sm:py-5 space-y-2.5">
+            <div className="flex items-center justify-between text-[14px] sm:text-[15px]">
               <span className="font-medium text-[var(--apple-text,#fff)]">
                 1. Conversas iniciadas
               </span>
@@ -103,7 +103,7 @@ export function SellerConversionFunnel({
                 {totalStarts} {totalStarts === 1 ? "lead" : "leads"}
               </span>
             </div>
-            <div className="h-[8px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
+            <div className="h-[10px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[var(--apple-blue,#0a84ff)] rounded-full transition-all duration-500"
                 style={{ width: `${Math.max(widthStarts, 2)}%` }}
@@ -112,14 +112,14 @@ export function SellerConversionFunnel({
           </div>
 
           {/* Linha 2: Pix gerados */}
-          <div className="py-3.5 space-y-2">
-            <div className="flex items-center justify-between text-[14px]">
+          <div className="py-4 sm:py-5 space-y-2.5">
+            <div className="flex items-center justify-between text-[14px] sm:text-[15px]">
               <span className="font-medium text-[var(--apple-text,#fff)]">
                 2. Pix gerados
               </span>
               <div className="flex items-center gap-2">
                 {startToPixRate !== null && (
-                  <span className="text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                  <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
                     ({startToPixRate}%)
                   </span>
                 )}
@@ -128,7 +128,7 @@ export function SellerConversionFunnel({
                 </span>
               </div>
             </div>
-            <div className="h-[8px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
+            <div className="h-[10px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[var(--apple-blue,#0a84ff)] rounded-full transition-all duration-500"
                 style={{ width: `${Math.max(widthPix, 2)}%` }}
@@ -137,14 +137,14 @@ export function SellerConversionFunnel({
           </div>
 
           {/* Linha 3: Vendas pagas */}
-          <div className="py-3.5 space-y-2">
-            <div className="flex items-center justify-between text-[14px]">
+          <div className="py-4 sm:py-5 space-y-2.5">
+            <div className="flex items-center justify-between text-[14px] sm:text-[15px]">
               <span className="font-medium text-[var(--apple-text,#fff)]">
                 3. Vendas confirmadas
               </span>
               <div className="flex items-center gap-2">
                 {pixToPaidRate > 0 && (
-                  <span className="text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                  <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
                     ({pixToPaidRate}%)
                   </span>
                 )}
@@ -153,7 +153,7 @@ export function SellerConversionFunnel({
                 </span>
               </div>
             </div>
-            <div className="h-[8px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
+            <div className="h-[10px] w-full bg-[var(--apple-surface-2,#2c2c2e)] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[var(--apple-green,#30d158)] rounded-full transition-all duration-500"
                 style={{ width: `${Math.max(widthPaid, 2)}%` }}
@@ -164,7 +164,7 @@ export function SellerConversionFunnel({
       )}
 
       {/* Rodapé Apple */}
-      <div className="pt-4 mt-4 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+      <div className="pt-4 mt-auto border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
         Cada pessoa gerou em média {avgPixPerPerson} Pix, e {pixToPaidRate}% dos Pix foram pagos.
       </div>
     </section>

@@ -155,9 +155,9 @@ export function SellerMetricsOverview({
 
   // Dimensões SVG e coordenadas do gráfico
   const SVG_WIDTH = 1000;
-  const SVG_HEIGHT = 280;
-  const PAD_LEFT = 75;
-  const PAD_RIGHT = 25;
+  const SVG_HEIGHT = 340;
+  const PAD_LEFT = 80;
+  const PAD_RIGHT = 30;
   const PAD_TOP = 20;
   const PAD_BOTTOM = 40;
   const PLOT_W = SVG_WIDTH - PAD_LEFT - PAD_RIGHT;
@@ -284,47 +284,47 @@ export function SellerMetricsOverview({
          ========================================================================= */}
       <section
         aria-label="Indicadores de desempenho"
-        className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7"
+        className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8"
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-white/[0.08]">
           {/* Indicador 1: Receita aprovada */}
-          <div className="lg:px-6 first:pl-0 flex flex-col justify-between">
+          <div className="lg:px-7 first:pl-0 flex flex-col justify-between">
             <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
               <span>Receita aprovada</span>
               <span className="text-[11px] text-zinc-500 cursor-help" title="Faturamento total bruto obtido no período">?</span>
             </span>
-            <div className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5">
+            <div className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-2">
               {receitaValue}
             </div>
-            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
               {approvedSales?.count || 0} {(approvedSales?.count || 0) === 1 ? "venda confirmada" : "vendas confirmadas"}
             </p>
           </div>
 
           {/* Indicador 2: Vendas aprovadas */}
-          <div className="lg:px-6 flex flex-col justify-between">
+          <div className="lg:px-7 flex flex-col justify-between">
             <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
               <span>Vendas aprovadas</span>
               <span className="text-[11px] text-zinc-500 cursor-help" title="Quantidade de pedidos com pagamento confirmado">?</span>
             </span>
-            <div className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5">
+            <div className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-2">
               {vendasValue}
             </div>
-            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
               Volume de pedidos concluídos
             </p>
           </div>
 
           {/* Indicador 3: Valor médio */}
-          <div className="lg:px-6 flex flex-col justify-between">
+          <div className="lg:px-7 flex flex-col justify-between">
             <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
               <span>Valor médio por venda</span>
               <span className="text-[11px] text-zinc-500 cursor-help" title="Ticket médio por venda aprovada">?</span>
             </span>
-            <div className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5">
+            <div className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-2">
               {ticketValue}
             </div>
-            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
               {averageTicket?.consideredSalesCount
                 ? `Média de ${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? "venda aprovada" : "vendas aprovadas"}`
                 : "Média por pedido aprovado"}
@@ -332,28 +332,28 @@ export function SellerMetricsOverview({
           </div>
 
           {/* Indicador 4: Pix pagos */}
-          <div className="lg:px-6 last:pr-0 flex flex-col justify-between">
+          <div className="lg:px-7 last:pr-0 flex flex-col justify-between">
             <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
               <span>Pix pagos</span>
               <span className="sr-only">Pagamentos concluídos</span>
               <span className="text-[11px] text-zinc-500 cursor-help" title="Taxa de conversão de Pix">?</span>
             </span>
-            <div className="flex items-baseline justify-between gap-2 my-1.5">
-              <span className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums">
+            <div className="flex items-baseline justify-between gap-2 my-2">
+              <span className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums">
                 {pixValue}
               </span>
-              <span className="text-[11px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+              <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
                 {totalPixPaid}/{totalPixGenerated || 0}
               </span>
             </div>
-            <p className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
               De {totalPixGenerated} Pix gerados, {totalPixPaid} foram pagos
             </p>
           </div>
         </div>
 
         {/* Linha de starts */}
-        <div className="px-1 pt-4 mt-4 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[12px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+        <div className="px-1 pt-4 mt-5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
           <span>
             <strong className="text-[var(--apple-text,#fff)] font-medium tabular-nums">{totalStartsCount}</strong>{" "}
             pessoas iniciaram conversa no período
@@ -369,16 +369,16 @@ export function SellerMetricsOverview({
         {/* Gráfico de vendas: 65% da largura disponível */}
         <section
           aria-label="Evolução da receita"
-          className="w-full bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between select-none min-w-0"
+          className="w-full bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between select-none min-w-0"
         >
-          {/* Topo: Legenda, Total grande (56px) e Controle Segmentado Curva/Barras */}
+          {/* Topo: Legenda, Total grande e Controle Segmentado Curva/Barras */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
             <div>
               <span className="sr-only">Receita</span>
               <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal transition-colors">
                 {displaySubtitle}
               </p>
-              <div className="text-[40px] sm:text-[52px] lg:text-[56px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1">
+              <div className="text-[44px] sm:text-[56px] lg:text-[62px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1">
                 {displayRevenue}
               </div>
             </div>
@@ -434,7 +434,7 @@ export function SellerMetricsOverview({
           <svg
             ref={svgRef}
             viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-            className="w-full h-[220px] sm:h-[280px] overflow-visible"
+            className="w-full h-[260px] sm:h-[300px] lg:h-[340px] overflow-visible"
             onMouseMove={(e) => handleScrubberMove(e.clientX)}
             onMouseLeave={() => setHoveredIndex(null)}
             onTouchMove={(e) => {
