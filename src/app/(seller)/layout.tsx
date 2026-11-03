@@ -14,7 +14,6 @@ interface SellerLayoutProps {
 
 export default function SellerLayout({ children }: SellerLayoutProps) {
   const pathname = usePathname();
-  const isDashboard = pathname === "/seller";
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -91,7 +90,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     <div
       style={
         {
-          "--seller-bg": "#0B0D13",
+          "--seller-bg": "#0B0F14",
           "--seller-surface": "#101218",
           "--seller-surface-raised": "#151821",
           "--seller-border": "rgba(255, 255, 255, 0.06)",
@@ -101,12 +100,12 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           "--seller-accent-glow": "rgba(57, 132, 255, 0.12)",
         } as React.CSSProperties
       }
-      className="min-h-screen bg-[var(--seller-bg,#0B0D13)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
+      className="min-h-screen bg-[var(--seller-bg,#0B0F14)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
     >
-      <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--seller-bg,#0B0D13)]">
+      <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-[var(--seller-bg,#0B0F14)]">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
-        <aside className="w-72 bg-[var(--seller-bg,#0B0D13)] h-full shrink-0 hidden md:block">
+        <aside className="w-72 bg-[var(--seller-bg,#0B0F14)] h-full shrink-0 hidden md:block">
           <SellerSidebar
             sellerProfile={sellerProfile}
             totalRevenue={totalRevenue}
@@ -130,7 +129,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-[70] w-[85vw] max-w-[288px] bg-[var(--seller-bg,#0B0D13)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out md:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          className={`fixed inset-y-0 left-0 z-[70] w-[85vw] max-w-[288px] bg-[var(--seller-bg,#0B0F14)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out md:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
             }`}
         >
           <SellerSidebar
@@ -143,12 +142,12 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         </aside>
 
         {/* Content Canvas Wrapper */}
-        <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-[var(--seller-bg,#0B0D13)]">
+        <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-[var(--seller-bg,#0B0F14)]">
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
-          <header className="shrink-0 w-full bg-[var(--seller-bg,#0B0D13)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
+          <header className="shrink-0 w-full bg-[var(--seller-bg,#0B0F14)] border-b border-white/[0.08] md:border-b-0 z-30 relative overflow-visible">
             {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): md:hidden */}
-            <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0B0D13]">
+            <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0B0F14]">
               <div className="flex items-center gap-2.5 shrink-0 min-w-0">
                 <button
                   ref={hamburgerButtonRef}
@@ -195,38 +194,9 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             />
           </header>
 
-          {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado */}
-          <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0B0D13)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 z-10">
-            {/* 1. Malha Pontilhada Sutil em todo o Canvas (atrás do conteúdo) */}
-            <div
-              className="absolute inset-0 pointer-events-none z-0"
-              aria-hidden="true"
-              style={{
-                backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-                backgroundPosition: "0 0",
-                backgroundRepeat: "repeat",
-              }}
-            />
-
-            {/* 2. Gradiente Ancorado Exclusivamente na Extremidade Inferior da Dashboard (Regra: Apenas Dashboard) */}
-            {isDashboard && (
-              <div
-                className="absolute bottom-0 left-0 right-0 h-[48%] pointer-events-none z-0"
-                aria-hidden="true"
-                style={{
-                  background: `linear-gradient(
-                    to top,
-                    rgba(20, 48, 88, 0.32) 0%,
-                    rgba(28, 65, 116, 0.20) 25%,
-                    rgba(35, 78, 135, 0.08) 60%,
-                    transparent 100%
-                  )`,
-                }}
-              />
-            )}
-
-            {/* 3. Área de Rolagem do Conteúdo */}
+          {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado e Fundo Sólido Uniforme */}
+          <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0B0F14)] rounded-none md:rounded-tl-[24px] border-0 md:border-t md:border-l md:border-white/10 z-10">
+            {/* Área de Rolagem do Conteúdo */}
             <main
               tabIndex={0}
               aria-label="Painel do Vendedor"

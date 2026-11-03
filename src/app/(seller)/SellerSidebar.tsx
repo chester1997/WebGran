@@ -120,7 +120,7 @@ export default function SellerSidebar({
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between h-full min-h-0 bg-[var(--seller-bg,#0B0D13)]">
+    <div className="flex-1 flex flex-col justify-between h-full min-h-0 bg-[var(--seller-bg,#0B0F14)]">
       {/* ==================================================== */}
       {/* BRAND HEADER (Idêntico ao Admin: px-6 md:px-7)      */}
       {/* ==================================================== */}
@@ -317,7 +317,7 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* RODAPÉ: CARD DE VOLUME, VOLTAR AO ADMIN & USUÁRIO    */}
       {/* ==================================================== */}
-      <div className="px-6 md:px-7 py-4 border-t border-white/[0.06] space-y-2.5 bg-[var(--seller-bg,#0B0D13)] shrink-0">
+      <div className="px-6 md:px-7 py-4 border-t border-white/[0.06] space-y-2.5 bg-[var(--seller-bg,#0B0F14)] shrink-0">
         
         {/* Card de Volume de Vendas */}
         <div className="p-3 rounded-lg bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
