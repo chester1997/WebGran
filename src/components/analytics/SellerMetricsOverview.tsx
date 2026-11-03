@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useCallback } from "react";
+import React, { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { getBusinessDateKey } from "@/lib/analytics/timezone-utils";
 import { SellerConversionFunnel } from "./SellerConversionFunnel";
@@ -77,6 +77,37 @@ export function SellerMetricsOverview({
   const [chartMode, setChartMode] = useState<"area" | "bar">("area");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
+  const [chartWidth, setChartWidth] = useState<number>(0);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+      if (chartContainerRef.current) {
+        const w = chartContainerRef.current.clientWidth;
+        if (w > 0) setChartWidth(w);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    let ro: ResizeObserver | null = null;
+    if (chartContainerRef.current) {
+      ro = new ResizeObserver(() => {
+        if (chartContainerRef.current) {
+          const w = chartContainerRef.current.clientWidth;
+          if (w > 0) setChartWidth(w);
+        }
+      });
+      ro.observe(chartContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (ro) ro.disconnect();
+    };
+  }, []);
 
   const approvedSales = metrics?.approvedSales;
   const conversionRate = metrics?.conversionRate;
@@ -153,15 +184,15 @@ export function SellerMetricsOverview({
   const conversionRatePercent = conversionRate?.ratePercent ?? (totalPixGenerated > 0 ? Math.round((totalPixPaid / totalPixGenerated) * 100) : null);
   const pixValue = conversionRatePercent !== null ? `${conversionRatePercent}%` : `${totalPixPaid}/${totalPixGenerated || 0}`;
 
-  // Dimensões SVG e coordenadas do gráfico
-  const SVG_WIDTH = 1000;
-  const SVG_HEIGHT = 340;
-  const PAD_LEFT = 80;
-  const PAD_RIGHT = 30;
-  const PAD_TOP = 20;
-  const PAD_BOTTOM = 40;
-  const PLOT_W = SVG_WIDTH - PAD_LEFT - PAD_RIGHT;
-  const PLOT_H = SVG_HEIGHT - PAD_TOP - PAD_BOTTOM;
+  // Dimensões SVG e coordenadas do gráfico (adaptadas dinamicamente à largura disponível)
+  const currentWidth = chartWidth || 800;
+  const currentHeight = isMobile ? 250 : 340;
+  const PAD_LEFT = isMobile ? 54 : 80;
+  const PAD_RIGHT = isMobile ? 12 : 30;
+  const PAD_TOP = 14;
+  const PAD_BOTTOM = 26;
+  const PLOT_W = Math.max(currentWidth - PAD_LEFT - PAD_RIGHT, 10);
+  const PLOT_H = Math.max(currentHeight - PAD_TOP - PAD_BOTTOM, 10);
 
   const maxRevenue = useMemo(() => {
     const max = Math.max(...normalizedSeries.map((p) => p.revenue), 0);
@@ -201,7 +232,7 @@ export function SellerMetricsOverview({
       if (!svgRef.current || chartPoints.length === 0) return;
       const rect = svgRef.current.getBoundingClientRect();
       const relativeX = clientX - rect.left;
-      const scaleX = SVG_WIDTH / rect.width;
+      const scaleX = currentWidth / rect.width;
       const svgX = relativeX * scaleX;
 
       let closestIdx = 0;
@@ -217,7 +248,7 @@ export function SellerMetricsOverview({
 
       setHoveredIndex(closestIdx);
     },
-    [chartPoints, SVG_WIDTH]
+    [chartPoints, currentWidth]
   );
 
   const activePoint = hoveredIndex !== null && chartPoints[hoveredIndex] ? chartPoints[hoveredIndex] : null;
@@ -251,10 +282,11 @@ export function SellerMetricsOverview({
     { value: 0, y: PAD_TOP + PLOT_H, label: "R$ 0" },
   ];
 
-  // Ticks do eixo X (amostra de 5 a 6 pontos espaçados)
+  // Ticks do eixo X (amostra com espaçamento responsivo)
+  const maxXTicks = isMobile ? 4 : 6;
   const xTicks = chartPoints.filter((_, idx) => {
-    if (chartPoints.length <= 6) return true;
-    const step = Math.ceil(chartPoints.length / 5);
+    if (chartPoints.length <= maxXTicks) return true;
+    const step = Math.ceil((chartPoints.length - 1) / (maxXTicks - 1));
     return idx % step === 0 || idx === chartPoints.length - 1;
   });
 
@@ -264,10 +296,10 @@ export function SellerMetricsOverview({
           1. CABEÇALHO (Título Vendas + Resumo Hoje/Ontem)
          ========================================================================= */}
       <header className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pt-1 px-1">
-        <h1 className="text-[34px] font-bold leading-tight tracking-[-0.022em] text-[var(--apple-text,#fff)]">
+        <h1 className="text-[30px] sm:text-[34px] font-bold leading-tight tracking-[-0.022em] text-[var(--apple-text,#fff)]">
           Vendas
         </h1>
-        <div className="text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1.5 flex-wrap">
+        <div className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1.5 flex-wrap">
           <span className="sr-only">Vendas de hoje</span>
           <span>Hoje </span>
           <strong className="font-bold text-[var(--apple-text,#fff)] tabular-nums">{todayFormatted}</strong>
@@ -280,51 +312,57 @@ export function SellerMetricsOverview({
       </header>
 
       {/* =========================================================================
-          2. UMA ÚNICA SUPERFÍCIE: OS 4 INDICADORES EM GRID DE 4 COLUNAS
+          2. UMA ÚNICA SUPERFÍCIE: OS 4 INDICADORES EM GRID DE 2 (MOBILE) E 4 COLUNAS (DESKTOP)
          ========================================================================= */}
       <section
         aria-label="Indicadores de desempenho"
-        className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 relative overflow-hidden"
+        className="bg-[#1C1C1E] rounded-[18px] sm:rounded-[22px] p-4 sm:p-6 lg:p-8 relative overflow-hidden"
       >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-white/[0.08]">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-5 lg:gap-0 lg:divide-x lg:divide-white/[0.08]">
           {/* Indicador 1: Receita aprovada */}
-          <div className="lg:px-7 first:pl-0 flex flex-col justify-between">
-            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
-              <span>Receita aprovada</span>
-              <span className="text-[11px] text-zinc-500 cursor-help" title="Faturamento total bruto obtido no período">?</span>
-            </span>
-            <div className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-2">
+          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7 first:pl-0">
+            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
+              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
+                <span>Receita aprovada</span>
+                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Faturamento total bruto obtido no período">?</span>
+              </span>
+            </div>
+            <div className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5 sm:my-2 leading-none">
               {receitaValue}
             </div>
-            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
               {approvedSales?.count || 0} {(approvedSales?.count || 0) === 1 ? "venda confirmada" : "vendas confirmadas"}
             </p>
           </div>
 
           {/* Indicador 2: Vendas aprovadas */}
-          <div className="lg:px-7 flex flex-col justify-between">
-            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
-              <span>Vendas aprovadas</span>
-              <span className="text-[11px] text-zinc-500 cursor-help" title="Quantidade de pedidos com pagamento confirmado">?</span>
-            </span>
-            <div className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-2">
+          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7">
+            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
+              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
+                <span>Vendas aprovadas</span>
+                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Quantidade de pedidos com pagamento confirmado">?</span>
+              </span>
+            </div>
+            <div className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5 sm:my-2 leading-none">
               {vendasValue}
             </div>
-            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
               Volume de pedidos concluídos
             </p>
           </div>
 
           {/* Indicador 3: Valor médio */}
-          <div className="lg:px-7 flex flex-col justify-between">
-            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
-              <span>Valor médio por venda</span>
-              <span className="text-[11px] text-zinc-500 cursor-help" title="Ticket médio por venda aprovada">?</span>
-            </span>
-            <div className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-2">
+          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7">
+            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
+              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
+                <span>Valor médio por venda</span>
+                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Ticket médio por venda aprovada">?</span>
+              </span>
+            </div>
+            <div className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5 sm:my-2 leading-none">
               {ticketValue}
             </div>
-            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
               {averageTicket?.consideredSalesCount
                 ? `Média de ${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? "venda aprovada" : "vendas aprovadas"}`
                 : "Média por pedido aprovado"}
@@ -332,28 +370,30 @@ export function SellerMetricsOverview({
           </div>
 
           {/* Indicador 4: Pix pagos */}
-          <div className="lg:px-7 last:pr-0 flex flex-col justify-between">
-            <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
-              <span>Pix pagos</span>
-              <span className="sr-only">Pagamentos concluídos</span>
-              <span className="text-[11px] text-zinc-500 cursor-help" title="Taxa de conversão de Pix">?</span>
-            </span>
-            <div className="flex items-baseline justify-between gap-2 my-2">
-              <span className="text-[28px] sm:text-[34px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums">
+          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7 last:pr-0">
+            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
+              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
+                <span>Pix pagos</span>
+                <span className="sr-only">Pagamentos concluídos</span>
+                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Taxa de conversão de Pix">?</span>
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2 my-1.5 sm:my-2 leading-none">
+              <span className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums">
                 {pixValue}
               </span>
-              <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+              <span className="text-[11px] sm:text-[12px] font-medium text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
                 {totalPixPaid}/{totalPixGenerated || 0}
               </span>
             </div>
-            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
               De {totalPixGenerated} Pix gerados, {totalPixPaid} foram pagos
             </p>
           </div>
         </div>
 
         {/* Linha de starts */}
-        <div className="px-1 pt-4 mt-5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))]">
+        <div className="pt-3.5 sm:pt-4 mt-4 sm:mt-5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] text-left">
           <span>
             <strong className="text-[var(--apple-text,#fff)] font-medium tabular-nums">{totalStartsCount}</strong>{" "}
             pessoas iniciaram conversa no período
@@ -369,26 +409,26 @@ export function SellerMetricsOverview({
         {/* Gráfico de vendas: 65% da largura disponível */}
         <section
           aria-label="Evolução da receita"
-          className="w-full bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between select-none min-w-0 relative overflow-hidden"
+          className="w-full bg-[#1C1C1E] rounded-[18px] sm:rounded-[22px] p-4 sm:p-6 lg:p-8 flex flex-col select-none min-w-0 relative overflow-hidden"
         >
           {/* Topo: Legenda, Total grande e Controle Segmentado Curva/Barras */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
             <div>
               <span className="sr-only">Receita</span>
-              <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal transition-colors">
+              <p className="text-xs sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal transition-colors">
                 {displaySubtitle}
               </p>
-              <div className="text-[44px] sm:text-[56px] lg:text-[62px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1">
+              <div className="text-[34px] sm:text-[44px] lg:text-[56px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1 sm:mt-1.5">
                 {displayRevenue}
               </div>
             </div>
 
             {/* Controle Segmentado iOS (Curva / Barras) */}
-            <div className="inline-flex items-center self-start sm:self-auto bg-[var(--apple-surface-2,#2c2c2e)] p-1 rounded-[12px]">
+            <div className="inline-flex items-center self-start sm:self-auto bg-[var(--apple-surface-2,#2c2c2e)] p-0.5 sm:p-1 rounded-[10px] sm:rounded-[12px]">
               <button
                 type="button"
                 onClick={() => setChartMode("area")}
-                className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-[13px] font-medium rounded-[7px] sm:rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
                   chartMode === "area"
                     ? "bg-[#1C1C1E] text-[var(--apple-text,#fff)] shadow-xs"
                     : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
@@ -401,7 +441,7 @@ export function SellerMetricsOverview({
               <button
                 type="button"
                 onClick={() => setChartMode("bar")}
-                className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-[13px] font-medium rounded-[7px] sm:rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
                   chartMode === "bar"
                     ? "bg-[#1C1C1E] text-[var(--apple-text,#fff)] shadow-xs"
                     : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
@@ -414,158 +454,160 @@ export function SellerMetricsOverview({
             </div>
           </div>
 
-        {/* Gráfico SVG com Scrubber e Suporte a Touch e Teclado */}
-        <div
-          role="img"
-          aria-label={`Gráfico de evolução da receita: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (chartPoints.length === 0) return;
-            if (e.key === "ArrowRight") {
-              setHoveredIndex((prev) => (prev === null ? 0 : Math.min(prev + 1, chartPoints.length - 1)));
-            } else if (e.key === "ArrowLeft") {
-              setHoveredIndex((prev) => (prev === null ? chartPoints.length - 1 : Math.max(prev - 1, 0)));
-            } else if (e.key === "Escape") {
-              setHoveredIndex(null);
-            }
-          }}
-          className="w-full relative touch-none focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
-        >
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-            className="w-full h-[260px] sm:h-[300px] lg:h-[340px] overflow-visible"
-            onMouseMove={(e) => handleScrubberMove(e.clientX)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            onTouchMove={(e) => {
-              if (e.touches && e.touches[0]) {
-                handleScrubberMove(e.touches[0].clientX);
+          {/* Gráfico SVG com Scrubber e Suporte a Touch e Teclado */}
+          <div
+            ref={chartContainerRef}
+            role="img"
+            aria-label={`Gráfico de evolução da receita: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (chartPoints.length === 0) return;
+              if (e.key === "ArrowRight") {
+                setHoveredIndex((prev) => (prev === null ? 0 : Math.min(prev + 1, chartPoints.length - 1)));
+              } else if (e.key === "ArrowLeft") {
+                setHoveredIndex((prev) => (prev === null ? chartPoints.length - 1 : Math.max(prev - 1, 0)));
+              } else if (e.key === "Escape") {
+                setHoveredIndex(null);
               }
             }}
-            onTouchEnd={() => setHoveredIndex(null)}
+            className="w-full relative touch-none focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
           >
-            <defs>
-              <linearGradient id="appleAzureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.22" />
-                <stop offset="100%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${currentWidth} ${currentHeight}`}
+              style={{ width: "100%", height: `${currentHeight}px` }}
+              className="w-full block overflow-visible"
+              onMouseMove={(e) => handleScrubberMove(e.clientX)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onTouchMove={(e) => {
+                if (e.touches && e.touches[0]) {
+                  handleScrubberMove(e.touches[0].clientX);
+                }
+              }}
+              onTouchEnd={() => setHoveredIndex(null)}
+            >
+              <defs>
+                <linearGradient id="appleAzureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.22" />
+                  <stop offset="100%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
 
-            {/* Linhas de Grade Horizontais e Eixo Y em R$ */}
-            {yTicks.map((tick, i) => (
-              <g key={i}>
-                <line
-                  x1={PAD_LEFT}
-                  y1={tick.y}
-                  x2={SVG_WIDTH - PAD_RIGHT}
-                  y2={tick.y}
-                  stroke="var(--apple-separator, rgba(84, 84, 88, 0.25))"
-                  strokeWidth="1"
-                />
-                <text
-                  x={PAD_LEFT - 10}
-                  y={tick.y + 4}
-                  textAnchor="end"
-                  fill="var(--apple-text-secondary, rgba(235, 235, 245, 0.6))"
-                  fontSize="11"
-                  className="tabular-nums"
-                >
-                  {tick.label}
-                </text>
-              </g>
-            ))}
-
-            {/* Modo Curva Suave */}
-            {chartMode === "area" && chartPoints.length > 0 && (
-              <>
-                <path d={smoothAreaPath} fill="url(#appleAzureRevenueGrad)" />
-                <path
-                  d={smoothCurvePath}
-                  fill="none"
-                  stroke="var(--apple-blue, #0a84ff)"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </>
-            )}
-
-            {/* Modo Barras */}
-            {chartMode === "bar" &&
-              chartPoints.map((pt, i) => {
-                const barWidth = Math.max(Math.min(PLOT_W / chartPoints.length - 4, 28), 4);
-                const barHeight = Math.max(PAD_TOP + PLOT_H - pt.y, 2);
-                return (
-                  <rect
-                    key={i}
-                    x={pt.x - barWidth / 2}
-                    y={pt.y}
-                    width={barWidth}
-                    height={barHeight}
-                    rx="3"
-                    fill={hoveredIndex === i ? "#ffffff" : "var(--apple-blue, #0a84ff)"}
-                    opacity={hoveredIndex === null || hoveredIndex === i ? 1 : 0.45}
-                    className="transition-opacity duration-150"
+              {/* Linhas de Grade Horizontais e Eixo Y em R$ */}
+              {yTicks.map((tick, i) => (
+                <g key={i}>
+                  <line
+                    x1={PAD_LEFT}
+                    y1={tick.y}
+                    x2={currentWidth - PAD_RIGHT}
+                    y2={tick.y}
+                    stroke="var(--apple-separator, rgba(84, 84, 88, 0.25))"
+                    strokeWidth="1"
                   />
-                );
-              })}
+                  <text
+                    x={PAD_LEFT - 8}
+                    y={tick.y + 4}
+                    textAnchor="end"
+                    fill="var(--apple-text-secondary, rgba(235, 235, 245, 0.6))"
+                    fontSize={isMobile ? "10" : "11"}
+                    className="tabular-nums"
+                  >
+                    {tick.label}
+                  </text>
+                </g>
+              ))}
 
-            {/* Eixo X com Rótulos de Data */}
-            {xTicks.map((pt, i) => (
-              <text
-                key={i}
-                x={pt.x}
-                y={SVG_HEIGHT - 12}
-                textAnchor="middle"
-                fill="var(--apple-text-secondary, rgba(235, 235, 245, 0.6))"
-                fontSize="11"
-              >
-                {pt.data.dateLabel}
-              </text>
-            ))}
+              {/* Modo Curva Suave */}
+              {chartMode === "area" && chartPoints.length > 0 && (
+                <>
+                  <path d={smoothAreaPath} fill="url(#appleAzureRevenueGrad)" />
+                  <path
+                    d={smoothCurvePath}
+                    fill="none"
+                    stroke="var(--apple-blue, #0a84ff)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </>
+              )}
 
-            {/* Linha Vertical do Scrubber e Ponto Circular (Bolsa / Stocks) */}
-            {activePoint && (
-              <g pointerEvents="none">
-                <line
-                  x1={activePoint.x}
-                  y1={PAD_TOP}
-                  x2={activePoint.x}
-                  y2={PAD_TOP + PLOT_H}
-                  stroke="rgba(255, 255, 255, 0.45)"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 3"
-                />
-                <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="var(--apple-blue, #0a84ff)" opacity="0.3" />
-                <circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r="4.5"
-                  fill="var(--apple-blue, #0a84ff)"
-                  stroke="#ffffff"
-                  strokeWidth="2"
-                />
-              </g>
-            )}
+              {/* Modo Barras */}
+              {chartMode === "bar" &&
+                chartPoints.map((pt, i) => {
+                  const barWidth = Math.max(Math.min(PLOT_W / chartPoints.length - 4, isMobile ? 18 : 28), 3);
+                  const barHeight = Math.max(PAD_TOP + PLOT_H - pt.y, 2);
+                  return (
+                    <rect
+                      key={i}
+                      x={pt.x - barWidth / 2}
+                      y={pt.y}
+                      width={barWidth}
+                      height={barHeight}
+                      rx="3"
+                      fill={hoveredIndex === i ? "#ffffff" : "var(--apple-blue, #0a84ff)"}
+                      opacity={hoveredIndex === null || hoveredIndex === i ? 1 : 0.45}
+                      className="transition-opacity duration-150"
+                    />
+                  );
+                })}
 
-            {/* Overlay transparente para captura de ponteiro */}
-            <rect
-              x={PAD_LEFT}
-              y={PAD_TOP}
-              width={PLOT_W}
-              height={PLOT_H}
-              fill="transparent"
-              className="cursor-crosshair"
-            />
-          </svg>
+              {/* Eixo X com Rótulos de Data */}
+              {xTicks.map((pt, i) => (
+                <text
+                  key={i}
+                  x={pt.x}
+                  y={currentHeight - 8}
+                  textAnchor="middle"
+                  fill="var(--apple-text-secondary, rgba(235, 235, 245, 0.6))"
+                  fontSize={isMobile ? "10" : "11"}
+                >
+                  {pt.data.dateLabel}
+                </text>
+              ))}
+
+              {/* Linha Vertical do Scrubber e Ponto Circular (Bolsa / Stocks) */}
+              {activePoint && (
+                <g pointerEvents="none">
+                  <line
+                    x1={activePoint.x}
+                    y1={PAD_TOP}
+                    x2={activePoint.x}
+                    y2={PAD_TOP + PLOT_H}
+                    stroke="rgba(255, 255, 255, 0.45)"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                  />
+                  <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="var(--apple-blue, #0a84ff)" opacity="0.3" />
+                  <circle
+                    cx={activePoint.x}
+                    cy={activePoint.y}
+                    r="4.5"
+                    fill="var(--apple-blue, #0a84ff)"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                  />
+                </g>
+              )}
+
+              {/* Overlay transparente para captura de ponteiro */}
+              <rect
+                x={PAD_LEFT}
+                y={PAD_TOP}
+                width={PLOT_W}
+                height={PLOT_H}
+                fill="transparent"
+                className="cursor-crosshair"
+              />
+            </svg>
+          </div>
+        </section>
+
+        {/* Conversões: 35% da largura disponível */}
+        <div className="w-full h-full min-w-0 flex flex-col">
+          {funnelSlot ?? <SellerConversionFunnel metrics={metrics} isPending={isPending} className="h-full" />}
         </div>
-      </section>
-
-      {/* Conversões: 35% da largura disponível */}
-      <div className="w-full h-full min-w-0 flex flex-col">
-        {funnelSlot ?? <SellerConversionFunnel metrics={metrics} isPending={isPending} className="h-full" />}
       </div>
     </div>
-  </div>
   );
 }
