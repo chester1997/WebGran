@@ -37,10 +37,10 @@ export default function SellerPageHeader({
   const content = children ? (
     children
   ) : (
-    <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 w-full h-full relative z-30 overflow-visible ${className}`}>
+    <div className={`flex flex-col md:flex-row md:items-center justify-between gap-0 md:gap-4 w-full h-full relative z-30 overflow-visible ${className}`}>
       {/* Título e Subtítulo */}
       <div className="min-w-0 flex flex-col justify-center">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 mb-1.5 md:mb-0">
           {title && (
             <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight truncate">
               {title}
@@ -49,7 +49,7 @@ export default function SellerPageHeader({
           {badge}
         </div>
         {subtitle && (
-          <p className="text-zinc-400 text-xs sm:text-sm mt-0.5 md:mt-1 truncate sm:whitespace-normal">
+          <p className="text-zinc-400 text-xs sm:text-sm truncate sm:whitespace-normal mb-5 md:mb-0">
             {subtitle}
           </p>
         )}
@@ -57,7 +57,7 @@ export default function SellerPageHeader({
 
       {/* Ações / Filtros */}
       {actions && (
-        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap relative z-30 overflow-visible">
+        <div className="flex items-center gap-[10px] md:gap-2 shrink-0 flex-nowrap relative z-30 overflow-visible">
           {actions}
         </div>
       )}

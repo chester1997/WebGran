@@ -196,10 +196,10 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
               </div>
             </div>
 
-            {/* External Header Slot para Páginas do Seller (Portal) com altura uniforme de 112px */}
+            {/* External Header Slot para Páginas do Seller (Portal) com altura uniforme de 112px no desktop e padding vertical refinado no mobile */}
             <div
               id="seller-page-header-portal"
-              className="w-full px-6 md:px-7 lg:px-8 py-0 h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] flex items-center relative z-30 overflow-visible"
+              className="w-full px-4 sm:px-6 md:px-7 lg:px-8 pt-3.5 pb-4 lg:py-0 h-auto lg:h-[var(--header-h,112px)] min-h-0 lg:min-h-[var(--header-h,112px)] lg:max-h-[var(--header-h,112px)] flex items-center relative z-30 overflow-visible"
             />
           </header>
 

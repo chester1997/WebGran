@@ -217,7 +217,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
           ) : null
         }
         actions={
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 max-w-full relative z-30">
+          <div className="flex items-center gap-[10px] md:gap-2.5 shrink-0 max-w-full relative z-30">
             {/* Seletor de Bot Integrado */}
             <div className="relative flex items-center min-w-[130px] sm:min-w-[160px] max-w-full">
               <Bot className="absolute left-2.5 w-4 h-4 text-zinc-400 pointer-events-none" />
