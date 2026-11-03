@@ -107,11 +107,12 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           "--seller-accent-deep": "#1D4ED8",
           "--seller-accent-light": "#60A5FA",
           "--seller-accent-glow": "rgba(57, 132, 255, 0.12)",
+          "--sidebar-mobile-w": "min(296px, 85vw)",
         } as React.CSSProperties
       }
       className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-[var(--seller-bg,#0A0A0A)] text-zinc-100 antialiased selection:bg-[#3984FF]/25 selection:text-[#93C5FD]"
     >
-      <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0A0A0A)]">
+      <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0A0A0A)] relative">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
         <aside className="w-[var(--sidebar-w,320px)] bg-[var(--seller-bg,#0A0A0A)] h-full shrink-0 hidden lg:block">
@@ -122,24 +123,27 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           />
         </aside>
 
-        {/* Mobile Drawer Backdrop (Sem blur, fundo escuro simples semitransparente) */}
-        {mobileDrawerOpen && (
-          <div
-            onClick={() => setMobileDrawerOpen(false)}
-            className="fixed inset-0 bg-black/75 z-[60] lg:hidden transition-opacity duration-200"
-            aria-hidden="true"
-          />
-        )}
+        {/* Mobile Drawer Backdrop (Transição suave sincronizada) */}
+        <div
+          onClick={() => setMobileDrawerOpen(false)}
+          className={`fixed inset-0 bg-black/60 z-[60] lg:hidden transition-opacity duration-300 ease-in-out ${
+            mobileDrawerOpen
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
+          aria-hidden="true"
+        />
 
-        {/* Mobile Drawer Panel */}
+        {/* Mobile Drawer Panel (Push drawer com 300ms ease-in-out) */}
         <aside
           ref={mobileSidebarRef}
           tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-[70] w-[var(--sidebar-w,320px)] max-w-[85vw] bg-[var(--seller-bg,#0A0A0A)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out lg:hidden ${mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
+          className={`fixed inset-y-0 left-0 z-[70] w-[var(--sidebar-mobile-w,296px)] max-w-[85vw] h-[100dvh] bg-[var(--seller-bg,#0A0A0A)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out will-change-transform outline-none focus:outline-none lg:hidden ${
+            mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         >
           <SellerSidebar
             sellerProfile={sellerProfile}
@@ -150,8 +154,14 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           />
         </aside>
 
-        {/* Content Canvas Wrapper */}
-        <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden relative bg-[var(--seller-bg,#0A0A0A)]">
+        {/* Content Canvas Wrapper (Acompanha o movimento empurrando suavemente para a direita) */}
+        <div
+          className={`flex-1 min-h-0 flex flex-col min-w-0 w-full overflow-hidden relative bg-[var(--seller-bg,#0A0A0A)] transition-transform duration-300 ease-in-out will-change-transform lg:transition-none lg:transform-none ${
+            mobileDrawerOpen
+              ? "translate-x-[var(--sidebar-mobile-w,296px)] lg:translate-x-0"
+              : "translate-x-0"
+          }`}
+        >
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
           <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0A0A0A)] border-b border-white/[0.08] lg:border-b-0 z-30 relative overflow-visible">
@@ -161,10 +171,11 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
                 <button
                   ref={hamburgerButtonRef}
                   type="button"
-                  onClick={() => setMobileDrawerOpen(true)}
+                  onClick={() => setMobileDrawerOpen((prev) => !prev)}
                   className="w-8 h-8 flex items-center justify-center text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-lg border border-white/10 transition-colors cursor-pointer shrink-0"
-                  title="Abrir menu"
-                  aria-label="Abrir menu"
+                  title={mobileDrawerOpen ? "Fechar menu" : "Abrir menu"}
+                  aria-label={mobileDrawerOpen ? "Fechar menu" : "Abrir menu"}
+                  aria-expanded={mobileDrawerOpen}
                 >
                   <Menu className="w-4 h-4" />
                 </button>

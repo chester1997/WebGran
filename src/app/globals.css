@@ -125,6 +125,7 @@
   /* ==================================================== */
   --sidebar-w: 320px;
   --sidebar-w-collapsed: 80px;
+  --sidebar-mobile-w: 296px;
   --sidebar-pad-x: 28px;
   --nav-item-h: 44px;
   --nav-item-gap: 4px;
@@ -183,6 +184,7 @@
   /* ==================================================== */
   --sidebar-w: 320px;
   --sidebar-w-collapsed: 80px;
+  --sidebar-mobile-w: 296px;
   --sidebar-pad-x: 28px;
   --nav-item-h: 44px;
   --nav-item-gap: 4px;

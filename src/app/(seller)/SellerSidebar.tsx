@@ -124,7 +124,7 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* BRAND HEADER: Altura padronizada de 112px (--header-h)*/}
       {/* ==================================================== */}
-      <div className="h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] px-[var(--sidebar-pad-x,28px)] flex items-center justify-between shrink-0 select-none">
+      <div className="h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] px-5 lg:px-[var(--sidebar-pad-x,28px)] flex items-center justify-between shrink-0 select-none">
         <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-3 min-w-0">
           <Image
             src="/logo-webgran-icon.png"
@@ -157,12 +157,12 @@ export default function SellerSidebar({
       </div>
 
       {/* ==================================================== */}
-      {/* NAVEGAÇÃO PRINCIPAL (px padronizado de 28px)        */}
+      {/* NAVEGAÇÃO PRINCIPAL (px padronizado de 28px no desktop) */}
       {/* ==================================================== */}
       <nav
         tabIndex={0}
         aria-label="Navegação do Vendedor"
-        className="flex-1 overflow-y-auto px-[var(--sidebar-pad-x,28px)] py-4 space-y-[var(--nav-item-gap,4px)] sidebar-scroll focus-visible:outline-none"
+        className="flex-1 overflow-y-auto px-5 lg:px-[var(--sidebar-pad-x,28px)] py-4 space-y-[var(--nav-item-gap,4px)] sidebar-scroll focus-visible:outline-none"
       >
         {/* ==================================================== */}
         {/* SEÇÃO 1: GERAL                                       */}
@@ -317,7 +317,7 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* RODAPÉ: CARD DE VOLUME, VOLTAR AO ADMIN & USUÁRIO    */}
       {/* ==================================================== */}
-      <div className="px-[var(--sidebar-pad-x,28px)] py-4 border-t border-white/[0.06] space-y-3 bg-[var(--seller-bg,#0A0A0A)] shrink-0">
+      <div className="px-5 lg:px-[var(--sidebar-pad-x,28px)] py-4 border-t border-white/[0.06] space-y-3 bg-[var(--seller-bg,#0A0A0A)] shrink-0">
         
         {/* Card de Volume de Vendas */}
         <div className="p-3.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
