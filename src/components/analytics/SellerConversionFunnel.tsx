@@ -41,7 +41,7 @@ export function SellerConversionFunnel({
 
   if (isPending) {
     return (
-      <div className={`bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 animate-pulse ${className}`}>
+      <div className={`bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 animate-pulse h-full ${className}`}>
         <div className="h-5 bg-white/[0.04] rounded w-48 mb-6" />
         <div className="space-y-4">
           <div className="h-10 bg-white/[0.02] rounded-lg w-full" />
@@ -62,7 +62,7 @@ export function SellerConversionFunnel({
     <section
       aria-label="Funil de conversão"
       title="Funil de conversão"
-      className={`bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between ${className}`}
+      className={`bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between ${className}`}
     >
       {/* Topo do Funil */}
       <div className="flex items-center justify-between gap-3 mb-6">

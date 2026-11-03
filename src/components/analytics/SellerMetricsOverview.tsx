@@ -233,10 +233,13 @@ export function SellerMetricsOverview({
   // Skeleton Loading elegante
   if (isPending) {
     return (
-      <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] animate-pulse">
+      <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-[20px] animate-pulse">
         <div className="h-10 bg-white/[0.04] rounded-[14px] w-64" />
-        <div className="h-32 bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px]" />
-        <div className="h-96 bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px]" />
+        <div className="h-32 bg-[#1C1C1E] rounded-[22px]" />
+        <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-[20px] items-stretch">
+          <div className="h-96 bg-[#1C1C1E] rounded-[22px]" />
+          <div className="h-96 bg-[#1C1C1E] rounded-[22px]" />
+        </div>
       </div>
     );
   }
@@ -256,7 +259,7 @@ export function SellerMetricsOverview({
   });
 
   return (
-    <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
+    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
           1. CABEÇALHO (Título Vendas + Resumo Hoje/Ontem)
          ========================================================================= */}
@@ -281,9 +284,9 @@ export function SellerMetricsOverview({
          ========================================================================= */}
       <section
         aria-label="Indicadores de desempenho"
-        className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6"
+        className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7"
       >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-[var(--apple-separator,rgba(84,84,88,0.35))]">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-white/[0.08]">
           {/* Indicador 1: Receita aprovada */}
           <div className="lg:px-6 first:pl-0 flex flex-col justify-between">
             <span className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1">
@@ -360,54 +363,56 @@ export function SellerMetricsOverview({
       </section>
 
       {/* =========================================================================
-          3. SUPERFÍCIE DO GRÁFICO DE RECEITA (Apple Stocks / Bolsa Scrubber)
+          3. DISPOSIÇÃO HORIZONTAL: GRÁFICO DE VENDAS (65%) + CONVERSÃO (35%)
          ========================================================================= */}
-      <section
-        aria-label="Evolução da receita"
-        className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col gap-4 select-none"
-      >
-        {/* Topo: Legenda, Total grande (56px) e Controle Segmentado Curva/Barras */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <span className="sr-only">Receita</span>
-            <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal transition-colors">
-              {displaySubtitle}
-            </p>
-            <div className="text-[40px] sm:text-[56px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1">
-              {displayRevenue}
+      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-[20px] items-stretch w-full">
+        {/* Gráfico de vendas: 65% da largura disponível */}
+        <section
+          aria-label="Evolução da receita"
+          className="w-full bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between select-none min-w-0"
+        >
+          {/* Topo: Legenda, Total grande (56px) e Controle Segmentado Curva/Barras */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+            <div>
+              <span className="sr-only">Receita</span>
+              <p className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal transition-colors">
+                {displaySubtitle}
+              </p>
+              <div className="text-[40px] sm:text-[52px] lg:text-[56px] font-bold tracking-[-0.035em] text-[var(--apple-text,#fff)] tabular-nums leading-none mt-1">
+                {displayRevenue}
+              </div>
+            </div>
+
+            {/* Controle Segmentado iOS (Curva / Barras) */}
+            <div className="inline-flex items-center self-start sm:self-auto bg-[var(--apple-surface-2,#2c2c2e)] p-1 rounded-[12px]">
+              <button
+                type="button"
+                onClick={() => setChartMode("area")}
+                className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
+                  chartMode === "area"
+                    ? "bg-[#1C1C1E] text-[var(--apple-text,#fff)] shadow-xs"
+                    : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
+                }`}
+                title="Curva suave"
+              >
+                <LineIcon className="w-3.5 h-3.5" />
+                <span>Curva</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode("bar")}
+                className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
+                  chartMode === "bar"
+                    ? "bg-[#1C1C1E] text-[var(--apple-text,#fff)] shadow-xs"
+                    : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
+                }`}
+                title="Barras"
+              >
+                <BarIcon className="w-3.5 h-3.5" />
+                <span>Barras</span>
+              </button>
             </div>
           </div>
-
-          {/* Controle Segmentado iOS (Curva / Barras) */}
-          <div className="inline-flex items-center self-start sm:self-auto bg-[var(--apple-surface-2,#2c2c2e)] p-1 rounded-[12px] border border-[var(--apple-separator,rgba(84,84,88,0.25))]">
-            <button
-              type="button"
-              onClick={() => setChartMode("area")}
-              className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
-                chartMode === "area"
-                  ? "bg-[var(--apple-surface,#1c1c1e)] text-[var(--apple-text,#fff)] shadow-xs"
-                  : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
-              }`}
-              title="Curva suave"
-            >
-              <LineIcon className="w-3.5 h-3.5" />
-              <span>Curva</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setChartMode("bar")}
-              className={`px-3 py-1.5 text-[13px] font-medium rounded-[8px] transition-all flex items-center gap-1.5 cursor-pointer ${
-                chartMode === "bar"
-                  ? "bg-[var(--apple-surface,#1c1c1e)] text-[var(--apple-text,#fff)] shadow-xs"
-                  : "text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] hover:text-[var(--apple-text,#fff)]"
-              }`}
-              title="Barras"
-            >
-              <BarIcon className="w-3.5 h-3.5" />
-              <span>Barras</span>
-            </button>
-          </div>
-        </div>
 
         {/* Gráfico SVG com Scrubber e Suporte a Touch e Teclado */}
         <div
@@ -556,12 +561,11 @@ export function SellerMetricsOverview({
         </div>
       </section>
 
-      {/* =========================================================================
-          4. SUPERFÍCIE DO FUNIL "DA CONVERSA AO PAGAMENTO"
-         ========================================================================= */}
-      <div className="w-full">
-        {funnelSlot ?? <SellerConversionFunnel metrics={metrics} isPending={isPending} />}
+      {/* Conversões: 35% da largura disponível */}
+      <div className="w-full h-full min-w-0 flex flex-col">
+        {funnelSlot ?? <SellerConversionFunnel metrics={metrics} isPending={isPending} className="h-full" />}
       </div>
     </div>
+  </div>
   );
 }

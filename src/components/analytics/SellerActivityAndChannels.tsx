@@ -94,7 +94,7 @@ export function SellerActivityAndChannels({
   const hasMultipleBots = effectiveBotsCount > 1;
 
   return (
-    <div className="w-full max-w-[1080px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
+    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
           5. DUAS SUPERFÍCIES LADO A LADO (UMA COLUNA ABAIXO DE 860px)
          ========================================================================= */}
@@ -108,7 +108,7 @@ export function SellerActivityAndChannels({
            ========================================================================= */}
         <section
           aria-label="Atividade recente"
-          className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between"
+          className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -247,7 +247,7 @@ export function SellerActivityAndChannels({
            ========================================================================= */}
         <section
           aria-label="Produtos mais vendidos"
-          className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between"
+          className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -366,7 +366,7 @@ export function SellerActivityAndChannels({
         {hasMultipleBots && (
           <section
             aria-label="Desempenho por bot"
-            className="bg-[var(--apple-surface,#1c1c1e)] border border-[var(--apple-separator,rgba(84,84,88,0.35))] rounded-[22px] p-6 flex flex-col justify-between"
+            className="bg-[#1C1C1E] rounded-[22px] p-6 lg:p-7 flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between gap-3 mb-4">

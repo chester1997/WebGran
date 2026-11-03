@@ -261,4 +261,30 @@ describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
     expect(html).toContain("Bot Principal");
     expect(html).toContain("@meubot_vip");
   });
+
+  it("7. Disposição Horizontal 65/35: Gráfico de Vendas e Conversões lado a lado com fundo #1C1C1E e sem bordas", () => {
+    const html = renderToStaticMarkup(
+      <SellerMetricsOverview
+        metrics={mockCommercialMetrics}
+        kpis={mockKpis}
+        chartSeries={mockChartSeries}
+        periodLabel="Últimos 30 dias"
+      />
+    );
+
+    // Grid layout: mobile empilhado (grid-cols-1) e desktop 65/35 (lg:grid-cols-[65fr_35fr]) com mesma altura (items-stretch)
+    expect(html).toContain("grid-cols-1");
+    expect(html).toContain("lg:grid-cols-[65fr_35fr]");
+    expect(html).toContain("items-stretch");
+
+    // Ambos os cards possuem fundo #1C1C1E
+    expect(html).toContain("bg-[#1C1C1E]");
+
+    // Container expandido com ocupação ampla da tela
+    expect(html).toContain("max-w-[1600px]");
+
+    // Ambas as seções existem e estão no mesmo container
+    expect(html).toContain('aria-label="Evolução da receita"');
+    expect(html).toContain('aria-label="Funil de conversão"');
+  });
 });
