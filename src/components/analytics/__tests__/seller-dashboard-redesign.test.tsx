@@ -94,8 +94,8 @@ describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
       />
     ).replace(/\u00a0/g, " ");
 
-    // Hero
-    expect(html).toContain("Vendas de hoje");
+    // Cabeçalho
+    expect(html).toContain("Vendas");
     expect(html).toContain("Total do período (Últimos 30 dias)");
 
     // 3 Cards de Indicadores (valores principais intactos, sem badges de variação e sem sparklines)

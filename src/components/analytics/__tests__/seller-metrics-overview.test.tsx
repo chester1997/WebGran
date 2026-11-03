@@ -11,7 +11,7 @@ describe("SellerMetricsOverview Component Suite (Apple Design & HIG)", () => {
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const yesterdayKey = getBusinessDateKey(yesterday);
 
-  it("1. Renderiza hero 'Vendas de hoje' com valores corretos de hoje e ontem", () => {
+  it("1. Renderiza cabeçalho minimalista com apenas o título 'Vendas'", () => {
     const metrics: CommercialMetrics = {
       period: "30D",
       storeId: "store-hero-test",
@@ -20,67 +20,53 @@ describe("SellerMetricsOverview Component Suite (Apple Design & HIG)", () => {
       botStarts: { totalStarts: 28, formatted: "28", isTelemetryAvailable: true, uniqueUsers: 24, statusMessage: "28 inícios" },
       averageTicket: { averageTicket: 266.67, formatted: "R$ 266,67", consideredSalesCount: 12, approvedPixCount: 12, generatedPixCount: 16, pixConversionRatePercent: 75 },
       performanceSeries: [],
-      last7DaysPerformance: [
-        { dateStr: yesterdayKey, dateKey: yesterdayKey, dateLabel: "Ontem", dayName: "Ontem", revenue: 200, salesCount: 1, formattedRevenue: "R$ 200,00" },
-        { dateStr: todayKey, dateKey: todayKey, dateLabel: "Hoje", dayName: "Hoje", revenue: 500, salesCount: 2, formattedRevenue: "R$ 500,00" },
-      ],
+      last7DaysPerformance: [],
     };
 
     const html = renderToStaticMarkup(<SellerMetricsOverview metrics={metrics} isPending={false} periodLabel="Últimos 30 dias" />);
     const normalizedHtml = html.replace(/\u00a0/g, " ");
-    expect(normalizedHtml).toContain("Vendas de hoje");
-    expect(normalizedHtml).toContain("R$ 500,00");
-    expect(normalizedHtml).toContain("Ontem:");
-    expect(normalizedHtml).toContain("R$ 200,00");
-    // Hoje (500) > Ontem (200) -> Pílula verde: ((500-200)/200)*100 = 150%
-    expect(normalizedHtml).toContain("+150% vs ontem");
+    expect(normalizedHtml).toContain("Vendas");
+    // Não deve conter hoje e ontem no cabeçalho
+    expect(normalizedHtml).not.toContain("Vendas de hoje");
+    expect(normalizedHtml).not.toContain("ontem");
   });
 
-  it("2. Não exibe pílula vermelha quando hoje for menor ou igual a ontem", () => {
+  it("2. Renderiza ícones em azul escuro (#2563EB) sem fundos, badges ou círculos ao redor", () => {
     const metrics: CommercialMetrics = {
       period: "30D",
-      storeId: "store-hero-lower",
+      storeId: "store-icons-test",
       approvedSales: { total: 1000, formatted: "R$ 1.000,00", count: 4, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
       conversionRate: { ratePercent: 50, formatted: "50%", isTelemetryAvailable: true, totalVisits: 8, convertedOrders: 4, totalPixGerados: 8, totalPixPagos: 4, statusMessage: "" },
       botStarts: { totalStarts: 5, formatted: "5", isTelemetryAvailable: true, uniqueUsers: 5, statusMessage: "" },
       averageTicket: { averageTicket: 250, formatted: "R$ 250,00", consideredSalesCount: 4, approvedPixCount: 4, generatedPixCount: 8, pixConversionRatePercent: 50 },
       performanceSeries: [],
-      last7DaysPerformance: [
-        { dateStr: yesterdayKey, dateKey: yesterdayKey, dateLabel: "Ontem", dayName: "Ontem", revenue: 500, salesCount: 2, formattedRevenue: "R$ 500,00" },
-        { dateStr: todayKey, dateKey: todayKey, dateLabel: "Hoje", dayName: "Hoje", revenue: 100, salesCount: 1, formattedRevenue: "R$ 100,00" },
-      ],
+      last7DaysPerformance: [],
     };
 
     const html = renderToStaticMarkup(<SellerMetricsOverview metrics={metrics} isPending={false} />);
     const normalizedHtml = html.replace(/\u00a0/g, " ");
-    expect(normalizedHtml).toContain("Vendas de hoje");
-    expect(normalizedHtml).toContain("R$ 100,00");
-    expect(normalizedHtml).toContain("Ontem:");
-    expect(normalizedHtml).toContain("R$ 500,00");
-    // NUNCA deve conter porcentagem de queda nem cor vermelha
-    expect(normalizedHtml).not.toContain("% vs ontem");
-    expect(normalizedHtml).not.toContain("text-rose");
-    expect(normalizedHtml).not.toContain("bg-rose");
+    // Ícones em #2563EB
+    expect(normalizedHtml).toContain("text-[#2563EB]");
+    // Sem backgrounds circulares ao redor dos ícones
+    expect(normalizedHtml).not.toContain("bg-blue-500/10");
   });
 
-  it("3. Exibe teto de '+999%+' quando o crescimento for superior a 999%", () => {
+  it("3. Renderiza taxa de conversão formatada (incluindo decimais como 54,8%)", () => {
     const metrics: CommercialMetrics = {
       period: "30D",
-      storeId: "store-hero-max",
-      approvedSales: { total: 15000, formatted: "R$ 15.000,00", count: 10, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
-      conversionRate: { ratePercent: 100, formatted: "100%", isTelemetryAvailable: true, totalVisits: 10, convertedOrders: 10, totalPixGerados: 10, totalPixPagos: 10, statusMessage: "" },
-      botStarts: { totalStarts: 10, formatted: "10", isTelemetryAvailable: true, uniqueUsers: 10, statusMessage: "" },
-      averageTicket: { averageTicket: 1500, formatted: "R$ 1.500,00", consideredSalesCount: 10, approvedPixCount: 10, generatedPixCount: 10, pixConversionRatePercent: 100 },
+      storeId: "store-decimal-test",
+      approvedSales: { total: 41, formatted: "R$ 41,00", count: 17, targetGoal: null, targetProgressPercent: null, hasTargetGoal: false },
+      conversionRate: { ratePercent: 54.8, formatted: "54,8%", isTelemetryAvailable: true, totalVisits: 18, convertedOrders: 17, totalPixGerados: 31, totalPixPagos: 17, statusMessage: "" },
+      botStarts: { totalStarts: 18, formatted: "18", isTelemetryAvailable: true, uniqueUsers: 18, statusMessage: "" },
+      averageTicket: { averageTicket: 2.41, formatted: "R$ 2,41", consideredSalesCount: 17, approvedPixCount: 17, generatedPixCount: 31, pixConversionRatePercent: 54.8 },
       performanceSeries: [],
-      last7DaysPerformance: [
-        { dateStr: yesterdayKey, dateKey: yesterdayKey, dateLabel: "Ontem", dayName: "Ontem", revenue: 10, salesCount: 1, formattedRevenue: "R$ 10,00" },
-        { dateStr: todayKey, dateKey: todayKey, dateLabel: "Hoje", dayName: "Hoje", revenue: 2000, salesCount: 2, formattedRevenue: "R$ 2.000,00" },
-      ],
+      last7DaysPerformance: [],
     };
 
     const html = renderToStaticMarkup(<SellerMetricsOverview metrics={metrics} isPending={false} />);
-    // ((2000 - 10) / 10) * 100 = 19900% -> deve limitar a +999%+
-    expect(html).toContain("+999%+ vs ontem");
+    const normalizedHtml = html.replace(/\u00a0/g, " ");
+    expect(normalizedHtml).toContain("54,8%");
+    expect(normalizedHtml).toContain("17 de 31 pagamentos");
   });
 
   it("4. Renderiza os 3 indicadores com as legendas exatas e linha de starts", () => {

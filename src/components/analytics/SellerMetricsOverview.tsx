@@ -189,12 +189,17 @@ export function SellerMetricsOverview({
 
   const totalPixGenerated = conversionRate?.totalPixGerados ?? 0;
   const totalPixPaid = conversionRate?.totalPixPagos ?? approvedSales?.count ?? 0;
-  const conversionRatePercent =
+  const rawRate =
     conversionRate?.ratePercent ??
     (totalPixGenerated > 0
-      ? Math.round((totalPixPaid / totalPixGenerated) * 100)
+      ? (totalPixPaid / totalPixGenerated) * 100
       : (totalPixPaid > 0 ? 100 : 0));
-  const pixValue = `${conversionRatePercent}%`;
+  const pixValue =
+    conversionRate?.formatted && conversionRate.formatted !== "—"
+      ? conversionRate.formatted
+      : rawRate > 0
+      ? (Number.isInteger(rawRate) ? `${rawRate}%` : `${rawRate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`)
+      : "0%";
   const pixComplementary = `${totalPixPaid} de ${totalPixGenerated || 0} pagamentos`;
 
   // Dimensões SVG e coordenadas do gráfico (adaptadas dinamicamente à largura disponível)
@@ -306,22 +311,12 @@ export function SellerMetricsOverview({
   return (
     <div className="w-full max-w-none flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
-          1. CABEÇALHO (Título Vendas + Resumo Hoje/Ontem)
+          1. CABEÇALHO (Título Vendas)
          ========================================================================= */}
-      <header className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pt-1 px-1">
+      <header className="pt-1 px-1">
         <h1 className="text-[30px] sm:text-[34px] font-bold leading-tight tracking-[-0.022em] text-[var(--apple-text,#fff)]">
           Vendas
         </h1>
-        <div className="text-[13px] sm:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal flex items-center gap-1.5 flex-wrap">
-          <span className="sr-only">Vendas de hoje</span>
-          <span>Hoje </span>
-          <strong className="font-bold text-[var(--apple-text,#fff)] tabular-nums">{todayFormatted}</strong>
-          <span> · </span>
-          <span className="sr-only">Ontem: </span>
-          <span>ontem </span>
-          <strong className="font-bold text-[var(--apple-text,#fff)] tabular-nums">{yesterdayFormatted}</strong>
-          {growthPill && <span className="sr-only">{growthPill}</span>}
-        </div>
       </header>
 
       {/* =========================================================================
@@ -337,11 +332,9 @@ export function SellerMetricsOverview({
           {/* CARD 1 — Vendas aprovadas */}
           <div className="min-w-0 w-full flex flex-col justify-between pb-5 first:pt-0 last:pb-0 lg:pb-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
             <div>
-              {/* Linha superior: Ícone em círculo sutil + Título e breve explicação */}
-              <div className="flex items-start lg:items-center gap-3 lg:gap-2.5">
-                <div className="w-8 h-8 lg:w-7 lg:h-7 rounded-full bg-blue-500/10 text-[var(--apple-blue,#0a84ff)] border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 lg:mt-0">
-                  <CheckCircle2 className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
-                </div>
+              {/* Linha superior: Ícone minimalista sem container + Título e breve explicação */}
+              <div className="flex items-start lg:items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-[#2563EB] shrink-0 mt-0.5 lg:mt-0 stroke-[2.25]" />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-[14px] lg:text-[15px] font-semibold text-[var(--apple-text,#fff)] tracking-tight">
                     Vendas aprovadas
@@ -354,7 +347,7 @@ export function SellerMetricsOverview({
               </div>
 
               {/* Valor principal + Informação complementar */}
-              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-11 lg:pl-0 flex-wrap">
+              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-[30px] lg:pl-0 flex-wrap">
                 <span className="text-[28px] sm:text-[30px] lg:text-[32px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">
                   {receitaValue}
                 </span>
@@ -378,11 +371,9 @@ export function SellerMetricsOverview({
           {/* CARD 2 — Valor médio por venda */}
           <div className="min-w-0 w-full flex flex-col justify-between py-5 first:pt-0 last:pb-0 lg:py-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
             <div>
-              {/* Linha superior: Ícone em círculo sutil + Título e breve explicação */}
-              <div className="flex items-start lg:items-center gap-3 lg:gap-2.5">
-                <div className="w-8 h-8 lg:w-7 lg:h-7 rounded-full bg-blue-500/10 text-[var(--apple-blue,#0a84ff)] border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 lg:mt-0">
-                  <TrendingUp className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
-                </div>
+              {/* Linha superior: Ícone minimalista sem container + Título e breve explicação */}
+              <div className="flex items-start lg:items-center gap-2.5">
+                <TrendingUp className="w-5 h-5 text-[#2563EB] shrink-0 mt-0.5 lg:mt-0 stroke-[2.25]" />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-[14px] lg:text-[15px] font-semibold text-[var(--apple-text,#fff)] tracking-tight">
                     Valor médio por venda
@@ -395,7 +386,7 @@ export function SellerMetricsOverview({
               </div>
 
               {/* Valor principal + Informação complementar */}
-              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-11 lg:pl-0 flex-wrap">
+              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-[30px] lg:pl-0 flex-wrap">
                 <span className="text-[28px] sm:text-[30px] lg:text-[32px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">
                   {ticketValue}
                 </span>
@@ -419,11 +410,9 @@ export function SellerMetricsOverview({
           {/* CARD 3 — Pagamentos confirmados */}
           <div className="min-w-0 w-full flex flex-col justify-between pt-5 first:pt-0 last:pb-0 lg:pt-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
             <div>
-              {/* Linha superior: Ícone em círculo sutil + Título e breve explicação */}
-              <div className="flex items-start lg:items-center gap-3 lg:gap-2.5">
-                <div className="w-8 h-8 lg:w-7 lg:h-7 rounded-full bg-blue-500/10 text-[var(--apple-blue,#0a84ff)] border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 lg:mt-0">
-                  <CreditCard className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
-                </div>
+              {/* Linha superior: Ícone minimalista sem container + Título e breve explicação */}
+              <div className="flex items-start lg:items-center gap-2.5">
+                <CreditCard className="w-5 h-5 text-[#2563EB] shrink-0 mt-0.5 lg:mt-0 stroke-[2.25]" />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-[14px] lg:text-[15px] font-semibold text-[var(--apple-text,#fff)] tracking-tight">
                     Pagamentos confirmados
@@ -436,7 +425,7 @@ export function SellerMetricsOverview({
               </div>
 
               {/* Valor principal + Informação complementar */}
-              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-11 lg:pl-0 flex-wrap">
+              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-[30px] lg:pl-0 flex-wrap">
                 <span className="text-[28px] sm:text-[30px] lg:text-[32px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">
                   {pixValue}
                 </span>
