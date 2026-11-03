@@ -124,7 +124,7 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* BRAND HEADER (Logo 38px, WebGran 21px/700, Vendedor 10px) */}
       {/* ==================================================== */}
-      <div className="px-4 pt-5 pb-3.5 flex items-center justify-between shrink-0 select-none">
+      <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0 select-none">
         <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-3 min-w-0">
           <Image
             src="/logo-webgran-icon.png"
@@ -157,24 +157,24 @@ export default function SellerSidebar({
       </div>
 
       {/* ==================================================== */}
-      {/* NAVEGAÇÃO PRINCIPAL (px-4 py-2 space-y-1.5)        */}
+      {/* NAVEGAÇÃO PRINCIPAL (px-6 py-2 space-y-2)           */}
       {/* ==================================================== */}
       <nav
         tabIndex={0}
         aria-label="Navegação do Vendedor"
-        className="flex-1 overflow-y-auto px-4 py-2 space-y-1.5 sidebar-scroll focus-visible:outline-none"
+        className="flex-1 overflow-y-auto px-6 py-2 sidebar-scroll focus-visible:outline-none"
       >
         {/* ==================================================== */}
         {/* SEÇÃO 1: GERAL                                       */}
         {/* ==================================================== */}
         <div className="pt-1">
-          <div className="px-2.5 pb-1.5 flex items-center gap-2.5 select-none">
+          <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
             <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               GERAL
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2 mt-1">
             <SidebarNavItem
               href="/seller"
               label="Dashboard"
@@ -190,15 +190,15 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* SEÇÃO 2: BOT TELEGRAM                                */}
         {/* ==================================================== */}
-        <div className="mt-[32px]">
-          <div className="px-2.5 pb-1.5 flex items-center gap-2.5 select-none">
+        <div className="mt-[36px]">
+          <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
             <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               BOT TELEGRAM
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2 mt-1">
             {/* Acordeão do Bot Telegram estilizado */}
             <SidebarNavItem
               label="Configurações do Bot"
@@ -207,7 +207,7 @@ export default function SellerSidebar({
               iconSize={19}
               accent="blue"
               onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
-              className={`w-full flex items-center justify-between gap-3.5 px-3 h-[42px] min-h-[42px] rounded-[10px] text-[15px] font-medium text-left transition-all duration-150 cursor-pointer ${
+              className={`w-full flex items-center justify-between gap-3.5 px-3.5 h-[44px] min-h-[44px] rounded-[10px] text-[15px] font-medium text-left transition-all duration-150 cursor-pointer ${
                 isBotChildActive
                   ? "bg-[#3984FF]/10 text-white font-medium"
                   : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
@@ -222,7 +222,7 @@ export default function SellerSidebar({
 
             {/* Subitens com árvore de conexão SVG */}
             {botGroupOpen && (
-              <div className="relative pl-5 space-y-1.5 my-1.5">
+              <div className="relative pl-5 space-y-2 my-2">
                 {visibleBotSubItems.map((item, index) => {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                   const isLast = index === visibleBotSubItems.length - 1;
@@ -260,14 +260,14 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* SEÇÃO 3: VENDAS                                      */}
         {/* ==================================================== */}
-        <div className="mt-[32px]">
-          <div className="px-2.5 pb-1.5 flex items-center gap-2.5 select-none">
+        <div className="mt-[36px]">
+          <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
             <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               VENDAS
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2 mt-1">
             {salesItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
@@ -290,14 +290,14 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* SEÇÃO 4: CONTA                                       */}
         {/* ==================================================== */}
-        <div className="mt-[32px]">
-          <div className="px-2.5 pb-1.5 flex items-center gap-2.5 select-none">
+        <div className="mt-[36px]">
+          <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
             <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-400 shrink-0">
               CONTA
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2 mt-1">
             {accountItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
@@ -321,10 +321,10 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* RODAPÉ: CARD DE VOLUME, VOLTAR AO ADMIN & USUÁRIO    */}
       {/* ==================================================== */}
-      <div className="px-4 py-3 border-t border-white/[0.06] space-y-2.5 bg-[var(--seller-bg,#0B0F14)] shrink-0">
+      <div className="px-6 py-4 border-t border-white/[0.06] space-y-3 bg-[var(--seller-bg,#0B0F14)] shrink-0">
         
         {/* Card de Volume de Vendas */}
-        <div className="p-3 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
+        <div className="p-3.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-zinc-300">
               <SolarSellerSalesVolumeIcon size={19} className="text-[#3984FF] shrink-0" />
@@ -362,7 +362,7 @@ export default function SellerSidebar({
           <Link
             href="/admin"
             onClick={handleLinkClick}
-            className="flex items-center gap-3.5 px-3 h-[42px] min-h-[42px] rounded-[10px] text-[15px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
+            className="flex items-center gap-3.5 px-3.5 h-[44px] min-h-[44px] rounded-[10px] text-[15px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
           >
             <SolarSellerBackToAdminIcon size={19} className="text-zinc-400 shrink-0" />
             <span className="truncate flex-1">Voltar ao Admin</span>
@@ -370,7 +370,7 @@ export default function SellerSidebar({
         )}
 
         {/* Perfil do Vendedor & Logout */}
-        <div className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06]">
+        <div className="flex items-center justify-between p-3 rounded-[12px] bg-[#0F1014] border border-white/[0.06]">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-[38px] h-[38px] rounded-xl bg-[#1D4ED8] flex items-center justify-center border border-[#3984FF]/30 shrink-0 font-bold text-[14px] text-white overflow-hidden">
               {sellerProfile?.avatarUrl ? (
