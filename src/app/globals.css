@@ -12,6 +12,7 @@
   --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   /* WebGran Titanium Design System Surfaces & Semantic Tokens */
   --color-wg-canvas: #09090B;
+  --color-seller-bg: var(--seller-bg);
   --color-wg-card: #0F1014;
   --color-wg-card-hover: #14151B;
   --color-wg-control: #15171D;
@@ -139,6 +140,7 @@
   --logo-size: 40px;
   --logo-text-size: 20px;
   --logo-text-weight: 700;
+  --seller-bg: #0A0A0A;
 }
 
 .dark {
@@ -196,6 +198,7 @@
   --logo-size: 40px;
   --logo-text-size: 20px;
   --logo-text-weight: 700;
+  --seller-bg: #0A0A0A;
 }
 
 @layer base {
