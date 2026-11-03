@@ -94,7 +94,7 @@ export function SellerActivityAndChannels({
   const hasMultipleBots = effectiveBotsCount > 1;
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
+    <div className="w-full max-w-none flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
           5. DUAS SUPERFÍCIES LADO A LADO (UMA COLUNA ABAIXO DE 860px)
          ========================================================================= */}

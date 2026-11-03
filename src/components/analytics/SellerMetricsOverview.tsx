@@ -233,7 +233,7 @@ export function SellerMetricsOverview({
   // Skeleton Loading elegante
   if (isPending) {
     return (
-      <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-[20px] animate-pulse">
+      <div className="w-full max-w-none flex flex-col gap-[20px] animate-pulse">
         <div className="h-10 bg-white/[0.04] rounded-[14px] w-64" />
         <div className="h-32 bg-[#1C1C1E] rounded-[22px]" />
         <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-[20px] items-stretch">
@@ -259,7 +259,7 @@ export function SellerMetricsOverview({
   });
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
+    <div className="w-full max-w-none flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
       {/* =========================================================================
           1. CABEÇALHO (Título Vendas + Resumo Hoje/Ontem)
          ========================================================================= */}

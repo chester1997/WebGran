@@ -280,8 +280,9 @@ describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
     // Ambos os cards possuem fundo #1C1C1E
     expect(html).toContain("bg-[#1C1C1E]");
 
-    // Container expandido com ocupação ampla da tela
-    expect(html).toContain("max-w-[1600px]");
+    // Container expandido com ocupação total da tela (w-full max-w-none)
+    expect(html).toContain("w-full");
+    expect(html).toContain("max-w-none");
 
     // Ambas as seções existem e estão no mesmo container
     expect(html).toContain('aria-label="Evolução da receita"');
