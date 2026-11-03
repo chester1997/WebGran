@@ -98,24 +98,19 @@ describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
     expect(html).toContain("Vendas de hoje");
     expect(html).toContain("Total do período (Últimos 30 dias)");
 
-    // 4 Cards de Indicadores (valores principais intactos, sem badges de variação e sem sparklines)
-    expect(html).toContain("Receita aprovada");
-    expect(html).toContain("R$ 12.500,50");
-    expect(html).not.toContain("+18%");
-
+    // 3 Cards de Indicadores (valores principais intactos, sem badges de variação e sem sparklines)
     expect(html).toContain("Vendas aprovadas");
-    expect(html).toContain("85");
+    expect(html).toContain("R$ 12.500,50");
+    expect(html).toContain("85 vendas");
+    expect(html).not.toContain("+18%");
     expect(html).not.toContain("+12%");
 
     expect(html).toContain("Valor médio por venda");
     expect(html).toContain("R$ 147,06");
 
-    expect(html).toContain("Pagamentos concluídos");
+    expect(html).toContain("Pagamentos confirmados");
     expect(html).toContain("68%");
-    expect(html).toContain("85/125");
-
-    // Tooltip trigger "?"
-    expect(html).toContain("?");
+    expect(html).toContain("85 de 125 pagamentos");
 
     // Starts line
     expect(html).toContain("pessoas iniciaram conversa");

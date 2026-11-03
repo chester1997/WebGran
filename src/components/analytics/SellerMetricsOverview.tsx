@@ -4,7 +4,7 @@ import React, { useMemo, useState, useRef, useCallback, useEffect } from "react"
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { getBusinessDateKey } from "@/lib/analytics/timezone-utils";
 import { SellerConversionFunnel } from "./SellerConversionFunnel";
-import { LineChart as LineIcon, BarChart2 as BarIcon } from "lucide-react";
+import { LineChart as LineIcon, BarChart2 as BarIcon, CheckCircle2, TrendingUp, CreditCard } from "lucide-react";
 
 interface KpiDataPoint {
   value: number;
@@ -174,15 +174,28 @@ export function SellerMetricsOverview({
   const totalConfirmedSales = approvedSales?.count ?? normalizedSeries.reduce((acc, curr) => acc + curr.salesCount, 0);
   const totalStartsCount = botStarts?.uniqueUsers || botStarts?.totalStarts || 0;
 
-  // Valores dos 4 indicadores
+  // Valores dos 3 indicadores principais
   const receitaValue = kpis?.revenue?.formatted || approvedSales?.formatted || formatBRL(totalPeriodRevenue);
-  const vendasValue = kpis?.salesCount?.value ?? approvedSales?.count ?? 0;
-  const ticketValue = kpis?.averageTicket?.formatted || averageTicket?.formatted || "R$ 0,00";
+  const ticketValue =
+    kpis?.averageTicket?.formatted ||
+    averageTicket?.formatted ||
+    (totalConfirmedSales > 0 ? formatBRL(totalPeriodRevenue / totalConfirmedSales) : "R$ 0,00");
+
+  const consideredSalesCount = averageTicket?.consideredSalesCount ?? totalConfirmedSales;
+  const ticketComplementary =
+    consideredSalesCount > 0
+      ? `Média de ${consideredSalesCount} ${consideredSalesCount === 1 ? "venda" : "vendas"}`
+      : "0 vendas consideradas";
 
   const totalPixGenerated = conversionRate?.totalPixGerados ?? 0;
   const totalPixPaid = conversionRate?.totalPixPagos ?? approvedSales?.count ?? 0;
-  const conversionRatePercent = conversionRate?.ratePercent ?? (totalPixGenerated > 0 ? Math.round((totalPixPaid / totalPixGenerated) * 100) : null);
-  const pixValue = conversionRatePercent !== null ? `${conversionRatePercent}%` : `${totalPixPaid}/${totalPixGenerated || 0}`;
+  const conversionRatePercent =
+    conversionRate?.ratePercent ??
+    (totalPixGenerated > 0
+      ? Math.round((totalPixPaid / totalPixGenerated) * 100)
+      : (totalPixPaid > 0 ? 100 : 0));
+  const pixValue = `${conversionRatePercent}%`;
+  const pixComplementary = `${totalPixPaid} de ${totalPixGenerated || 0} pagamentos`;
 
   // Dimensões SVG e coordenadas do gráfico (adaptadas dinamicamente à largura disponível)
   const currentWidth = chartWidth || 800;
@@ -312,83 +325,136 @@ export function SellerMetricsOverview({
       </header>
 
       {/* =========================================================================
-          2. UMA ÚNICA SUPERFÍCIE: OS 4 INDICADORES EM GRID DE 2 (MOBILE) E 4 COLUNAS (DESKTOP)
+          2. UMA ÚNICA SUPERFÍCIE: OS 3 INDICADORES PRINCIPAIS
+             Desktop: 3 colunas de mesma proporção com divisores verticais
+             Mobile: 3 seções verticais com divisores horizontais
          ========================================================================= */}
       <section
         aria-label="Indicadores de desempenho"
-        className="bg-[#1C1C1E] rounded-[18px] sm:rounded-[22px] p-4 sm:p-6 lg:p-8 relative overflow-hidden"
+        className="bg-[#1C1C1E] rounded-[18px] sm:rounded-[22px] p-5 sm:p-6 lg:p-7 border border-white/[0.06] relative overflow-hidden"
       >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-5 lg:gap-0 lg:divide-x lg:divide-white/[0.08]">
-          {/* Indicador 1: Receita aprovada */}
-          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7 first:pl-0">
-            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
-              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
-                <span>Receita aprovada</span>
-                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Faturamento total bruto obtido no período">?</span>
+        <div className="flex flex-col divide-y divide-white/[0.08] lg:divide-y-0 lg:grid lg:grid-cols-3 lg:divide-x lg:divide-white/[0.08]">
+          {/* CARD 1 — Vendas aprovadas */}
+          <div className="min-w-0 w-full flex flex-col justify-between pb-5 first:pt-0 last:pb-0 lg:pb-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
+            <div>
+              {/* Linha superior: Ícone em círculo sutil + Título e breve explicação */}
+              <div className="flex items-start lg:items-center gap-3 lg:gap-2.5">
+                <div className="w-8 h-8 lg:w-7 lg:h-7 rounded-full bg-blue-500/10 text-[var(--apple-blue,#0a84ff)] border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 lg:mt-0">
+                  <CheckCircle2 className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[14px] lg:text-[15px] font-semibold text-[var(--apple-text,#fff)] tracking-tight">
+                    Vendas aprovadas
+                  </h3>
+                  {/* Descrição mobile ao lado do título */}
+                  <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-normal mt-0.5 lg:hidden">
+                    Dinheiro gerado pelas vendas aprovadas.
+                  </p>
+                </div>
+              </div>
+
+              {/* Valor principal + Informação complementar */}
+              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-11 lg:pl-0 flex-wrap">
+                <span className="text-[28px] sm:text-[30px] lg:text-[32px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">
+                  {receitaValue}
+                </span>
+                <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium tabular-nums lg:hidden">
+                  {totalConfirmedSales} {totalConfirmedSales === 1 ? "venda" : "vendas"}
+                </span>
+              </div>
+            </div>
+
+            {/* Desktop: Informação complementar + Descrição abaixo do valor */}
+            <div className="hidden lg:flex lg:flex-col lg:gap-0.5 lg:mt-2">
+              <span className="text-[12px] lg:text-[13px] text-blue-400 font-medium tabular-nums">
+                {totalConfirmedSales} {totalConfirmedSales === 1 ? "venda" : "vendas"}
               </span>
+              <p className="text-[13px] lg:text-[13.5px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-normal">
+                Dinheiro gerado pelas vendas aprovadas.
+              </p>
             </div>
-            <div className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5 sm:my-2 leading-none">
-              {receitaValue}
-            </div>
-            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
-              {approvedSales?.count || 0} {(approvedSales?.count || 0) === 1 ? "venda confirmada" : "vendas confirmadas"}
-            </p>
           </div>
 
-          {/* Indicador 2: Vendas aprovadas */}
-          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7">
-            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
-              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
-                <span>Vendas aprovadas</span>
-                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Quantidade de pedidos com pagamento confirmado">?</span>
+          {/* CARD 2 — Valor médio por venda */}
+          <div className="min-w-0 w-full flex flex-col justify-between py-5 first:pt-0 last:pb-0 lg:py-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
+            <div>
+              {/* Linha superior: Ícone em círculo sutil + Título e breve explicação */}
+              <div className="flex items-start lg:items-center gap-3 lg:gap-2.5">
+                <div className="w-8 h-8 lg:w-7 lg:h-7 rounded-full bg-blue-500/10 text-[var(--apple-blue,#0a84ff)] border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 lg:mt-0">
+                  <TrendingUp className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[14px] lg:text-[15px] font-semibold text-[var(--apple-text,#fff)] tracking-tight">
+                    Valor médio por venda
+                  </h3>
+                  {/* Descrição mobile ao lado do título */}
+                  <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-normal mt-0.5 lg:hidden">
+                    Quanto cada cliente gastou, em média.
+                  </p>
+                </div>
+              </div>
+
+              {/* Valor principal + Informação complementar */}
+              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-11 lg:pl-0 flex-wrap">
+                <span className="text-[28px] sm:text-[30px] lg:text-[32px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">
+                  {ticketValue}
+                </span>
+                <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium tabular-nums lg:hidden">
+                  {ticketComplementary}
+                </span>
+              </div>
+            </div>
+
+            {/* Desktop: Informação complementar + Descrição abaixo do valor */}
+            <div className="hidden lg:flex lg:flex-col lg:gap-0.5 lg:mt-2">
+              <span className="text-[12px] lg:text-[13px] text-blue-400 font-medium tabular-nums">
+                {ticketComplementary}
               </span>
+              <p className="text-[13px] lg:text-[13.5px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-normal">
+                Quanto cada cliente gastou, em média.
+              </p>
             </div>
-            <div className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5 sm:my-2 leading-none">
-              {vendasValue}
-            </div>
-            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
-              Volume de pedidos concluídos
-            </p>
           </div>
 
-          {/* Indicador 3: Valor médio */}
-          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7">
-            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
-              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
-                <span>Valor médio por venda</span>
-                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Ticket médio por venda aprovada">?</span>
-              </span>
-            </div>
-            <div className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums my-1.5 sm:my-2 leading-none">
-              {ticketValue}
-            </div>
-            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
-              {averageTicket?.consideredSalesCount
-                ? `Média de ${averageTicket.consideredSalesCount} ${averageTicket.consideredSalesCount === 1 ? "venda aprovada" : "vendas aprovadas"}`
-                : "Média por pedido aprovado"}
-            </p>
-          </div>
+          {/* CARD 3 — Pagamentos confirmados */}
+          <div className="min-w-0 w-full flex flex-col justify-between pt-5 first:pt-0 last:pb-0 lg:pt-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
+            <div>
+              {/* Linha superior: Ícone em círculo sutil + Título e breve explicação */}
+              <div className="flex items-start lg:items-center gap-3 lg:gap-2.5">
+                <div className="w-8 h-8 lg:w-7 lg:h-7 rounded-full bg-blue-500/10 text-[var(--apple-blue,#0a84ff)] border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 lg:mt-0">
+                  <CreditCard className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[14px] lg:text-[15px] font-semibold text-[var(--apple-text,#fff)] tracking-tight">
+                    Pagamentos confirmados
+                  </h3>
+                  {/* Descrição mobile ao lado do título */}
+                  <p className="text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-normal mt-0.5 lg:hidden">
+                    Percentual dos Pix gerados que foram pagos.
+                  </p>
+                </div>
+              </div>
 
-          {/* Indicador 4: Pix pagos */}
-          <div className="min-w-0 w-full flex flex-col justify-start lg:px-7 last:pr-0">
-            <div className="flex items-start gap-1 min-h-[34px] sm:min-h-[22px]">
-              <span className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium inline-flex items-center gap-1">
-                <span>Pix pagos</span>
-                <span className="sr-only">Pagamentos concluídos</span>
-                <span className="text-[10px] sm:text-[11px] text-zinc-500 cursor-help shrink-0" title="Taxa de conversão de Pix">?</span>
-              </span>
+              {/* Valor principal + Informação complementar */}
+              <div className="mt-3 lg:mt-2.5 flex items-baseline gap-2.5 pl-11 lg:pl-0 flex-wrap">
+                <span className="text-[28px] sm:text-[30px] lg:text-[32px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">
+                  {pixValue}
+                </span>
+                <span className="text-[12px] sm:text-[13px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium tabular-nums lg:hidden">
+                  {pixComplementary}
+                </span>
+              </div>
             </div>
-            <div className="flex items-baseline gap-2 my-1.5 sm:my-2 leading-none">
-              <span className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums">
-                {pixValue}
+
+            {/* Desktop: Informação complementar + Descrição abaixo do valor */}
+            <div className="hidden lg:flex lg:flex-col lg:gap-0.5 lg:mt-2">
+              <span className="text-[12px] lg:text-[13px] text-blue-400 font-medium tabular-nums">
+                {pixComplementary}
               </span>
-              <span className="text-[11px] sm:text-[12px] font-medium text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
-                {totalPixPaid}/{totalPixGenerated || 0}
-              </span>
+              <p className="text-[13px] lg:text-[13.5px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-normal">
+                Percentual dos Pix gerados que foram pagos.
+              </p>
             </div>
-            <p className="text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-normal leading-[1.45]">
-              De {totalPixGenerated} Pix gerados, {totalPixPaid} foram pagos
-            </p>
           </div>
         </div>
 

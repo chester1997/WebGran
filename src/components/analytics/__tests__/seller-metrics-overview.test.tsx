@@ -97,12 +97,25 @@ describe("SellerMetricsOverview Component Suite (Apple Design & HIG)", () => {
 
     const html = renderToStaticMarkup(<SellerMetricsOverview metrics={metrics} isPending={false} />);
     const normalizedHtml = html.replace(/\u00a0/g, " ");
-    expect(normalizedHtml).toContain("Receita aprovada");
-    expect(normalizedHtml).toContain("15 vendas confirmadas");
-    expect(normalizedHtml).toContain("Pagamentos concluídos");
-    expect(normalizedHtml).toContain("De 25 Pix gerados, 15 foram pagos");
+    // Card 1
+    expect(normalizedHtml).toContain("Vendas aprovadas");
+    expect(normalizedHtml).toContain("R$ 4.500,00");
+    expect(normalizedHtml).toContain("15 vendas");
+    expect(normalizedHtml).toContain("Dinheiro gerado pelas vendas aprovadas.");
+
+    // Card 2
     expect(normalizedHtml).toContain("Valor médio por venda");
     expect(normalizedHtml).toContain("R$ 300,00");
+    expect(normalizedHtml).toContain("Média de 15 vendas");
+    expect(normalizedHtml).toContain("Quanto cada cliente gastou, em média.");
+
+    // Card 3
+    expect(normalizedHtml).toContain("Pagamentos confirmados");
+    expect(normalizedHtml).toContain("60%");
+    expect(normalizedHtml).toContain("15 de 25 pagamentos");
+    expect(normalizedHtml).toContain("Percentual dos Pix gerados que foram pagos.");
+
+    // Starts footer
     expect(normalizedHtml).toContain("pessoas iniciaram conversa no período");
     expect(normalizedHtml).toContain(">32<");
   });
