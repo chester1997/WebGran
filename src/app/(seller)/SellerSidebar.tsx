@@ -124,7 +124,7 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* BRAND HEADER (Logo 38px, WebGran 21px/700, Vendedor 10px) */}
       {/* ==================================================== */}
-      <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0 select-none">
+      <div className="px-[22px] pt-6 pb-4 flex items-center justify-between shrink-0 select-none">
         <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-3 min-w-0">
           <Image
             src="/logo-webgran-icon.png"
@@ -157,12 +157,12 @@ export default function SellerSidebar({
       </div>
 
       {/* ==================================================== */}
-      {/* NAVEGAÇÃO PRINCIPAL (px-6 py-2 space-y-2)           */}
+      {/* NAVEGAÇÃO PRINCIPAL (px-[22px] py-2 space-y-2)      */}
       {/* ==================================================== */}
       <nav
         tabIndex={0}
         aria-label="Navegação do Vendedor"
-        className="flex-1 overflow-y-auto px-6 py-2 sidebar-scroll focus-visible:outline-none"
+        className="flex-1 overflow-y-auto px-[22px] py-2 sidebar-scroll focus-visible:outline-none"
       >
         {/* ==================================================== */}
         {/* SEÇÃO 1: GERAL                                       */}
@@ -207,16 +207,16 @@ export default function SellerSidebar({
               iconSize={19}
               accent="blue"
               onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
-              className={`w-full flex items-center justify-between gap-3.5 px-3.5 h-[44px] min-h-[44px] rounded-[10px] text-[15px] font-medium text-left transition-all duration-150 cursor-pointer ${
+              className={`w-full flex items-center justify-between gap-2.5 px-3 h-[44px] min-h-[44px] rounded-[10px] text-[14px] font-medium text-left transition-all duration-150 cursor-pointer ${
                 isBotChildActive
                   ? "bg-[#3984FF]/10 text-white font-medium"
                   : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
               {botGroupOpen ? (
-                <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-150 ml-auto" strokeWidth={1.8} />
+                <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
               ) : (
-                <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-150 ml-auto" strokeWidth={1.8} />
+                <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
               )}
             </SidebarNavItem>
 
@@ -321,7 +321,7 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       {/* RODAPÉ: CARD DE VOLUME, VOLTAR AO ADMIN & USUÁRIO    */}
       {/* ==================================================== */}
-      <div className="px-6 py-4 border-t border-white/[0.06] space-y-3 bg-[var(--seller-bg,#0B0F14)] shrink-0">
+      <div className="px-[22px] py-4 border-t border-white/[0.06] space-y-3 bg-[var(--seller-bg,#0B0F14)] shrink-0">
         
         {/* Card de Volume de Vendas */}
         <div className="p-3.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
@@ -362,7 +362,7 @@ export default function SellerSidebar({
           <Link
             href="/admin"
             onClick={handleLinkClick}
-            className="flex items-center gap-3.5 px-3.5 h-[44px] min-h-[44px] rounded-[10px] text-[15px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
+            className="flex items-center gap-3 px-3 h-[44px] min-h-[44px] rounded-[10px] text-[14px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
           >
             <SolarSellerBackToAdminIcon size={19} className="text-zinc-400 shrink-0" />
             <span className="truncate flex-1">Voltar ao Admin</span>

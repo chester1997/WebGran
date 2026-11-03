@@ -81,7 +81,7 @@ export default function SidebarNavItem({
     ? "bg-emerald-500/10 text-white font-medium"
     : "bg-[#3984FF]/10 text-white font-medium";
 
-  const defaultClasses = `flex items-center gap-3.5 px-3.5 h-[44px] min-h-[44px] rounded-[10px] text-[15px] font-medium transition-all duration-150 relative ${isActive
+  const defaultClasses = `flex items-center gap-3 px-3 h-[44px] min-h-[44px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${isActive
     ? activeBgClass
     : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
     }`;
