@@ -132,7 +132,8 @@
   --nav-icon: 20px;
   --nav-radius: 12px;
   --section-label-size: 11px;
-  --section-label-spacing: 0.06em;
+  --section-label-spacing: 0.05em;
+  --section-label-weight: 500;
   --section-label-margin-top: 28px;
   --header-h: 112px;
   --logo-size: 40px;
@@ -188,7 +189,8 @@
   --nav-icon: 20px;
   --nav-radius: 12px;
   --section-label-size: 11px;
-  --section-label-spacing: 0.06em;
+  --section-label-spacing: 0.05em;
+  --section-label-weight: 500;
   --section-label-margin-top: 28px;
   --header-h: 112px;
   --logo-size: 40px;
