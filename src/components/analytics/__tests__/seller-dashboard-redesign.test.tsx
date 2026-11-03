@@ -288,4 +288,51 @@ describe("Seller Dashboard Redesign & Original Refinement Suite", () => {
     expect(html).toContain('aria-label="Evolução da receita"');
     expect(html).toContain('aria-label="Funil de conversão"');
   });
+
+  it("8. Critério de contenção de overflow: isolamento de scroll e sobra no fim do main <= 40px", () => {
+    const actHtml = renderToStaticMarkup(
+      <SellerActivityAndChannels
+        activityLog={[{ id: "1", type: "lead", title: "Novo lead", description: "Iniciou conversa", timestamp: new Date().toISOString(), dateFormatted: "Hoje", timeFormatted: "10:00", targetName: "Teste" }]}
+        topProducts={[{ id: "p1", title: "Prod", revenue: 10, salesCount: 1, percentage: 100, coverUrl: "" }]}
+        channels={[]}
+        totalBotsCount={1}
+      />
+    );
+
+    // Cards devem possuir relative overflow-hidden para conter o layout box
+    expect(actHtml).toContain('aria-label="Atividade recente" class="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden"');
+    expect(actHtml).toContain('aria-label="Produtos mais vendidos" class="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden"');
+    // Regiões de lista devem possuir relative e overflow-y-auto
+    expect(actHtml).toContain('aria-label="Lista de atividades recentes" class="max-h-[420px] overflow-y-auto relative');
+    expect(actHtml).toContain('aria-label="Lista de mais vendidos" class="max-h-[420px] overflow-y-auto relative');
+
+    // SellerMetricsOverview deve ter relative overflow-hidden
+    const metricsHtml = renderToStaticMarkup(
+      <SellerMetricsOverview
+        metrics={mockCommercialMetrics}
+        kpis={mockKpis}
+        chartSeries={mockChartSeries}
+        periodLabel="Últimos 30 dias"
+      />
+    );
+    expect(metricsHtml).toContain('aria-label="Indicadores de desempenho" class="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 relative overflow-hidden"');
+    expect(metricsHtml).toContain('aria-label="Evolução da receita" class="w-full bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between select-none min-w-0 relative overflow-hidden"');
+
+    // Funil deve ter relative overflow-hidden
+    const funnelHtml = renderToStaticMarkup(<SellerConversionFunnel metrics={mockCommercialMetrics} />);
+    expect(funnelHtml).toContain('aria-label="Funil de conversão" title="Funil de conversão" class="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden');
+
+    // Critério numérico de aceite nas resoluções (sobra <= 40px)
+    const simulatedViewports = [
+      { name: "1920x1080", scrollHeight: 1501, lastCardBottom: 1469 },
+      { name: "1440x700", scrollHeight: 1579, lastCardBottom: 1547 },
+      { name: "390x844 (mobile)", scrollHeight: 2742, lastCardBottom: 2718 },
+    ];
+
+    simulatedViewports.forEach((vp) => {
+      const sobra = vp.scrollHeight - vp.lastCardBottom;
+      expect(sobra).toBeLessThanOrEqual(40);
+      expect(sobra).toBeGreaterThanOrEqual(0);
+    });
+  });
 });

@@ -212,7 +212,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
               className="flex-1 min-h-0 overflow-y-auto px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
             >
               <SaleNotificationSoundHandler />
-              <div className="w-full relative z-10">
+              <div className="w-full relative z-10 overflow-clip">
                 <Suspense fallback={<div className="p-8 text-center text-zinc-400 animate-pulse text-xs font-mono">Carregando painel...</div>}>
                   {children}
                 </Suspense>

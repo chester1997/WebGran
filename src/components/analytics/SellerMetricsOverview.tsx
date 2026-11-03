@@ -284,7 +284,7 @@ export function SellerMetricsOverview({
          ========================================================================= */}
       <section
         aria-label="Indicadores de desempenho"
-        className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8"
+        className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 relative overflow-hidden"
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-white/[0.08]">
           {/* Indicador 1: Receita aprovada */}
@@ -369,7 +369,7 @@ export function SellerMetricsOverview({
         {/* Gráfico de vendas: 65% da largura disponível */}
         <section
           aria-label="Evolução da receita"
-          className="w-full bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between select-none min-w-0"
+          className="w-full bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between select-none min-w-0 relative overflow-hidden"
         >
           {/* Topo: Legenda, Total grande e Controle Segmentado Curva/Barras */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">

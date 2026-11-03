@@ -353,7 +353,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
         }
       />
 
-      <div className="w-full max-w-none flex flex-col gap-[20px] min-w-0 pb-0">
+      <div className="w-full max-w-none flex flex-col gap-[20px] min-w-0 pb-0 relative">
 
         {/* Error Banner */}
         {errorMsg && (

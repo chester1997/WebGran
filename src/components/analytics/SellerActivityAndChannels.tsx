@@ -108,7 +108,7 @@ export function SellerActivityAndChannels({
            ========================================================================= */}
         <section
           aria-label="Atividade recente"
-          className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between"
+          className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -149,7 +149,7 @@ export function SellerActivityAndChannels({
                 tabIndex={0}
                 role="region"
                 aria-label="Lista de atividades recentes"
-                className="max-h-[420px] overflow-y-auto no-scrollbar focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
+                className="max-h-[420px] overflow-y-auto relative no-scrollbar focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
               >
                 <ul role="list" className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))]">
                   {activityLog.map((event) => {
@@ -247,7 +247,7 @@ export function SellerActivityAndChannels({
            ========================================================================= */}
         <section
           aria-label="Produtos mais vendidos"
-          className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between"
+          className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden"
         >
           <div>
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -288,7 +288,7 @@ export function SellerActivityAndChannels({
                 tabIndex={0}
                 role="region"
                 aria-label="Lista de mais vendidos"
-                className="max-h-[420px] overflow-y-auto no-scrollbar focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
+                className="max-h-[420px] overflow-y-auto relative no-scrollbar focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
               >
                 <ul role="list" className="divide-y divide-[var(--apple-separator,rgba(84,84,88,0.25))]">
                   {topProducts.map((prod, index) => {
@@ -366,7 +366,7 @@ export function SellerActivityAndChannels({
         {hasMultipleBots && (
           <section
             aria-label="Desempenho por bot"
-            className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between"
+            className="bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden"
           >
             <div>
               <div className="flex items-center justify-between gap-3 mb-4">

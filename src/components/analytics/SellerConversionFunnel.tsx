@@ -62,7 +62,7 @@ export function SellerConversionFunnel({
     <section
       aria-label="Funil de conversão"
       title="Funil de conversão"
-      className={`bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between ${className}`}
+      className={`bg-[#1C1C1E] rounded-[22px] p-7 lg:p-8 flex flex-col justify-between relative overflow-hidden ${className}`}
     >
       {/* Topo do Funil */}
       <div className="flex items-center justify-between gap-3 mb-6">
