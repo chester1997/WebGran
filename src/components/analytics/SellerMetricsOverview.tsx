@@ -28,7 +28,6 @@ import {
 } from "recharts";
 import { CommercialMetrics } from "@/lib/analytics/commercial-metrics-service";
 import { getBusinessDateKey } from "@/lib/analytics/timezone-utils";
-import { MiniSparkline } from "./MiniSparkline";
 import { SellerConversionFunnel } from "./SellerConversionFunnel";
 
 interface KpiDataPoint {
@@ -117,37 +116,7 @@ function IndicatorTooltip({ text }: { text: string }) {
   );
 }
 
-function DeltaBadge({ changePercent, trend }: { changePercent: number | null; trend?: 'up' | 'down' | 'neutral' | 'none' }) {
-  if (changePercent === null) return null;
 
-  const isUp = trend === 'up' || changePercent > 0;
-  const isDown = trend === 'down' || changePercent < 0;
-
-  if (isUp) {
-    return (
-      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tabular-nums">
-        <TrendingUp className="w-2.5 h-2.5 stroke-[2.5]" />
-        <span>+{Math.abs(changePercent)}%</span>
-      </span>
-    );
-  }
-
-  if (isDown) {
-    return (
-      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 tabular-nums">
-        <TrendingDown className="w-2.5 h-2.5 stroke-[2.5]" />
-        <span>-{Math.abs(changePercent)}%</span>
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/[0.04] text-zinc-400 border border-white/[0.06] tabular-nums">
-      <Minus className="w-2.5 h-2.5" />
-      <span>0%</span>
-    </span>
-  );
-}
 
 export function SellerMetricsOverview({
   metrics,
@@ -223,27 +192,6 @@ export function SellerMetricsOverview({
 
   // Starts
   const totalStartsCount = botStarts?.uniqueUsers || botStarts?.totalStarts || 0;
-
-  // Séries para MiniSparklines
-  const revenueSparklineData = useMemo(() => {
-    if (chartSeries.length > 0) return chartSeries.map((p) => p.revenue);
-    if (performanceSeries.length > 0) return performanceSeries.map((p: any) => Number(p.revenue || 0));
-    return [0, 0];
-  }, [chartSeries, performanceSeries]);
-
-  const salesSparklineData = useMemo(() => {
-    if (chartSeries.length > 0) return chartSeries.map((p) => p.salesCount);
-    if (performanceSeries.length > 0) return performanceSeries.map((p: any) => Number(p.salesCount || 0));
-    return [0, 0];
-  }, [chartSeries, performanceSeries]);
-
-  const ticketSparklineData = useMemo(() => {
-    const series = chartSeries.length > 0 ? chartSeries : performanceSeries;
-    if (series.length > 0) {
-      return series.map((p: any) => (p.salesCount > 0 ? Number(p.revenue || 0) / Number(p.salesCount) : 0));
-    }
-    return [0, 0];
-  }, [chartSeries, performanceSeries]);
 
   // SKELETON LOADING
   if (isPending) {
@@ -350,15 +298,10 @@ export function SellerMetricsOverview({
                 </div>
               </div>
 
-              <div className="flex items-baseline justify-between gap-2 pt-1">
+              <div className="pt-1.5">
                 <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
                   {kpis?.revenue?.formatted || approvedSales?.formatted || formatBRL(totalPeriodRevenue)}
                 </div>
-                <DeltaBadge changePercent={kpis?.revenue?.changePercent ?? null} trend={kpis?.revenue?.trend} />
-              </div>
-
-              <div className="pt-2">
-                <MiniSparkline data={revenueSparklineData} color="#3984FF" height={24} width={76} />
               </div>
             </div>
 
@@ -382,15 +325,10 @@ export function SellerMetricsOverview({
                 </div>
               </div>
 
-              <div className="flex items-baseline justify-between gap-2 pt-1">
+              <div className="pt-1.5">
                 <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
                   {kpis?.salesCount?.value ?? approvedSales?.count ?? 0}
                 </div>
-                <DeltaBadge changePercent={kpis?.salesCount?.changePercent ?? null} trend={kpis?.salesCount?.trend} />
-              </div>
-
-              <div className="pt-2">
-                <MiniSparkline data={salesSparklineData} color="#10B981" height={24} width={76} />
               </div>
             </div>
 
@@ -414,15 +352,10 @@ export function SellerMetricsOverview({
                 </div>
               </div>
 
-              <div className="flex items-baseline justify-between gap-2 pt-1">
+              <div className="pt-1.5">
                 <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
                   {kpis?.averageTicket?.formatted || averageTicket?.formatted || "R$ 0,00"}
                 </div>
-                <DeltaBadge changePercent={kpis?.averageTicket?.changePercent ?? null} trend={kpis?.averageTicket?.trend} />
-              </div>
-
-              <div className="pt-2">
-                <MiniSparkline data={ticketSparklineData} color="#F59E0B" height={24} width={76} />
               </div>
             </div>
 
@@ -448,17 +381,13 @@ export function SellerMetricsOverview({
                 </div>
               </div>
 
-              <div className="flex items-baseline justify-between gap-2 pt-1">
+              <div className="flex items-baseline justify-between gap-2 pt-1.5">
                 <div className="text-2xl sm:text-3xl font-bold font-sans tracking-tight tabular-nums text-white">
                   {conversionRatePercent !== null ? `${conversionRatePercent}%` : "—"}
                 </div>
                 <span className="text-[10px] text-zinc-400 font-sans tabular-nums">
                   {totalPixPaid}/{totalPixGenerated || 0}
                 </span>
-              </div>
-
-              <div className="pt-2">
-                <MiniSparkline data={salesSparklineData} color="#A855F7" height={24} width={76} />
               </div>
             </div>
 
