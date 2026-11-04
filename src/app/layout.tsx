@@ -15,10 +15,12 @@ const jbMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#121214",
+  themeColor: "#0A0A0A",
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -52,7 +54,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${jbMono.variable} antialiased h-full`}>
+    <html lang="pt-BR" className={`${inter.variable} ${jbMono.variable} dark antialiased h-full`} style={{ colorScheme: "dark" }}>
       <head>
         <link
           rel="stylesheet"

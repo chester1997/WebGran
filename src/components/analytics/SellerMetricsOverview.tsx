@@ -536,8 +536,8 @@ export function SellerMetricsOverview({
             >
               <defs>
                 <linearGradient id="appleAzureRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.22" />
-                  <stop offset="100%" stopColor="var(--apple-blue, #0a84ff)" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="#0a84ff" stopOpacity="0.22" />
+                  <stop offset="100%" stopColor="#0a84ff" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
 
