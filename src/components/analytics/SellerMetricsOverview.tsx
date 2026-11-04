@@ -310,17 +310,10 @@ export function SellerMetricsOverview({
 
   return (
     <div className="w-full max-w-none flex flex-col gap-[20px] font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Text','SF_Pro_Display','Inter',system-ui,sans-serif] [font-feature-settings:'tnum'] text-[var(--apple-text,#fff)]">
-      {/* =========================================================================
-          1. CABEÇALHO (Título Vendas)
-         ========================================================================= */}
-      <header className="pt-1 px-1">
-        <h1 className="text-[30px] sm:text-[34px] font-bold leading-tight tracking-[-0.022em] text-[var(--apple-text,#fff)]">
-          Vendas
-        </h1>
-      </header>
+      <h1 className="sr-only">Vendas</h1>
 
       {/* =========================================================================
-          2. UMA ÚNICA SUPERFÍCIE: OS 3 INDICADORES PRINCIPAIS
+          1. UMA ÚNICA SUPERFÍCIE: OS 3 INDICADORES PRINCIPAIS
              Desktop: 3 colunas de mesma proporção com divisores verticais
              Mobile: 3 seções verticais com divisores horizontais
          ========================================================================= */}
