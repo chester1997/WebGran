@@ -19,6 +19,9 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
   const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileSidebarRef = useRef<HTMLElement | null>(null);
   const prevMobileOpenRef = useRef(mobileDrawerOpen);
+  const DRAWER_STATE_KEY = "webgran_mobile_drawer";
+  const drawerHistoryPushedRef = useRef(false);
+  const isHandlingPopStateRef = useRef(false);
 
   // Perfil do vendedor e faturamento real
   const [sellerProfile, setSellerProfile] = useState<SellerProfileData | null>(null);
@@ -54,16 +57,41 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     };
   }, []);
 
-  // Fechar drawer móvel ao navegar
+  // Fechar drawer móvel ao navegar entre rotas
   useEffect(() => {
+    drawerHistoryPushedRef.current = false;
+    isHandlingPopStateRef.current = false;
     setMobileDrawerOpen(false);
   }, [pathname]);
 
-  // Acessibilidade do drawer móvel: Focus trap e listener da tecla Escape
+  // Suporte ao gesto/botão voltar do Android (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (mobileDrawerOpen) {
+        // Consumido pelo gesto ou botão voltar nativo do Android
+        isHandlingPopStateRef.current = true;
+        drawerHistoryPushedRef.current = false;
+        setMobileDrawerOpen(false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [mobileDrawerOpen]);
+
+  // Acessibilidade do drawer móvel e sincronização de histórico
   useEffect(() => {
     if (mobileDrawerOpen) {
       document.body.style.overflow = "hidden";
       mobileSidebarRef.current?.focus();
+
+      // Registra entrada no histórico para interceptar o botão voltar do Android
+      if (!drawerHistoryPushedRef.current && typeof window !== "undefined") {
+        window.history.pushState({ [DRAWER_STATE_KEY]: true }, "");
+        drawerHistoryPushedRef.current = true;
+      }
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape") {
@@ -79,6 +107,16 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       document.body.style.overflow = "";
       if (prevMobileOpenRef.current) {
         hamburgerButtonRef.current?.focus();
+      }
+
+      // Se fechado por clique no X, backdrop ou ESC, desempilha a entrada do histórico
+      if (isHandlingPopStateRef.current) {
+        isHandlingPopStateRef.current = false;
+      } else if (drawerHistoryPushedRef.current) {
+        drawerHistoryPushedRef.current = false;
+        if (typeof window !== "undefined" && window.history.state?.[DRAWER_STATE_KEY]) {
+          window.history.back();
+        }
       }
     }
     prevMobileOpenRef.current = mobileDrawerOpen;

@@ -91,7 +91,7 @@ export function CarouselModal({ carousel, triggerText }: CarouselModalProps) {
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-[500px] w-full bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[85vh]">
+      <DialogContent className="sm:max-w-[500px] w-[94vw] max-w-[calc(100vw-1rem)] sm:w-full bg-[#121214] border border-white/5 p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[85vh] max-h-[92dvh] sm:max-h-[85vh] rounded-2xl">
         <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
           <DialogTitle className="text-lg font-bold text-white">
             {isEditing ? "Editar Carrossel" : "Novo Carrossel"}

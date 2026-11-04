@@ -176,7 +176,7 @@ export function EditProductModal({
         <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[90vh] rounded-2xl">
+      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 shadow-2xl flex flex-col max-h-[90vh] max-h-[92dvh] sm:max-h-[88vh] rounded-2xl">
         <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between shrink-0">
           <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-white">Editar Produto</DialogTitle>
         </div>

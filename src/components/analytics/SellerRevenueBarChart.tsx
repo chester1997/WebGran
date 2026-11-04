@@ -113,7 +113,7 @@ export function SellerRevenueBarChart({
       <div
         role="img"
         aria-label={`Gráfico de receita em barras: total de ${formatBRL(totalPeriodRevenue)} em ${periodLabel}`}
-        className="w-full h-[240px] sm:h-[260px] flex items-center justify-center overflow-hidden"
+        className="w-full h-[240px] sm:h-[260px] flex items-center justify-center overflow-hidden touch-pan-y"
       >
         {!hasSales ? (
           <DashboardEmptyState
@@ -122,7 +122,7 @@ export function SellerRevenueBarChart({
             description="Assim que novos pedidos forem confirmados, as barras de faturamento diário aparecerão aqui."
           />
         ) : (
-          <div className="w-full h-full">
+          <div className="w-full h-full touch-pan-y">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartSeries}

@@ -201,7 +201,7 @@ export function NewProductModal({
         <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] shadow-2xl rounded-2xl">
+      <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] max-h-[92dvh] sm:max-h-[88vh] shadow-2xl rounded-2xl">
         <div className="p-4 sm:p-6 border-b border-white/[0.08] shrink-0 flex items-center justify-between">
           <DialogTitle className="text-lg sm:text-xl font-bold text-white">Novo Produto</DialogTitle>
         </div>

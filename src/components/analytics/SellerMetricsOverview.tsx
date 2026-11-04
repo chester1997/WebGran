@@ -524,7 +524,7 @@ export function SellerMetricsOverview({
               ref={svgRef}
               viewBox={`0 0 ${currentWidth} ${currentHeight}`}
               style={{ width: "100%", height: `${currentHeight}px` }}
-              className="w-full block overflow-visible"
+              className="w-full block overflow-visible touch-pan-y"
               onMouseMove={(e) => handleScrubberMove(e.clientX)}
               onMouseLeave={() => setHoveredIndex(null)}
               onTouchStart={(e) => {
