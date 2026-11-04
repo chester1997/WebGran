@@ -217,14 +217,14 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
           ) : null
         }
         actions={
-          <div className="flex items-center gap-[10px] md:gap-2.5 shrink-0 max-w-full relative z-30">
+          <div className="flex items-center gap-2 sm:gap-[10px] md:gap-2.5 shrink-0 max-w-full relative z-30">
             {/* Seletor de Bot Integrado */}
-            <div className="relative flex items-center min-w-[130px] sm:min-w-[160px] max-w-full">
+            <div className="relative flex items-center min-w-[120px] sm:min-w-[160px] max-w-full">
               <Bot className="absolute left-2.5 w-4 h-4 text-zinc-400 pointer-events-none" />
               <select
                 value={selectedBot}
                 onChange={(e) => handleBotChange(e.target.value)}
-                className="w-full bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border border-white/[0.08] hover:border-zinc-700 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium focus:outline-none focus:border-[#3984FF] transition-all appearance-none cursor-pointer h-9 shadow-xs"
+                className="w-full bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border border-white/[0.08] hover:border-zinc-700 rounded-xl pl-6.5 pr-5.5 sm:pl-8 sm:pr-7 py-1.5 text-[11.5px] sm:text-xs font-medium focus:outline-none focus:border-[#3984FF] transition-all appearance-none cursor-pointer h-9 shadow-xs"
                 aria-label="Selecionar Bot"
               >
                 <option value="all" className="bg-[#0F1014] text-white">Todos os bots</option>
@@ -243,7 +243,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
               <button
                 type="button"
                 onClick={() => setIsPeriodOpen(!isPeriodOpen)}
-                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${isPeriodOpen
+                className={`w-full sm:w-auto inline-flex items-center justify-between gap-2 bg-[#15171D] hover:bg-[#1C1E26] text-zinc-200 hover:text-white border rounded-xl px-2.5 sm:px-3 py-1.5 text-[11.5px] sm:text-xs font-medium transition-all cursor-pointer h-9 shadow-xs ${isPeriodOpen
                     ? "border-[#3984FF]/80 ring-1 ring-[#3984FF]/30 text-white"
                     : "border-white/[0.08] hover:border-zinc-700"
                   }`}
@@ -262,7 +262,7 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
 
               {/* Popover Dropdown */}
               {isPeriodOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] bg-[#101218] border border-white/[0.1] rounded-2xl p-3 shadow-2xl z-50 backdrop-blur-md space-y-3 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] max-w-[calc(100vw-32px)] bg-[#101218] border border-white/[0.1] rounded-2xl p-3 shadow-2xl z-50 backdrop-blur-md space-y-3 animate-in fade-in zoom-in-95 duration-100">
                   {/* Seção Presets */}
                   <div className="space-y-1">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block px-2 py-0.5">

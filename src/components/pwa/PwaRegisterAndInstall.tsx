@@ -159,7 +159,7 @@ export function PwaRegisterAndInstall() {
     <div 
       role="dialog" 
       aria-label="Instalar aplicativo WebGran"
-      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-sm w-full bg-[#16161a]/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl text-white animate-in slide-in-from-bottom duration-300"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-sm w-auto sm:w-full bg-[#16161a]/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl text-white animate-in slide-in-from-bottom duration-300"
     >
       <div className="flex items-start gap-3">
         <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#121214] border border-white/10 shrink-0 shadow-md">

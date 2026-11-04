@@ -518,7 +518,7 @@ export function SellerMetricsOverview({
                 setHoveredIndex(null);
               }
             }}
-            className="w-full relative touch-none focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
+            className="w-full relative touch-pan-y focus:outline-none focus:ring-1 focus:ring-[var(--apple-blue,#0a84ff)] rounded-[12px]"
           >
             <svg
               ref={svgRef}
@@ -527,6 +527,11 @@ export function SellerMetricsOverview({
               className="w-full block overflow-visible"
               onMouseMove={(e) => handleScrubberMove(e.clientX)}
               onMouseLeave={() => setHoveredIndex(null)}
+              onTouchStart={(e) => {
+                if (e.touches && e.touches[0]) {
+                  handleScrubberMove(e.touches[0].clientX);
+                }
+              }}
               onTouchMove={(e) => {
                 if (e.touches && e.touches[0]) {
                   handleScrubberMove(e.touches[0].clientX);

@@ -141,7 +141,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu do Vendedor"
-          className={`fixed inset-y-0 left-0 z-[70] w-[var(--sidebar-mobile-w,296px)] max-w-[85vw] h-[100dvh] bg-[var(--seller-bg,#0A0A0A)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out will-change-transform outline-none focus:outline-none lg:hidden ${
+          className={`fixed inset-y-0 left-0 z-[70] w-[var(--sidebar-mobile-w,296px)] max-w-[85vw] h-[100dvh] bg-[var(--seller-bg,#0A0A0A)] border-r border-white/10 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out will-change-transform outline-none focus:outline-none overscroll-contain lg:hidden ${
             mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -220,7 +220,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             <main
               tabIndex={0}
               aria-label="Painel do Vendedor"
-              className="flex-1 min-h-0 overflow-y-auto px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
             >
               <SaleNotificationSoundHandler />
               <div className="w-full relative z-10 overflow-clip">

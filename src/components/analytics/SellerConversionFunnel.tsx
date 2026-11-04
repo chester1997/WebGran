@@ -65,7 +65,7 @@ export function SellerConversionFunnel({
       className={`bg-[#1C1C1E] rounded-[18px] sm:rounded-[22px] p-4 sm:p-6 lg:p-8 flex flex-col justify-between relative overflow-hidden ${className}`}
     >
       {/* Topo do Funil */}
-      <div className="flex items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 mb-6">
         <div>
           <h3 className="text-[18px] sm:text-[20px] font-bold text-[var(--apple-text,#fff)] tracking-tight">
             Da conversa ao pagamento
@@ -76,7 +76,7 @@ export function SellerConversionFunnel({
         </div>
 
         {overallRate !== null && (
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--apple-surface-2,#2c2c2e)] text-[12px] sm:text-[13px] font-semibold text-[var(--apple-blue,#0a84ff)] tabular-nums shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--apple-surface-2,#2c2c2e)] text-[12px] sm:text-[13px] font-semibold text-[var(--apple-blue,#0a84ff)] tabular-nums self-start sm:self-auto shrink-0">
             <span>{overallRate}% conv. global</span>
           </div>
         )}
