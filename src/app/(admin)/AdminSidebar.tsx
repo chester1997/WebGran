@@ -153,7 +153,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
             width={32}
             height={32}
             priority
-            className="w-8 h-8 rounded-full object-contain shrink-0"
+            className="w-8 h-8 object-contain shrink-0"
           />
           <span className="font-semibold text-base text-white tracking-tight">
             WebGran
@@ -208,7 +208,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               width={40}
               height={40}
               priority
-              className="w-10 h-10 rounded-full object-contain shrink-0"
+              className="w-10 h-10 object-contain shrink-0"
             />
             <span className="font-[700] text-[20px] text-white tracking-tight truncate">
               WebGran

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Mail, 
   Lock, 
@@ -116,11 +117,16 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
         <div className="p-6 sm:p-10 md:p-12 flex flex-col justify-between bg-[#121215]">
           <div>
             {/* BRAND HEADER */}
-            <div className="flex items-center gap-2.5 mb-8">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 via-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-red-500/20">
-                <Heart className="w-4 h-4 text-white fill-white" />
-              </div>
-              <span className="text-xl font-black tracking-tight text-white">webgran</span>
+            <div className="flex items-center gap-3 mb-8">
+              <Image
+                src="/logo-webgran-icon.png"
+                alt="WebGran"
+                width={36}
+                height={36}
+                priority
+                className="w-9 h-9 object-contain shrink-0"
+              />
+              <span className="text-xl font-bold tracking-tight text-white">WebGran</span>
             </div>
 
             {/* TAB SELECTOR BAR */}

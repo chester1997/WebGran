@@ -25,6 +25,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
   const isHandlingPopStateRef = useRef(false);
   const pendingNavigationRef = useRef<string | null>(null);
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isNavigatingRef = useRef(false);
 
   // Perfil do vendedor e faturamento real
   const [sellerProfile, setSellerProfile] = useState<SellerProfileData | null>(null);
@@ -69,6 +70,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     pendingNavigationRef.current = null;
     drawerHistoryPushedRef.current = false;
     isHandlingPopStateRef.current = false;
+    isNavigatingRef.current = false;
     setMobileDrawerOpen(false);
   }, [pathname]);
 
@@ -159,6 +161,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
 
       if (isHandlingPopStateRef.current) {
         isHandlingPopStateRef.current = false;
+    isNavigatingRef.current = false;
       } else if (drawerHistoryPushedRef.current) {
         drawerHistoryPushedRef.current = false;
         if (typeof window !== "undefined" && window.history.state?.[DRAWER_STATE_KEY]) {
@@ -273,7 +276,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
                     width={32}
                     height={32}
                     priority
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-contain shrink-0"
+                    className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
                   />
                   <span className="font-semibold text-sm text-white tracking-tight shrink-0 whitespace-nowrap">
                     WebGran

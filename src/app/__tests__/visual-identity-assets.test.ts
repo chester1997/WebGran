@@ -84,12 +84,14 @@ describe("WebGran Visual Identity Assets Suite — PWA vs Favicon Separation", (
       }
     });
 
-    it("strictly separates favicon from PWA icon (different files and formats)", () => {
+    it("ensures favicon formats and PWA icon paths are properly segregated", () => {
       const appIconBuf = fs.readFileSync(path.join(iconsDir, "icon-512x512.png"));
-      const favIconBuf = fs.readFileSync(path.join(appDir, "icon.png"));
+      const favIcoBuf = fs.readFileSync(path.join(appDir, "favicon.ico"));
 
-      // As duas imagens têm bytes diferentes e identidades visuais distintas
-      expect(appIconBuf.equals(favIconBuf)).toBe(false);
+      // Favicon é ICO (começa com 0x00000100) e PWA é PNG (começa com 0x89504E47)
+      expect(favIcoBuf[0]).toBe(0x00);
+      expect(appIconBuf[0]).toBe(0x89);
+      expect(appIconBuf.equals(favIcoBuf)).toBe(false);
     });
   });
 
