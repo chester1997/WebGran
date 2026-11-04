@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import SellerSidebar, { SellerProfileData } from "./SellerSidebar";
 import { SaleNotificationSoundHandler } from "@/components/audio/SaleNotificationSoundHandler";
@@ -14,6 +14,7 @@ interface SellerLayoutProps {
 
 export default function SellerLayout({ children }: SellerLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -22,6 +23,8 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
   const DRAWER_STATE_KEY = "webgran_mobile_drawer";
   const drawerHistoryPushedRef = useRef(false);
   const isHandlingPopStateRef = useRef(false);
+  const pendingNavigationRef = useRef<string | null>(null);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Perfil do vendedor e faturamento real
   const [sellerProfile, setSellerProfile] = useState<SellerProfileData | null>(null);
@@ -57,18 +60,64 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     };
   }, []);
 
-  // Fechar drawer móvel ao navegar entre rotas
+  // Fechar drawer móvel e sincronizar estados ao alterar rota
   useEffect(() => {
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+      navigationTimeoutRef.current = null;
+    }
+    pendingNavigationRef.current = null;
     drawerHistoryPushedRef.current = false;
     isHandlingPopStateRef.current = false;
     setMobileDrawerOpen(false);
   }, [pathname]);
 
-  // Suporte ao gesto/botão voltar do Android (popstate)
+  const handleMobileNavigate = (href: string) => {
+    if (href === pathname) {
+      setMobileDrawerOpen(false);
+      return;
+    }
+
+    if (drawerHistoryPushedRef.current) {
+      pendingNavigationRef.current = href;
+      drawerHistoryPushedRef.current = false;
+      setMobileDrawerOpen(false);
+
+      if (typeof window !== "undefined") {
+        window.history.back();
+      }
+
+      navigationTimeoutRef.current = setTimeout(() => {
+        if (pendingNavigationRef.current) {
+          const target = pendingNavigationRef.current;
+          pendingNavigationRef.current = null;
+          router.push(target);
+        }
+      }, 150);
+    } else {
+      setMobileDrawerOpen(false);
+      router.push(href);
+    }
+  };
+
+  // Suporte ao gesto/botão voltar do Android (popstate) e coordenação de navegação
   useEffect(() => {
     const handlePopState = () => {
+      if (pendingNavigationRef.current) {
+        if (navigationTimeoutRef.current) {
+          clearTimeout(navigationTimeoutRef.current);
+          navigationTimeoutRef.current = null;
+        }
+        const target = pendingNavigationRef.current;
+        pendingNavigationRef.current = null;
+        drawerHistoryPushedRef.current = false;
+        isHandlingPopStateRef.current = true;
+        setMobileDrawerOpen(false);
+        router.push(target);
+        return;
+      }
+
       if (mobileDrawerOpen) {
-        // Consumido pelo gesto ou botão voltar nativo do Android
         isHandlingPopStateRef.current = true;
         drawerHistoryPushedRef.current = false;
         setMobileDrawerOpen(false);
@@ -79,7 +128,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [mobileDrawerOpen]);
+  }, [mobileDrawerOpen, router]);
 
   // Acessibilidade do drawer móvel e sincronização de histórico
   useEffect(() => {
@@ -87,7 +136,6 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
       document.body.style.overflow = "hidden";
       mobileSidebarRef.current?.focus();
 
-      // Registra entrada no histórico para interceptar o botão voltar do Android
       if (!drawerHistoryPushedRef.current && typeof window !== "undefined") {
         window.history.pushState({ [DRAWER_STATE_KEY]: true }, "");
         drawerHistoryPushedRef.current = true;
@@ -109,7 +157,6 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         hamburgerButtonRef.current?.focus();
       }
 
-      // Se fechado por clique no X, backdrop ou ESC, desempilha a entrada do histórico
       if (isHandlingPopStateRef.current) {
         isHandlingPopStateRef.current = false;
       } else if (drawerHistoryPushedRef.current) {
@@ -189,6 +236,7 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
             salesGoal={SALES_GOAL}
             isMobileDrawer
             onCloseMobile={() => setMobileDrawerOpen(false)}
+            onNavigateMobile={handleMobileNavigate}
           />
         </aside>
 

@@ -11,7 +11,7 @@ export interface IconHandle {
 
 export interface SidebarNavItemProps {
   href?: string;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
   label: string;
   isActive?: boolean;
   icon?: ElementType;

@@ -44,6 +44,7 @@ interface SellerSidebarProps {
   salesGoal?: number;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
+  onNavigateMobile?: (href: string) => void;
   isMobileDrawer?: boolean;
 }
 
@@ -52,6 +53,7 @@ export default function SellerSidebar({
   totalRevenue,
   salesGoal = 15000.0,
   onCloseMobile,
+  onNavigateMobile,
   isMobileDrawer = false,
 }: SellerSidebarProps) {
   const pathname = usePathname();
@@ -113,9 +115,18 @@ export default function SellerSidebar({
 
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
 
-  const handleLinkClick = () => {
-    if (isMobileDrawer && onCloseMobile) {
-      onCloseMobile();
+  const handleLinkClick = (e?: React.MouseEvent, href?: string) => {
+    if (isMobileDrawer) {
+      if (onNavigateMobile && href) {
+        if (e && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+          e.preventDefault();
+          onNavigateMobile(href);
+          return;
+        }
+      }
+      if (onCloseMobile) {
+        onCloseMobile();
+      }
     }
   };
 
@@ -125,7 +136,7 @@ export default function SellerSidebar({
       {/* BRAND HEADER: Altura padronizada de 112px (--header-h)*/}
       {/* ==================================================== */}
       <div className="h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] px-5 lg:px-[var(--sidebar-pad-x,28px)] flex items-center justify-between shrink-0 select-none">
-        <Link href="/seller" onClick={handleLinkClick} className="flex items-center gap-3 min-w-0">
+        <Link href="/seller" onClick={(e) => handleLinkClick(e, "/seller")} className="flex items-center gap-3 min-w-0">
           <Image
             src="/logo-webgran-icon.png"
             alt="WebGran"
@@ -179,7 +190,7 @@ export default function SellerSidebar({
               href="/seller"
               label="Dashboard"
               isActive={pathname === "/seller"}
-              onClick={handleLinkClick}
+              onClick={(e) => handleLinkClick(e, "/seller")}
               icon={SolarSellerDashboardIcon}
               accent="blue"
             />
@@ -236,7 +247,7 @@ export default function SellerSidebar({
                         href={item.href}
                         label={item.name}
                         isActive={isActive}
-                        onClick={handleLinkClick}
+                        onClick={(e) => handleLinkClick(e, item.href)}
                         icon={item.icon}
                         iconSize={17}
                         accent="blue"
@@ -275,7 +286,7 @@ export default function SellerSidebar({
                   href={item.href}
                   label={item.name}
                   isActive={isActive}
-                  onClick={handleLinkClick}
+                  onClick={(e) => handleLinkClick(e, item.href)}
                   icon={item.icon}
                   accent="blue"
                 />
@@ -304,7 +315,7 @@ export default function SellerSidebar({
                   href={item.href}
                   label={item.name}
                   isActive={isActive}
-                  onClick={handleLinkClick}
+                  onClick={(e) => handleLinkClick(e, item.href)}
                   icon={item.icon}
                   accent="blue"
                 />
@@ -357,7 +368,7 @@ export default function SellerSidebar({
         {isAdminOrSuperAdmin && (
           <Link
             href="/admin"
-            onClick={handleLinkClick}
+            onClick={(e) => handleLinkClick(e, "/admin")}
             className="flex items-center gap-3 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
           >
             <SolarSellerBackToAdminIcon size={20} className="text-zinc-400 shrink-0" />
