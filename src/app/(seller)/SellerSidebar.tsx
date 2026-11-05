@@ -225,59 +225,63 @@ export default function SellerSidebar({
               />
             )}
 
-            {/* Acordeão do Bot Telegram estilizado */}
-            <SidebarNavItem
-              label={isOwner ? "Recursos do Mini App" : "Configurações do Bot"}
-              isActive={isBotChildActive}
-              icon={SolarSellerBotIcon}
-              accent="blue"
-              onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
-              className={`w-full flex items-center justify-between gap-2.5 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium text-left transition-all duration-150 cursor-pointer ${
-                isBotChildActive
-                  ? "bg-[#3984FF]/10 text-white font-medium"
-                  : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-              }`}
-            >
-              {botGroupOpen ? (
-                <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
-              ) : (
-                <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
-              )}
-            </SidebarNavItem>
+            {/* Acordeão do Bot Telegram (Apenas para vendedores comuns — no proprietário os recursos foram integrados na página do bot) */}
+            {!isOwner && (
+              <>
+                <SidebarNavItem
+                  label="Configurações do Bot"
+                  isActive={isBotChildActive}
+                  icon={SolarSellerBotIcon}
+                  accent="blue"
+                  onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
+                  className={`w-full flex items-center justify-between gap-2.5 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium text-left transition-all duration-150 cursor-pointer ${
+                    isBotChildActive
+                      ? "bg-[#3984FF]/10 text-white font-medium"
+                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                  }`}
+                >
+                  {botGroupOpen ? (
+                    <ChevronUp className="w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-150 ml-1.5" strokeWidth={1.8} />
+                  )}
+                </SidebarNavItem>
 
-            {/* Subitens com árvore de conexão SVG */}
-            {botGroupOpen && (
-              <div className="relative pl-5 space-y-[var(--nav-item-gap,4px)] my-1">
-                {visibleBotSubItems.map((item, index) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                  const isLast = index === visibleBotSubItems.length - 1;
+                {/* Subitens com árvore de conexão SVG */}
+                {botGroupOpen && (
+                  <div className="relative pl-5 space-y-[var(--nav-item-gap,4px)] my-1">
+                    {visibleBotSubItems.map((item, index) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                      const isLast = index === visibleBotSubItems.length - 1;
 
-                  return (
-                    <div key={item.href} className="relative flex items-center">
-                      <svg className="absolute -left-3 top-0 bottom-0 w-3.5 h-full pointer-events-none" overflow="visible">
-                        <line x1="0" y1="0" x2="0" y2={isLast ? "16" : "100%"} stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" />
-                        <path d="M 0 0 V 8 Q 0 16 6 16 H 10" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" strokeLinecap="round" />
-                      </svg>
+                      return (
+                        <div key={item.href} className="relative flex items-center">
+                          <svg className="absolute -left-3 top-0 bottom-0 w-3.5 h-full pointer-events-none" overflow="visible">
+                            <line x1="0" y1="0" x2="0" y2={isLast ? "16" : "100%"} stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" />
+                            <path d="M 0 0 V 8 Q 0 16 6 16 H 10" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.25" strokeLinecap="round" />
+                          </svg>
 
-                      <SidebarNavItem
-                        href={item.href}
-                        label={item.name}
-                        isActive={isActive}
-                        onClick={(e) => handleLinkClick(e, item.href)}
-                        icon={item.icon}
-                        iconSize={17}
-                        accent="blue"
-                        iconClassName={`w-[17px] h-[17px] shrink-0 transition-colors ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`}
-                        className={`w-full flex items-center gap-3 px-3 py-2 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
-                          isActive
-                            ? "bg-[#3984FF]/10 text-white font-medium"
-                            : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-                        }`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                          <SidebarNavItem
+                            href={item.href}
+                            label={item.name}
+                            isActive={isActive}
+                            onClick={(e) => handleLinkClick(e, item.href)}
+                            icon={item.icon}
+                            iconSize={17}
+                            accent="blue"
+                            iconClassName={`w-[17px] h-[17px] shrink-0 transition-colors ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
+                              isActive
+                                ? "bg-[#3984FF]/10 text-white font-medium"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                            }`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

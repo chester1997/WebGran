@@ -119,7 +119,7 @@ describe("SellerSidebar Component (Etapa B)", () => {
     expect(html).not.toContain("bg-blue-500 rounded-r-full");
   });
 
-  it("exibe a seção BOTS e a rota '/seller/bots' exclusivamente para a conta real do proprietário", () => {
+  it("exibe a seção BOTS e a rota '/seller/bots' exclusivamente para a conta real do proprietário, sem atalho redundante", () => {
     const html = renderToStaticMarkup(
       <SellerSidebar
         sellerProfile={{
@@ -136,7 +136,8 @@ describe("SellerSidebar Component (Etapa B)", () => {
 
     expect(html).toContain("BOTS");
     expect(html).toContain('href="/seller/bots"');
-    expect(html).toContain("Recursos do Mini App");
+    // Atalho redundante removido para o proprietário: agora centralizado dentro de /seller/bots/[id]
+    expect(html).not.toContain("Recursos do Mini App");
   });
 
   it("NÃO exibe a rota '/seller/bots' nem o label 'BOTS' para outros vendedores comuns", () => {
