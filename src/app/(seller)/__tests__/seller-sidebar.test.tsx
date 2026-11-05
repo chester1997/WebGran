@@ -118,5 +118,45 @@ describe("SellerSidebar Component (Etapa B)", () => {
     // Não deve conter a pílula azul antiga nem bg-[#18181C]
     expect(html).not.toContain("bg-blue-500 rounded-r-full");
   });
+
+  it("exibe a seção BOTS e a rota '/seller/bots' exclusivamente para a conta real do proprietário", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "ead2ec50-ac72-4917-9d9c-1c68de270070",
+          name: "STUDIO ADM",
+          email: "lf49127@gmail.com",
+          avatarUrl: null,
+          role: "admin",
+        }}
+        totalRevenue={1000}
+        salesGoal={15000}
+      />
+    );
+
+    expect(html).toContain("BOTS");
+    expect(html).toContain('href="/seller/bots"');
+    expect(html).toContain("Recursos do Mini App");
+  });
+
+  it("NÃO exibe a rota '/seller/bots' nem o label 'BOTS' para outros vendedores comuns", () => {
+    const html = renderToStaticMarkup(
+      <SellerSidebar
+        sellerProfile={{
+          id: "outro-vendedor-id",
+          name: "Vendedora Maria",
+          email: "maria@doramas.com",
+          avatarUrl: null,
+          role: "seller",
+        }}
+        totalRevenue={1000}
+        salesGoal={15000}
+      />
+    );
+
+    expect(html).not.toContain('href="/seller/bots"');
+    expect(html).toContain("BOT TELEGRAM");
+    expect(html).toContain("Configurações do Bot");
+  });
 });
 

@@ -12,7 +12,7 @@ interface SellerLayoutProps {
   children: ReactNode;
 }
 
-export default function SellerLayout({ children }: SellerLayoutProps) {
+function SellerLayoutContent({ children }: SellerLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -322,5 +322,13 @@ export default function SellerLayout({ children }: SellerLayoutProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SellerLayout({ children }: SellerLayoutProps) {
+  return (
+    <Suspense fallback={<div className="h-full w-full bg-[#0A0A0A]" />}>
+      <SellerLayoutContent>{children}</SellerLayoutContent>
+    </Suspense>
   );
 }

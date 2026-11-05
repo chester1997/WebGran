@@ -486,6 +486,7 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   carts: many(carts),
   combos: many(combos),
   botSaleNotificationRecipients: many(botSaleNotificationRecipients),
+  telegramMessages: many(telegramMessages),
 }));
 
 export const couponsRelations = relations(coupons, ({ one }) => ({
@@ -515,6 +516,8 @@ export const telegramBotsRelations = relations(telegramBots, ({ one, many }) => 
   notificationRecipients: many(botSaleNotificationRecipients),
   notificationTokens: many(botSaleNotificationTokens),
   notificationDeliveries: many(orderBotNotificationDeliveries),
+  messages: many(telegramMessages),
+  webhookUpdates: many(telegramWebhookUpdates),
 }));
 
 export const botSaleNotificationRecipientsRelations = relations(botSaleNotificationRecipients, ({ one, many }) => ({
@@ -603,6 +606,7 @@ export const telegramCustomersRelations = relations(telegramCustomers, ({ one, m
   accesses: many(accesses),
   videoProgresses: many(videoProgress),
   carts: many(carts),
+  messages: many(telegramMessages),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -1483,6 +1487,83 @@ export const sellerGatewayControlsRelations = relations(sellerGatewayControls, (
   updatedBy: one(users, {
     fields: [sellerGatewayControls.updatedById],
     references: [users.id],
+  }),
+}));
+
+export const telegramMessages = pgTable('telegram_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').references(() => telegramCustomers.id, { onDelete: 'set null' }),
+  telegramUserId: text('telegram_user_id').notNull(),
+  telegramChatId: text('telegram_chat_id').notNull(),
+  telegramMessageId: text('telegram_message_id'),
+  telegramUpdateId: text('telegram_update_id'),
+  clientMessageId: text('client_message_id'),
+  direction: text('direction').notNull(), // 'inbound' | 'outbound'
+  messageType: text('message_type').notNull().default('text'), // 'text' | 'photo' | 'video' | 'command' | 'system'
+  text: text('text'),
+  mediaUrl: text('media_url'),
+  status: text('status').notNull().default('delivered'), // 'pending' | 'sent' | 'delivered' | 'failed' | 'unknown'
+  errorMessage: text('error_message'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  sendingAt: timestamp('sending_at', { withTimezone: true }),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+}, (t) => ({
+  storeIdIdx: index('telegram_messages_store_id_idx').on(t.storeId),
+  botIdIdx: index('telegram_messages_bot_id_idx').on(t.botId),
+  customerIdIdx: index('telegram_messages_customer_id_idx').on(t.customerId),
+  telegramUserIdIdx: index('telegram_messages_user_id_idx').on(t.telegramUserId),
+  telegramUpdateIdIdx: index('telegram_messages_update_id_idx').on(t.telegramUpdateId),
+  createdAtIdx: index('telegram_messages_created_at_idx').on(t.createdAt),
+  statusCreatedIdx: index('telegram_messages_status_created_idx').on(t.botId, t.status, t.createdAt),
+  inboundUniqueIdx: uniqueIndex('telegram_messages_inbound_unique_idx')
+    .on(t.botId, t.telegramMessageId, t.direction),
+  clientMessageIdUniqueIdx: uniqueIndex('telegram_messages_bot_client_msg_unique_idx')
+    .on(t.botId, t.clientMessageId),
+}));
+
+export const telegramMessagesRelations = relations(telegramMessages, ({ one }) => ({
+  store: one(stores, {
+    fields: [telegramMessages.storeId],
+    references: [stores.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [telegramMessages.botId],
+    references: [telegramBots.id],
+  }),
+  customer: one(telegramCustomers, {
+    fields: [telegramMessages.customerId],
+    references: [telegramCustomers.id],
+  }),
+}));
+
+export const telegramWebhookUpdates = pgTable('telegram_webhook_updates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  updateId: text('update_id').notNull(),
+  status: text('status').notNull().default('processing'), // 'processing' | 'completed' | 'failed'
+  executionId: text('execution_id'),
+  step: text('step').notNull().default('reserved'), // 'reserved' | 'lead_synced' | 'command_started' | 'effects_confirmed' | 'completed' | 'ambiguous_external_failure'
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  botUpdateUniqueIdx: uniqueIndex('telegram_webhook_updates_bot_update_unique_idx').on(t.botId, t.updateId),
+  statusIdx: index('telegram_webhook_updates_status_idx').on(t.botId, t.status),
+  createdAtIdx: index('telegram_webhook_updates_created_at_idx').on(t.createdAt),
+  leaseIdx: index('telegram_webhook_updates_lease_idx').on(t.botId, t.status, t.leaseExpiresAt),
+  executionIdx: index('telegram_webhook_updates_execution_idx').on(t.executionId),
+}));
+
+export const telegramWebhookUpdatesRelations = relations(telegramWebhookUpdates, ({ one }) => ({
+  bot: one(telegramBots, {
+    fields: [telegramWebhookUpdates.botId],
+    references: [telegramBots.id],
   }),
 }));
 

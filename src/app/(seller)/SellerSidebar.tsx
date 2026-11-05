@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import SidebarNavItem from "@/components/layout/SidebarNavItem";
+import { isOwnerUser } from "@/lib/bots/owner-guard";
 import {
   SolarSellerDashboardIcon,
   SolarSellerBotIcon,
@@ -87,6 +88,9 @@ export default function SellerSidebar({
   ];
 
   const isAdminOrSuperAdmin = sellerProfile?.role === "admin" || sellerProfile?.role === "super_admin";
+
+  const isOwner = isOwnerUser(sellerProfile);
+  const isBotsRouteActive = pathname === "/seller/bots" || pathname.startsWith("/seller/bots/");
 
   const visibleBotSubItems = botTelegramSubItems.filter((item) => {
     if (item.href === "/seller/categories") {
@@ -198,20 +202,32 @@ export default function SellerSidebar({
         </div>
 
         {/* ==================================================== */}
-        {/* SEÇÃO 2: BOT TELEGRAM                                */}
+        {/* SEÇÃO 2: BOT TELEGRAM / BOTS (EXCLUSIVO PROPRIETÁRIO) */}
         {/* ==================================================== */}
         <div className="mt-[var(--section-label-margin-top,28px)]">
           <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
             <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
-              BOT TELEGRAM
+              {isOwner ? "BOTS" : "BOT TELEGRAM"}
             </span>
             <div className="h-px flex-1 bg-white/[0.08]" />
           </div>
 
           <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
+            {/* Opção BOTS direta exclusiva da conta proprietária */}
+            {isOwner && (
+              <SidebarNavItem
+                href="/seller/bots"
+                label="Bots"
+                isActive={isBotsRouteActive}
+                onClick={(e) => handleLinkClick(e, "/seller/bots")}
+                icon={SolarSellerBotIcon}
+                accent="blue"
+              />
+            )}
+
             {/* Acordeão do Bot Telegram estilizado */}
             <SidebarNavItem
-              label="Configurações do Bot"
+              label={isOwner ? "Recursos do Mini App" : "Configurações do Bot"}
               isActive={isBotChildActive}
               icon={SolarSellerBotIcon}
               accent="blue"

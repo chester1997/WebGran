@@ -1,51 +1,309 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { StoreResolver } from "@/lib/telegram/resolver";
 import { TelegramBotService } from "@/lib/telegram/bot";
+
+/**
+ * Comparação segura em tempo constante contra timing attacks
+ */
+function safeCompare(a: string, b: string): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, status: "Telegram Webhook Active" });
 }
 
 export async function POST(req: NextRequest) {
+  let resolved: any = null;
+  let update: any = null;
+  let executionId: string | null = null;
+  let updateCheckpoint: ((step: string, lastError?: string) => Promise<void>) | null = null;
+  let markCompleted: (() => Promise<void>) | null = null;
+  let markFailed: ((error: string, ambiguous?: boolean) => Promise<void>) | null = null;
+
   try {
     const url = new URL(req.url);
     const botIdParam = url.searchParams.get("botId");
-    const secretTokenHeader = req.headers.get("x-telegram-bot-api-secret-token");
+    const secretTokenHeader = req.headers.get("x-telegram-bot-api-secret-token") || "";
 
-    let resolved;
-    if (secretTokenHeader) {
-      try {
-        resolved = await StoreResolver.resolveFromSecretToken(secretTokenHeader);
-      } catch (err) {
-        console.warn("[TELEGRAM WEBHOOK] Could not resolve store from secret_token header, checking botId param...");
+    // 1. Validar se há botIdParam e carregar o bot candidato para checagem estrita de credenciais
+    let botCandidate: any = null;
+    if (botIdParam) {
+      const { db } = await import("@/db");
+      const { telegramBots } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+      botCandidate = await db.query.telegramBots.findFirst({
+        where: eq(telegramBots.botId, botIdParam),
+        with: { store: true },
+      });
+
+      if (!botCandidate) {
+        console.warn("[TELEGRAM WEBHOOK] Rejeitado: botIdParam fornecido não encontrado.");
+        return NextResponse.json({ error: "NotFound: Bot not found" }, { status: 404 });
       }
     }
 
-    if (!resolved && botIdParam) {
-      resolved = await StoreResolver.resolveFromBotId(botIdParam);
+    // 2. Fluxo de autenticação e validação de identidade
+    if (botCandidate) {
+      // O bot possui secretToken cadastrado no banco?
+      const hasSecretConfigured = Boolean(botCandidate.secretToken && botCandidate.secretToken.trim() !== "");
+
+      if (hasSecretConfigured) {
+        // Exigir estritamente o header X-Telegram-Bot-Api-Secret-Token
+        if (!secretTokenHeader) {
+          console.warn(`[TELEGRAM WEBHOOK] Rejeitado: botId=${botCandidate.botId} exige X-Telegram-Bot-Api-Secret-Token`);
+          return NextResponse.json(
+            { error: "Forbidden: X-Telegram-Bot-Api-Secret-Token is required for this bot" },
+            { status: 403 }
+          );
+        }
+
+        // Comparação segura em tempo constante
+        if (!safeCompare(secretTokenHeader, botCandidate.secretToken)) {
+          console.warn("[TELEGRAM WEBHOOK] Rejeitado: secretToken inválido para o bot solicitado.");
+          return NextResponse.json(
+            { error: "Forbidden: Invalid secret token" },
+            { status: 403 }
+          );
+        }
+
+        const { decrypt } = await import("@/lib/encryption");
+        resolved = {
+          bot: botCandidate,
+          store: botCandidate.store,
+          token: decrypt(botCandidate.tokenEncrypted),
+        };
+      } else {
+        // Bot legado sem secretToken configurado
+        if (secretTokenHeader) {
+          console.warn("[TELEGRAM WEBHOOK] Rejeitado: header enviado para bot sem secretToken configurado.");
+          return NextResponse.json(
+            { error: "Forbidden: Bot does not have a secret token configured" },
+            { status: 403 }
+          );
+        }
+
+        const { decrypt } = await import("@/lib/encryption");
+        resolved = {
+          bot: botCandidate,
+          store: botCandidate.store,
+          token: decrypt(botCandidate.tokenEncrypted),
+        };
+      }
+    } else if (secretTokenHeader) {
+      // Sem botIdParam na URL: autenticação puramente via secretTokenHeader
+      try {
+        const found = await StoreResolver.resolveFromSecretToken(secretTokenHeader);
+        if (found?.bot?.secretToken && !safeCompare(secretTokenHeader, found.bot.secretToken)) {
+          return NextResponse.json({ error: "Unauthorized: Invalid secret token" }, { status: 401 });
+        }
+        resolved = found;
+      } catch {
+        return NextResponse.json({ error: "Unauthorized: Invalid secret token" }, { status: 401 });
+      }
     }
 
     if (!resolved) {
-      console.error("[TELEGRAM WEBHOOK] Unrecognized request: missing valid secret_token header or botId parameter");
-      return NextResponse.json({ ok: true }); // Always return 200 to prevent retries
+      console.warn("[TELEGRAM WEBHOOK] Requisição não autorizada: secret inválido ou bot não registrado.");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { store, token } = resolved;
-    const update = await req.json();
+    update = await req.json();
 
-    // Prevent duplicate processing of the same update during retries
+    // Mecanismo de segurança para homologação inbound isolada
+    if (update?._isHomologationTest) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "Forbidden: Homologation mode disabled in production" }, { status: 403 });
+      }
+      const fromId = String(update.message?.from?.id || update.message?.chat?.id || "");
+      const authorizedChatId = process.env.AUTHORIZED_TEST_CHAT_ID || "1795655200";
+      if (fromId !== authorizedChatId) {
+        return NextResponse.json(
+          { error: `Forbidden: Inbound homologation allowed only for authorized owner Chat ID (${authorizedChatId.slice(0, 4)}***)` },
+          { status: 403 }
+        );
+      }
+    }
+
+    // =========================================================================
+    // CONTROLE DE EXECUÇÃO POR LEASE, DEDUPLICAÇÃO E CHECKPOINTS NO NEON
+    // =========================================================================
+    if (update && update.update_id) {
+      const updateIdStr = String(update.update_id);
+      const botIdStr = resolved.bot.id;
+      const currentExecId = crypto.randomUUID();
+
+      try {
+        const { db } = await import("@/db");
+        const { telegramWebhookUpdates } = await import("@/db/schema");
+        const { sql, eq, and } = await import("drizzle-orm");
+
+        // 1. Reserva atômica inicial no PostgreSQL via INSERT ... ON CONFLICT DO NOTHING
+        const reservation = await db.execute(sql`
+          INSERT INTO telegram_webhook_updates (
+            bot_id, update_id, status, execution_id, step, started_at, lease_expires_at, created_at, updated_at
+          ) VALUES (
+            ${botIdStr}, ${updateIdStr}, 'processing', ${currentExecId}, 'reserved', NOW(), NOW() + interval '30 seconds', NOW(), NOW()
+          )
+          ON CONFLICT (bot_id, update_id) DO NOTHING
+          RETURNING id, execution_id, status, step
+        `);
+
+        const rows = Array.isArray(reservation) ? reservation : (reservation as any)?.rows || [];
+
+        if (rows.length > 0) {
+          // Lease inicial obtida com sucesso
+          executionId = currentExecId;
+        } else {
+          // Conflito de unicidade: update_id já registrado. Inspecionar status da lease e checkpoints
+          const existing = await db.query.telegramWebhookUpdates.findFirst({
+            where: and(
+              eq(telegramWebhookUpdates.botId, botIdStr),
+              eq(telegramWebhookUpdates.updateId, updateIdStr)
+            )
+          });
+
+          if (existing) {
+            // Se já foi concluído anteriormente ('completed'), descartar imediatamente sem reprocessar comandos
+            if (existing.status === 'completed') {
+              console.log(`[TELEGRAM WEBHOOK] Update ${updateIdStr} já concluído anteriormente. Descartando duplicate.`);
+              return NextResponse.json({ ok: true, duplicate: true });
+            }
+
+            // Se falhou com ambiguidade de efeito externo, NUNCA repetir automaticamente
+            if (existing.step === 'ambiguous_external_failure') {
+              console.warn(`[TELEGRAM WEBHOOK] Update ${updateIdStr} em estado ambíguo anterior. Bloqueando reexecução.`);
+              return NextResponse.json({ ok: true, ambiguous: true });
+            }
+
+            // Verificar validade temporal da lease
+            const now = new Date();
+            const leaseExpires = existing.leaseExpiresAt ? new Date(existing.leaseExpiresAt) : new Date(0);
+
+            if (existing.status === 'processing' && leaseExpires > now) {
+              console.log(`[TELEGRAM WEBHOOK] Update ${updateIdStr} com lease ativa em outro worker até ${leaseExpires.toISOString()}.`);
+              return NextResponse.json({ ok: true, in_progress: true });
+            }
+
+            // A lease expirou (worker anterior abandonou a execução).
+            // Recuperação atômica por concorrência otimista (apenas 1 worker adquire a nova lease)
+            console.warn(`[TELEGRAM WEBHOOK] Lease expirada para update ${updateIdStr}. Tentando aquisição condicional...`);
+            const recovered = await db.execute(sql`
+              UPDATE telegram_webhook_updates
+              SET
+                execution_id = ${currentExecId},
+                status = 'processing',
+                step = 'reserved',
+                lease_expires_at = NOW() + interval '30 seconds',
+                updated_at = NOW()
+              WHERE bot_id = ${botIdStr}
+                AND update_id = ${updateIdStr}
+                AND status != 'completed'
+                AND step != 'ambiguous_external_failure'
+                AND lease_expires_at <= NOW()
+              RETURNING id, execution_id, status, step
+            `);
+
+            const recRows = Array.isArray(recovered) ? recovered : (recovered as any)?.rows || [];
+            if (recRows.length > 0) {
+              executionId = currentExecId;
+              console.log(`[TELEGRAM WEBHOOK] Lease recuperada com sucesso para update ${updateIdStr} (execId: ${executionId}).`);
+            } else {
+              console.warn(`[TELEGRAM WEBHOOK] Conflito transitório ao recuperar lease de update ${updateIdStr}.`);
+              return NextResponse.json({ error: "Transient conflict acquiring update lease" }, { status: 503 });
+            }
+          }
+        }
+
+        // Configurar helpers de checkpoints e finalização atômica vinculados ao executionId atual
+        if (executionId) {
+          const boundExecId = executionId;
+          updateCheckpoint = async (step: string, lastError?: string) => {
+            try {
+              await db.execute(sql`
+                UPDATE telegram_webhook_updates
+                SET step = ${step},
+                    last_error = ${lastError || null},
+                    updated_at = NOW()
+                WHERE bot_id = ${botIdStr}
+                  AND update_id = ${updateIdStr}
+                  AND execution_id = ${boundExecId}
+              `);
+            } catch (cpErr) {
+              console.error(`[TELEGRAM WEBHOOK] Erro ao registrar checkpoint '${step}':`, cpErr);
+            }
+          };
+
+          markCompleted = async () => {
+            try {
+              await db.execute(sql`
+                UPDATE telegram_webhook_updates
+                SET status = 'completed',
+                    step = 'completed',
+                    completed_at = NOW(),
+                    updated_at = NOW()
+                WHERE bot_id = ${botIdStr}
+                  AND update_id = ${updateIdStr}
+                  AND execution_id = ${boundExecId}
+              `);
+            } catch (compErr) {
+              console.error("[TELEGRAM WEBHOOK] Erro ao marcar como completed:", compErr);
+            }
+          };
+
+          markFailed = async (errMsg: string, ambiguous = false) => {
+            try {
+              await db.execute(sql`
+                UPDATE telegram_webhook_updates
+                SET status = 'failed',
+                    step = ${ambiguous ? 'ambiguous_external_failure' : 'failed'},
+                    last_error = ${errMsg},
+                    updated_at = NOW()
+                WHERE bot_id = ${botIdStr}
+                  AND update_id = ${updateIdStr}
+                  AND execution_id = ${boundExecId}
+              `);
+            } catch (failErr) {
+              console.error("[TELEGRAM WEBHOOK] Erro ao marcar como failed:", failErr);
+            }
+          };
+        }
+      } catch (dedupErr) {
+        console.error("[TELEGRAM WEBHOOK] Erro ao gerenciar lease de update_id:", dedupErr);
+      }
+    }
+
+    // Cache rápido em memória como primeira camada adicional
     const { isDuplicateTelegramUpdate } = await import("@/lib/telegram/update-dedup");
-    if (update.update_id && isDuplicateTelegramUpdate(update.update_id)) {
-      console.log(`[TELEGRAM WEBHOOK] Skipping duplicate update_id=${update.update_id}`);
+    if (update && update.update_id && isDuplicateTelegramUpdate(update.update_id)) {
+      console.log(`[TELEGRAM WEBHOOK] Skipping duplicate update_id=${update.update_id} via memory cache`);
       return NextResponse.json({ ok: true, duplicate: true });
     }
 
+    // Helper unificado de resposta com confirmação de conclusão da lease
+    const respondOk = async () => {
+      if (markCompleted) await markCompleted();
+      return NextResponse.json({ ok: true });
+    };
+
     if (update.my_chat_member) {
       try {
+        if (updateCheckpoint) await updateCheckpoint('command_started');
         const { handleMyChatMemberUpdate } = await import("@/lib/telegram/chat-sync");
         await handleMyChatMemberUpdate(resolved.bot, update);
-      } catch (chatSyncErr) {
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+      } catch (chatSyncErr: any) {
         console.error("[TELEGRAM WEBHOOK] Error processing my_chat_member:", chatSyncErr);
+        if (markFailed) await markFailed(chatSyncErr?.message || "chat-sync error", true);
       }
     }
 
@@ -153,11 +411,111 @@ export async function POST(req: NextRequest) {
             cbData,
             fromUser
           );
-          return NextResponse.json({ ok: true });
+          if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+          return respondOk();
         }
       } else {
         const botService = new TelegramBotService(token);
         await botService.answerCallbackQuery(cbId);
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+      }
+    }
+
+    // =========================================================================
+    // PERSISTÊNCIA REAL DE MENSAGENS E SINCRONIZAÇÃO DE LEADS (CONVERSAS)
+    // =========================================================================
+    if (update.message) {
+      if (updateCheckpoint) await updateCheckpoint('command_started');
+      try {
+        const { db } = await import("@/db");
+        const { telegramCustomers, telegramMessages } = await import("@/db/schema");
+        const { eq, and } = await import("drizzle-orm");
+
+        const msg = update.message;
+        const fromUser = msg.from;
+        const chatId = String(msg.chat.id);
+        const telegramUserId = fromUser ? String(fromUser.id) : chatId;
+        const rawText = (msg.text || msg.caption || "").trim();
+        const msgId = msg.message_id ? String(msg.message_id) : null;
+        const updateId = update.update_id ? String(update.update_id) : null;
+
+        let messageType = "text";
+        if (rawText.startsWith("/")) messageType = "command";
+        else if (msg.photo) messageType = "photo";
+        else if (msg.video) messageType = "video";
+        else if (msg.voice) messageType = "voice";
+        else if (msg.document) messageType = "document";
+        else if (msg.sticker) messageType = "sticker";
+
+        // 1. Sincronização atômica do lead em telegramCustomers
+        let customer = await db.query.telegramCustomers.findFirst({
+          where: and(
+            eq(telegramCustomers.storeId, store.id),
+            eq(telegramCustomers.telegramUserId, telegramUserId)
+          )
+        });
+
+        const now = new Date();
+        if (customer) {
+          await db.update(telegramCustomers).set({
+            username: fromUser?.username || customer.username,
+            firstName: fromUser?.first_name || customer.firstName,
+            lastName: fromUser?.last_name || customer.lastName,
+            languageCode: fromUser?.language_code || customer.languageCode,
+            updatedAt: now,
+          }).where(eq(telegramCustomers.id, customer.id));
+        } else {
+          const [insertedCustomer] = await db.insert(telegramCustomers).values({
+            storeId: store.id,
+            telegramUserId,
+            username: fromUser?.username || null,
+            firstName: fromUser?.first_name || null,
+            lastName: fromUser?.last_name || null,
+            languageCode: fromUser?.language_code || null,
+            createdAt: now,
+            updatedAt: now,
+          }).onConflictDoUpdate({
+            target: [telegramCustomers.storeId, telegramCustomers.telegramUserId],
+            set: {
+              username: fromUser?.username || null,
+              firstName: fromUser?.first_name || null,
+              lastName: fromUser?.last_name || null,
+              updatedAt: now,
+            }
+          }).returning();
+          customer = insertedCustomer;
+        }
+
+        // Checkpoint: lead sincronizado no banco
+        if (updateCheckpoint) await updateCheckpoint('lead_synced');
+
+        // 2. Persistência da mensagem recebida com idempotência
+        await db.insert(telegramMessages).values({
+          storeId: store.id,
+          botId: resolved.bot.id,
+          customerId: customer?.id || null,
+          telegramUserId,
+          telegramChatId: chatId,
+          telegramMessageId: msgId,
+          telegramUpdateId: updateId,
+          direction: "inbound",
+          messageType,
+          text: rawText || (msg.sticker ? "[Figurinha]" : msg.photo ? "[Foto]" : msg.video ? "[Vídeo]" : "[Mensagem]"),
+          status: "delivered",
+          metadata: {
+            updateId: update.update_id,
+            date: msg.date,
+            chatType: msg.chat?.type,
+            ...(update._isHomologationTest ? {
+              isTest: true,
+              testScope: "inbound_homologation",
+              operatorUserId: store.ownerId || (store as any).userId,
+            } : {})
+          },
+          createdAt: msg.date ? new Date(msg.date * 1000) : now,
+        }).onConflictDoNothing();
+      } catch (persistErr: any) {
+        console.error("[TELEGRAM WEBHOOK] Erro não-crítico ao persistir mensagem recebida:", persistErr?.message || persistErr);
       }
     }
 
@@ -186,7 +544,8 @@ export async function POST(req: NextRequest) {
         const fromUser = update.message.from || { id: chatId };
         const { handleCartCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleCartCommand({ store, botService, miniAppUrl }, chatId, fromUser);
-        return NextResponse.json({ ok: true });
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
       }
 
       // Check /produtos or /catalogo command
@@ -200,7 +559,8 @@ export async function POST(req: NextRequest) {
         const fromUser = update.message.from || { id: chatId };
         const { handleCatalogCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleCatalogCommand({ store, botService, miniAppUrl }, chatId, fromUser);
-        return NextResponse.json({ ok: true });
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
       }
 
       // Check /combos command
@@ -212,7 +572,8 @@ export async function POST(req: NextRequest) {
       ) {
         const { handleCombosCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleCombosCommand({ store, botService, miniAppUrl }, chatId);
-        return NextResponse.json({ ok: true });
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
       }
 
       // Check /ofertas or /promocao command
@@ -227,7 +588,8 @@ export async function POST(req: NextRequest) {
       ) {
         const { handleProgressiveOffersCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleProgressiveOffersCommand({ store, botService, miniAppUrl }, chatId);
-        return NextResponse.json({ ok: true });
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
       }
 
       // Check /acessos command
@@ -240,7 +602,8 @@ export async function POST(req: NextRequest) {
         const fromUser = update.message.from || { id: chatId };
         const { handleAccessesCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleAccessesCommand({ store, botService, miniAppUrl }, chatId, fromUser);
-        return NextResponse.json({ ok: true });
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
       }
 
       // Check /suporte command
@@ -253,10 +616,18 @@ export async function POST(req: NextRequest) {
       ) {
         const { handleSupportCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleSupportCommand({ store, botService, miniAppUrl }, chatId, store);
-        return NextResponse.json({ ok: true });
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
       }
 
       const isStartCommand = text.startsWith("/start");
+      if (!isStartCommand) {
+        // Mensagem de diálogo / conversação (já sincronizada em telegram_customers e persistida em telegram_messages acima).
+        // Evita disparo de respostas automáticas repetitivas para mensagens de chat ou testes inbound.
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
+      }
+
       if (isStartCommand && update.update_id) {
         try {
           const { BotStartEventService } = await import("@/lib/analytics/bot-start-service");
@@ -381,11 +752,11 @@ export async function POST(req: NextRequest) {
         try {
           const { VideoTriggerService } = await import("@/lib/videos/video-trigger-service");
           const resolvedTrigger = await VideoTriggerService.resolveTriggerToken(startParam);
-          
+
           if (resolvedTrigger.video) {
             const videoPlayerUrl = `${miniAppUrl}/video/${resolvedTrigger.video.id}?token=${startParam}`;
             const videoTitle = resolvedTrigger.video.title;
-            
+
             const videoMessageText = `🎬 *${videoTitle}*\n\nClique no botão abaixo para assistir ao vídeo diretamente no Mini App:`;
             const videoKeyboard = {
               inline_keyboard: [
@@ -401,7 +772,8 @@ export async function POST(req: NextRequest) {
             };
 
             await botService.sendMessage(chatId, videoMessageText, videoKeyboard, "Markdown");
-            return NextResponse.json({ ok: true });
+            if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+            return respondOk();
           }
         } catch (triggerErr: any) {
           console.warn("[TELEGRAM WEBHOOK] Video trigger error:", triggerErr.message);
@@ -409,7 +781,8 @@ export async function POST(req: NextRequest) {
             chatId,
             `⚠️ ${triggerErr.message || "Link de vídeo indisponível."}`
           );
-          return NextResponse.json({ ok: true });
+          if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+          return respondOk();
         }
       }
 
@@ -442,24 +815,31 @@ export async function POST(req: NextRequest) {
         try {
           const photoResult = await botService.sendPhoto(chatId, primaryBanner, welcomeText, inlineKeyboard);
           console.log(`[TELEGRAM WEBHOOK] Welcome photo sent successfully to chatId=${chatId}. Result:`, photoResult);
+          if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
         } catch (photoErr: any) {
           console.error(`[TELEGRAM WEBHOOK] Failed to send welcome photo (URL: ${primaryBanner}). Error:`, photoErr?.message || photoErr);
           console.log(`[TELEGRAM WEBHOOK] Falling back to text-only welcome message for chatId=${chatId}`);
           await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
+          if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
         }
       } else {
         console.log(`[TELEGRAM WEBHOOK] No welcome banner configured. Sending text-only welcome message to chatId=${chatId}`);
         try {
           await botService.sendMessage(chatId, welcomeText, inlineKeyboard);
+          if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
         } catch (msgErr: any) {
           console.error(`[TELEGRAM WEBHOOK] Failed to send text welcome message to chatId=${chatId}:`, msgErr?.message || msgErr);
+          if (markFailed) await markFailed(msgErr?.message || "Welcome message failed", true);
         }
       }
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
+    return respondOk();
+  } catch (error: any) {
     console.error("Webhook error:", error);
+    if (markFailed) {
+      await markFailed(error?.message || "Webhook runtime error", true);
+    }
     return NextResponse.json({ ok: true }); // Always return 200 to Telegram to prevent retries on our internal errors
   }
 }
