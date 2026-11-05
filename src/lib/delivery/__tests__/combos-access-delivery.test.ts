@@ -42,6 +42,21 @@ vi.mock("@/db", () => ({
           return Object.values(dbBots)[0] || null;
         }),
       },
+      telegramBotChats: {
+        findMany: vi.fn().mockImplementation(async () => {
+          const bots = Object.values(dbBots);
+          return bots.map((b: any) => ({
+            id: `chat-${b.id}`,
+            storeId: b.storeId,
+            botId: b.id,
+            telegramChatId: "-1001111",
+            botStatus: "administrator",
+            canInviteUsers: true,
+            isActive: true,
+            bot: b,
+          }));
+        }),
+      },
       accesses: {
         findFirst: vi.fn().mockImplementation(async ({ where }: any) => {
           return Object.values(dbAccesses)[0] || null;

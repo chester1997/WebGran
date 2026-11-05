@@ -5,6 +5,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { decrypt } from "@/lib/encryption";
 import { TelegramDeliveryService } from "./telegram-delivery-service";
 import { SellerSaleNotificationService } from "@/lib/notifications/seller-sale-notification-service";
+import { BotDeliveryResolver } from "./bot-delivery-resolver";
 
 export interface DeliveryResult {
   accessId: string;
@@ -206,11 +207,6 @@ export class AccessDeliveryService {
 
     const store = await db.query.stores.findFirst({
       where: eq(stores.id, order.storeId)
-    });
-
-    // Multi-tenant check: Get active default bot strictly bound to this store for global products
-    const defaultStoreBot = await db.query.telegramBots.findFirst({
-      where: and(eq(telegramBots.storeId, order.storeId), eq(telegramBots.status, 'active'))
     });
 
     const items = order.items || await db.query.orderItems.findMany({
@@ -431,19 +427,28 @@ export class AccessDeliveryService {
 
           // Resolve bot strictly for this component product
           let itemBot = null;
-          if (productData.botId) {
-            itemBot = await db.query.telegramBots.findFirst({
-              where: and(
-                eq(telegramBots.id, productData.botId),
-                eq(telegramBots.storeId, order.storeId),
-                eq(telegramBots.status, 'active')
-              )
+          try {
+            itemBot = await BotDeliveryResolver.resolveBotForDelivery({
+              storeId: order.storeId,
+              botId: productData.botId,
+              deliveryType: productData.deliveryType,
+              deliveryValue: productData.deliveryValue,
             });
-            if (!itemBot) {
-              itemBot = defaultStoreBot;
+          } catch (botErr: any) {
+            const errorMsg = botErr.message || "Falha na resolução do bot para este componente do combo.";
+            console.error(`[AccessDeliveryService] Bot resolution error for combo component ${compProductId}:`, errorMsg);
+            if (claimToken) {
+              await AccessDeliveryService.finalizeDeliveryFailure(accessRecord.id, claimToken, errorMsg, null);
             }
-          } else {
-            itemBot = defaultStoreBot;
+            results.push({
+              accessId: accessRecord.id,
+              status: 'FAILED',
+              deliveryStatus: 'FAILED',
+              error: errorMsg,
+              productId: compProductId,
+              isComboComponent: true,
+            });
+            continue;
           }
 
           // Execute delivery for component
@@ -613,22 +618,29 @@ export class AccessDeliveryService {
         }
       }
 
-      // Resolve bot strictly for this product: if product has botId, use that specific active bot of the store;
-      // if botId is null, use the store's global/default active bot.
+      // Resolve bot strictly for this product using deterministic resolution
       let itemBot = null;
-      if (product.botId) {
-        itemBot = await db.query.telegramBots.findFirst({
-          where: and(
-            eq(telegramBots.id, product.botId),
-            eq(telegramBots.storeId, order.storeId),
-            eq(telegramBots.status, 'active')
-          )
+      try {
+        itemBot = await BotDeliveryResolver.resolveBotForDelivery({
+          storeId: order.storeId,
+          botId: product.botId,
+          deliveryType: product.deliveryType,
+          deliveryValue: product.deliveryValue,
         });
-        if (!itemBot) {
-          throw new Error(`Bot vinculado ao produto (${product.botId}) não encontrado ou não está ativo nesta loja.`);
+      } catch (botErr: any) {
+        const errorMsg = botErr.message || "Falha na resolução do bot para este produto.";
+        console.error(`[AccessDeliveryService] Bot resolution error for product ${product.id}:`, errorMsg);
+        if (claimToken) {
+          await AccessDeliveryService.finalizeDeliveryFailure(accessRecord.id, claimToken, errorMsg, null);
         }
-      } else {
-        itemBot = defaultStoreBot;
+        results.push({
+          accessId: accessRecord.id,
+          status: 'FAILED',
+          deliveryStatus: 'FAILED',
+          error: errorMsg,
+          productId: product.id,
+        });
+        continue;
       }
 
       // Execute Delivery
@@ -729,24 +741,13 @@ export class AccessDeliveryService {
       throw new Error("Produto vinculado ao acesso não encontrado.");
     }
 
-    let itemBot = null;
-    const productBotId = productData.botId;
-    if (productBotId) {
-      itemBot = await db.query.telegramBots.findFirst({
-        where: and(
-          eq(telegramBots.id, productBotId),
-          eq(telegramBots.storeId, sellerStoreId),
-          eq(telegramBots.status, 'active')
-        )
-      });
-      if (!itemBot) {
-        throw new Error("Bot vinculado ao produto não encontrado ou não está ativo nesta loja.");
-      }
-    } else {
-      itemBot = await db.query.telegramBots.findFirst({
-        where: and(eq(telegramBots.storeId, sellerStoreId), eq(telegramBots.status, 'active'))
-      });
-    }
+    // Resolve bot strictly using deterministic resolution
+    const itemBot = await BotDeliveryResolver.resolveBotForDelivery({
+      storeId: sellerStoreId,
+      botId: productData.botId,
+      deliveryType: productData.deliveryType,
+      deliveryValue: productData.deliveryValue,
+    });
 
     return AccessDeliveryService.executeSingleDelivery(
       accessRecord,
@@ -790,8 +791,8 @@ export class AccessDeliveryService {
     }
 
     try {
-      if (!bot && product.deliveryType !== 'product_video') {
-        throw new Error("Nenhum bot do Telegram está vinculado a esta loja.");
+      if (!bot && (product.deliveryType === 'telegram' || product.deliveryType === 'TELEGRAM_CHAT')) {
+        throw new Error("Nenhum bot do Telegram válido foi encontrado para realizar a entrega neste canal.");
       }
 
       const telegramChatId = product.deliveryValue ? String(product.deliveryValue).trim() : null;

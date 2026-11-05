@@ -41,6 +41,7 @@ export default async function SellerBotsPage() {
     recipientsCount: bot.notificationRecipients?.length || 0,
     chatsCount: bot.chats?.length || 0,
     storeSlug: store.slug,
+    storeName: store.name,
   }));
 
   return (
