@@ -78,6 +78,7 @@ export interface VideoStorageUsage {
 interface VideosClientProps {
   initialVideos: LibraryVideoItem[];
   initialUsage: VideoStorageUsage;
+  hideHeader?: boolean;
 }
 
 const GB = 1024 * 1024 * 1024;
@@ -125,7 +126,7 @@ function normalizeUsage(raw: any): VideoStorageUsage {
   };
 }
 
-export default function VideosClient({ initialVideos, initialUsage }: VideosClientProps) {
+export default function VideosClient({ initialVideos, initialUsage, hideHeader }: VideosClientProps) {
   const [videosList, setVideosList] = useState<LibraryVideoItem[]>(initialVideos);
   const [usage, setUsage] = useState<VideoStorageUsage>(() => normalizeUsage(initialUsage));
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -697,17 +698,52 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
       )}
 
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Biblioteca de Vídeos"
-        badge={
-          usage.hasVideoSubscription ? (
-            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-violet-500/10 text-violet-400 border border-violet-500/25">
-              {videosList.length} {videosList.length === 1 ? "vídeo" : "vídeos"}
-            </span>
-          ) : null
-        }
-        subtitle="Gerencie seus vídeos e utilize-os na entrega automática de produtos digitais."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Biblioteca de Vídeos"
+          badge={
+            usage.hasVideoSubscription ? (
+              <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-violet-500/10 text-violet-400 border border-violet-500/25">
+                {videosList.length} {videosList.length === 1 ? "vídeo" : "vídeos"}
+              </span>
+            ) : null
+          }
+          subtitle="Gerencie seus vídeos e utilize-os na entrega automática de produtos digitais."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshData()}
+                disabled={isRefreshing}
+                className="bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white text-xs rounded-xl h-9 px-3"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin text-[#3984FF]" : ""}`} />
+                Atualizar
+              </Button>
+
+              {usage.hasVideoSubscription && (
+                <Button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium text-xs rounded-xl px-3.5 h-9 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar vídeo</span>
+                </Button>
+              )}
+            </div>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-white">Biblioteca de Vídeos</h3>
+            {usage.hasVideoSubscription && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-violet-500/10 text-violet-400 border border-violet-500/25">
+                {videosList.length} {videosList.length === 1 ? "vídeo" : "vídeos"}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -719,7 +755,6 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin text-[#3984FF]" : ""}`} />
               Atualizar
             </Button>
-
             {usage.hasVideoSubscription && (
               <Button
                 onClick={() => setIsUploadModalOpen(true)}
@@ -730,8 +765,8 @@ export default function VideosClient({ initialVideos, initialUsage }: VideosClie
               </Button>
             )}
           </div>
-        }
-      />
+        </div>
+      )}
 
       {/* PAYWALL / LOCK SCREEN FOR UN-SUBSCRIBED SELLERS */}
       {!usage.hasVideoSubscription && !usage.isUnlimited ? (

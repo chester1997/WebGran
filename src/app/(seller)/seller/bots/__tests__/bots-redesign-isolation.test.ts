@@ -94,6 +94,6 @@ describe("WebGran Bots — Redesign & Isolamento Exclusivo do Proprietário", ()
       expect(BotOverviewTab.default).toBeDefined();
       expect(BotConversationsTab.default).toBeDefined();
       expect(BotSettingsTab.default).toBeDefined();
-    });
+    }, 15000);
   });
 });

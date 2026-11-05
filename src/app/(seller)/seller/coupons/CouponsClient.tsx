@@ -40,7 +40,7 @@ interface CouponItem {
   updatedAt: Date | string;
 }
 
-export default function CouponsClient({ initialCoupons }: { initialCoupons: CouponItem[] }) {
+export default function CouponsClient({ initialCoupons, hideHeader }: { initialCoupons: CouponItem[]; hideHeader?: boolean }) {
   const [couponsList, setCouponsList] = useState<CouponItem[]>(initialCoupons);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -154,15 +154,37 @@ export default function CouponsClient({ initialCoupons }: { initialCoupons: Coup
       )}
 
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Cupons de Desconto"
-        badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {couponsList.length} {couponsList.length === 1 ? "cupom" : "cupons"}
-          </span>
-        }
-        subtitle="Crie e gerencie códigos promocionais para seus clientes resgatarem no carrinho."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Cupons de Desconto"
+          badge={
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {couponsList.length} {couponsList.length === 1 ? "cupom" : "cupons"}
+            </span>
+          }
+          subtitle="Crie e gerencie códigos promocionais para seus clientes resgatarem no carrinho."
+          actions={
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setIsModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-medium shadow-xs transition-all cursor-pointer shrink-0 h-9"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Criar Novo Cupom</span>
+            </button>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-white">Cupons de Desconto</h3>
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {couponsList.length} {couponsList.length === 1 ? "cupom" : "cupons"}
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -174,8 +196,8 @@ export default function CouponsClient({ initialCoupons }: { initialCoupons: Coup
             <Plus className="w-3.5 h-3.5" />
             <span>Criar Novo Cupom</span>
           </button>
-        }
-      />
+        </div>
+      )}
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

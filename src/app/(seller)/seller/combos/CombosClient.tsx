@@ -41,12 +41,14 @@ interface CombosClientProps {
   initialCombos: ComboItem[];
   activeProducts: ActiveProduct[];
   storeSlug: string;
+  hideHeader?: boolean;
 }
 
 export default function CombosClient({
   initialCombos,
   activeProducts,
   storeSlug,
+  hideHeader = false,
 }: CombosClientProps) {
   const [combosList, setCombosList] = useState<ComboItem[]>(initialCombos);
   const [searchTerm, setSearchTerm] = useState("");
@@ -144,15 +146,33 @@ export default function CombosClient({
   return (
     <div className="w-full space-y-6">
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Combos"
-        badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-            {totalCombos} {totalCombos === 1 ? "oferta" : "ofertas"}
-          </span>
-        }
-        subtitle="Crie combos tradicionais ou ofertas progressivas para aumentar o ticket médio da sua loja."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Combos"
+          badge={
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+              {totalCombos} {totalCombos === 1 ? "oferta" : "ofertas"}
+            </span>
+          }
+          subtitle="Crie combos tradicionais ou ofertas progressivas para aumentar o ticket médio da sua loja."
+          actions={
+            <Button
+              onClick={handleOpenCreate}
+              className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium px-4 h-9 rounded-xl flex items-center gap-1.5 shrink-0 text-xs shadow-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nova Oferta</span>
+            </Button>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-white">Combos e Ofertas</h3>
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+              {totalCombos} {totalCombos === 1 ? "oferta" : "ofertas"}
+            </span>
+          </div>
           <Button
             onClick={handleOpenCreate}
             className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium px-4 h-9 rounded-xl flex items-center gap-1.5 shrink-0 text-xs shadow-xs cursor-pointer"
@@ -160,8 +180,8 @@ export default function CombosClient({
             <Plus className="w-4 h-4" />
             <span>Nova Oferta</span>
           </Button>
-        }
-      />
+        </div>
+      )}
 
       {/* Alerts */}
       {successMessage && (

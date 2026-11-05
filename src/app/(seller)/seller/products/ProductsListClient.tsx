@@ -54,6 +54,7 @@ interface Props {
   bots: { id: string; username: string; displayName?: string | null }[];
   userRole?: string | null;
   carousels?: any[];
+  hideHeader?: boolean;
 }
 
 const durationMap: Record<string, string> = {
@@ -66,7 +67,7 @@ const durationMap: Record<string, string> = {
   annual: 'Anual'
 };
 
-export default function ProductsListClient({ storeName, products, categories, bots, userRole, carousels = [] }: Props) {
+export default function ProductsListClient({ storeName, products, categories, bots, userRole, carousels = [], hideHeader = false }: Props) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -148,16 +149,28 @@ export default function ProductsListClient({ storeName, products, categories, bo
   return (
     <div className="space-y-6 fade-in w-full max-w-[1600px] mx-auto">
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Produtos"
-        badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {products.length} {products.length === 1 ? "produto" : "produtos"}
-          </span>
-        }
-        subtitle="Gerencie o catálogo de produtos digitais da sua loja."
-        actions={<NewProductModal categories={categories} bots={bots} carousels={carousels} />}
-      />
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Produtos"
+          badge={
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {products.length} {products.length === 1 ? "produto" : "produtos"}
+            </span>
+          }
+          subtitle="Gerencie o catálogo de produtos digitais da sua loja."
+          actions={<NewProductModal categories={categories} bots={bots} carousels={carousels} />}
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-white tracking-tight">Catálogo de Produtos</h3>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {products.length} {products.length === 1 ? "produto" : "produtos"}
+            </span>
+          </div>
+          <NewProductModal categories={categories} bots={bots} carousels={carousels} />
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row items-center gap-3 bg-[var(--seller-surface,#101218)] p-3 border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none">

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import {
   toggleBotStatusAction,
   renameBotAction,
@@ -14,6 +15,18 @@ import BotTabsNav from "../components/BotTabsNav";
 import BotOverviewTab from "../components/BotOverviewTab";
 import BotConversationsTab, { CustomerItem, MessageItem } from "../components/BotConversationsTab";
 import BotSettingsTab from "../components/BotSettingsTab";
+
+import WelcomeClient from "@/app/(seller)/seller/boas-vindas/WelcomeClient";
+import BannersClient from "@/app/(seller)/seller/banners/BannersClient";
+import ProductsListClient from "@/app/(seller)/seller/products/ProductsListClient";
+import CombosClient from "@/app/(seller)/seller/combos/CombosClient";
+import VideosClient from "@/app/(seller)/seller/videos/VideosClient";
+import CarouselsClient from "@/app/(seller)/seller/carousels/CarouselsClient";
+import CategoriesClient from "@/app/(seller)/seller/categories/CategoriesClient";
+import ClipsClient from "@/app/(seller)/seller/bot/clips/ClipsClient";
+import { NotificationsClient } from "@/app/(seller)/seller/bot/notifications/NotificationsClient";
+import CouponsClient from "@/app/(seller)/seller/coupons/CouponsClient";
+import { BotTabData } from "../bot-tab-loaders";
 
 interface SingleBotClientProps {
   bot: {
@@ -42,6 +55,8 @@ interface SingleBotClientProps {
   }[];
   initialCustomers: CustomerItem[];
   initialMessages?: MessageItem[];
+  tabData?: BotTabData;
+  userRole?: string;
   isAdmin: boolean;
 }
 
@@ -52,13 +67,41 @@ export default function SingleBotClient({
   initialOrders,
   initialCustomers,
   initialMessages = [],
+  tabData,
+  userRole,
   isAdmin,
 }: SingleBotClientProps) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
   const [bot, setBot] = useState(initialBot);
   const [activeTab, setActiveTab] = useState(initialTab || "visao-geral");
+  const [tabCache, setTabCache] = useState<BotTabData>(tabData || {});
   const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year">("month");
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Sincronizar cache de dados ao receber novas abas carregadas
+  useEffect(() => {
+    if (tabData) {
+      setTabCache((prev) => ({
+        ...prev,
+        ...tabData,
+      }));
+    }
+  }, [tabData]);
+
+  // Sincronizar activeTab quando o searchParams mudar via router
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleSelectTab = (tabId: string) => {
+    setActiveTab(tabId);
+    startTransition(() => {
+      router.push(`/seller/bots/${bot.id}?tab=${tabId}`, { scroll: false });
+    });
+  };
 
   // Estados de Modais
   const [renameModal, setRenameModal] = useState(false);
@@ -194,7 +237,7 @@ export default function SingleBotClient({
       <BotHeader
         bot={bot}
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={handleSelectTab}
         onToggleStatus={handleToggleStatus}
         onOpenRename={() => {
           setRenameInput(bot.displayName);
@@ -210,18 +253,19 @@ export default function SingleBotClient({
       {/* 2. NAVEGAÇÃO HORIZONTAL DE ABAS */}
       <BotTabsNav
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={handleSelectTab}
         isAdmin={isAdmin}
       />
 
       {/* 3. CONTEÚDO DAS ABAS */}
+      {/* 3.1 GERENCIAMENTO DO BOT */}
       {activeTab === "visao-geral" && (
         <BotOverviewTab
           bot={bot}
           metrics={metrics}
           selectedPeriod={selectedPeriod}
           onSelectPeriod={setSelectedPeriod}
-          onOpenConversas={() => setActiveTab("conversas")}
+          onOpenConversas={() => handleSelectTab("conversas")}
         />
       )}
 
@@ -250,6 +294,162 @@ export default function SingleBotClient({
           onOpenDelete={() => setDeleteModal(true)}
           showNotification={showNotification}
         />
+      )}
+
+      {activeTab === "boas-vindas" && (
+        tabCache.welcomeSettings ? (
+          <WelcomeClient initialSettings={tabCache.welcomeSettings} hideHeader={true} />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Boas-vindas...</span>
+          </div>
+        )
+      )}
+
+      {/* 3.2 RECURSOS DO MINI APP */}
+      {activeTab === "banners" && (
+        tabCache.bannersData ? (
+          <BannersClient
+            initialBanners={tabCache.bannersData.banners}
+            initialInterval={tabCache.bannersData.bannerInterval}
+            maxLimit={tabCache.bannersData.maxLimit}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Banners...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "produtos" && (
+        tabCache.productsData ? (
+          <ProductsListClient
+            storeName={bot.storeName}
+            products={tabCache.productsData.products}
+            categories={tabCache.productsData.categories}
+            bots={tabCache.productsData.bots}
+            userRole={userRole}
+            carousels={tabCache.productsData.carousels}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Produtos...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "combos" && (
+        tabCache.combosData ? (
+          <CombosClient
+            initialCombos={tabCache.combosData.combos}
+            activeProducts={tabCache.combosData.activeProducts}
+            storeSlug={storeSlug}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Combos...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "videos" && (
+        tabCache.videosData ? (
+          <VideosClient
+            initialVideos={tabCache.videosData.videos}
+            initialUsage={tabCache.videosData.usage}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Biblioteca de Vídeos...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "carrosseis" && (
+        tabCache.carouselsData ? (
+          <CarouselsClient
+            rankingCarousel={tabCache.carouselsData.rankingCarousel}
+            standardCarousels={tabCache.carouselsData.standardCarousels}
+            storeProducts={tabCache.carouselsData.storeProducts}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Carrosséis...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "categorias" && (
+        tabCache.categoriesData ? (
+          <CategoriesClient
+            allCategories={tabCache.categoriesData.allCategories}
+            serializedProducts={tabCache.categoriesData.serializedProducts}
+            initialStyle={tabCache.categoriesData.initialStyle}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Categorias...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "clips" && (
+        tabCache.clipsData ? (
+          <ClipsClient
+            initialClips={tabCache.clipsData.clips}
+            initialStats={tabCache.clipsData.stats}
+            availableProducts={tabCache.clipsData.products}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Clipes...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "notificacoes" && (
+        tabCache.notificationsData ? (
+          <NotificationsClient
+            initialSettings={tabCache.notificationsData.settings}
+            notifications={tabCache.notificationsData.notifications}
+            products={tabCache.notificationsData.products}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Notificações...</span>
+          </div>
+        )
+      )}
+
+      {activeTab === "cupons" && (
+        tabCache.couponsData ? (
+          <CouponsClient
+            initialCoupons={tabCache.couponsData}
+            hideHeader={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center p-12 text-zinc-400">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
+            <span>Carregando Cupons...</span>
+          </div>
+        )
       )}
 
       {/* MODAL: RENOMEAR APELIDO */}

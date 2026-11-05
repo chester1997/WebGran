@@ -61,6 +61,7 @@ interface NotificationsClientProps {
   };
   notifications: NotificationItem[];
   products: ProductOption[];
+  hideHeader?: boolean;
 }
 
 const PAGES_OPTIONS = [
@@ -70,7 +71,7 @@ const PAGES_OPTIONS = [
   { id: "search", label: "Busca" },
 ];
 
-export function NotificationsClient({ initialSettings, notifications, products }: NotificationsClientProps) {
+export function NotificationsClient({ initialSettings, notifications, products, hideHeader }: NotificationsClientProps) {
   // Settings state
   const [enabled, setEnabled] = useState(initialSettings.floatingNotificationsEnabled);
   const [pages, setPages] = useState<string[]>(initialSettings.floatingNotificationsPages || ["home", "product", "category", "search"]);
@@ -166,15 +167,40 @@ export function NotificationsClient({ initialSettings, notifications, products }
   return (
     <div className="space-y-6 fade-in w-full pb-16">
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Notificações Flutuantes"
-        badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {notifications.length} {notifications.length === 1 ? "aviso" : "avisos"}
-          </span>
-        }
-        subtitle="Exiba mensagens promocionais durante a navegação da loja para aumentar destaque e atividade."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Notificações Flutuantes"
+          badge={
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {notifications.length} {notifications.length === 1 ? "aviso" : "avisos"}
+            </span>
+          }
+          subtitle="Exiba mensagens promocionais durante a navegação da loja para aumentar destaque e atividade."
+          actions={
+            <div className="flex items-center gap-2">
+              {notifications.length === 0 && (
+                <button
+                  type="button"
+                  onClick={handleSeedDefaults}
+                  className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 font-medium text-xs border border-white/10 transition-all flex items-center gap-1.5 cursor-pointer h-9"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Carregar Modelos</span>
+                </button>
+              )}
+
+              <NotificationModal products={products} />
+            </div>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-white">Notificações Flutuantes</h3>
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {notifications.length} {notifications.length === 1 ? "aviso" : "avisos"}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             {notifications.length === 0 && (
               <button
@@ -186,11 +212,10 @@ export function NotificationsClient({ initialSettings, notifications, products }
                 <span>Carregar Modelos</span>
               </button>
             )}
-
             <NotificationModal products={products} />
           </div>
-        }
-      />
+        </div>
+      )}
 
       {/* Grid: 2 Columns on XL screens (Settings & Preview left, Messages CRUD right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

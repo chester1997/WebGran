@@ -13,9 +13,10 @@ interface WelcomeClientProps {
     supportType: string;
     supportValue: string;
   };
+  hideHeader?: boolean;
 }
 
-export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
+export default function WelcomeClient({ initialSettings, hideHeader }: WelcomeClientProps) {
   const [isPending, startTransition] = useTransition();
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -78,10 +79,39 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Boas-vindas"
-        subtitle="Mensagem e banner exibidos no Mini App e no bot."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Boas-vindas"
+          subtitle="Mensagem e banner exibidos no Mini App e no bot."
+          actions={
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={handleSave}
+                disabled={isPending}
+                className="inline-flex items-center justify-center gap-2 bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-medium px-4 py-2 rounded-xl transition-all shadow-xs disabled:opacity-50 shrink-0 cursor-pointer h-9"
+              >
+                {isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : savedSuccess ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Salvo com sucesso!</span>
+                  </>
+                ) : (
+                  <span>Salvar alterações</span>
+                )}
+              </button>
+              {saveError && (
+                <span className="text-xs text-red-400 font-medium">{saveError}</span>
+              )}
+            </div>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Mensagem de Boas-vindas</h3>
+          </div>
           <div className="flex flex-col items-end gap-1">
             <button
               onClick={handleSave}
@@ -103,8 +133,8 @@ export default function WelcomeClient({ initialSettings }: WelcomeClientProps) {
               <span className="text-xs text-red-400 font-medium">{saveError}</span>
             )}
           </div>
-        }
-      />
+        </div>
+      )}
 
       {/* Card 1: Banner de boas-vindas */}
       <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-4 sm:p-6 space-y-5 shadow-xl relative overflow-hidden">

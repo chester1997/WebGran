@@ -7,6 +7,7 @@ import { eq, and, desc, asc } from "drizzle-orm";
 import { getCurrentStore } from "@/lib/auth";
 import { requireOwnerAccount } from "@/lib/bots/owner-guard";
 import SingleBotClient from "./SingleBotClient";
+import { loadBotTabData } from "../bot-tab-loaders";
 
 interface SingleBotPageProps {
   params: Promise<{ id: string }>;
@@ -125,15 +126,20 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
         }))
     : [];
 
+  const currentTab = tab || "visao-geral";
+  const tabData = await loadBotTabData(currentTab, store, user.id);
+
   return (
     <Suspense fallback={<div className="p-8 text-zinc-400 text-sm">Carregando painel do bot...</div>}>
       <SingleBotClient
         bot={botData}
         storeSlug={store.slug}
-        initialTab={tab || "visao-geral"}
+        initialTab={currentTab}
         initialOrders={initialOrders}
         initialCustomers={initialCustomers}
         initialMessages={initialSelectedMessages}
+        tabData={tabData}
+        userRole={user.role}
         isAdmin={user.role === "admin" || user.role === "super_admin"}
       />
     </Suspense>

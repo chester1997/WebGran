@@ -67,11 +67,12 @@ interface ClipsClientProps {
   initialClips: ClipItem[];
   initialStats: ClipsStats;
   availableProducts?: ProductOption[];
+  hideHeader?: boolean;
 }
 
 
 
-export default function ClipsClient({ initialClips, initialStats, availableProducts = [] }: ClipsClientProps) {
+export default function ClipsClient({ initialClips, initialStats, availableProducts = [], hideHeader }: ClipsClientProps) {
   const [clipsList, setClipsList] = useState<ClipItem[]>(initialClips);
   const [stats, setStats] = useState<ClipsStats>(initialStats);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -513,15 +514,75 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
       )}
 
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Clips"
-        badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {clipsList.length} {clipsList.length === 1 ? "clip" : "clips"}
-          </span>
-        }
-        subtitle="Gerencie os vídeos curtos exibidos na sua loja online."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Clips"
+          badge={
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {clipsList.length} {clipsList.length === 1 ? "clip" : "clips"}
+            </span>
+          }
+          subtitle="Gerencie os vídeos curtos exibidos na sua loja online."
+          actions={
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => refreshClipsData()}
+                disabled={isRefreshing}
+                title="Atualizar lista"
+                className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/10 transition-all cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#3984FF]" : ""}`} />
+              </button>
+
+              {/* View Mode Switcher */}
+              <div className="flex items-center bg-[#151821] border border-white/[0.08] rounded-xl p-0.5 gap-0.5 h-9">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  title="Grade"
+                  className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                    viewMode === "grid"
+                      ? "bg-[#3984FF] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Grade</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  title="Lista"
+                  className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                    viewMode === "list"
+                      ? "bg-[#3984FF] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Lista</span>
+                </button>
+              </div>
+
+              <Button
+                onClick={openAddModal}
+                className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl px-3.5 h-9 text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Adicionar Clip</span>
+              </Button>
+            </div>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-white">Clipes</h3>
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {clipsList.length} {clipsList.length === 1 ? "clip" : "clips"}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -532,8 +593,6 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#3984FF]" : ""}`} />
             </button>
-
-            {/* View Mode Switcher */}
             <div className="flex items-center bg-[#151821] border border-white/[0.08] rounded-xl p-0.5 gap-0.5 h-9">
               <button
                 type="button"
@@ -562,7 +621,6 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
                 <span className="hidden sm:inline">Lista</span>
               </button>
             </div>
-
             <Button
               onClick={openAddModal}
               className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl px-3.5 h-9 text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
@@ -571,8 +629,8 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
               <span>Adicionar Clip</span>
             </Button>
           </div>
-        }
-      />
+        </div>
+      )}
 
       {/* Real-time Summary Cards (Fetched directly from Neon) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

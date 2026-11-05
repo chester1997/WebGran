@@ -45,12 +45,13 @@ interface BannersClientProps {
   initialBanners: BannerItem[];
   initialInterval: number;
   maxLimit: number;
+  hideHeader?: boolean;
 }
 
 const MAX_BANNER_SIZE_MB = 20;
 const MAX_BANNER_SIZE_BYTES = MAX_BANNER_SIZE_MB * 1024 * 1024; // 20,971,520 bytes
 
-export default function BannersClient({ initialBanners, initialInterval, maxLimit }: BannersClientProps) {
+export default function BannersClient({ initialBanners, initialInterval, maxLimit, hideHeader = false }: BannersClientProps) {
   const [bannersList, setBannersList] = useState<BannerItem[]>(initialBanners);
   const [bannerInterval, setBannerInterval] = useState<number>(initialInterval);
   const [isSavingInterval, setIsSavingInterval] = useState(false);
@@ -285,15 +286,34 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       )}
 
       {/* Header Padronizado */}
-      <SellerPageHeader
-        title="Banners"
-        badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {bannersList.length} de {maxLimit} banners
-          </span>
-        }
-        subtitle="Faça upload ou configure os banners exibidos no topo da sua loja no Mini App. Suporta arquivos de até 20MB."
-        actions={
+      {!hideHeader ? (
+        <SellerPageHeader
+          title="Banners"
+          badge={
+            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {bannersList.length} de {maxLimit} banners
+            </span>
+          }
+          subtitle="Faça upload ou configure os banners exibidos no topo da sua loja no Mini App. Suporta arquivos de até 20MB."
+          actions={
+            <Button
+              onClick={openAddModal}
+              disabled={isLimitReached}
+              className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl px-4 py-2 text-xs flex items-center gap-1.5 cursor-pointer h-9 shadow-xs disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar Banner</span>
+            </Button>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-white tracking-tight">Banners da Loja</h3>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+              {bannersList.length} de {maxLimit}
+            </span>
+          </div>
           <Button
             onClick={openAddModal}
             disabled={isLimitReached}
@@ -302,8 +322,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             <Plus className="w-4 h-4" />
             <span>Adicionar Banner</span>
           </Button>
-        }
-      />
+        </div>
+      )}
 
       {/* Banner Size Recommendation Notice Card */}
       <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">

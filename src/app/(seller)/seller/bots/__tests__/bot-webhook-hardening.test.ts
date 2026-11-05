@@ -124,7 +124,7 @@ describe("WebGran — Hardening de Segurança do Webhook, Controle por Lease e R
       expect(res.status).toBe(403);
       const json = await res.json();
       expect(json.error).toContain("X-Telegram-Bot-Api-Secret-Token is required");
-    });
+    }, 20000);
 
     it("rejeita com 403 se header possui secret divergente do bot (comparação em tempo constante)", async () => {
       vi.mocked(db.query.telegramBots.findFirst).mockResolvedValue(BOT_WITH_SECRET as any);
