@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { 
   DollarSign, 
@@ -18,7 +18,7 @@ import {
   HelpCircle,
   Users,
   CheckCircle,
-  Sparkles
+  ShoppingBag
 } from "lucide-react";
 
 interface MetricsData {
@@ -56,176 +56,303 @@ export default function BotOverviewTab({
 }: BotOverviewTabProps) {
   const isRunning = bot.status === "active";
 
-  const periodLabels: Record<string, string> = {
-    today: "Hoje",
-    week: "Esta semana",
-    month: "Este mês",
-    year: "Este ano",
-  };
+  const periodOptions: Array<{ id: "today" | "week" | "month" | "year"; label: string }> = [
+    { id: "today", label: "Hoje" },
+    { id: "week", label: "Esta semana" },
+    { id: "month", label: "Este mês" },
+    { id: "year", label: "Este ano" },
+  ];
+
+  // Formatação de receita: R$ X,XX
+  const formattedRevenue = useMemo(() => {
+    const raw = metrics.approvedRevenue || 0;
+    const parts = raw.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).split(",");
+    return {
+      integer: parts[0] || "0",
+      decimal: parts[1] || "00",
+    };
+  }, [metrics.approvedRevenue]);
+
+  // Dias recentes para os eixos do gráfico (últimos 5 dias)
+  const chartDays = useMemo(() => {
+    const now = new Date();
+    const days = [];
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      days.push({
+        label: `${day}/${month}`,
+        isToday: i === 0,
+        isPenultimate: i === 1,
+      });
+    }
+    return days;
+  }, []);
 
   return (
-    <div className="space-y-6">
-      {/* 1. Barra Superior: Filtro de Período Alinhado à Direita (Referência Gerencia VIP) */}
+    <div className="space-y-5">
+      {/* 1. SELETOR DE PERÍODO ALINHADO À DIREITA (Conforme Referência Visual) */}
       <div className="flex items-center justify-end">
-        <div className="inline-flex items-center p-1 bg-[#111215] border border-white/10 rounded-xl text-xs font-semibold shadow-sm">
-          {(["today", "week", "month", "year"] as const).map((period) => (
-            <button
-              key={period}
-              type="button"
-              onClick={() => onSelectPeriod(period)}
-              className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                selectedPeriod === period
-                  ? "bg-white/10 text-white font-bold shadow-inner"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              {periodLabels[period]}
-            </button>
-          ))}
+        <div className="inline-flex items-center gap-1">
+          {periodOptions.map((item) => {
+            const isActive = selectedPeriod === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelectPeriod(item.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-[#222222] text-white border border-white/20 font-semibold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 2. Grid de Métricas Principais (Referência Exata Gerencia VIP: 1 Card de Receita + Grid 2x2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Card de Receita Aprovada (Destaque Principal à Esquerda) */}
-        <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-6 shadow-md flex flex-col justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                <DollarSign className="w-4 h-4" />
+      {/* 2. LINHA DE INDICADORES: RECEITA (ESQUERDA) + GRID 2x2 UNIFICADO (DIREITA) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Bloco da Esquerda: Receita aprovada (~42% da largura no desktop) */}
+        <div className="lg:col-span-5 bg-[#171717] border border-white/[0.08] rounded-2xl p-6 flex flex-col justify-between shadow-sm">
+          <div>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#1b2f1e] border border-[#2e5d34] flex items-center justify-center shrink-0 text-[#4ade80]">
+                <DollarSign className="w-5 h-5 stroke-[2.5]" />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-white">Receita aprovada</span>
-                <span title="Pagos no período por este bot, valor líquido." className="cursor-help inline-flex items-center">
-                  <HelpCircle className="w-3.5 h-3.5 text-zinc-500" />
-                </span>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-white tracking-tight">Receita aprovada</h3>
+                  <span
+                    title="Pagos no período por este bot, valor líquido."
+                    className="cursor-help inline-flex items-center text-zinc-500 hover:text-zinc-300"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                  Pagos no período por este bot, valor líquido.
+                </p>
               </div>
             </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Pagos no período por este bot, valor líquido.
-            </p>
           </div>
 
-          <div className="pt-4 border-t border-white/[0.04]">
-            <div className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-              {metrics.approvedRevenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          <div className="pt-8">
+            <div className="flex items-baseline">
+              <span className="text-base sm:text-lg font-bold text-zinc-400 mr-1.5">R$</span>
+              <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                {formattedRevenue.integer}
+              </span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                ,{formattedRevenue.decimal}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Grid 2x2 à Direita: Cliques, Iniciaram, Criados, Aprovados */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Card: Cliques no link */}
-          <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md flex flex-col justify-between gap-4">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Cliques no link</span>
+        {/* Bloco da Direita: Card Unificado 2x2 (~58% da largura no desktop) */}
+        <div className="lg:col-span-7 bg-[#171717] border border-white/[0.08] rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-2 shadow-sm">
+          {/* Quadrante 1: Cliques no link */}
+          <div className="p-5 sm:p-6 border-b sm:border-r border-white/[0.06] flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <MousePointerClick className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Cliques no link</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
               {metrics.clicksCount}
             </div>
           </div>
 
-          {/* Card: Iniciaram o bot */}
-          <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md flex flex-col justify-between gap-4">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span>Iniciaram o bot</span>
+          {/* Quadrante 2: Iniciaram o bot */}
+          <div className="p-5 sm:p-6 border-b border-white/[0.06] flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Iniciaram o bot</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
               {metrics.conversationsCount}
             </div>
           </div>
 
-          {/* Card: Pedidos criados */}
-          <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md flex flex-col justify-between gap-4">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-              <ShoppingCart className="w-4 h-4 text-[#3984FF]" />
-              <span>Pedidos criados</span>
+          {/* Quadrante 3: Pedidos criados */}
+          <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-white/[0.06] flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Pedidos criados</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
               {metrics.totalOrders}
             </div>
           </div>
 
-          {/* Card: Pedidos aprovados */}
-          <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md flex flex-col justify-between gap-4">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Pedidos aprovados</span>
+          {/* Quadrante 4: Pedidos aprovados */}
+          <div className="p-5 sm:p-6 flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Pedidos aprovados</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
               {metrics.paidCount}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Seção de Gráficos de Conversão (Referência Gerencia VIP Frame 06) */}
+      {/* 3. SEÇÃO DE GRÁFICOS: 2 CARDS BALANCEADOS LADO A LADO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Gráfico 1: Iniciaram o bot */}
-        <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-zinc-400" />
-              <span className="text-xs font-semibold text-zinc-300">Iniciaram o bot</span>
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-zinc-400">
+              <Users className="w-4 h-4" />
+              <span className="text-xs font-medium text-zinc-300">Iniciaram o bot</span>
             </div>
-            <span className="text-xs font-bold text-zinc-400">Total: {metrics.conversationsCount}</span>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
+              {metrics.conversationsCount}
+            </div>
           </div>
 
-          <div className="text-2xl font-extrabold text-white">
-            {metrics.conversationsCount}
-          </div>
+          {/* Área Gráfica com Linhas Sutis e Barras */}
+          <div className="mt-8 relative pt-6 pb-2">
+            {/* Linhas de grade pontilhadas sutis */}
+            <div className="absolute inset-x-0 top-0 flex flex-col justify-between h-32 pointer-events-none">
+              <div className="flex items-center">
+                <span className="text-[10px] text-zinc-500 w-5">1</span>
+                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
+              </div>
+              <div className="flex items-center">
+                <span className="text-[10px] text-zinc-500 w-5">0</span>
+                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
+              </div>
+            </div>
 
-          {/* Barras Visuais de Tendência */}
-          <div className="h-28 pt-4 flex items-end gap-2 border-b border-white/[0.06] pb-2">
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[20%]" title="D-6" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[35%]" title="D-5" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[25%]" title="D-4" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[40%]" title="D-3" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[60%]" title="D-2" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[45%]" title="Ontem" />
-            <div className="flex-1 bg-emerald-500 rounded-t shadow-lg shadow-emerald-500/20 h-[85%]" title="Hoje" />
-          </div>
-          <div className="flex justify-between text-[10px] text-zinc-500">
-            <span>Início do período</span>
-            <span>Hoje</span>
+            {/* Barras Alinhadas aos Dias */}
+            <div className="h-32 pl-6 pr-2 flex items-end justify-between gap-3 relative z-10">
+              {chartDays.map((day, idx) => {
+                const isPeak = idx === 3 && metrics.conversationsCount > 0;
+                const isHatched = idx === 4;
+
+                return (
+                  <div key={day.label} className="flex-1 flex flex-col items-center h-full justify-end">
+                    {isPeak ? (
+                      <div
+                        className="w-full max-w-[28px] bg-gradient-to-t from-lime-600 via-lime-500 to-lime-400 rounded-t-sm shadow-lg shadow-lime-500/20"
+                        style={{ height: "92%" }}
+                        title={`${day.label}: ${metrics.conversationsCount}`}
+                      />
+                    ) : isHatched ? (
+                      <div
+                        className="w-full max-w-[28px] h-1.5 bg-[#84cc16]/40 rounded-t-sm"
+                        style={{
+                          backgroundImage:
+                            "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(132, 204, 22, 0.6) 3px, rgba(132, 204, 22, 0.6) 6px)",
+                        }}
+                        title={`${day.label}: Projeção`}
+                      />
+                    ) : (
+                      <div
+                        className="w-full max-w-[28px] h-1 bg-[#84cc16] rounded-t-sm"
+                        title={`${day.label}: 0`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legenda dos Dias */}
+            <div className="pl-6 pr-2 mt-3 flex justify-between text-[11px] text-zinc-500 font-medium">
+              {chartDays.map((day) => (
+                <span key={day.label} className="text-center flex-1">
+                  {day.label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Gráfico 2: Pedidos aprovados */}
-        <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-zinc-400" />
-              <span className="text-xs font-semibold text-zinc-300">Pedidos aprovados</span>
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-zinc-400">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-xs font-medium text-zinc-300">Pedidos aprovados</span>
             </div>
-            <span className="text-xs font-bold text-zinc-400">Total: {metrics.paidCount}</span>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
+              {metrics.paidCount}
+            </div>
           </div>
 
-          <div className="text-2xl font-extrabold text-white">
-            {metrics.paidCount}
-          </div>
+          {/* Área Gráfica com Linhas Sutis e Barras */}
+          <div className="mt-8 relative pt-6 pb-2">
+            {/* Linhas de grade pontilhadas sutis */}
+            <div className="absolute inset-x-0 top-0 flex flex-col justify-between h-32 pointer-events-none">
+              <div className="flex items-center">
+                <span className="text-[10px] text-zinc-500 w-5">1</span>
+                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
+              </div>
+              <div className="flex items-center">
+                <span className="text-[10px] text-zinc-500 w-5">0</span>
+                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
+              </div>
+            </div>
 
-          {/* Barras Visuais de Tendência */}
-          <div className="h-28 pt-4 flex items-end gap-2 border-b border-white/[0.06] pb-2">
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[15%]" title="D-6" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[25%]" title="D-5" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[20%]" title="D-4" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[30%]" title="D-3" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[40%]" title="D-2" />
-            <div className="flex-1 bg-white/[0.03] rounded-t hover:bg-white/[0.08] transition-colors h-[35%]" title="Ontem" />
-            <div className="flex-1 bg-[#3984FF] rounded-t shadow-lg shadow-[#3984FF]/20 h-[75%]" title="Hoje" />
-          </div>
-          <div className="flex justify-between text-[10px] text-zinc-500">
-            <span>Início do período</span>
-            <span>Hoje</span>
+            {/* Barras Alinhadas aos Dias */}
+            <div className="h-32 pl-6 pr-2 flex items-end justify-between gap-3 relative z-10">
+              {chartDays.map((day, idx) => {
+                const isPeak = idx === 3 && metrics.paidCount > 0;
+                const isHatched = idx === 4;
+
+                return (
+                  <div key={day.label} className="flex-1 flex flex-col items-center h-full justify-end">
+                    {isPeak ? (
+                      <div
+                        className="w-full max-w-[28px] bg-gradient-to-t from-lime-600 via-lime-500 to-lime-400 rounded-t-sm shadow-lg shadow-lime-500/20"
+                        style={{ height: "92%" }}
+                        title={`${day.label}: ${metrics.paidCount}`}
+                      />
+                    ) : isHatched ? (
+                      <div
+                        className="w-full max-w-[28px] h-1.5 bg-[#84cc16]/40 rounded-t-sm"
+                        style={{
+                          backgroundImage:
+                            "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(132, 204, 22, 0.6) 3px, rgba(132, 204, 22, 0.6) 6px)",
+                        }}
+                        title={`${day.label}: Projeção`}
+                      />
+                    ) : (
+                      <div
+                        className="w-full max-w-[28px] h-1 bg-[#84cc16] rounded-t-sm"
+                        title={`${day.label}: 0`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legenda dos Dias */}
+            <div className="pl-6 pr-2 mt-3 flex justify-between text-[11px] text-zinc-500 font-medium">
+              {chartDays.map((day) => (
+                <span key={day.label} className="text-center flex-1">
+                  {day.label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 4. Painel de Status Operacional do Bot */}
-      <div className="bg-[#111215] border border-white/[0.08] rounded-2xl p-5 shadow-md">
+      {/* 4. PAINEL DE STATUS OPERACIONAL */}
+      <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#3984FF]" />
@@ -266,7 +393,7 @@ export default function BotOverviewTab({
         </div>
       </div>
 
-      {/* 5. Atalhos Rápidos para Gerenciamento */}
+      {/* 5. ATALHOS RÁPIDOS PARA RECURSOS DO BOT */}
       <div>
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
           Ações Rápidas do Bot
@@ -275,7 +402,7 @@ export default function BotOverviewTab({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             href="/seller/products"
-            className="bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-md"
+            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-[#3984FF] flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -291,7 +418,7 @@ export default function BotOverviewTab({
 
           <Link
             href="/seller/banners"
-            className="bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-md"
+            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -307,7 +434,7 @@ export default function BotOverviewTab({
 
           <Link
             href="/seller/videos"
-            className="bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-md"
+            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -323,7 +450,7 @@ export default function BotOverviewTab({
 
           <Link
             href="/seller/combos"
-            className="bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-md"
+            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -339,7 +466,7 @@ export default function BotOverviewTab({
 
           <Link
             href="/seller/bot/notifications"
-            className="bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-md"
+            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -356,7 +483,7 @@ export default function BotOverviewTab({
           <button
             type="button"
             onClick={onOpenConversas}
-            className="bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-md text-left cursor-pointer"
+            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm text-left cursor-pointer"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">

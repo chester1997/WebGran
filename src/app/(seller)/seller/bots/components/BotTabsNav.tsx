@@ -13,9 +13,7 @@ import {
   Film, 
   Bell, 
   Ticket,
-  Tags,
-  Bot,
-  Smartphone
+  Tags
 } from "lucide-react";
 
 export interface TabDefinition {
@@ -39,13 +37,13 @@ export default function BotTabsNav({
 }: BotTabsNavProps) {
   // GRUPO 1: GERENCIAMENTO DO BOT
   const botManagementTabs: TabDefinition[] = [
-    { id: "visao-geral", label: "Visão Geral", icon: TrendingUp },
+    { id: "visao-geral", label: "Visão geral", icon: TrendingUp },
     { id: "conversas", label: "Conversas", icon: MessageSquare },
     { id: "configuracao", label: "Configuração", icon: Settings },
     { id: "boas-vindas", label: "Boas-vindas", icon: Sparkles },
   ];
 
-  // GRUPO 2: MINI APP (Visível apenas quando mode === 'MINI_APP')
+  // GRUPO 2: MINI APP (Visível quando mode === 'MINI_APP')
   const isMiniApp = mode === "MINI_APP";
   const miniAppTabs: TabDefinition[] = isMiniApp
     ? [
@@ -62,17 +60,10 @@ export default function BotTabsNav({
     : [];
 
   return (
-    <div className="w-full bg-[#111215] border border-white/[0.08] rounded-2xl p-3 shadow-lg space-y-3">
-      {/* 1. SEÇÃO GERENCIAMENTO DO BOT */}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5 px-1 select-none">
-          <Bot className="w-3 h-3 text-zinc-500" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Gerenciamento do Bot
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+    <nav className="w-full border-b border-white/[0.08] overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="flex items-center gap-1 sm:gap-2 min-w-max pb-px">
+        {/* GRUPO 1: Gerenciamento do Bot */}
+        <div className="flex items-center gap-1">
           {botManagementTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -82,31 +73,36 @@ export default function BotTabsNav({
                 key={tab.id}
                 type="button"
                 onClick={() => onSelectTab(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer select-none shrink-0 ${
+                className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none whitespace-nowrap ${
                   isActive
-                    ? "bg-[#3984FF]/15 text-[#3984FF] border border-[#3984FF]/30 shadow-sm"
-                    : "text-zinc-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
+                    ? "text-white font-semibold"
+                    : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`} />
+                <Icon
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
+                  }`}
+                />
                 <span>{tab.label}</span>
+
+                {/* Indicador de aba ativa: linha inferior contínua e nítida */}
+                {isActive && (
+                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
+                )}
               </button>
             );
           })}
         </div>
-      </div>
 
-      {/* 2. SEÇÃO MINI APP (Condicional ao tipo de bot MINI_APP) */}
-      {isMiniApp && (
-        <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
-          <div className="flex items-center gap-1.5 px-1 select-none">
-            <Smartphone className="w-3 h-3 text-[#3984FF]" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#3984FF]/90">
-              Recursos do Mini App
-            </span>
-          </div>
+        {/* Divisor sutil entre grupos */}
+        {isMiniApp && miniAppTabs.length > 0 && (
+          <div className="h-4 w-px bg-white/10 shrink-0 mx-1.5 self-center" aria-hidden="true" />
+        )}
 
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        {/* GRUPO 2: Recursos do Mini App */}
+        {isMiniApp && (
+          <div className="flex items-center gap-1">
             {miniAppTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -116,20 +112,28 @@ export default function BotTabsNav({
                   key={tab.id}
                   type="button"
                   onClick={() => onSelectTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer select-none shrink-0 ${
+                  className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none whitespace-nowrap ${
                     isActive
-                      ? "bg-[#3984FF]/15 text-[#3984FF] border border-[#3984FF]/30 shadow-sm font-bold"
-                      : "text-zinc-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
+                      ? "text-white font-semibold"
+                      : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`} />
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
+                    }`}
+                  />
                   <span>{tab.label}</span>
+
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
+                  )}
                 </button>
               );
             })}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </nav>
   );
 }
