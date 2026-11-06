@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import BotAvatar from "./BotAvatar";
 import BotStatusBadge from "./BotStatusBadge";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 interface BotHeaderProps {
   bot: {
@@ -68,70 +69,67 @@ export default function BotHeader({
     : null;
 
   return (
-    <div className="w-full space-y-3 pb-4 border-b border-white/[0.08]">
-      {/* 1. Navegação de Retorno: ← Bots */}
-      <div className="flex items-center gap-2 text-xs">
-        <Link
-          href="/seller/bots"
-          className="inline-flex items-center gap-1.5 font-semibold text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Bots</span>
-        </Link>
-        <span className="text-zinc-600">/</span>
-        <span className="text-zinc-300 font-medium truncate max-w-[200px] sm:max-w-xs">{bot.displayName}</span>
-      </div>
+    <SellerPageHeader>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full h-full relative z-30 py-1">
+        {/* À esquerda: Breadcrumb, Avatar, Nome, Status, Loja, Username, Conexão, Link t.me */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Breadcrumb ← Bots */}
+          <Link
+            href="/seller/bots"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-colors shrink-0"
+            title="Voltar para a lista de bots"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Bots</span>
+          </Link>
 
-      {/* 2. Linha Principal do Cabeçalho: Identidade Completa à Esquerda, Ações à Direita */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        {/* Identificação Completa do Bot (Avatar, Nome, Status, Loja, Username, Conexão, Link) */}
-        <div className="flex items-center gap-3.5 min-w-0">
+          {/* Avatar circular do bot */}
           <BotAvatar
             photoUrl={bot.photoUrl}
             displayName={bot.displayName}
             username={bot.username}
-            size="lg"
-            className="ring-2 ring-white/10 shadow-md shrink-0"
+            size="md"
+            className="ring-2 ring-white/10 shadow-sm shrink-0 w-11 h-11"
           />
 
-          <div className="min-w-0 space-y-1">
-            {/* Linha 1: Nome do bot + Status Badge */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
+          <div className="min-w-0 space-y-0.5">
+            {/* Linha 1: Nome do bot + Badge de Status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-white truncate max-w-[180px] sm:max-w-xs md:max-w-md">
                 {bot.displayName}
               </h1>
 
               <BotStatusBadge status={bot.status} size="sm" />
             </div>
 
-            {/* Linha 2: Metadados (Loja · @username · Conectado em data · Link t.me com copiar) */}
-            <div className="flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-zinc-300 font-medium">
+            {/* Linha 2: Metadados (Loja · @username · Conectado em · Link t.me com copiar) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-zinc-400 flex-wrap">
+              <span className="inline-flex items-center gap-1 text-zinc-300 font-medium shrink-0">
                 <Bookmark className="w-3 h-3 text-zinc-500" />
                 {bot.storeName || "WebGran"}
               </span>
 
-              <span className="text-zinc-600">•</span>
-              <span className="font-mono text-zinc-400">@{bot.username}</span>
+              <span className="text-zinc-600 shrink-0">•</span>
+              <span className="font-mono text-zinc-400 shrink-0">@{bot.username}</span>
 
               {formattedDate && (
                 <>
-                  <span className="text-zinc-600">•</span>
-                  <span className="text-zinc-500">Conectado em {formattedDate}</span>
+                  <span className="text-zinc-600 shrink-0 hidden md:inline">•</span>
+                  <span className="text-zinc-500 shrink-0 hidden md:inline">Conectado em {formattedDate}</span>
                 </>
               )}
 
-              <span className="text-zinc-600">•</span>
+              <span className="text-zinc-600 shrink-0">•</span>
 
-              {/* Link t.me compacto com copiar */}
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300 hover:border-white/20 transition-colors">
+              {/* Link t.me com botão de copiar */}
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-zinc-300 hover:border-white/20 transition-colors">
                 <Link2 className="w-3 h-3 text-[#3984FF] shrink-0" />
-                <span className="truncate max-w-[130px] sm:max-w-[200px]">t.me/{bot.username}</span>
+                <span className="truncate max-w-[110px] sm:max-w-[150px]">t.me/{bot.username}</span>
                 <button
                   type="button"
                   onClick={handleCopyLink}
                   className="p-0.5 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                  title="Copiar link do bot"
+                  title="Copiar link"
                 >
                   {copiedLink ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -144,13 +142,13 @@ export default function BotHeader({
           </div>
         </div>
 
-        {/* Bloco de Ações Rápidas Alinhado à Direita */}
-        <div className="flex items-center gap-2 flex-wrap shrink-0 self-start lg:self-center">
-          {/* Botão Secundário: Conversas */}
+        {/* À direita: Conversas, Abrir no Telegram, Menu de ações */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap self-start lg:self-center">
+          {/* Botão Conversas */}
           <button
             type="button"
             onClick={() => onSelectTab("conversas")}
-            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer h-9 ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer h-8 sm:h-9 ${
               activeTab === "conversas"
                 ? "bg-[#3984FF]/15 text-[#3984FF] border-[#3984FF]/40 shadow-xs"
                 : "bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border-white/10"
@@ -160,12 +158,12 @@ export default function BotHeader({
             <span>Conversas</span>
           </button>
 
-          {/* Botão Primário: Abrir no Telegram */}
+          {/* Botão Abrir no Telegram */}
           <a
             href={`https://t.me/${bot.username}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] h-9"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] h-8 sm:h-9"
           >
             <span>Abrir no Telegram</span>
             <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
@@ -176,7 +174,7 @@ export default function BotHeader({
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
+              className="p-1.5 sm:p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0"
               title="Opções do bot"
             >
               <MoreVertical className="w-4 h-4" />
@@ -254,6 +252,6 @@ export default function BotHeader({
           </div>
         </div>
       </div>
-    </div>
+    </SellerPageHeader>
   );
 }
