@@ -1,23 +1,14 @@
 "use client";
 
 import React, { useMemo } from "react";
-import Link from "next/link";
 import { 
   DollarSign, 
-  ShoppingCart, 
   MousePointerClick, 
-  Package, 
-  ImageIcon, 
-  Settings, 
-  Video, 
-  Layers, 
-  Bell, 
   ShieldCheck, 
   CheckCircle2, 
   Smartphone,
   HelpCircle,
   Users,
-  CheckCircle,
   ShoppingBag
 } from "lucide-react";
 
@@ -390,112 +381,6 @@ export default function BotOverviewTab({
               <span>{bot.chatsCount} canais • {bot.recipientsCount} notificações</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 5. ATALHOS RÁPIDOS PARA RECURSOS DO BOT */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
-          Ações Rápidas do Bot
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link
-            href="/seller/products"
-            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-[#3984FF] flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Package className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                Gerenciar →
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Catálogo de Produtos</h4>
-            <p className="text-xs text-zinc-400">Cadastre produtos, defina preços e vincule a entrega a este bot.</p>
-          </Link>
-
-          <Link
-            href="/seller/banners"
-            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <ImageIcon className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                Gerenciar →
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Banners do Mini App</h4>
-            <p className="text-xs text-zinc-400">Adicione banners promocionais para destacar seus lançamentos.</p>
-          </Link>
-
-          <Link
-            href="/seller/videos"
-            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Video className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                Gerenciar →
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Biblioteca de Vídeos</h4>
-            <p className="text-xs text-zinc-400">Gerencie vídeos de entrega exclusiva e streaming protegido.</p>
-          </Link>
-
-          <Link
-            href="/seller/combos"
-            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Layers className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                Gerenciar →
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Combos Promocionais</h4>
-            <p className="text-xs text-zinc-400">Crie pacotes com múltiplos canais ou produtos em uma única compra.</p>
-          </Link>
-
-          <Link
-            href="/seller/bot/notifications"
-            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Bell className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                Gerenciar →
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Notificações de Vendas</h4>
-            <p className="text-xs text-zinc-400">Configure quem recebe os alertas de Pix pago instantaneamente no Telegram.</p>
-          </Link>
-
-          <button
-            type="button"
-            onClick={onOpenConversas}
-            className="bg-[#171717] hover:bg-[#1e1e1e] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all group shadow-sm text-left cursor-pointer"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Settings className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                Abrir →
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Central de Atendimento</h4>
-            <p className="text-xs text-zinc-400">Visualize as mensagens trocadas e responda clientes pelo painel.</p>
-          </button>
         </div>
       </div>
     </div>
