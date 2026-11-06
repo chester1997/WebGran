@@ -4,46 +4,6 @@ const sharp = require('sharp');
 
 const SOURCE_PATH = 'C:/Users/luiz_/.gemini/antigravity/brain/ef804771-f5c4-49ac-9c33-d932abd0dddb/.user_uploaded/media_1793788375210_70fa9f6f.png';
 
-async function createIcoBuffer(sourceBuffer) {
-  const sizes = [16, 32, 48];
-  const images = [];
-
-  for (const size of sizes) {
-    const buffer = await sharp(sourceBuffer)
-      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer();
-    images.push({ width: size, height: size, buffer });
-  }
-
-  const count = images.length;
-  const headerSize = 6;
-  const dirEntrySize = 16;
-  let offset = headerSize + count * dirEntrySize;
-
-  const header = Buffer.alloc(headerSize);
-  header.writeUInt16LE(0, 0); // Reserved
-  header.writeUInt16LE(1, 2); // ICO type 1
-  header.writeUInt16LE(count, 4); // Count of images
-
-  const entries = [];
-  for (const img of images) {
-    const entry = Buffer.alloc(dirEntrySize);
-    entry.writeUInt8(img.width >= 256 ? 0 : img.width, 0);
-    entry.writeUInt8(img.height >= 256 ? 0 : img.height, 1);
-    entry.writeUInt8(0, 2); // Color palette count (0 for 32bpp)
-    entry.writeUInt8(0, 3); // Reserved
-    entry.writeUInt16LE(1, 4); // Color planes
-    entry.writeUInt16LE(32, 6); // Bits per pixel
-    entry.writeUInt32LE(img.buffer.length, 8); // Image size in bytes
-    entry.writeUInt32LE(offset, 12); // Image data offset
-    entries.push(entry);
-    offset += img.buffer.length;
-  }
-
-  return Buffer.concat([header, ...entries, ...images.map((img) => img.buffer)]);
-}
-
 async function main() {
   if (!fs.existsSync(SOURCE_PATH)) {
     throw new Error('Fonte da nova logo não encontrada em: ' + SOURCE_PATH);
@@ -74,8 +34,8 @@ async function main() {
   fs.writeFileSync(path.join(publicDir, 'logo-icon.png'), fullResLogo);
   fs.writeFileSync(path.join(publicDir, 'logo-expanded.png'), fullResLogo);
 
-  // 2. Ícones de alta densidade PWA (public/icons)
-  console.log('2. Gerando ícones PWA e badges...');
+  // 2. Ícones padrão PWA (public/icons/icon-*.png)
+  console.log('2. Gerando ícones padrão PWA...');
   const icon512 = await sharp(originalBuffer)
     .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
@@ -88,42 +48,41 @@ async function main() {
     .toBuffer();
   fs.writeFileSync(path.join(publicIconsDir, 'icon-192x192.png'), icon192);
 
-  // Maskable icons (com 80% safe zone padding com background #121214)
-  const innerMaskable512 = await sharp(originalBuffer)
-    .resize(Math.round(512 * 0.8), Math.round(512 * 0.8), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-  const maskable512 = await sharp({
-    create: {
-      width: 512,
-      height: 512,
-      channels: 4,
-      background: { r: 18, g: 18, b: 20, alpha: 1 } // #121214
-    }
-  })
-    .composite([{ input: innerMaskable512, gravity: 'center' }])
-    .png()
-    .toBuffer();
+  // 3. Maskable icons com gradiente oficial WebGran contínuo (SEM bordas pretas!)
+  // Especificação W3C / Android: o fundo deve sangrar 100% de ponta a ponta e o emblema deve estar na safe zone
+  console.log('3. Gerando ícones maskable com gradiente azul contínuo de ponta a ponta...');
+  async function generateMaskableIcon(size) {
+    const svgGradient = Buffer.from(
+      `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0135E7"/>
+            <stop offset="100%" stop-color="#040E44"/>
+          </linearGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#bg)"/>
+      </svg>`
+    );
+
+    const innerSize = Math.round(size * 0.88);
+    const resizedSource = await sharp(originalBuffer)
+      .resize(innerSize, innerSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .toBuffer();
+
+    return await sharp(svgGradient)
+      .composite([{ input: resizedSource, gravity: 'center' }])
+      .png()
+      .toBuffer();
+  }
+
+  const maskable512 = await generateMaskableIcon(512);
   fs.writeFileSync(path.join(publicIconsDir, 'icon-maskable-512x512.png'), maskable512);
 
-  const innerMaskable192 = await sharp(originalBuffer)
-    .resize(Math.round(192 * 0.8), Math.round(192 * 0.8), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-  const maskable192 = await sharp({
-    create: {
-      width: 192,
-      height: 192,
-      channels: 4,
-      background: { r: 18, g: 18, b: 20, alpha: 1 } // #121214
-    }
-  })
-    .composite([{ input: innerMaskable192, gravity: 'center' }])
-    .png()
-    .toBuffer();
+  const maskable192 = await generateMaskableIcon(192);
   fs.writeFileSync(path.join(publicIconsDir, 'icon-maskable-192x192.png'), maskable192);
 
-  // Apple touch icons (180x180)
+  // 4. Apple touch icons (180x180)
+  console.log('4. Gerando apple-touch-icon.png...');
   const apple180 = await sharp(originalBuffer)
     .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
@@ -132,35 +91,17 @@ async function main() {
   fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), apple180);
   fs.writeFileSync(path.join(appDir, 'apple-icon.png'), apple180);
 
-  // Badges para notificações PWA
-  for (const size of [72, 96, 128, 192]) {
-    const badge = await sharp(originalBuffer)
-      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer();
-    fs.writeFileSync(path.join(publicIconsDir, `badge-${size}x${size}.png`), badge);
-  }
+  // NOTA ARQUITETURAL CRÍTICA:
+  // 1. Badges de Notificação PWA (badge-*.png) DEVEM ser estritamente monocromáticos (silhueta branca sobre fundo transparente)
+  //    para que o Android/SO consiga renderizar a máscara de canal alfa na barra de status sem gerar quadrado sólido/vazio.
+  // 2. Favicons (favicon.ico, favicon.png, src/app/icon.png) utilizam a identidade circular dark de alta fidelidade
+  //    em múltiplas resoluções (16, 32, 48, 64, 128, 256), segregados dos ícones PWA do app.
+  // NÃO sobrescrever badges nem favicons a partir do logo do app.
 
-  // 3. Favicon e App Icons
-  console.log('3. Gerando Favicons (.ico, .png) e icon.png do Next.js...');
-  fs.writeFileSync(path.join(publicDir, 'icon.png'), icon512);
-  fs.writeFileSync(path.join(appDir, 'icon.png'), icon512);
-
-  const favicon32 = await sharp(originalBuffer)
-    .resize(32, 32, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-  fs.writeFileSync(path.join(publicDir, 'favicon.png'), favicon32);
-
-  const icoBuffer = await createIcoBuffer(originalBuffer);
-  fs.writeFileSync(path.join(publicDir, 'favicon.ico'), icoBuffer);
-  fs.writeFileSync(path.join(appDir, 'favicon.ico'), icoBuffer);
-
-  console.log('Todos os assets da nova logo oficial foram gerados com sucesso!');
+  console.log('Todos os assets PWA e maskables gerados com sucesso!');
 }
 
 main().catch((err) => {
   console.error('Erro na geração dos assets:', err);
   process.exit(1);
 });
-

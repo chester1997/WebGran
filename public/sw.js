@@ -1,5 +1,5 @@
 // WebGran PWA Service Worker (Etapa 1: Installability & High Security Pass-Through)
-const CACHE_NAME = 'webgran-static-v13';
+const CACHE_NAME = 'webgran-static-v15';
 
 // Static brand assets explicitly safe to pre-cache (brand icons, notification badges and notification chime sounds)
 const PRECACHE_ASSETS = [
@@ -11,6 +11,8 @@ const PRECACHE_ASSETS = [
   '/icons/badge-96x96.png',
   '/icons/badge-128x128.png',
   '/icons/apple-touch-icon.png',
+  '/favicon.ico',
+  '/favicon.png',
   '/sounds/commission.mp3',
   '/sounds/commission.ogg',
   '/manifest.webmanifest'
@@ -232,7 +234,7 @@ async function handlePushEvent(event) {
     title: 'WebGran',
     body: 'Você tem uma nova notificação.',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-96x96.png',
+    badge: '/icons/badge-72x72.png',
     url: '/seller/financeiro',
     tag: 'webgran-notification',
   };
@@ -246,14 +248,27 @@ async function handlePushEvent(event) {
     }
   }
 
-  // Garante URLs absolutas acessíveis para o sistema operacional renderizar
-  const iconUrl = data.icon
-    ? (data.icon.startsWith('http') ? data.icon : new URL(data.icon, self.location.origin).href)
-    : new URL('/icons/icon-192x192.png', self.location.origin).href;
+  // Garante URLs absolutas canônicas acessíveis para o Android OS renderizar sem redirects 308
+  const CANONICAL_ORIGIN = 'https://www.webgran.online';
 
-  const badgeUrl = data.badge
-    ? (data.badge.startsWith('http') ? data.badge : new URL(data.badge, self.location.origin).href)
-    : new URL('/icons/badge-96x96.png', self.location.origin).href;
+  function normalizeNotificationUrl(url, fallback) {
+    if (!url || typeof url !== 'string' || url.trim().length === 0) return fallback;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      if (trimmed.includes('webgran.online') && !trimmed.includes('www.webgran.online')) {
+        return trimmed.replace('webgran.online', 'www.webgran.online');
+      }
+      return trimmed;
+    }
+    const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    const base = (self.location && self.location.origin && self.location.origin.includes('webgran.online'))
+      ? CANONICAL_ORIGIN
+      : (self.location.origin || CANONICAL_ORIGIN);
+    return `${base}${cleanPath}`;
+  }
+
+  const iconUrl = normalizeNotificationUrl(data.icon, `${CANONICAL_ORIGIN}/icons/icon-192x192.png`);
+  const badgeUrl = normalizeNotificationUrl(data.badge, `${CANONICAL_ORIGIN}/icons/badge-72x72.png`);
 
   const notificationTag = typeof data.tag === 'string' && data.tag.trim().length > 0 ? data.tag.trim() : null;
   // Prioriza data.tag para garantir identificadores independentes entre venda (sale-*) e comissão (commission-*)
@@ -279,7 +294,7 @@ async function handlePushEvent(event) {
     baseOptions.renotify = true;
   }
 
-  if (data.image) {
+  if (typeof data.image === 'string' && data.image.trim().length > 0) {
     baseOptions.image = data.image.startsWith('http')
       ? data.image
       : new URL(data.image, self.location.origin).href;

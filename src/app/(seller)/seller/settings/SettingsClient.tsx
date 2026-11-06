@@ -532,14 +532,21 @@ function urlBase64ToUint8Array(base64String: string) {
             role: sellerProfile.role,
           });
 
+          const resolvedIcon = testPayload.icon.startsWith("http")
+            ? testPayload.icon
+            : new URL(testPayload.icon, window.location.origin).href;
+          const resolvedBadge = testPayload.badge.startsWith("http")
+            ? testPayload.badge
+            : new URL(testPayload.badge, window.location.origin).href;
+
           let shownViaSw = false;
           if (typeof window !== "undefined" && "serviceWorker" in navigator) {
             const reg = await navigator.serviceWorker.ready.catch(() => null);
             if (reg && "showNotification" in reg) {
               await reg.showNotification(testPayload.title, {
                 body: testPayload.body,
-                icon: testPayload.icon,
-                badge: testPayload.badge,
+                icon: resolvedIcon,
+                badge: resolvedBadge,
                 data: testPayload.data,
                 tag: `${testPayload.tag}-${Date.now()}`,
               });
@@ -550,8 +557,8 @@ function urlBase64ToUint8Array(base64String: string) {
           if (!shownViaSw) {
             new Notification(testPayload.title, {
               body: testPayload.body,
-              icon: testPayload.icon,
-              badge: testPayload.badge,
+              icon: resolvedIcon,
+              badge: resolvedBadge,
               data: testPayload.data,
               tag: `${testPayload.tag}-${Date.now()}`,
             });

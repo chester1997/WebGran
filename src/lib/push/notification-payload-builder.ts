@@ -20,12 +20,37 @@ export interface StandardPushPayload {
   data: BasePushData;
 }
 
+export const WEBGRAN_CANONICAL_DOMAIN = "https://www.webgran.online";
+
 export const WEBGRAN_NOTIFICATION_BRAND = {
   name: "WebGran",
+  canonicalOrigin: WEBGRAN_CANONICAL_DOMAIN,
   defaultIcon: "/icons/icon-192x192.png",
   defaultBadge: "/icons/badge-72x72.png",
   defaultSound: "/sounds/commission.mp3",
+  canonicalIcon: `${WEBGRAN_CANONICAL_DOMAIN}/icons/icon-192x192.png`,
+  canonicalBadge: `${WEBGRAN_CANONICAL_DOMAIN}/icons/badge-72x72.png`,
+  canonicalSound: `${WEBGRAN_CANONICAL_DOMAIN}/sounds/commission.mp3`,
 } as const;
+
+/**
+ * Normaliza qualquer URL de asset de notificação para URL canônica sem redirect 308.
+ * Android OS Notification Manager recusa seguir redirects HTTP 301/308 para ícones e badges.
+ */
+export function resolveNotificationAssetUrl(url: string | undefined | null, fallbackUrl: string): string {
+  if (!url || typeof url !== "string" || url.trim().length === 0) {
+    return fallbackUrl;
+  }
+  const trimmed = url.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    // Normaliza apex webgran.online -> www.webgran.online para evitar 308 redirect
+    if (trimmed.includes("webgran.online") && !trimmed.includes("www.webgran.online")) {
+      return trimmed.replace("webgran.online", "www.webgran.online");
+    }
+    return trimmed;
+  }
+  return trimmed;
+}
 
 /**
  * Formata valores monetários no padrão oficial brasileiro (BRL - pt-BR).
@@ -217,8 +242,8 @@ export function standardizePushPayload(payload: {
   return {
     title: payload.title || "Notificação WebGran",
     body: payload.body || "Você tem uma nova notificação.",
-    icon: payload.icon || WEBGRAN_NOTIFICATION_BRAND.defaultIcon,
-    badge: payload.badge || WEBGRAN_NOTIFICATION_BRAND.defaultBadge,
+    icon: resolveNotificationAssetUrl(payload.icon, WEBGRAN_NOTIFICATION_BRAND.defaultIcon),
+    badge: resolveNotificationAssetUrl(payload.badge, WEBGRAN_NOTIFICATION_BRAND.defaultBadge),
     url: targetUrl,
     tag: payload.tag || "general",
     data: {
@@ -261,19 +286,14 @@ export function buildPushNotificationOptions(
     [key: string]: any;
   },
   clientHandledSilently: boolean,
-  origin: string = "https://webgran.com.br"
+  origin: string = WEBGRAN_CANONICAL_DOMAIN
 ): WebGranServiceWorkerNotificationOptions {
   const notificationTag = typeof data.tag === "string" && data.tag.trim().length > 0 ? data.tag.trim() : null;
   // Prioriza tag única para distinguir vendas (sale-*) e comissões (commission-*)
   const notificationId = notificationTag || data.data?.orderId || `push-${Date.now()}`;
 
-  const iconUrl = data.icon
-    ? (data.icon.startsWith("http") ? data.icon : `${origin}${data.icon.startsWith("/") ? "" : "/"}${data.icon}`)
-    : `${origin}/icons/icon-192x192.png`;
-
-  const badgeUrl = data.badge
-    ? (data.badge.startsWith("http") ? data.badge : `${origin}${data.badge.startsWith("/") ? "" : "/"}${data.badge}`)
-    : `${origin}/icons/badge-96x96.png`;
+  const iconUrl = resolveNotificationAssetUrl(data.icon, `${origin}/icons/icon-192x192.png`);
+  const badgeUrl = resolveNotificationAssetUrl(data.badge, `${origin}/icons/badge-72x72.png`);
 
   const baseOptions: Omit<WebGranServiceWorkerNotificationOptions, "silent" | "vibrate"> = {
     body: data.body || "",
