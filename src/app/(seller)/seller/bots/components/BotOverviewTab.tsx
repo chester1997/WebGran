@@ -35,7 +35,10 @@ interface BotOverviewTabProps {
   metrics: MetricsData;
   selectedPeriod: "today" | "week" | "month" | "year";
   onSelectPeriod: (period: "today" | "week" | "month" | "year") => void;
-  onOpenConversas: () => void;
+  onOpenConversas?: () => void;
+  isAdmin?: boolean;
+  userRole?: string;
+  showOperationalStatus?: boolean;
 }
 
 export default function BotOverviewTab({
@@ -44,8 +47,14 @@ export default function BotOverviewTab({
   selectedPeriod,
   onSelectPeriod,
   onOpenConversas,
+  isAdmin = false,
+  userRole,
+  showOperationalStatus,
 }: BotOverviewTabProps) {
   const isRunning = bot.status === "active";
+
+  // Ocultar completamente para vendedores. Exclusivo para visão administrativa com privilégios.
+  const isVisibleOperationalStatus = showOperationalStatus ?? (isAdmin && userRole !== "seller");
 
   const periodOptions: Array<{ id: "today" | "week" | "month" | "year"; label: string }> = [
     { id: "today", label: "Hoje" },
@@ -342,47 +351,49 @@ export default function BotOverviewTab({
         </div>
       </div>
 
-      {/* 4. PAINEL DE STATUS OPERACIONAL */}
-      <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#3984FF]" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-              Status Operacional da Integração
-            </h3>
+      {/* 4. PAINEL DE STATUS OPERACIONAL (Oculto para vendedores / Exclusivo para administração) */}
+      {isVisibleOperationalStatus && (
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#3984FF]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                Status Operacional da Integração
+              </h3>
+            </div>
+
+            <span className="text-[11px] text-zinc-500">
+              Atualizado em tempo real
+            </span>
           </div>
 
-          <span className="text-[11px] text-zinc-500">
-            Atualizado em tempo real
-          </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
+              <span className="text-zinc-500 text-[11px]">Conexão com Telegram</span>
+              <div className="flex items-center gap-2 text-white font-semibold">
+                <span className={`w-2 h-2 rounded-full ${isRunning ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                <span>{isRunning ? "Webhook Ativo & Respondendo" : "Operação Pausada"}</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
+              <span className="text-zinc-500 text-[11px]">Modo de Operação</span>
+              <div className="flex items-center gap-2 text-white font-semibold">
+                <Smartphone className="w-3.5 h-3.5 text-[#3984FF]" />
+                <span>Mini App Integrado</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
+              <span className="text-zinc-500 text-[11px]">Canais & Destinatários</span>
+              <div className="flex items-center gap-2 text-white font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{bot.chatsCount} canais • {bot.recipientsCount} notificações</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-            <span className="text-zinc-500 text-[11px]">Conexão com Telegram</span>
-            <div className="flex items-center gap-2 text-white font-semibold">
-              <span className={`w-2 h-2 rounded-full ${isRunning ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-              <span>{isRunning ? "Webhook Ativo & Respondendo" : "Operação Pausada"}</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-            <span className="text-zinc-500 text-[11px]">Modo de Operação</span>
-            <div className="flex items-center gap-2 text-white font-semibold">
-              <Smartphone className="w-3.5 h-3.5 text-[#3984FF]" />
-              <span>Mini App Integrado</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-            <span className="text-zinc-500 text-[11px]">Canais & Destinatários</span>
-            <div className="flex items-center gap-2 text-white font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{bot.chatsCount} canais • {bot.recipientsCount} notificações</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

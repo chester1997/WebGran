@@ -233,7 +233,7 @@ export default function SingleBotClient({
         </div>
       )}
 
-      {/* 1. CABEÇALHO UNIFICADO */}
+      {/* 1. CABEÇALHO UNIFICADO COM NAVEGAÇÃO HORIZONTAL INTEGRADA */}
       <BotHeader
         bot={bot}
         activeTab={activeTab}
@@ -248,17 +248,11 @@ export default function SingleBotClient({
           setTokenModal(true);
         }}
         onOpenDelete={() => setDeleteModal(true)}
-      />
-
-      {/* 2. NAVEGAÇÃO HORIZONTAL DE ABAS */}
-      <BotTabsNav
-        activeTab={activeTab}
-        onSelectTab={handleSelectTab}
         isAdmin={isAdmin}
       />
 
-      {/* 3. CONTEÚDO DAS ABAS */}
-      {/* 3.1 GERENCIAMENTO DO BOT */}
+      {/* 2. CONTEÚDO DAS ABAS */}
+      {/* 2.1 GERENCIAMENTO DO BOT */}
       {activeTab === "visao-geral" && (
         <BotOverviewTab
           bot={bot}
@@ -266,6 +260,8 @@ export default function SingleBotClient({
           selectedPeriod={selectedPeriod}
           onSelectPeriod={setSelectedPeriod}
           onOpenConversas={() => handleSelectTab("conversas")}
+          isAdmin={isAdmin}
+          userRole={userRole}
         />
       )}
 
