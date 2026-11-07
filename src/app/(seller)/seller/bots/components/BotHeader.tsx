@@ -74,15 +74,15 @@ export default function BotHeader({
 
   return (
     <SellerPageHeader>
-      <div className="flex flex-col w-full relative z-30 pt-1 pb-0 gap-1.5">
+      <div className="flex flex-col w-full relative z-30 pt-3.5 sm:pt-4 pb-0.5 gap-2">
         {/* PRIMEIRA LINHA — Identificação e ações */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full">
           {/* Bloco da Esquerda: Breadcrumb acima + Identificação do bot (Avatar, Nome, Status, Metadados) */}
-          <div className="flex flex-col gap-1 min-w-0">
-            {/* Breadcrumb ← Bots discreto e elegante */}
+          <div className="flex flex-col gap-2 min-w-0">
+            {/* Breadcrumb ← Bots discreto e elegante com ótimo respiro superior e inferior */}
             <Link
               href="/seller/bots"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors w-fit group py-0.5"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors w-fit group py-1"
               title="Voltar para a lista de bots"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
@@ -262,7 +262,7 @@ export default function BotHeader({
         </div>
 
         {/* Linha divisória horizontal discreta entre as informações do bot e a navegação */}
-        <div className="w-full h-px bg-white/[0.06] mt-1" />
+        <div className="w-full h-px bg-white/[0.06] mt-1.5 sm:mt-2" />
 
         {/* SEGUNDA LINHA — Navegação horizontal integrada das 13 abas */}
         <BotTabsNav
