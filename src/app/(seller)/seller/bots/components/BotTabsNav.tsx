@@ -95,11 +95,6 @@ export default function BotTabsNav({
           })}
         </div>
 
-        {/* Divisor sutil entre grupos */}
-        {isMiniApp && miniAppTabs.length > 0 && (
-          <div className="h-4 w-px bg-white/10 shrink-0 mx-1.5 self-center" aria-hidden="true" />
-        )}
-
         {/* GRUPO 2: Recursos do Mini App */}
         {isMiniApp && (
           <div className="flex items-center gap-1">
