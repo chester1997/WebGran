@@ -53,8 +53,9 @@ export default function BotOverviewTab({
 }: BotOverviewTabProps) {
   const isRunning = bot.status === "active";
 
-  // Ocultar completamente para vendedores. Exclusivo para visão administrativa com privilégios.
-  const isVisibleOperationalStatus = showOperationalStatus ?? (isAdmin && userRole !== "seller");
+  // Ocultado por padrão da Visão Geral conforme solicitado pelo usuário.
+  // Permanece falso mesmo para administradores, a menos que explicitamente ativado via prop.
+  const isVisibleOperationalStatus = Boolean(showOperationalStatus);
 
   const periodOptions: Array<{ id: "today" | "week" | "month" | "year"; label: string }> = [
     { id: "today", label: "Hoje" },

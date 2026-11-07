@@ -262,6 +262,7 @@ export default function SingleBotClient({
           onOpenConversas={() => handleSelectTab("conversas")}
           isAdmin={isAdmin}
           userRole={userRole}
+          showOperationalStatus={false}
         />
       )}
 
