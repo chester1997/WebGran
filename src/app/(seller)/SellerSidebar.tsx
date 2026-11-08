@@ -213,7 +213,7 @@ export default function SellerSidebar({
           </div>
 
           <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
-            {/* Opção BOTS direta exclusiva da conta proprietária */}
+            {/* Opção BOTS direta exclusiva da conta proprietária com destaque refinado azul e fundo #1c1c1c */}
             {isOwner && (
               <SidebarNavItem
                 href="/seller/bots"
@@ -221,7 +221,7 @@ export default function SellerSidebar({
                 isActive={isBotsRouteActive}
                 onClick={(e) => handleLinkClick(e, "/seller/bots")}
                 icon={SolarSellerBotIcon}
-                accent="blue"
+                accent="blue-dark"
               />
             )}
 
