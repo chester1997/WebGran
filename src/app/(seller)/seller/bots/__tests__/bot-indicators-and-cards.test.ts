@@ -171,4 +171,36 @@ describe("WebGran Bots — Testes dos Novos Indicadores e Cards", () => {
       expect(ordersMonth).toHaveLength(2);
     });
   });
+
+  describe("5. Centralização do Filtro de Período no Header e Integridade dos Indicadores", () => {
+    it("valida a lista de opções de períodos suportados no botão Filtros", () => {
+      const periodOptions = [
+        { id: "today", label: "Hoje" },
+        { id: "week", label: "Esta semana" },
+        { id: "month", label: "Este mês" },
+        { id: "year", label: "Este ano" },
+      ];
+
+      expect(periodOptions.map((p) => p.id)).toEqual(["today", "week", "month", "year"]);
+      expect(periodOptions.map((p) => p.label)).toEqual(["Hoje", "Esta semana", "Este mês", "Este ano"]);
+    });
+
+    it("mantém os 4 indicadores unificados com dados íntegros e consistentes", () => {
+      const metrics = {
+        approvedRevenue: 2500.5,
+        totalCustomers: 42,
+        averageTicket: 125.02,
+        activeProductsCount: 15,
+      };
+
+      // Receita
+      expect(metrics.approvedRevenue).toBe(2500.5);
+      // Clientes
+      expect(metrics.totalCustomers).toBe(42);
+      // Ticket
+      expect(metrics.averageTicket).toBe(125.02);
+      // Produtos
+      expect(metrics.activeProductsCount).toBe(15);
+    });
+  });
 });

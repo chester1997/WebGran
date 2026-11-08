@@ -97,13 +97,6 @@ export default function BotOverviewTab({
   // Permanece falso mesmo para administradores, a menos que explicitamente ativado via prop.
   const isVisibleOperationalStatus = Boolean(showOperationalStatus);
 
-  const periodOptions: Array<{ id: "today" | "week" | "month" | "year"; label: string }> = [
-    { id: "today", label: "Hoje" },
-    { id: "week", label: "Esta semana" },
-    { id: "month", label: "Este mês" },
-    { id: "year", label: "Este ano" },
-  ];
-
   // Formatação de receita: R$ X,XX
   const formattedRevenue = useMemo(() => {
     const raw = metrics.approvedRevenue || 0;
@@ -128,101 +121,104 @@ export default function BotOverviewTab({
 
   return (
     <div className="space-y-5">
-      {/* 1. SELETOR DE PERÍODO ALINHADO À DIREITA */}
-      <div className="flex items-center justify-end">
-        <div className="inline-flex items-center gap-1 bg-[#141414] border border-white/[0.06] p-1 rounded-lg">
-          {periodOptions.map((item) => {
-            const isActive = selectedPeriod === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectPeriod(item.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${isActive
-                  ? "bg-[#222222] text-white border border-white/20 font-semibold shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                  }`}
+      {/* LINHA DE INDICADORES: 4 CARDS UNIFICADOS E PROPORCIONAIS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: RECEITA APROVADA */}
+        <div className="bg-[#171717] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm transition-all min-h-[145px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight flex items-center gap-1.5">
+              Receita aprovada
+              <span
+                title="Pagos no período por este bot, valor líquido."
+                className="cursor-help inline-flex items-center text-zinc-500 hover:text-zinc-300 transition-colors"
               >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. LINHA DE INDICADORES: RECEITA (ESQUERDA) + GRID 2x2 UNIFICADO (DIREITA) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Bloco da Esquerda: Receita aprovada (~42% da largura no desktop) */}
-        <div className="lg:col-span-5 bg-[#171717] border border-white/[0.08] rounded-2xl p-6 flex flex-col justify-between shadow-sm min-h-[170px]">
-          <div>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
-                <DollarSign className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-white tracking-tight">Receita aprovada</h3>
-                  <span
-                    title="Pagos no período por este bot, valor líquido."
-                    className="cursor-help inline-flex items-center text-zinc-500 hover:text-zinc-300"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                  Pagos no período por este bot, valor líquido.
-                </p>
-              </div>
+                <HelpCircle className="w-3.5 h-3.5" />
+              </span>
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
+              <DollarSign className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
 
-          <div className="pt-6">
+          <div className="mt-3">
             <div className="flex items-baseline">
-              <span className="text-base sm:text-lg font-bold text-zinc-400 mr-1.5">R$</span>
-              <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              <span className="text-sm sm:text-base font-bold text-zinc-400 mr-1">R$</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 {formattedRevenue.integer}
               </span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              <span className="text-xl sm:text-2xl font-bold text-zinc-300 tracking-tight">
                 ,{formattedRevenue.decimal}
               </span>
             </div>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Pagos no período por este bot, valor líquido.
+            </p>
           </div>
         </div>
 
-        {/* Bloco da Direita: Card Unificado com os 3 Novos Indicadores (~58% da largura no desktop) */}
-        <div className="lg:col-span-7 bg-[#171717] border border-white/[0.08] rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-3 shadow-sm min-h-[170px]">
-          {/* Indicador 1: TOTAL DE CLIENTES */}
-          <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-white/[0.06] flex flex-col justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Total de clientes</span>
+        {/* Card 2: TOTAL DE CLIENTES */}
+        <div className="bg-[#171717] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm transition-all min-h-[145px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
+              Total de clientes
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
+              <Users className="w-4 h-4 stroke-[2.2]" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4 tracking-tight">
+          </div>
+
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {metrics.totalCustomers}
             </div>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Clientes únicos com interação
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: TICKET MÉDIO */}
+        <div className="bg-[#171717] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm transition-all min-h-[145px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
+              Ticket médio
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
+              <TrendingUp className="w-4 h-4 stroke-[2.2]" />
+            </div>
           </div>
 
-          {/* Indicador 2: TICKET MÉDIO */}
-          <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-white/[0.06] flex flex-col justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Ticket médio</span>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4 tracking-tight">
+          <div className="mt-3">
+            <div className="flex items-baseline">
               <span className="text-sm sm:text-base font-bold text-zinc-400 mr-1">R$</span>
-              {formattedTicket}
+              <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                {formattedTicket}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Média por pedido aprovado
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: PRODUTOS ATIVOS */}
+        <div className="bg-[#171717] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm transition-all min-h-[145px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
+              Produtos ativos
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
+              <Package className="w-4 h-4 stroke-[2.2]" />
             </div>
           </div>
 
-          {/* Indicador 3: PRODUTOS ATIVOS */}
-          <div className="p-5 sm:p-6 flex flex-col justify-between">
-            <div className="flex items-center gap-2">
-              <Package className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Produtos ativos</span>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4 tracking-tight">
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {metrics.activeProductsCount}
             </div>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Disponíveis no catálogo do bot
+            </p>
           </div>
         </div>
       </div>
@@ -262,16 +258,7 @@ export default function BotOverviewTab({
                   const isApproved = event.type === "sale_approved";
                   const isPending = event.type === "payment_pending";
 
-                  // Formatação de ticket médio: R$ X,XX
-  const formattedTicket = useMemo(() => {
-    const raw = metrics.averageTicket || 0;
-    return raw.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }, [metrics.averageTicket]);
-
-  return (
+                  return (
                     <div key={event.id} className="py-3 flex items-center gap-3">
                       {/* Ícone Semântico */}
                       <div

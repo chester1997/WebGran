@@ -369,6 +369,8 @@ export default function SingleBotClient({
         }}
         onOpenDelete={() => setDeleteModal(true)}
         isAdmin={isAdmin}
+        selectedPeriod={selectedPeriod}
+        onSelectPeriod={setSelectedPeriod}
       />
 
       {/* 2. CONTEÚDO DAS ABAS */}
