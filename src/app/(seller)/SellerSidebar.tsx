@@ -195,7 +195,7 @@ export default function SellerSidebar({
             <SidebarNavItem
               href="/seller"
               label="Dashboard"
-              isActive={pathname === "/seller"}
+              isActive={pathname === "/seller" || pathname === "/seller/dashboard"}
               onClick={(e) => handleLinkClick(e, "/seller")}
               icon={SolarSellerDashboardIcon}
               accent="blue"
@@ -215,7 +215,7 @@ export default function SellerSidebar({
           </div>
 
           <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
-            {/* Opção BOTS direta exclusiva da conta proprietária com destaque refinado azul e fundo #1c1c1c */}
+            {/* Opção BOTS direta exclusiva da conta proprietária com o mesmo padrão visual compartilhado */}
             {isOwner && (
               <SidebarNavItem
                 href="/seller/bots"
@@ -223,7 +223,7 @@ export default function SellerSidebar({
                 isActive={isBotsRouteActive}
                 onClick={(e) => handleLinkClick(e, "/seller/bots")}
                 icon={SolarSellerBotIcon}
-                accent="blue-dark"
+                accent="blue"
               />
             )}
 
@@ -236,10 +236,10 @@ export default function SellerSidebar({
                   icon={SolarSellerBotIcon}
                   accent="blue"
                   onClick={() => setUserManuallyToggledBot(!botGroupOpen)}
-                  className={`w-full flex items-center justify-between gap-2.5 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium text-left transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center justify-between gap-2.5 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] text-left transition-all duration-150 cursor-pointer ${
                     isBotChildActive
-                      ? "bg-[#3984FF]/10 text-white font-medium"
-                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                      ? "bg-[#1c1c1c] text-white font-semibold border border-white/[0.04]"
+                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white font-medium"
                   }`}
                 >
                   {botGroupOpen ? (
@@ -272,10 +272,10 @@ export default function SellerSidebar({
                             iconSize={17}
                             accent="blue"
                             iconClassName={`w-[17px] h-[17px] shrink-0 transition-colors ${isActive ? "text-[#3984FF]" : "text-zinc-400"}`}
-                            className={`w-full flex items-center gap-3 px-3 py-2 min-h-[40px] rounded-[10px] text-[14px] font-medium transition-all duration-150 relative ${
+                            className={`w-full flex items-center gap-3 px-3 py-2 min-h-[40px] rounded-[10px] text-[14px] transition-all duration-150 relative overflow-hidden ${
                               isActive
-                                ? "bg-[#3984FF]/10 text-white font-medium"
-                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                                ? "bg-[#1c1c1c] text-white font-semibold border border-white/[0.04]"
+                                : "bg-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white font-medium"
                             }`}
                           />
                         </div>

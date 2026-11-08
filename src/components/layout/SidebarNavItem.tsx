@@ -77,11 +77,9 @@ export default function SidebarNavItem({
     motionControls.start("normal");
   }, [motionControls]);
 
-  const activeBgClass = (accent === "lime" || accent === "blue-dark")
-    ? "bg-[#1c1c1c] text-white font-semibold border border-white/[0.04]"
-    : accent === "emerald"
-      ? "bg-emerald-500/10 text-white font-medium"
-      : "bg-[#3984FF]/10 text-white font-medium";
+  const activeBgClass = accent === "emerald"
+    ? "bg-emerald-500/10 text-white font-medium"
+    : "bg-[#1c1c1c] text-white font-semibold border border-white/[0.04]";
 
   const defaultClasses = `flex items-center gap-3 px-3 h-[var(--nav-item-h,44px)] min-h-[var(--nav-item-h,44px)] rounded-[var(--nav-radius,12px)] text-[var(--nav-font,15px)] font-medium transition-all duration-200 relative overflow-hidden ${isActive
     ? activeBgClass
@@ -89,11 +87,9 @@ export default function SidebarNavItem({
     }`;
 
   const defaultIconColor = isActive
-    ? (accent === "lime" || accent === "blue-dark")
-      ? "text-[#3984FF]"
-      : accent === "emerald"
-        ? "text-emerald-400"
-        : "text-[#3984FF]"
+    ? accent === "emerald"
+      ? "text-emerald-400"
+      : "text-[#3984FF]"
     : "text-zinc-400";
 
   const renderIcon = () => {
@@ -137,7 +133,7 @@ export default function SidebarNavItem({
 
   const content = (
     <>
-      {isActive && (accent === "lime" || accent === "blue-dark") && (
+      {isActive && accent !== "emerald" && (
         <span
           className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#3984FF] rounded-r-full shadow-[0_0_8px_rgba(57,132,255,0.35)]"
           aria-hidden="true"
