@@ -157,7 +157,7 @@ export default function BotHeader({
             <button
               type="button"
               onClick={() => onSelectTab("conversas")}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium border transition-all cursor-pointer h-9 group ${activeTab === "conversas"
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium border transition-all cursor-pointer h-9 group ${activeTab === "conversas"
                   ? "bg-[#3984FF]/15 text-[#3984FF] border-[#3984FF]/40 shadow-xs"
                   : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60 hover:border-zinc-500/80"
                 }`}
@@ -171,7 +171,7 @@ export default function BotHeader({
               href={`https://t.me/${bot.username}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 hover:border-zinc-500/80 text-xs sm:text-sm font-medium transition-all h-9 group"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 hover:border-zinc-500/80 text-xs sm:text-sm font-medium transition-all h-9 group"
             >
               <ExternalLink className="w-4 h-4 text-zinc-400 group-hover:text-zinc-200" />
               <span>Abrir no Telegram</span>
@@ -182,7 +182,7 @@ export default function BotHeader({
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
+                className="p-2 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
                 title="Opções do bot"
               >
                 <MoreVertical className="w-4 h-4" />
