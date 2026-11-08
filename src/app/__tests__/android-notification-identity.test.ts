@@ -117,9 +117,9 @@ describe("WebGran — Homologação da Identidade Visual e Notificações Androi
       expect(payload3.icon).toBe(WEBGRAN_NOTIFICATION_BRAND.defaultIcon);
 
       // Garante que o formatador BRL gera 'R$ 0,15' com espaço padrão sem colapsar
-      expect(payload1.body).toBe("Comissão de R$ 0,15 confirmada");
-      expect(payload2.body).toBe("Comissão de R$ 0,15 confirmada");
-      expect(payload3.body).toBe("Você recebeu R$ 0,15 em comissão");
+      expect(payload1.body).toBe("Taxa de R$ 0,15 recebida!");
+      expect(payload2.body).toBe("Taxa de R$ 0,15 recebida!");
+      expect(payload3.body).toBe("Taxa de R$ 0,15 recebida!");
     });
 
     it("resolveNotificationAssetUrl elimina redirect 308 do domínio apex webgran.online", () => {
@@ -131,8 +131,8 @@ describe("WebGran — Homologação da Identidade Visual e Notificações Androi
 
     it("standardizePushPayload preserva consistência global entre todos os disparos", () => {
       const standardized = standardizePushPayload({
-        title: "💰 Comissão WebGran",
-        body: "Comissão de R$ 0,15 confirmada",
+        title: "💰 Taxas Recebidas!",
+        body: "Taxa de R$ 0,15 recebida!",
       });
 
       expect(standardized.icon).toBe(WEBGRAN_NOTIFICATION_BRAND.defaultIcon);

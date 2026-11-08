@@ -198,13 +198,8 @@ export function buildPlatformCommissionPayload(params: {
   const { orderId, feeReais, eventType, ownerId, recipientUserId } = params;
   const formattedFee = formatNotificationBRL(feeReais);
 
-  let title = "💰 Comissão WebGran";
-  let body = `Comissão de ${formattedFee} confirmada`;
-
-  if (eventType === "COMMISSION_SETTLED") {
-    title = "💰 Comissão recebida";
-    body = `Você recebeu ${formattedFee} em comissão`;
-  }
+  const title = "💰 Taxas Recebidas!";
+  const body = `Taxa de ${formattedFee} recebida!`;
 
   return {
     title,

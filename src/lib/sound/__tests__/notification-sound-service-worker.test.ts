@@ -775,7 +775,8 @@ describe("Notification Sound & Service Worker Bidirectional Negotiation Suite", 
       });
 
       expect(commPayload.url).toBe("/admin/commission");
-      expect(commPayload.title).toBe("💰 Comissão recebida");
+      expect(commPayload.title).toBe("💰 Taxas Recebidas!");
+      expect(commPayload.body).toBe("Taxa de R$ 1,50 recebida!");
       expect(commPayload.tag).toBe("commission-ord-admin-comm-9-commission_settled");
 
       const result = await simulateSwPushNegotiation({

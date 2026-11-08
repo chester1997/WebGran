@@ -156,7 +156,7 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-legit",
         expect.objectContaining({
-          title: "💰 Comissão WebGran",
+          title: "💰 Taxas Recebidas!",
           url: "/admin/commission",
         })
       );
@@ -194,7 +194,7 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).not.toHaveBeenCalled();
     });
 
-    it("envia '💰 Comissão WebGran' com valor real quando comprovado na API oficial (SPLIT_PROCESSED)", async () => {
+    it("envia '💰 Taxas Recebidas!' com valor real quando comprovado na API oficial (SPLIT_PROCESSED)", async () => {
       mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
@@ -208,15 +208,15 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-1",
         expect.objectContaining({
-          title: "💰 Comissão WebGran",
-          body: expect.stringMatching(/0,50/),
+          title: "💰 Taxas Recebidas!",
+          body: "Taxa de R$ 0,50 recebida!",
           url: "/admin/commission",
           tag: "commission-order-proc-1-split_processed",
         })
       );
     });
 
-    it("envia '💰 Comissão WebGran' quando confirmado por reconciliação formal (COMMISSION_CONFIRMED)", async () => {
+    it("envia '💰 Taxas Recebidas!' quando confirmado por reconciliação formal (COMMISSION_CONFIRMED)", async () => {
       mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
@@ -230,14 +230,14 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-1",
         expect.objectContaining({
-          title: "💰 Comissão WebGran",
-          body: expect.stringMatching(/1,50/),
+          title: "💰 Taxas Recebidas!",
+          body: "Taxa de R$ 1,50 recebida!",
           url: "/admin/commission",
         })
       );
     });
 
-    it("envia '💰 Comissão recebida' quando houver evidência bancária (COMMISSION_SETTLED)", async () => {
+    it("envia '💰 Taxas Recebidas!' quando houver evidência bancária (COMMISSION_SETTLED)", async () => {
       mockDb.query.platformFinancialNotificationEvents.findFirst.mockResolvedValueOnce(null);
 
       const result = await PlatformFinancialNotificationService.notifyOwnerOfCommission({
@@ -251,8 +251,8 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
       expect(mockSendToSeller).toHaveBeenCalledWith(
         "owner-uuid-1",
         expect.objectContaining({
-          title: "💰 Comissão recebida",
-          body: expect.stringContaining("Você recebeu"),
+          title: "💰 Taxas Recebidas!",
+          body: "Taxa de R$ 0,50 recebida!",
         })
       );
     });
@@ -424,8 +424,8 @@ describe("WebGran — Platform Owner Commission Notifications & Custom Sound Sui
         data: {
           type: "WEBGRAN_PUSH_RECEIVED",
           payload: {
-            title: "💰 Comissão WebGran",
-            body: "Comissão de R$ 0,50 confirmada",
+            title: "💰 Taxas Recebidas!",
+            body: "Taxa de R$ 0,50 recebida!",
             data: { orderId: "order-fg-sound-test" },
           },
         },

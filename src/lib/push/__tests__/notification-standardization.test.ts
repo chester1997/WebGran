@@ -262,8 +262,8 @@ describe("WebGran — Padronização Global de Notificações para Todos os Usu�
       const [subArg, payloadArg] = vi.mocked(webpush.sendNotification).mock.calls[0];
       expect(subArg.endpoint).toContain("owner");
       const parsed = JSON.parse(payloadArg as string);
-      expect(parsed.title).toBe("💰 Comissão WebGran");
-      expect(parsed.body).toBe("Comissão de R$ 1,50 confirmada");
+      expect(parsed.title).toBe("💰 Taxas Recebidas!");
+      expect(parsed.body).toBe("Taxa de R$ 1,50 recebida!");
       expect(parsed.url).toBe("/admin/commission");
       // Padrão visual alinhado
       expect(parsed.icon).toBe(WEBGRAN_NOTIFICATION_BRAND.defaultIcon);
