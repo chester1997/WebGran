@@ -74,41 +74,45 @@ export default function BotCard({
           onSelect(bot.id);
         }
       }}
-      className="group relative w-full bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-5 transition-all duration-200 cursor-pointer shadow-md hover:shadow-xl hover:shadow-[#3984FF]/5 flex flex-col justify-between gap-4 select-none"
+      className="group relative w-full bg-[#111215] hover:bg-[#14151A] border border-white/[0.08] hover:border-[#3984FF]/40 rounded-2xl p-6 transition-all duration-200 cursor-pointer shadow-md hover:shadow-xl hover:shadow-[#3984FF]/5 flex flex-col justify-between gap-5 select-none min-h-[168px]"
     >
       {/* Linha Superior: Avatar, Identidade (Status + Nome + @user) e Ações Rápidas */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3.5 min-w-0">
+      <div className="flex items-start justify-between gap-3.5">
+        <div className="flex items-center gap-4 min-w-0">
           <BotAvatar
             photoUrl={bot.photoUrl}
+            botId={bot.id}
             displayName={bot.displayName}
             username={bot.username}
-            size="md"
-            className="ring-2 ring-white/5 group-hover:ring-[#3984FF]/25 transition-all shrink-0"
+            size="card"
+            className="ring-2 ring-white/10 group-hover:ring-[#3984FF]/30 transition-all shrink-0"
           />
 
-          <div className="min-w-0 space-y-0.5">
-            {/* Status em caixa alta discreto acima do nome (referência Gerencia VIP) */}
+          <div className="min-w-0 space-y-1">
+            {/* Status em caixa alta discreto com indicador luminoso */}
             <div className="flex items-center gap-1.5">
               {bot.status === "active" && (
-                <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">
+                <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   RODANDO
                 </span>
               )}
               {bot.status === "paused" && (
-                <span className="text-[10px] font-bold text-amber-400 tracking-wider uppercase">
+                <span className="text-[10px] font-bold text-amber-400 tracking-wider uppercase inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                   PAUSADO
                 </span>
               )}
               {bot.status === "disconnected" && (
-                <span className="text-[10px] font-bold text-rose-400 tracking-wider uppercase">
+                <span className="text-[10px] font-bold text-rose-400 tracking-wider uppercase inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   DESCONECTADO
                 </span>
               )}
             </div>
 
             {/* Nome do bot */}
-            <h3 className="text-sm font-bold text-white group-hover:text-[#3984FF] transition-colors truncate tracking-tight">
+            <h3 className="text-[15px] font-bold text-white group-hover:text-[#3984FF] transition-colors truncate tracking-tight">
               {bot.displayName}
             </h3>
 

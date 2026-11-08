@@ -141,14 +141,14 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       <div className="h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] px-5 lg:px-[var(--sidebar-pad-x,28px)] flex items-center justify-between shrink-0 select-none">
         <Link href="/seller" onClick={(e) => handleLinkClick(e, "/seller")} className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-[#0055FF] border border-white/10 shadow-sm">
+          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center shadow-sm select-none">
             <Image
               src="/logo-webgran-icon.png"
               alt="WebGran"
               width={40}
               height={40}
               priority
-              className="w-full h-full object-cover rounded-full"
+              className="w-full h-full object-cover scale-[1.38]"
             />
           </div>
           <div className="flex flex-col min-w-0">

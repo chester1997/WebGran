@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { telegramBots, stores, telegramCustomers, orders, telegramMessages, botStartEvents } from "@/db/schema";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { telegramBots, stores, telegramCustomers, orders, telegramMessages, botStartEvents, products } from "@/db/schema";
+import { eq, and, desc, asc, or, isNull } from "drizzle-orm";
 import { getCurrentStore } from "@/lib/auth";
 import { requireOwnerAccount } from "@/lib/bots/owner-guard";
 import SingleBotClient from "./SingleBotClient";
@@ -110,6 +110,40 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     if (order.customer?.telegramUserId && botCustomerUserIds.has(order.customer.telegramUserId)) return true;
     return false;
   });
+
+  // Buscar produtos ativos vinculados ao catálogo deste bot
+  const botActiveProducts = await db.query.products.findMany({
+    where: and(
+      eq(products.storeId, store.id),
+      eq(products.status, "active"),
+      isOnlyBot
+        ? or(eq(products.botId, botRecord.id), isNull(products.botId))
+        : eq(products.botId, botRecord.id)
+    ),
+    columns: { id: true },
+  });
+  const activeProductsCount = botActiveProducts.length;
+
+  // Calcular clientes únicos vinculados a este bot sem duplicidade
+  const botUniqueCustomerKeys = new Set<string>();
+  botOrders.forEach((o) => {
+    const key = o.customer?.telegramUserId || o.customerId || o.customer?.id;
+    if (key) botUniqueCustomerKeys.add(key);
+  });
+  botMessages.forEach((m) => {
+    const key = m.telegramUserId || m.customerId;
+    if (key) botUniqueCustomerKeys.add(key);
+  });
+  startEvents.forEach((se) => {
+    if (se.telegramUserId) botUniqueCustomerKeys.add(se.telegramUserId);
+  });
+  if (isOnlyBot) {
+    customers.forEach((c) => {
+      const key = c.telegramUserId || c.id;
+      if (key) botUniqueCustomerKeys.add(key);
+    });
+  }
+  const totalUniqueCustomers = botUniqueCustomerKeys.size;
 
   // Mapear dados para o cliente
   const botData = {
@@ -271,6 +305,8 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
         initialRecentActivity={recentActivityEvents}
         initialCustomers={initialCustomers}
         initialMessages={initialSelectedMessages}
+        totalUniqueCustomers={totalUniqueCustomers}
+        activeProductsCount={activeProductsCount}
         tabData={tabData}
         userRole={user.role}
         isAdmin={user.role === "admin" || user.role === "super_admin"}

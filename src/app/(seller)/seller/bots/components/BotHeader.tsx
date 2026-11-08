@@ -94,10 +94,11 @@ export default function BotHeader({
               {/* Avatar circular do bot */}
               <BotAvatar
                 photoUrl={bot.photoUrl}
+                botId={bot.id}
                 displayName={bot.displayName}
                 username={bot.username}
-                size="md"
-                className="ring-2 ring-white/10 shadow-sm shrink-0 w-11 h-11"
+                size="card"
+                className="ring-2 ring-white/10 shadow-sm shrink-0"
               />
 
               <div className="min-w-0 space-y-0.5">

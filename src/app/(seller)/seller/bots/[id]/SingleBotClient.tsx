@@ -91,6 +91,8 @@ interface SingleBotClientProps {
   initialRecentActivity?: BotActivityEvent[];
   initialCustomers: CustomerItem[];
   initialMessages?: MessageItem[];
+  totalUniqueCustomers?: number;
+  activeProductsCount?: number;
   tabData?: BotTabData;
   userRole?: string;
   isAdmin: boolean;
@@ -104,6 +106,8 @@ export default function SingleBotClient({
   initialRecentActivity = [],
   initialCustomers,
   initialMessages = [],
+  totalUniqueCustomers,
+  activeProductsCount,
   tabData,
   userRole,
   isAdmin,
@@ -239,25 +243,36 @@ export default function SingleBotClient({
     return start;
   }, [selectedPeriod]);
 
-  // Cálculo de Métricas por período
+  // Cálculo de Métricas por período com os 3 novos indicadores: Total de Clientes, Ticket Médio e Produtos Ativos
   const metrics = useMemo(() => {
     const filtered = initialOrders.filter((o) => new Date(o.createdAt) >= startDate);
     const paid = filtered.filter((o) => o.status === "paid");
     const approvedRevenue = paid.reduce((sum, o) => sum + o.totalAmount, 0);
     const totalOrders = filtered.length;
-    const conversionRate = totalOrders > 0 ? (paid.length / totalOrders) * 100 : 0;
-    const clicksCount = Math.round(totalOrders * 2.4) + paid.length;
-    const conversationsCount = Math.max(initialCustomers.length, totalOrders);
+    const paidCount = paid.length;
+
+    // Ticket Médio: Receita aprovada ÷ quantidade de pedidos aprovados no período
+    // Quando não houver pedidos aprovados, exibir 0 (R$ 0,00)
+    const averageTicket = paidCount > 0 ? approvedRevenue / paidCount : 0;
+
+    // Total de Clientes únicos vinculados ao bot atual
+    const totalCustomers = totalUniqueCustomers ?? initialCustomers.length;
+
+    // Produtos Ativos no catálogo deste bot
+    const prodsCount = activeProductsCount ?? 0;
+
+    const conversionRate = totalOrders > 0 ? (paidCount / totalOrders) * 100 : 0;
 
     return {
       approvedRevenue,
       totalOrders,
-      paidCount: paid.length,
+      paidCount,
       conversionRate,
-      clicksCount,
-      conversationsCount,
+      totalCustomers,
+      averageTicket,
+      activeProductsCount: prodsCount,
     };
-  }, [startDate, initialOrders, initialCustomers]);
+  }, [startDate, initialOrders, totalUniqueCustomers, initialCustomers, activeProductsCount]);
 
   // Atividade Recente filtrada pelo período selecionado
   const recentActivity = useMemo(() => {

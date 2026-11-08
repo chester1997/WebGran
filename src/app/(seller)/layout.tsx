@@ -270,14 +270,14 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
                 </button>
 
                 <Link href="/seller" className="flex items-center gap-2.5 shrink-0">
-                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-[#0055FF] border border-white/10 shadow-sm">
+                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center shadow-sm select-none">
                     <Image
                       src="/logo-webgran-icon.png"
                       alt="WebGran"
                       width={32}
                       height={32}
                       priority
-                      className="w-full h-full object-cover rounded-full"
+                      className="w-full h-full object-cover scale-[1.38]"
                     />
                   </div>
                   <div className="flex flex-col min-w-0">

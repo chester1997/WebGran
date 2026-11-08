@@ -16,17 +16,21 @@ import {
   Check,
   Package,
   Activity,
-  Inbox
+  Inbox,
+  TrendingUp,
 } from "lucide-react";
 import type { BotActivityEvent, TopSellingProduct } from "../[id]/SingleBotClient";
 
 interface MetricsData {
   approvedRevenue: number;
-  totalOrders: number;
-  paidCount: number;
-  conversionRate: number;
-  clicksCount: number;
-  conversationsCount: number;
+  totalCustomers: number;
+  averageTicket: number;
+  activeProductsCount: number;
+  totalOrders?: number;
+  paidCount?: number;
+  conversionRate?: number;
+  clicksCount?: number;
+  conversationsCount?: number;
 }
 
 interface BotOverviewTabProps {
@@ -113,6 +117,15 @@ export default function BotOverviewTab({
     };
   }, [metrics.approvedRevenue]);
 
+  // Formatação de ticket médio: R$ X,XX
+  const formattedTicket = useMemo(() => {
+    const raw = metrics.averageTicket || 0;
+    return raw.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [metrics.averageTicket]);
+
   return (
     <div className="space-y-5">
       {/* 1. SELETOR DE PERÍODO ALINHADO À DIREITA */}
@@ -176,49 +189,39 @@ export default function BotOverviewTab({
           </div>
         </div>
 
-        {/* Bloco da Direita: Card Unificado 2x2 (~58% da largura no desktop) */}
-        <div className="lg:col-span-7 bg-[#171717] border border-white/[0.08] rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-2 shadow-sm min-h-[170px]">
-          {/* Quadrante 1: Cliques no link */}
-          <div className="p-5 sm:p-6 border-b sm:border-r border-white/[0.06] flex flex-col justify-between">
-            <div className="flex items-center gap-2">
-              <MousePointerClick className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Cliques no link</span>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
-              {metrics.clicksCount}
-            </div>
-          </div>
-
-          {/* Quadrante 2: Iniciaram o bot */}
-          <div className="p-5 sm:p-6 border-b border-white/[0.06] flex flex-col justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Iniciaram o bot</span>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
-              {metrics.conversationsCount}
-            </div>
-          </div>
-
-          {/* Quadrante 3: Pedidos criados */}
+        {/* Bloco da Direita: Card Unificado com os 3 Novos Indicadores (~58% da largura no desktop) */}
+        <div className="lg:col-span-7 bg-[#171717] border border-white/[0.08] rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-3 shadow-sm min-h-[170px]">
+          {/* Indicador 1: TOTAL DE CLIENTES */}
           <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-white/[0.06] flex flex-col justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Pedidos criados</span>
+              <Users className="w-4 h-4 text-[#3984FF] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Total de clientes</span>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
-              {metrics.totalOrders}
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4 tracking-tight">
+              {metrics.totalCustomers}
             </div>
           </div>
 
-          {/* Quadrante 4: Pedidos aprovados */}
+          {/* Indicador 2: TICKET MÉDIO */}
+          <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-white/[0.06] flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#3984FF] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Ticket médio</span>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4 tracking-tight">
+              <span className="text-sm sm:text-base font-bold text-zinc-400 mr-1">R$</span>
+              {formattedTicket}
+            </div>
+          </div>
+
+          {/* Indicador 3: PRODUTOS ATIVOS */}
           <div className="p-5 sm:p-6 flex flex-col justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#3984FF] shrink-0" />
-              <span className="text-xs font-medium text-zinc-300">Pedidos aprovados</span>
+              <Package className="w-4 h-4 text-[#3984FF] shrink-0" />
+              <span className="text-xs font-medium text-zinc-300">Produtos ativos</span>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
-              {metrics.paidCount}
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-4 tracking-tight">
+              {metrics.activeProductsCount}
             </div>
           </div>
         </div>
@@ -259,7 +262,16 @@ export default function BotOverviewTab({
                   const isApproved = event.type === "sale_approved";
                   const isPending = event.type === "payment_pending";
 
-                  return (
+                  // Formatação de ticket médio: R$ X,XX
+  const formattedTicket = useMemo(() => {
+    const raw = metrics.averageTicket || 0;
+    return raw.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [metrics.averageTicket]);
+
+  return (
                     <div key={event.id} className="py-3 flex items-center gap-3">
                       {/* Ícone Semântico */}
                       <div
