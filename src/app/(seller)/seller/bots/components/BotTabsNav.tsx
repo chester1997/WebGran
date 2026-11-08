@@ -60,8 +60,8 @@ export default function BotTabsNav({
     : [];
 
   return (
-    <nav className="w-full border-b border-white/[0.08] overflow-x-auto no-scrollbar scroll-smooth">
-      <div className="flex items-center gap-1 sm:gap-2 min-w-max pb-px">
+    <nav className="w-full overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="flex items-center gap-1 sm:gap-2 min-w-max">
         {/* GRUPO 1: Gerenciamento do Bot */}
         <div className="flex items-center gap-1">
           {botManagementTabs.map((tab) => {
