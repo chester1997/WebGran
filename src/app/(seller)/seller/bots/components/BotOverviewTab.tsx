@@ -1,16 +1,24 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { 
-  DollarSign, 
-  MousePointerClick, 
-  ShieldCheck, 
-  CheckCircle2, 
+import Image from "next/image";
+import {
+  DollarSign,
+  MousePointerClick,
+  ShieldCheck,
+  CheckCircle2,
   Smartphone,
   HelpCircle,
   Users,
-  ShoppingBag
+  ShoppingBag,
+  Clock,
+  UserPlus,
+  Check,
+  Package,
+  Activity,
+  Inbox
 } from "lucide-react";
+import type { BotActivityEvent, TopSellingProduct } from "../[id]/SingleBotClient";
 
 interface MetricsData {
   approvedRevenue: number;
@@ -33,6 +41,8 @@ interface BotOverviewTabProps {
     recipientsCount: number;
   };
   metrics: MetricsData;
+  recentActivity?: BotActivityEvent[];
+  topSellingProducts?: TopSellingProduct[];
   selectedPeriod: "today" | "week" | "month" | "year";
   onSelectPeriod: (period: "today" | "week" | "month" | "year") => void;
   onOpenConversas?: () => void;
@@ -41,9 +51,35 @@ interface BotOverviewTabProps {
   showOperationalStatus?: boolean;
 }
 
+function formatRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = Math.max(0, now.getTime() - date.getTime());
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSec < 60) return "agora";
+    if (diffMin < 60) return `há ${diffMin} min`;
+    if (diffHours === 1) return "há 1 h";
+    if (diffHours < 24) return `há ${diffHours} h`;
+    if (diffDays === 1) return "ontem";
+    if (diffDays < 30) return `há ${diffDays} d`;
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return `${day}/${month}`;
+  } catch {
+    return "recente";
+  }
+}
+
 export default function BotOverviewTab({
   bot,
   metrics,
+  recentActivity = [],
+  topSellingProducts = [],
   selectedPeriod,
   onSelectPeriod,
   onOpenConversas,
@@ -77,29 +113,11 @@ export default function BotOverviewTab({
     };
   }, [metrics.approvedRevenue]);
 
-  // Dias recentes para os eixos do gráfico (últimos 5 dias)
-  const chartDays = useMemo(() => {
-    const now = new Date();
-    const days = [];
-    for (let i = 4; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(now.getDate() - i);
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      days.push({
-        label: `${day}/${month}`,
-        isToday: i === 0,
-        isPenultimate: i === 1,
-      });
-    }
-    return days;
-  }, []);
-
   return (
     <div className="space-y-5">
-      {/* 1. SELETOR DE PERÍODO ALINHADO À DIREITA (Conforme Referência Visual) */}
+      {/* 1. SELETOR DE PERÍODO ALINHADO À DIREITA */}
       <div className="flex items-center justify-end">
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex items-center gap-1 bg-[#141414] border border-white/[0.06] p-1 rounded-lg">
           {periodOptions.map((item) => {
             const isActive = selectedPeriod === item.id;
             return (
@@ -107,11 +125,10 @@ export default function BotOverviewTab({
                 key={item.id}
                 type="button"
                 onClick={() => onSelectPeriod(item.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-[#222222] text-white border border-white/20 font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                }`}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${isActive
+                  ? "bg-[#222222] text-white border border-white/20 font-semibold shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+                  }`}
               >
                 {item.label}
               </button>
@@ -123,10 +140,10 @@ export default function BotOverviewTab({
       {/* 2. LINHA DE INDICADORES: RECEITA (ESQUERDA) + GRID 2x2 UNIFICADO (DIREITA) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Bloco da Esquerda: Receita aprovada (~42% da largura no desktop) */}
-        <div className="lg:col-span-5 bg-[#171717] border border-white/[0.08] rounded-2xl p-6 flex flex-col justify-between shadow-sm">
+        <div className="lg:col-span-5 bg-[#171717] border border-white/[0.08] rounded-2xl p-6 flex flex-col justify-between shadow-sm min-h-[170px]">
           <div>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#1b2f1e] border border-[#2e5d34] flex items-center justify-center shrink-0 text-[#4ade80]">
+              <div className="w-10 h-10 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
                 <DollarSign className="w-5 h-5 stroke-[2.5]" />
               </div>
               <div>
@@ -146,7 +163,7 @@ export default function BotOverviewTab({
             </div>
           </div>
 
-          <div className="pt-8">
+          <div className="pt-6">
             <div className="flex items-baseline">
               <span className="text-base sm:text-lg font-bold text-zinc-400 mr-1.5">R$</span>
               <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
@@ -160,11 +177,11 @@ export default function BotOverviewTab({
         </div>
 
         {/* Bloco da Direita: Card Unificado 2x2 (~58% da largura no desktop) */}
-        <div className="lg:col-span-7 bg-[#171717] border border-white/[0.08] rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-2 shadow-sm">
+        <div className="lg:col-span-7 bg-[#171717] border border-white/[0.08] rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-2 shadow-sm min-h-[170px]">
           {/* Quadrante 1: Cliques no link */}
           <div className="p-5 sm:p-6 border-b sm:border-r border-white/[0.06] flex flex-col justify-between">
             <div className="flex items-center gap-2">
-              <MousePointerClick className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <MousePointerClick className="w-4 h-4 text-[#3984FF] shrink-0" />
               <span className="text-xs font-medium text-zinc-300">Cliques no link</span>
             </div>
             <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
@@ -175,7 +192,7 @@ export default function BotOverviewTab({
           {/* Quadrante 2: Iniciaram o bot */}
           <div className="p-5 sm:p-6 border-b border-white/[0.06] flex flex-col justify-between">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <Users className="w-4 h-4 text-[#3984FF] shrink-0" />
               <span className="text-xs font-medium text-zinc-300">Iniciaram o bot</span>
             </div>
             <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
@@ -186,7 +203,7 @@ export default function BotOverviewTab({
           {/* Quadrante 3: Pedidos criados */}
           <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-white/[0.06] flex flex-col justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <ShoppingBag className="w-4 h-4 text-[#3984FF] shrink-0" />
               <span className="text-xs font-medium text-zinc-300">Pedidos criados</span>
             </div>
             <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
@@ -197,7 +214,7 @@ export default function BotOverviewTab({
           {/* Quadrante 4: Pedidos aprovados */}
           <div className="p-5 sm:p-6 flex flex-col justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#84cc16] shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-[#3984FF] shrink-0" />
               <span className="text-xs font-medium text-zinc-300">Pedidos aprovados</span>
             </div>
             <div className="text-2xl sm:text-3xl font-bold text-white mt-4">
@@ -207,147 +224,180 @@ export default function BotOverviewTab({
         </div>
       </div>
 
-      {/* 3. SEÇÃO DE GRÁFICOS: 2 CARDS BALANCEADOS LADO A LADO */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Gráfico 1: Iniciaram o bot */}
-        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+      {/* 3. SEÇÃO 2: ATIVIDADE RECENTE (ESQUERDA) + MAIS VENDIDOS (DIREITA) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Card Esquerdo: ATIVIDADE RECENTE */}
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
           <div>
-            <div className="flex items-center gap-2 text-zinc-400">
-              <Users className="w-4 h-4" />
-              <span className="text-xs font-medium text-zinc-300">Iniciaram o bot</span>
+            {/* Header do Card */}
+            <div className="flex items-start justify-between gap-3 pb-4 border-b border-white/[0.06]">
+              <div>
+                <h3 className="text-base font-bold text-white tracking-tight">Atividade recente</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">Acontecimentos em tempo real</p>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Ao vivo</span>
+              </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
-              {metrics.conversationsCount}
+
+            {/* Lista de Acontecimentos */}
+            <div className="py-2 divide-y divide-white/[0.04] max-h-[340px] overflow-y-auto sidebar-scroll">
+              {recentActivity.length === 0 ? (
+                <div className="py-12 text-center flex flex-col items-center justify-center text-zinc-500 space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center text-zinc-500">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-medium text-zinc-400">Nenhuma atividade recente</p>
+                  <p className="text-[11px] text-zinc-600 max-w-xs leading-relaxed">
+                    Acontecimentos do bot aparecerão aqui conforme clientes interagirem e realizarem pedidos.
+                  </p>
+                </div>
+              ) : (
+                recentActivity.slice(0, 10).map((event) => {
+                  const isApproved = event.type === "sale_approved";
+                  const isPending = event.type === "payment_pending";
+
+                  return (
+                    <div key={event.id} className="py-3 flex items-center gap-3">
+                      {/* Ícone Semântico */}
+                      <div
+                        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border ${isApproved
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                          : isPending
+                            ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                            : "bg-white/[0.04] border-white/10 text-zinc-400"
+                          }`}
+                      >
+                        {isApproved ? (
+                          <Check className="w-4 h-4 stroke-[2.5]" />
+                        ) : isPending ? (
+                          <Clock className="w-4 h-4" />
+                        ) : (
+                          <UserPlus className="w-4 h-4" />
+                        )}
+                      </div>
+
+                      {/* Informações Centrais */}
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">
+                            {event.title}
+                          </span>
+                          {event.botTag && (
+                            <span className="text-[10px] uppercase font-semibold tracking-wider text-zinc-400 bg-white/[0.04] border border-white/[0.08] px-1.5 py-0.5 rounded shrink-0">
+                              {event.botTag}
+                            </span>
+                          )}
+                        </div>
+
+                        <p
+                          className={`text-xs truncate ${isApproved ? "text-emerald-400 font-medium" : "text-zinc-400"
+                            }`}
+                        >
+                          {event.description}
+                        </p>
+                      </div>
+
+                      {/* Tempo Relativo */}
+                      <span className="text-[11px] sm:text-xs text-zinc-500 font-medium shrink-0 ml-auto whitespace-nowrap">
+                        {formatRelativeTime(event.createdAt)}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          {/* Área Gráfica com Linhas Sutis e Barras */}
-          <div className="mt-8 relative pt-6 pb-2">
-            {/* Linhas de grade pontilhadas sutis */}
-            <div className="absolute inset-x-0 top-0 flex flex-col justify-between h-32 pointer-events-none">
-              <div className="flex items-center">
-                <span className="text-[10px] text-zinc-500 w-5">1</span>
-                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
-              </div>
-              <div className="flex items-center">
-                <span className="text-[10px] text-zinc-500 w-5">0</span>
-                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
-              </div>
-            </div>
-
-            {/* Barras Alinhadas aos Dias */}
-            <div className="h-32 pl-6 pr-2 flex items-end justify-between gap-3 relative z-10">
-              {chartDays.map((day, idx) => {
-                const isPeak = idx === 3 && metrics.conversationsCount > 0;
-                const isHatched = idx === 4;
-
-                return (
-                  <div key={day.label} className="flex-1 flex flex-col items-center h-full justify-end">
-                    {isPeak ? (
-                      <div
-                        className="w-full max-w-[28px] bg-gradient-to-t from-lime-600 via-lime-500 to-lime-400 rounded-t-sm shadow-lg shadow-lime-500/20"
-                        style={{ height: "92%" }}
-                        title={`${day.label}: ${metrics.conversationsCount}`}
-                      />
-                    ) : isHatched ? (
-                      <div
-                        className="w-full max-w-[28px] h-1.5 bg-[#84cc16]/40 rounded-t-sm"
-                        style={{
-                          backgroundImage:
-                            "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(132, 204, 22, 0.6) 3px, rgba(132, 204, 22, 0.6) 6px)",
-                        }}
-                        title={`${day.label}: Projeção`}
-                      />
-                    ) : (
-                      <div
-                        className="w-full max-w-[28px] h-1 bg-[#84cc16] rounded-t-sm"
-                        title={`${day.label}: 0`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Legenda dos Dias */}
-            <div className="pl-6 pr-2 mt-3 flex justify-between text-[11px] text-zinc-500 font-medium">
-              {chartDays.map((day) => (
-                <span key={day.label} className="text-center flex-1">
-                  {day.label}
-                </span>
-              ))}
-            </div>
+          {/* Rodapé do Card */}
+          <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
+            <span className="text-zinc-400">Registros no período</span>
+            <span className="font-semibold text-zinc-200 tabular-nums">
+              {recentActivity.length} {recentActivity.length === 1 ? "registro" : "registros"}
+            </span>
           </div>
         </div>
 
-        {/* Gráfico 2: Pedidos aprovados */}
-        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+        {/* Card Direito: MAIS VENDIDOS */}
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
           <div>
-            <div className="flex items-center gap-2 text-zinc-400">
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="text-xs font-medium text-zinc-300">Pedidos aprovados</span>
+            {/* Header do Card */}
+            <div className="pb-4 border-b border-white/[0.06]">
+              <h3 className="text-base font-bold text-white tracking-tight">Mais vendidos</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">Ranking por receita aprovada no período</p>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
-              {metrics.paidCount}
+
+            {/* Lista de Produtos Mais Vendidos */}
+            <div className="py-2 divide-y divide-white/[0.04] max-h-[340px] overflow-y-auto sidebar-scroll">
+              {topSellingProducts.length === 0 ? (
+                <div className="py-12 text-center flex flex-col items-center justify-center text-zinc-500 space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center text-zinc-500">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-medium text-zinc-400">Nenhum produto vendido</p>
+                  <p className="text-[11px] text-zinc-600 max-w-xs leading-relaxed">
+                    As vendas aprovadas deste bot serão ranqueadas aqui conforme forem pagas.
+                  </p>
+                </div>
+              ) : (
+                topSellingProducts.slice(0, 10).map((product) => (
+                  <div key={product.id} className="py-3 space-y-2">
+                    <div className="flex items-center gap-3">
+                      {/* Miniatura do Produto */}
+                      <div className="w-9 h-9 rounded-lg overflow-hidden bg-white/5 border border-white/10 shrink-0 flex items-center justify-center relative">
+                        {product.coverUrl ? (
+                          <img
+                            src={product.coverUrl}
+                            alt={product.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-4 h-4 text-zinc-500" />
+                        )}
+                      </div>
+
+                      {/* Nome e Quantidade */}
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <h4 className="text-xs sm:text-sm font-medium text-white truncate" title={product.title}>
+                          {product.title}
+                        </h4>
+                        <p className="text-xs text-zinc-400">
+                          {product.totalQuantity} {product.totalQuantity === 1 ? "unidade vendida" : "unidades vendidas"}
+                        </p>
+                      </div>
+
+                      {/* Valor Aprovado e Percentual */}
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <div className="text-xs sm:text-sm font-bold text-white tabular-nums">
+                          R$ {product.totalRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] text-zinc-400 tabular-nums">
+                          {product.revenuePercent}% do total
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Barra Horizontal Proporcional */}
+                    <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#3984FF] rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(product.revenuePercent, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Área Gráfica com Linhas Sutis e Barras */}
-          <div className="mt-8 relative pt-6 pb-2">
-            {/* Linhas de grade pontilhadas sutis */}
-            <div className="absolute inset-x-0 top-0 flex flex-col justify-between h-32 pointer-events-none">
-              <div className="flex items-center">
-                <span className="text-[10px] text-zinc-500 w-5">1</span>
-                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
-              </div>
-              <div className="flex items-center">
-                <span className="text-[10px] text-zinc-500 w-5">0</span>
-                <div className="flex-1 border-b border-dashed border-white/[0.05]" />
-              </div>
-            </div>
-
-            {/* Barras Alinhadas aos Dias */}
-            <div className="h-32 pl-6 pr-2 flex items-end justify-between gap-3 relative z-10">
-              {chartDays.map((day, idx) => {
-                const isPeak = idx === 3 && metrics.paidCount > 0;
-                const isHatched = idx === 4;
-
-                return (
-                  <div key={day.label} className="flex-1 flex flex-col items-center h-full justify-end">
-                    {isPeak ? (
-                      <div
-                        className="w-full max-w-[28px] bg-gradient-to-t from-lime-600 via-lime-500 to-lime-400 rounded-t-sm shadow-lg shadow-lime-500/20"
-                        style={{ height: "92%" }}
-                        title={`${day.label}: ${metrics.paidCount}`}
-                      />
-                    ) : isHatched ? (
-                      <div
-                        className="w-full max-w-[28px] h-1.5 bg-[#84cc16]/40 rounded-t-sm"
-                        style={{
-                          backgroundImage:
-                            "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(132, 204, 22, 0.6) 3px, rgba(132, 204, 22, 0.6) 6px)",
-                        }}
-                        title={`${day.label}: Projeção`}
-                      />
-                    ) : (
-                      <div
-                        className="w-full max-w-[28px] h-1 bg-[#84cc16] rounded-t-sm"
-                        title={`${day.label}: 0`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Legenda dos Dias */}
-            <div className="pl-6 pr-2 mt-3 flex justify-between text-[11px] text-zinc-500 font-medium">
-              {chartDays.map((day) => (
-                <span key={day.label} className="text-center flex-1">
-                  {day.label}
-                </span>
-              ))}
-            </div>
+          {/* Rodapé do Card */}
+          <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
+            <span className="text-zinc-400">Produtos vendidos no período</span>
+            <span className="font-semibold text-zinc-200 tabular-nums">
+              {topSellingProducts.length} {topSellingProducts.length === 1 ? "produto" : "produtos"}
+            </span>
           </div>
         </div>
       </div>

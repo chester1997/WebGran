@@ -269,21 +269,25 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
                   <Menu className="w-4 h-4" />
                 </button>
 
-                <Link href="/seller" className="flex items-center gap-2 shrink-0">
-                  <Image
-                    src="/logo-webgran-icon.png"
-                    alt="WebGran"
-                    width={32}
-                    height={32}
-                    priority
-                    className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
-                  />
-                  <span className="font-semibold text-sm text-white tracking-tight shrink-0 whitespace-nowrap">
-                    WebGran
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 tracking-wider uppercase shrink-0">
-                    Vendedor
-                  </span>
+                <Link href="/seller" className="flex items-center gap-2.5 shrink-0">
+                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-[#0055FF] border border-white/10 shadow-sm">
+                    <Image
+                      src="/logo-webgran-icon.png"
+                      alt="WebGran"
+                      width={32}
+                      height={32}
+                      priority
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-[14px] text-white tracking-tight leading-tight whitespace-nowrap">
+                      WebGran
+                    </span>
+                    <span className="text-[10px] font-medium text-[#3984FF] tracking-normal leading-tight whitespace-nowrap">
+                      Painel do Vendedor
+                    </span>
+                  </div>
                 </Link>
               </div>
 

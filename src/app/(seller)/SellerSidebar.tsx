@@ -141,34 +141,36 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       <div className="h-[var(--header-h,112px)] min-h-[var(--header-h,112px)] max-h-[var(--header-h,112px)] px-5 lg:px-[var(--sidebar-pad-x,28px)] flex items-center justify-between shrink-0 select-none">
         <Link href="/seller" onClick={(e) => handleLinkClick(e, "/seller")} className="flex items-center gap-3 min-w-0">
-          <Image
-            src="/logo-webgran-icon.png"
-            alt="WebGran"
-            width={40}
-            height={40}
-            priority
-            className="w-10 h-10 object-contain shrink-0"
-          />
-          <span className="font-[700] text-[20px] text-white tracking-tight whitespace-nowrap">
-            WebGran
-          </span>
+          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-[#0055FF] border border-white/10 shadow-sm">
+            <Image
+              src="/logo-webgran-icon.png"
+              alt="WebGran"
+              width={40}
+              height={40}
+              priority
+              className="w-full h-full object-cover rounded-full"
+            />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-[18px] text-white tracking-tight leading-tight">
+              WebGran
+            </span>
+            <span className="text-[12px] font-medium text-[#3984FF] tracking-normal leading-tight">
+              Painel do Vendedor
+            </span>
+          </div>
         </Link>
 
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 rounded-lg tracking-wider uppercase">
-            VENDEDOR
-          </span>
-          {isMobileDrawer && onCloseMobile && (
-            <button
-              type="button"
-              onClick={onCloseMobile}
-              className="lg:hidden p-1 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              aria-label="Fechar menu"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        {isMobileDrawer && onCloseMobile && (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer ml-auto"
+            aria-label="Fechar menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* ==================================================== */}

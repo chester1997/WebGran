@@ -28,6 +28,47 @@ import { NotificationsClient } from "@/app/(seller)/seller/bot/notifications/Not
 import CouponsClient from "@/app/(seller)/seller/coupons/CouponsClient";
 import { BotTabData } from "../bot-tab-loaders";
 
+export interface BotActivityEvent {
+  id: string;
+  type: "conversation_started" | "payment_pending" | "sale_approved";
+  title: string;
+  botTag: string;
+  description: string;
+  createdAt: string;
+  status: "completed" | "pending" | "approved";
+  amount?: number;
+}
+
+export interface BotOrderItem {
+  id: string;
+  productId: string | null;
+  productTitle: string;
+  productCoverUrl: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface BotOrderRecord {
+  id: string;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  paidAt?: string | null;
+  customerTelegramId?: string | null;
+  customerName?: string;
+  items?: BotOrderItem[];
+}
+
+export interface TopSellingProduct {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  totalQuantity: number;
+  totalRevenue: number;
+  revenuePercent: number;
+}
+
 interface SingleBotClientProps {
   bot: {
     id: string;
@@ -46,13 +87,8 @@ interface SingleBotClientProps {
   };
   storeSlug: string;
   initialTab: string;
-  initialOrders: {
-    id: string;
-    status: string;
-    totalAmount: number;
-    createdAt: string;
-    customerTelegramId: string | null;
-  }[];
+  initialOrders: BotOrderRecord[];
+  initialRecentActivity?: BotActivityEvent[];
   initialCustomers: CustomerItem[];
   initialMessages?: MessageItem[];
   tabData?: BotTabData;
@@ -65,6 +101,7 @@ export default function SingleBotClient({
   storeSlug,
   initialTab,
   initialOrders,
+  initialRecentActivity = [],
   initialCustomers,
   initialMessages = [],
   tabData,
@@ -192,15 +229,18 @@ export default function SingleBotClient({
     }
   };
 
+  const startDate = useMemo(() => {
+    const now = new Date();
+    const start = new Date();
+    if (selectedPeriod === "today") start.setHours(0, 0, 0, 0);
+    else if (selectedPeriod === "week") start.setDate(now.getDate() - 7);
+    else if (selectedPeriod === "month") start.setMonth(now.getMonth() - 1);
+    else if (selectedPeriod === "year") start.setFullYear(now.getFullYear() - 1);
+    return start;
+  }, [selectedPeriod]);
+
   // Cálculo de Métricas por período
   const metrics = useMemo(() => {
-    const now = new Date();
-    const startDate = new Date();
-    if (selectedPeriod === "today") startDate.setHours(0, 0, 0, 0);
-    else if (selectedPeriod === "week") startDate.setDate(now.getDate() - 7);
-    else if (selectedPeriod === "month") startDate.setMonth(now.getMonth() - 1);
-    else if (selectedPeriod === "year") startDate.setFullYear(now.getFullYear() - 1);
-
     const filtered = initialOrders.filter((o) => new Date(o.createdAt) >= startDate);
     const paid = filtered.filter((o) => o.status === "paid");
     const approvedRevenue = paid.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -217,7 +257,72 @@ export default function SingleBotClient({
       clicksCount,
       conversationsCount,
     };
-  }, [selectedPeriod, initialOrders, initialCustomers]);
+  }, [startDate, initialOrders, initialCustomers]);
+
+  // Atividade Recente filtrada pelo período selecionado
+  const recentActivity = useMemo(() => {
+    return (initialRecentActivity || []).filter(
+      (e) => new Date(e.createdAt) >= startDate
+    );
+  }, [startDate, initialRecentActivity]);
+
+  // Mais Vendidos filtrado pelo período a partir de pedidos pagos do bot
+  const topSellingProducts = useMemo(() => {
+    const paidOrders = initialOrders.filter(
+      (o) => o.status === "paid" && new Date(o.createdAt) >= startDate
+    );
+
+    const productMap = new Map<string, {
+      id: string;
+      title: string;
+      coverUrl: string | null;
+      totalQuantity: number;
+      totalRevenue: number;
+    }>();
+
+    paidOrders.forEach((o) => {
+      if (o.items && o.items.length > 0) {
+        o.items.forEach((item) => {
+          const key = item.productId || item.productTitle || item.id;
+          const current = productMap.get(key) || {
+            id: key,
+            title: item.productTitle,
+            coverUrl: item.productCoverUrl,
+            totalQuantity: 0,
+            totalRevenue: 0,
+          };
+          current.totalQuantity += item.quantity || 1;
+          current.totalRevenue += item.total || (item.unitPrice ? item.unitPrice * item.quantity : 0);
+          if (item.productCoverUrl && !current.coverUrl) {
+            current.coverUrl = item.productCoverUrl;
+          }
+          productMap.set(key, current);
+        });
+      } else {
+        const key = o.id;
+        const current = productMap.get(key) || {
+          id: key,
+          title: "Produto WebGran",
+          coverUrl: null,
+          totalQuantity: 0,
+          totalRevenue: 0,
+        };
+        current.totalQuantity += 1;
+        current.totalRevenue += o.totalAmount;
+        productMap.set(key, current);
+      }
+    });
+
+    const list = Array.from(productMap.values());
+    list.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    const totalRevenueSum = list.reduce((sum, p) => sum + p.totalRevenue, 0);
+
+    return list.map((p) => ({
+      ...p,
+      revenuePercent: totalRevenueSum > 0 ? Math.round((p.totalRevenue / totalRevenueSum) * 100) : 0,
+    }));
+  }, [startDate, initialOrders]);
 
   return (
     <div className="space-y-6 fade-in w-full pb-16">
@@ -225,8 +330,8 @@ export default function SingleBotClient({
       {notification && (
         <div
           className={`fixed top-4 right-4 z-50 p-4 rounded-xl border shadow-xl text-sm font-medium transition-all animate-in slide-in-from-top-2 ${notification.type === "success"
-              ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-950/90 border-rose-500/30 text-rose-300"
+            ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-300"
+            : "bg-rose-950/90 border-rose-500/30 text-rose-300"
             }`}
         >
           {notification.message}
@@ -257,6 +362,8 @@ export default function SingleBotClient({
         <BotOverviewTab
           bot={bot}
           metrics={metrics}
+          recentActivity={recentActivity}
+          topSellingProducts={topSellingProducts}
           selectedPeriod={selectedPeriod}
           onSelectPeriod={setSelectedPeriod}
           onOpenConversas={() => handleSelectTab("conversas")}

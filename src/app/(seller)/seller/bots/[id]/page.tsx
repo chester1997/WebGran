@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { telegramBots, stores, telegramCustomers, orders, telegramMessages } from "@/db/schema";
+import { telegramBots, stores, telegramCustomers, orders, telegramMessages, botStartEvents } from "@/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { getCurrentStore } from "@/lib/auth";
 import { requireOwnerAccount } from "@/lib/bots/owner-guard";
@@ -43,14 +43,21 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     notFound();
   }
 
+  // Buscar todos os bots da loja para validação de vínculo exclusivo
+  const allStoreBots = await db.query.telegramBots.findMany({
+    where: eq(telegramBots.storeId, store.id),
+    columns: { id: true },
+  });
+  const isOnlyBot = allStoreBots.length <= 1;
+
   // Buscar clientes do Telegram da loja para a aba Conversas
   const customers = await db.query.telegramCustomers.findMany({
     where: eq(telegramCustomers.storeId, store.id),
     orderBy: [desc(telegramCustomers.updatedAt)],
-    limit: 50,
+    limit: 100,
   });
 
-  // Buscar mensagens recentes deste bot para enriquecer a lista de conversas
+  // Buscar mensagens recentes deste bot para enriquecer a lista de conversas e mapear interações
   const botMessages = await db.query.telegramMessages.findMany({
     where: and(
       eq(telegramMessages.storeId, store.id),
@@ -60,11 +67,48 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     limit: 500,
   });
 
-  // Buscar pedidos recentes vinculados à loja
+  // Buscar eventos de /start registrados para este bot
+  const startEvents = await db.query.botStartEvents.findMany({
+    where: and(
+      eq(botStartEvents.storeId, store.id),
+      eq(botStartEvents.botId, botRecord.id)
+    ),
+    orderBy: [desc(botStartEvents.createdAt)],
+    limit: 100,
+  }).catch(() => []);
+
+  // Set de IDs de usuários do Telegram que interagiram com este bot
+  const botCustomerUserIds = new Set<string>();
+  botMessages.forEach((m) => {
+    if (m.telegramUserId) botCustomerUserIds.add(m.telegramUserId);
+  });
+  startEvents.forEach((se) => {
+    if (se.telegramUserId) botCustomerUserIds.add(se.telegramUserId);
+  });
+
+  // Buscar pedidos recentes vinculados à loja com itens, produtos e entregas de notificações
   const recentOrders = await db.query.orders.findMany({
     where: eq(orders.storeId, store.id),
     orderBy: [desc(orders.createdAt)],
-    limit: 100,
+    limit: 150,
+    with: {
+      customer: true,
+      items: {
+        with: {
+          product: true,
+        },
+      },
+      botNotificationDeliveries: true,
+    },
+  });
+
+  // Filtrar pedidos rigorosamente atribuídos a este bot
+  const botOrders = recentOrders.filter((order) => {
+    if (isOnlyBot) return true;
+    if (order.botNotificationDeliveries?.some((d) => d.botId === botRecord.id)) return true;
+    if (order.items?.some((item) => item.product?.botId === botRecord.id)) return true;
+    if (order.customer?.telegramUserId && botCustomerUserIds.has(order.customer.telegramUserId)) return true;
+    return false;
   });
 
   // Mapear dados para o cliente
@@ -84,16 +128,104 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     recipientsCount: botRecord.notificationRecipients?.length || 0,
   };
 
-  const initialOrders = recentOrders.map(o => ({
+  const initialOrders = botOrders.map((o) => ({
     id: o.id,
     status: o.status,
     totalAmount: Number(o.total || 0),
     createdAt: o.createdAt.toISOString(),
+    paidAt: o.paidAt ? o.paidAt.toISOString() : null,
     customerTelegramId: o.customerId,
+    customerName: [o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(" ") || (o.customer?.username ? `@${o.customer.username}` : "Cliente"),
+    items: (o.items || []).map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      productTitle: item.product?.title || "Produto",
+      productCoverUrl: item.product?.coverUrl || null,
+      quantity: Number(item.quantity || 1),
+      unitPrice: Number(item.unitPrice || 0),
+      total: Number(item.total || 0),
+    })),
   }));
 
-  const initialCustomers = customers.map(c => {
-    const custMsgs = botMessages.filter(m => m.telegramUserId === c.telegramUserId);
+  // Montar lista unificada de acontecimentos recentes relacionados ao bot
+  const recentActivityEvents: Array<{
+    id: string;
+    type: "conversation_started" | "payment_pending" | "sale_approved";
+    title: string;
+    botTag: string;
+    description: string;
+    createdAt: string;
+    status: "completed" | "pending" | "approved";
+    amount?: number;
+  }> = [];
+
+  // 1. Início de conversa via botStartEvents
+  startEvents.forEach((se) => {
+    const name = [se.telegramFirstName, se.telegramUsername ? `@${se.telegramUsername}` : null].filter(Boolean).join(" ") || "Cliente";
+    recentActivityEvents.push({
+      id: `start-${se.id}`,
+      type: "conversation_started",
+      title: name,
+      botTag: botRecord.displayName || botRecord.username,
+      description: "Iniciou uma conversa",
+      createdAt: se.createdAt.toISOString(),
+      status: "completed",
+    });
+  });
+
+  // 1.1 Início de conversa para clientes que interagiram com este bot (sem evento duplicado)
+  const seenUserIds = new Set(startEvents.map((se) => se.telegramUserId));
+  customers.forEach((c) => {
+    if (botCustomerUserIds.has(c.telegramUserId) && !seenUserIds.has(c.telegramUserId)) {
+      seenUserIds.add(c.telegramUserId);
+      const name = [c.firstName, c.lastName].filter(Boolean).join(" ") || (c.username ? `@${c.username}` : "Cliente");
+      recentActivityEvents.push({
+        id: `customer-${c.id}`,
+        type: "conversation_started",
+        title: name,
+        botTag: botRecord.displayName || botRecord.username,
+        description: "Iniciou uma conversa",
+        createdAt: c.createdAt.toISOString(),
+        status: "completed",
+      });
+    }
+  });
+
+  // 2. Pedidos pendentes e aprovados do bot
+  botOrders.forEach((o) => {
+    const productTitle = o.items?.[0]?.product?.title;
+    const customerName = [o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(" ") || (o.customer?.username ? `@${o.customer.username}` : "Cliente");
+    const itemTitle = productTitle || customerName;
+
+    if (o.status === "paid") {
+      recentActivityEvents.push({
+        id: `order-paid-${o.id}`,
+        type: "sale_approved",
+        title: itemTitle,
+        botTag: botRecord.displayName || botRecord.username,
+        description: `Venda aprovada · Pagou R$ ${Number(o.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        createdAt: (o.paidAt || o.createdAt).toISOString(),
+        status: "approved",
+        amount: Number(o.total || 0),
+      });
+    } else if (o.status === "pending") {
+      recentActivityEvents.push({
+        id: `order-pending-${o.id}`,
+        type: "payment_pending",
+        title: itemTitle,
+        botTag: botRecord.displayName || botRecord.username,
+        description: "Cobrança aguardando pagamento · Aguardando pagamento",
+        createdAt: o.createdAt.toISOString(),
+        status: "pending",
+      });
+    }
+  });
+
+  // Ordenar por data decrescente
+  recentActivityEvents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const initialCustomers = customers.map((c) => {
+    const custMsgs = botMessages.filter((m) => m.telegramUserId === c.telegramUserId);
     const lastMsg = custMsgs[0] || null;
     return {
       id: c.id,
@@ -113,17 +245,17 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
   const firstCustomerId = initialCustomers[0]?.id;
   const initialSelectedMessages = firstCustomerId
     ? botMessages
-        .filter(m => m.telegramUserId === initialCustomers[0].telegramUserId)
-        .reverse()
-        .map(m => ({
-          id: m.id,
-          direction: m.direction as "inbound" | "outbound",
-          messageType: m.messageType,
-          text: m.text,
-          status: m.status,
-          createdAt: m.createdAt.toISOString(),
-          errorMessage: m.errorMessage,
-        }))
+      .filter((m) => m.telegramUserId === initialCustomers[0].telegramUserId)
+      .reverse()
+      .map((m) => ({
+        id: m.id,
+        direction: m.direction as "inbound" | "outbound",
+        messageType: m.messageType,
+        text: m.text,
+        status: m.status,
+        createdAt: m.createdAt.toISOString(),
+        errorMessage: m.errorMessage,
+      }))
     : [];
 
   const currentTab = tab || "visao-geral";
@@ -136,6 +268,7 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
         storeSlug={store.slug}
         initialTab={currentTab}
         initialOrders={initialOrders}
+        initialRecentActivity={recentActivityEvents}
         initialCustomers={initialCustomers}
         initialMessages={initialSelectedMessages}
         tabData={tabData}

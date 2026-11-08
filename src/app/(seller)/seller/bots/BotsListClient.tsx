@@ -159,7 +159,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
         actions={
           <Link
             href="/seller/bots/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-bold transition-all shadow-lg shadow-[#3984FF]/20 hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white text-xs font-semibold transition-all shadow-sm shadow-[#3984FF]/25 active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" />
             <span>Adicionar Bot</span>
@@ -193,7 +193,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
           <div className="pt-2">
             <Link
               href="/seller/bots/new"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-bold transition-all"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white text-xs font-semibold transition-all shadow-sm shadow-[#3984FF]/25 active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               <span>Conectar meu primeiro bot</span>
@@ -241,7 +241,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
               <button
                 type="button"
                 onClick={() => setRenameModalBot(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-300 hover:text-white bg-[#1C1C1C] hover:bg-[#262626] border border-white/10 transition-colors"
               >
                 Cancelar
               </button>
@@ -249,7 +249,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
                 type="button"
                 onClick={handleSaveRename}
                 disabled={loadingAction === renameModalBot.id}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#3984FF] hover:bg-[#2563EB] text-white transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white transition-colors disabled:opacity-50"
               >
                 Salvar
               </button>
@@ -277,7 +277,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
               <button
                 type="button"
                 onClick={() => setTokenModalBot(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-300 hover:text-white bg-[#1C1C1C] hover:bg-[#262626] border border-white/10 transition-colors"
               >
                 Cancelar
               </button>
@@ -285,7 +285,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
                 type="button"
                 onClick={handleSaveToken}
                 disabled={loadingAction === tokenModalBot.id || !tokenInput}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#3984FF] hover:bg-[#2563EB] text-white transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white transition-colors disabled:opacity-50"
               >
                 Validar e Salvar
               </button>
@@ -308,7 +308,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
               <button
                 type="button"
                 onClick={() => setDeleteModalBot(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-300 hover:text-white bg-[#1C1C1C] hover:bg-[#262626] border border-white/10 transition-colors"
               >
                 Cancelar
               </button>
@@ -316,7 +316,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={loadingAction === deleteModalBot.id}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors disabled:opacity-50"
               >
                 Confirmar Exclusão
               </button>
