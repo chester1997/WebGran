@@ -1041,8 +1041,8 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           </Button>
         </div>
       ) : viewMode === "grid" ? (
-        /* 9. GRID DE VÍDEOS (Standardized WebGran Product Grid Layout) */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+        /* 9. GRID DE VÍDEOS (Standardized WebGran Product Grid Layout Responsivo) */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {filteredVideos.map((video) => {
             const assignedCount = video.assignedProductsCount || video.assignmentCount || video.assignments?.length || 0;
             return (

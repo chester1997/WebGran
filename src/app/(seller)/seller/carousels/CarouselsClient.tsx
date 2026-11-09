@@ -128,7 +128,7 @@ export default function CarouselsClient({
                 Nenhum produto selecionado no Ranking. Clique em "Gerenciar Top 15" para adicionar até 15 produtos.
               </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-2">
                 {rankingActiveProducts.slice(0, 6).map((prod: any, idx: number) => (
                   <div
                     key={prod.id}
@@ -182,7 +182,7 @@ export default function CarouselsClient({
             <CarouselModal products={storeProducts} triggerText="Criar Carrossel" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
             {standardCarousels.map((c, idx) => {
               const activeProducts = c.items?.map((i: any) => i.product).filter(Boolean) || [];
               const selectedProductIds = c.items?.map((i: any) => i.productId) || [];

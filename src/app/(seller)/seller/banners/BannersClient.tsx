@@ -270,7 +270,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
   };
 
   return (
-    <div className="space-y-8 w-full max-w-[1600px] mx-auto pb-16">
+    <div className="space-y-8 w-full min-w-0 pb-16">
       {/* Toast Feedback */}
       {errorMsg && (
         <div className="p-4 rounded-xl bg-red-950/90 border border-red-500/40 text-red-200 flex items-center gap-3 animate-in fade-in shadow-xl">
@@ -393,7 +393,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
           {bannersList.map((banner, index) => {
             const isActive = banner.status === "active";
             return (
@@ -501,6 +501,22 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
               </div>
             );
           })}
+          {bannersList.length === 1 && (
+            <div
+              onClick={openAddModal}
+              className="border-2 border-dashed border-white/10 hover:border-[#3984FF]/40 bg-white/[0.01] hover:bg-[#3984FF]/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer group min-h-[240px] shadow-sm"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-[#3984FF]/10 text-[#3984FF] group-hover:bg-[#3984FF]/20 flex items-center justify-center mb-3 transition-colors">
+                <Plus className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#3984FF] transition-colors">
+                Adicionar Novo Banner ao Slider
+              </h4>
+              <p className="text-xs text-zinc-400 max-w-xs mt-1.5 leading-relaxed">
+                Múltiplos banners alternam automaticamente no Mini App a cada {bannerInterval}s.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

@@ -144,7 +144,7 @@ export default function CouponsClient({ initialCoupons, hideHeader }: { initialC
     const totalUsed = couponsList.reduce((acc, c) => acc + (c.usedCount || 0), 0);
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        <div className="space-y-6 w-full min-w-0 pb-16">
             {/* Toast Notifications */}
             {successMessage && (
                 <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md animate-in fade-in slide-in-from-bottom-5">

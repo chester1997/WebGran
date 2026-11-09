@@ -498,7 +498,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
   };
 
   return (
-    <div className="space-y-8 w-full max-w-[1600px] mx-auto pb-16">
+    <div className="space-y-8 w-full min-w-0 pb-16">
       {/* Toast Feedback Messages */}
       {errorMsg && (
         <div className="p-4 rounded-xl bg-red-950/90 border border-red-500/40 text-red-200 flex items-center gap-3 animate-in fade-in shadow-xl">
@@ -683,8 +683,8 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
           </Button>
         </div>
       ) : viewMode === "grid" ? (
-        /* GRID VIEW — LADO A LADO */
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        /* GRID VIEW — LADO A LADO RESPONSIVO DE ALTA CAPACIDADE */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 3xl:grid-cols-8 gap-4">
           {clipsList.map((clip, index) => {
             const isReady = clip.status === "READY";
             const isFailed = clip.status === "FAILED";

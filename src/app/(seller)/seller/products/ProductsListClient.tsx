@@ -147,7 +147,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
   };
 
   return (
-    <div className="space-y-6 fade-in w-full max-w-[1600px] mx-auto">
+    <div className="space-y-6 fade-in w-full min-w-0 pb-16">
       {/* Header Padronizado */}
       {!hideHeader ? (
         <SellerPageHeader
@@ -270,8 +270,8 @@ export default function ProductsListClient({ storeName, products, categories, bo
           )}
         </div>
       ) : viewMode === "grid" ? (
-        /* Standardized Compact Grid Layout */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+        /* Standardized Compact Grid Layout Responsivo e Fluido */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {filteredProducts.map((prod) => (
             <div 
               key={prod.id} 

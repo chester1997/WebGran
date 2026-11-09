@@ -336,7 +336,7 @@ export default function CombosClient({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
           {filteredCombos.map((combo) => {
             const isActive = combo.status === "active";
             const isProgressive = combo.type === "progressive";
@@ -581,6 +581,22 @@ export default function CombosClient({
               </div>
             );
           })}
+          {filteredCombos.length === 1 && (
+            <div
+              onClick={handleOpenCreate}
+              className="border-2 border-dashed border-white/10 hover:border-[#3984FF]/40 bg-white/[0.01] hover:bg-[#3984FF]/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer group min-h-[340px] shadow-sm"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-[#3984FF]/10 text-[#3984FF] group-hover:bg-[#3984FF]/20 flex items-center justify-center mb-3 transition-colors">
+                <Plus className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#3984FF] transition-colors">
+                Criar Nova Oferta ou Combo
+              </h4>
+              <p className="text-xs text-zinc-400 max-w-xs mt-1.5 leading-relaxed">
+                Crie combos de produtos ou descontos progressivos (leve mais por menos) para alavancar seu ticket médio.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
