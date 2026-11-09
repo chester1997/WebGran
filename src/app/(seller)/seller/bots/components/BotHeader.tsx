@@ -349,7 +349,7 @@ export default function BotHeader({
             <button
               type="button"
               onClick={() => onSelectTab("conversas")}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer h-10 ${
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-[10px] text-xs sm:text-sm font-semibold border transition-all cursor-pointer h-10 ${
                 activeTab === "conversas"
                   ? "bg-[#3984FF]/15 text-[#3984FF] border-[#3984FF]/40 shadow-xs"
                   : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60"
@@ -364,7 +364,7 @@ export default function BotHeader({
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="w-10 h-10 rounded-xl bg-[#18181B] hover:bg-[#202024] border border-zinc-700/60 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="w-10 h-10 rounded-[10px] bg-[#18181B] hover:bg-[#202024] border border-zinc-700/60 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
                 title="Opções do bot"
                 aria-label="Opções do bot"
                 aria-expanded={menuOpen}
@@ -451,7 +451,7 @@ export default function BotHeader({
               href={`https://t.me/${bot.username}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 text-xs font-medium transition-all h-10 truncate"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 text-xs font-medium transition-all h-10 truncate"
             >
               <ExternalLink className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
               <span className="truncate">Abrir no Telegram</span>
@@ -464,7 +464,7 @@ export default function BotHeader({
                 onClick={() => setFilterOpen(!filterOpen)}
                 aria-expanded={filterOpen}
                 aria-haspopup="true"
-                className={`w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-medium border transition-all cursor-pointer h-10 truncate ${
+                className={`w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-[10px] text-xs font-medium border transition-all cursor-pointer h-10 truncate ${
                   filterOpen
                     ? "bg-[#202024] text-white border-zinc-500 shadow-xs"
                     : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60"

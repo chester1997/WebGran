@@ -98,7 +98,7 @@ export default function BotTabsNav({
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="w-full flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-2xl bg-[#141416] hover:bg-[#18181D] border border-white/[0.08] hover:border-white/20 transition-all text-left group shadow-sm active:scale-[0.99] cursor-pointer"
+          className="w-full flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-[10px] bg-[#141416] hover:bg-[#18181D] border border-white/[0.08] hover:border-white/20 transition-all text-left group shadow-sm active:scale-[0.99] cursor-pointer"
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
           aria-label="Abrir seções do bot"
