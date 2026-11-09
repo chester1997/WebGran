@@ -168,8 +168,8 @@ export default function BotHeader({
             </div>
           </div>
 
-          {/* À direita: Conversas, Abrir no Telegram, Menu de ações */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap self-start lg:self-center">
+          {/* À direita: Controles Desktop (>= lg: Linha Única Horizontal) */}
+          <div className="hidden lg:flex items-center gap-2.5 shrink-0 self-center">
             {/* 1. Botão Conversas */}
             <button
               type="button"
@@ -341,6 +341,187 @@ export default function BotHeader({
               )}
             </div>
           </div>
+
+        {/* CONTROLES MOBILE (< lg: DUAS LINHAS ORGANIZADAS) */}
+        <div className="flex flex-col gap-2 w-full lg:hidden pt-1">
+          {/* Linha 1: Conversas (amplo, maior destaque e área de toque) + Menu de 3 Pontos à direita */}
+          <div className="flex items-center gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => onSelectTab("conversas")}
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer h-10 ${
+                activeTab === "conversas"
+                  ? "bg-[#3984FF]/15 text-[#3984FF] border-[#3984FF]/40 shadow-xs"
+                  : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60"
+              }`}
+            >
+              <MessageSquare className={`w-4 h-4 ${activeTab === "conversas" ? "text-[#3984FF]" : "text-zinc-400"}`} />
+              <span>Conversas</span>
+            </button>
+
+            {/* Menu de 3 Pontos à direita */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="w-10 h-10 rounded-xl bg-[#18181B] hover:bg-[#202024] border border-zinc-700/60 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                title="Opções do bot"
+                aria-label="Opções do bot"
+                aria-expanded={menuOpen}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMenuOpen(false)}
+                  />
+
+                  <div className="absolute right-0 top-11 z-50 w-52 bg-[#18181D] border border-white/10 rounded-2xl shadow-2xl py-2 text-xs animate-in fade-in-50 zoom-in-95">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onToggleStatus();
+                      }}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-white/5 text-zinc-200 transition-colors"
+                    >
+                      {isRunning ? (
+                        <>
+                          <Pause className="w-4 h-4 text-amber-400" />
+                          <span>Pausar bot</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 text-emerald-400" />
+                          <span>Reativar bot</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenRename();
+                      }}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-white/5 text-zinc-200 transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4 text-sky-400" />
+                      <span>Renomear apelido</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenToken();
+                      }}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-white/5 text-zinc-200 transition-colors"
+                    >
+                      <Key className="w-4 h-4 text-violet-400" />
+                      <span>Atualizar token</span>
+                    </button>
+
+                    <div className="h-px bg-white/5 my-1" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenDelete();
+                      }}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-rose-500/10 text-rose-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Excluir bot</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Linha 2: Abrir no Telegram + Filtros (lado a lado com largura equilibrada) */}
+          <div className="grid grid-cols-2 gap-2 w-full">
+            {/* Abrir no Telegram */}
+            <a
+              href={`https://t.me/${bot.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 text-xs font-medium transition-all h-10 truncate"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <span className="truncate">Abrir no Telegram</span>
+            </a>
+
+            {/* Filtros */}
+            <div className="relative w-full">
+              <button
+                type="button"
+                onClick={() => setFilterOpen(!filterOpen)}
+                aria-expanded={filterOpen}
+                aria-haspopup="true"
+                className={`w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-medium border transition-all cursor-pointer h-10 truncate ${
+                  filterOpen
+                    ? "bg-[#202024] text-white border-zinc-500 shadow-xs"
+                    : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60"
+                }`}
+                title="Filtrar período da análise"
+              >
+                <Filter className={`w-3.5 h-3.5 ${filterOpen ? "text-[#3984FF]" : "text-zinc-400"} shrink-0`} />
+                <span className="truncate">Filtros • <strong className="text-[#3984FF] font-semibold">{currentPeriodLabel}</strong></span>
+                <ChevronDown className={`w-3 h-3 text-zinc-400 shrink-0 transition-transform ${filterOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {filterOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setFilterOpen(false)}
+                  />
+
+                  <div className="absolute right-0 top-11 z-50 w-52 bg-[#18181D] border border-white/10 rounded-xl shadow-2xl py-1.5 text-xs animate-in fade-in-50 zoom-in-95 backdrop-blur-md">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/[0.06] mb-1">
+                      Período de Análise
+                    </div>
+
+                    {(
+                      [
+                        { id: "today", label: "Hoje" },
+                        { id: "week", label: "Esta semana" },
+                        { id: "month", label: "Este mês" },
+                        { id: "year", label: "Este ano" },
+                      ] as const
+                    ).map((option) => {
+                      const isSelected = selectedPeriod === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectPeriod?.(option.id);
+                            setFilterOpen(false);
+                          }}
+                          className={`w-full px-3.5 py-2 text-left flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                            isSelected
+                              ? "bg-[#3984FF]/15 text-[#3984FF] font-semibold"
+                              : "text-zinc-300 hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          <span>{option.label}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#3984FF] stroke-[2.5]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
         </div>
 
         {/* Linha divisória horizontal discreta entre as informações do bot e a navegação */}

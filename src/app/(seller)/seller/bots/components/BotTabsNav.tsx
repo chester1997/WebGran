@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   TrendingUp, 
   MessageSquare, 
@@ -13,7 +13,10 @@ import {
   Film, 
   Bell, 
   Ticket,
-  Tags
+  Tags,
+  ChevronDown,
+  X,
+  Check
 } from "lucide-react";
 
 export interface TabDefinition {
@@ -35,6 +38,27 @@ export default function BotTabsNav({
   isAdmin,
   mode = "MINI_APP",
 }: BotTabsNavProps) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Trava scroll do body e escuta tecla Escape quando o bottom sheet estiver aberto
+  useEffect(() => {
+    if (sheetOpen) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          setSheetOpen(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [sheetOpen]);
+
   // GRUPO 1: GERENCIAMENTO DO BOT
   const botManagementTabs: TabDefinition[] = [
     { id: "visao-geral", label: "Visão geral", icon: TrendingUp },
@@ -59,46 +83,139 @@ export default function BotTabsNav({
       ]
     : [];
 
+  const allTabs: TabDefinition[] = [...botManagementTabs, ...miniAppTabs];
+  const currentTab = allTabs.find((t) => t.id === activeTab) || botManagementTabs[0];
+  const CurrentIcon = currentTab.icon;
+
   return (
-    <nav className="w-full overflow-x-auto no-scrollbar scroll-smooth">
-      <div className="flex items-center gap-1 sm:gap-2 min-w-max">
-        {/* GRUPO 1: Gerenciamento do Bot */}
-        <div className="flex items-center gap-1">
-          {botManagementTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+    <>
+      {/* ========================================================= */}
+      {/* 1. SELETOR MOBILE "Seções do bot" + BOTTOM SHEET (Mobile)  */}
+      {/* ========================================================= */}
+      <div className="block lg:hidden w-full pt-1">
+        {/* Botão expansível que abre o painel inferior */}
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#141416] hover:bg-[#18181D] border border-white/[0.08] hover:border-white/20 transition-all text-left group shadow-sm active:scale-[0.99] cursor-pointer"
+          aria-haspopup="dialog"
+          aria-expanded={sheetOpen}
+          aria-label="Abrir seções do bot"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center text-[#3984FF] shrink-0">
+              <CurrentIcon className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
+                Seções do bot
+              </span>
+              <span className="text-sm font-bold text-white truncate">
+                {currentTab.label}
+              </span>
+            </div>
+          </div>
 
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => onSelectTab(tab.id)}
-                className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none whitespace-nowrap ${
-                  isActive
-                    ? "text-white font-semibold"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                <Icon
-                  className={`w-4 h-4 shrink-0 transition-colors ${
-                    isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
-                  }`}
-                />
-                <span>{tab.label}</span>
+          <div className="flex items-center gap-1.5 text-zinc-400 group-hover:text-white transition-colors shrink-0">
+            <span className="text-xs text-zinc-500 font-medium hidden xs:inline">Alternar</span>
+            <ChevronDown className="w-4 h-4" />
+          </div>
+        </button>
 
-                {/* Indicador de aba ativa: linha inferior contínua e nítida */}
-                {isActive && (
-                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {/* BOTTOM SHEET: Painel inferior com backdrop e lista vertical */}
+        {sheetOpen && (
+          <div className="fixed inset-0 z-[100] lg:hidden">
+            {/* Backdrop escurecido com desfoque */}
+            <div
+              onClick={() => setSheetOpen(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+              aria-hidden="true"
+            />
 
-        {/* GRUPO 2: Recursos do Mini App */}
-        {isMiniApp && (
+            {/* Painel inferior (Bottom Sheet) */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Seções do bot"
+              className="fixed inset-x-0 bottom-0 z-[101] bg-[#141417] border-t border-white/10 rounded-t-[28px] p-5 pb-8 shadow-2xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300 outline-none overscroll-contain"
+            >
+              {/* Puxador central decorativo */}
+              <div className="w-12 h-1.5 rounded-full bg-zinc-600/70 mx-auto mb-3 shrink-0" />
+
+              {/* Cabeçalho do Bottom Sheet */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.08] shrink-0">
+                <div>
+                  <h3 className="text-base font-bold text-white tracking-tight">Seções do bot</h3>
+                  <p className="text-xs text-zinc-400">Escolha a área que deseja gerenciar</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSheetOpen(false)}
+                  className="w-8 h-8 rounded-full bg-white/[0.05] hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                  title="Fechar painel"
+                  aria-label="Fechar painel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Lista Vertical de Seções */}
+              <div className="flex-1 overflow-y-auto overscroll-contain py-3 space-y-1.5 custom-scrollbar min-h-0">
+                {allTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectTab(tab.id);
+                        setSheetOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all cursor-pointer text-left min-h-[48px] ${
+                        isActive
+                          ? "bg-[#3984FF]/15 border border-[#3984FF]/30 text-white shadow-xs"
+                          : "bg-transparent hover:bg-white/[0.04] text-zinc-300 border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            isActive
+                              ? "bg-[#3984FF] text-white"
+                              : "bg-white/[0.04] text-zinc-400 border border-white/[0.06]"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span className={`text-sm truncate ${isActive ? "font-bold text-white" : "font-medium text-zinc-300"}`}>
+                          {tab.label}
+                        </span>
+                      </div>
+
+                      {isActive && (
+                        <div className="w-6 h-6 rounded-full bg-[#3984FF]/20 flex items-center justify-center text-[#3984FF] shrink-0">
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================= */}
+      {/* 2. NAVEGAÇÃO HORIZONTAL CLÁSSICA (Desktop >= lg)            */}
+      {/* ========================================================= */}
+      <nav className="hidden lg:block w-full overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-max">
+          {/* GRUPO 1: Gerenciamento do Bot */}
           <div className="flex items-center gap-1">
-            {miniAppTabs.map((tab) => {
+            {botManagementTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
 
@@ -120,6 +237,7 @@ export default function BotTabsNav({
                   />
                   <span>{tab.label}</span>
 
+                  {/* Indicador de aba ativa: linha inferior contínua e nítida */}
                   {isActive && (
                     <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
                   )}
@@ -127,8 +245,42 @@ export default function BotTabsNav({
               );
             })}
           </div>
-        )}
-      </div>
-    </nav>
+
+          {/* GRUPO 2: Recursos do Mini App */}
+          {isMiniApp && (
+            <div className="flex items-center gap-1">
+              {miniAppTabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => onSelectTab(tab.id)}
+                    className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none whitespace-nowrap ${
+                      isActive
+                        ? "text-white font-semibold"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    <Icon
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
+                      }`}
+                    />
+                    <span>{tab.label}</span>
+
+                    {isActive && (
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </nav>
+    </>
   );
 }
