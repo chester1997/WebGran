@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { 
-  TrendingUp, 
+  ChartNoAxesCombined, 
   MessageSquare, 
   Settings, 
   Sparkles, 
   Image as ImageIcon, 
   Package, 
-  Layers, 
+  Layers3, 
   Video, 
-  Film, 
+  GalleryHorizontal, 
+  Tags, 
+  Clapperboard, 
   Bell, 
   Ticket,
-  Tags,
   ChevronDown,
   X,
   Check
@@ -61,7 +62,7 @@ export default function BotTabsNav({
 
   // GRUPO 1: GERENCIAMENTO DO BOT
   const botManagementTabs: TabDefinition[] = [
-    { id: "visao-geral", label: "Visão geral", icon: TrendingUp },
+    { id: "visao-geral", label: "Visão geral", icon: ChartNoAxesCombined },
     { id: "conversas", label: "Conversas", icon: MessageSquare },
     { id: "configuracao", label: "Configuração", icon: Settings },
     { id: "boas-vindas", label: "Boas-vindas", icon: Sparkles },
@@ -73,11 +74,11 @@ export default function BotTabsNav({
     ? [
         { id: "banners", label: "Banners", icon: ImageIcon },
         { id: "produtos", label: "Produtos", icon: Package },
-        { id: "combos", label: "Combos", icon: Layers },
+        { id: "combos", label: "Combos", icon: Layers3 },
         { id: "videos", label: "Biblioteca de Vídeos", icon: Video },
-        { id: "carrosseis", label: "Carrosséis", icon: ImageIcon },
+        { id: "carrosseis", label: "Carrosséis", icon: GalleryHorizontal },
         ...(isAdmin ? [{ id: "categorias", label: "Categorias", icon: Tags }] : []),
-        { id: "clips", label: "Clipes", icon: Film },
+        { id: "clips", label: "Clipes", icon: Clapperboard },
         { id: "notificacoes", label: "Notificações", icon: Bell },
         { id: "cupons", label: "Cupons", icon: Ticket },
       ]
@@ -93,38 +94,30 @@ export default function BotTabsNav({
       {/* 1. SELETOR MOBILE "Seções do bot" + BOTTOM SHEET (Mobile)  */}
       {/* ========================================================= */}
       <div className="block lg:hidden w-full pt-1">
-        {/* Botão expansível que abre o painel inferior */}
+        {/* Botão seletor fechado — minimalista, sem texto 'SEÇÕES DO BOT' e sem card atrás do ícone */}
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#141416] hover:bg-[#18181D] border border-white/[0.08] hover:border-white/20 transition-all text-left group shadow-sm active:scale-[0.99] cursor-pointer"
+          className="w-full flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-2xl bg-[#141416] hover:bg-[#18181D] border border-white/[0.08] hover:border-white/20 transition-all text-left group shadow-sm active:scale-[0.99] cursor-pointer"
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
           aria-label="Abrir seções do bot"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center text-[#3984FF] shrink-0">
-              <CurrentIcon className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
-                Seções do bot
-              </span>
-              <span className="text-sm font-bold text-white truncate">
-                {currentTab.label}
-              </span>
-            </div>
+            <CurrentIcon className="w-5 h-5 text-[#3984FF] shrink-0" />
+            <span className="text-sm font-semibold text-white truncate">
+              {currentTab.label}
+            </span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-zinc-400 group-hover:text-white transition-colors shrink-0">
-            <span className="text-xs text-zinc-500 font-medium hidden xs:inline">Alternar</span>
+          <div className="flex items-center text-zinc-400 group-hover:text-white transition-colors shrink-0">
             <ChevronDown className="w-4 h-4" />
           </div>
         </button>
 
         {/* BOTTOM SHEET: Painel inferior com backdrop e lista vertical */}
         {sheetOpen && (
-          <div className="fixed inset-0 z-[100] lg:hidden">
+          <div className="fixed inset-0 z-[200] lg:hidden">
             {/* Backdrop escurecido com desfoque */}
             <div
               onClick={() => setSheetOpen(false)}
@@ -137,7 +130,7 @@ export default function BotTabsNav({
               role="dialog"
               aria-modal="true"
               aria-label="Seções do bot"
-              className="fixed inset-x-0 bottom-0 z-[101] bg-[#141417] border-t border-white/10 rounded-t-[28px] p-5 pb-8 shadow-2xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300 outline-none overscroll-contain"
+              className="fixed inset-x-0 bottom-0 z-[201] bg-[#141417] border-t border-white/10 rounded-t-[28px] p-5 pb-8 shadow-2xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300 outline-none overscroll-contain"
             >
               {/* Puxador central decorativo */}
               <div className="w-12 h-1.5 rounded-full bg-zinc-600/70 mx-auto mb-3 shrink-0" />
@@ -159,8 +152,8 @@ export default function BotTabsNav({
                 </button>
               </div>
 
-              {/* Lista Vertical de Seções */}
-              <div className="flex-1 overflow-y-auto overscroll-contain py-3 space-y-1.5 custom-scrollbar min-h-0">
+              {/* Lista Vertical de Seções: Scrollbar invisível e sem containers atrás dos ícones */}
+              <div className="flex-1 overflow-y-auto overscroll-contain py-2 space-y-1 scrollbar-hide min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {allTabs.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -173,31 +166,29 @@ export default function BotTabsNav({
                         onSelectTab(tab.id);
                         setSheetOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all cursor-pointer text-left min-h-[48px] ${
-                        isActive
-                          ? "bg-[#3984FF]/15 border border-[#3984FF]/30 text-white shadow-xs"
-                          : "bg-transparent hover:bg-white/[0.04] text-zinc-300 border border-transparent"
-                      }`}
+                      className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all cursor-pointer text-left min-h-[48px] bg-transparent hover:bg-white/[0.04] active:bg-white/[0.08] border border-transparent group"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <Icon
+                          className={`w-5 h-5 shrink-0 transition-colors ${
                             isActive
-                              ? "bg-[#3984FF] text-white"
-                              : "bg-white/[0.04] text-zinc-400 border border-white/[0.06]"
+                              ? "text-[#3984FF]"
+                              : "text-zinc-400 group-hover:text-zinc-200"
+                          }`}
+                        />
+                        <span
+                          className={`text-sm truncate transition-colors ${
+                            isActive
+                              ? "font-semibold text-white"
+                              : "font-medium text-zinc-300 group-hover:text-white"
                           }`}
                         >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <span className={`text-sm truncate ${isActive ? "font-bold text-white" : "font-medium text-zinc-300"}`}>
                           {tab.label}
                         </span>
                       </div>
 
                       {isActive && (
-                        <div className="w-6 h-6 rounded-full bg-[#3984FF]/20 flex items-center justify-center text-[#3984FF] shrink-0">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </div>
+                        <Check className="w-4 h-4 text-[#3984FF] stroke-[2.5] shrink-0" />
                       )}
                     </button>
                   );

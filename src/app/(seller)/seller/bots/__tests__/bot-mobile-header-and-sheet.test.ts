@@ -112,5 +112,31 @@ describe("WebGran Bots — Header Mobile & Bottom Sheet de Seções", () => {
       expect(allKnownSectionIds).toContain("cupons");
     });
   });
+
+  describe("4. Refinamento Visual do Seletor e Bottom Sheet", () => {
+    it("verifica que os novos ícones Lucide atualizados estão disponíveis e instanciáveis", async () => {
+      const lucide = await import("lucide-react");
+      const expectedIcons = [
+        "ChartNoAxesCombined",
+        "MessageSquare",
+        "Settings",
+        "Sparkles",
+        "Image",
+        "Package",
+        "Layers3",
+        "Video",
+        "GalleryHorizontal",
+        "Tags",
+        "Clapperboard",
+        "Bell",
+        "Ticket",
+        "Check",
+      ];
+
+      for (const iconName of expectedIcons) {
+        expect(lucide[iconName as keyof typeof lucide]).toBeDefined();
+      }
+    });
+  });
 });
 
