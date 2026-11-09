@@ -634,7 +634,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
 
       {/* Real-time Summary Cards (Fetched directly from Neon) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-[#121216] border border-white/5 rounded-2xl p-4 shadow-md flex flex-col justify-between">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 shadow-xl flex flex-col justify-between">
           <span className="text-xs font-semibold text-zinc-400">Total de Clips</span>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-black text-white">{stats.total}</span>
@@ -642,7 +642,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
           </div>
         </div>
 
-        <div className="bg-[#121216] border border-emerald-500/20 rounded-2xl p-4 shadow-md flex flex-col justify-between">
+        <div className="bg-[#171717] border border-emerald-500/20 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
           <span className="text-xs font-semibold text-emerald-400">Publicados</span>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-black text-emerald-400">{stats.published}</span>
@@ -650,7 +650,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
           </div>
         </div>
 
-        <div className="bg-[#121216] border border-sky-500/20 rounded-2xl p-4 shadow-md flex flex-col justify-between">
+        <div className="bg-[#171717] border border-sky-500/20 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
           <span className="text-xs font-semibold text-sky-400">Processando</span>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-black text-sky-400">{stats.processing}</span>
@@ -658,7 +658,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
           </div>
         </div>
 
-        <div className="bg-[#121216] border border-red-500/20 rounded-2xl p-4 shadow-md flex flex-col justify-between">
+        <div className="bg-[#171717] border border-red-500/20 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
           <span className="text-xs font-semibold text-red-400">Falhos</span>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-black text-red-400">{stats.failed}</span>
@@ -669,7 +669,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
 
       {/* Clips Container (Grid vs List) */}
       {clipsList.length === 0 ? (
-        <div className="bg-[#121216] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-xl">
           <Video className="w-12 h-12 text-zinc-600 mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Nenhum Clip cadastrado</h3>
           <p className="text-xs text-zinc-400 max-w-sm mb-6">
@@ -677,7 +677,7 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
           </p>
           <Button
             onClick={openAddModal}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl px-5 py-2 cursor-pointer"
+            className="bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-semibold rounded-xl px-5 py-2 cursor-pointer shadow-lg shadow-[#3984FF]/20"
           >
             + Adicionar Primeiro Clip
           </Button>
@@ -693,8 +693,8 @@ export default function ClipsClient({ initialClips, initialStats, availableProdu
             return (
               <div
                 key={clip.id}
-                className={`bg-[#121216] border rounded-2xl overflow-hidden flex flex-col justify-between shadow-lg transition-all ${
-                  clip.isActive ? "border-white/10 hover:border-white/20" : "border-white/5 opacity-60"
+                className={`bg-[#171717] border rounded-2xl overflow-hidden flex flex-col justify-between shadow-xl transition-all ${
+                  clip.isActive ? "border-white/10 hover:border-white/20" : "border-white/[0.08] opacity-60"
                 }`}
               >
                 {/* Top Poster / Thumbnail Area */}

@@ -871,10 +871,10 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
 
       {/* 7. KPIs (Matching Dashboard KPI Grid) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full max-w-full">
-        <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col justify-between min-h-[110px]">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between min-h-[110px]">
           <div className="flex items-center justify-between text-zinc-400 mb-1">
             <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">VÍDEOS</span>
-            <Film className="w-4 h-4 text-red-400" />
+            <Film className="w-4 h-4 text-[#3984FF]" />
           </div>
           <div>
             <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight truncate font-mono">{videosList.length}</h3>
@@ -882,10 +882,10 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           </div>
         </div>
 
-        <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col justify-between min-h-[110px]">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between min-h-[110px]">
           <div className="flex items-center justify-between text-zinc-400 mb-1">
             <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">ARMAZENAMENTO</span>
-            <HardDrive className="w-4 h-4 text-red-400" />
+            <HardDrive className="w-4 h-4 text-[#3984FF]" />
           </div>
           <div>
             <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight truncate font-mono">{usage.usedGB.toFixed(1)} GB</h3>
@@ -893,10 +893,10 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           </div>
         </div>
 
-        <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col justify-between min-h-[110px]">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between min-h-[110px]">
           <div className="flex items-center justify-between text-zinc-400 mb-1">
             <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">DISPONÍVEIS</span>
-            <CloudUpload className="w-4 h-4 text-red-400" />
+            <CloudUpload className="w-4 h-4 text-[#3984FF]" />
           </div>
           <div>
             <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight truncate font-mono">{usage.freeGB.toFixed(1)} GB</h3>
@@ -904,7 +904,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           </div>
         </div>
 
-        <div className="bg-[#0F0F12] border border-white/5 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col justify-between min-h-[110px]">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between min-h-[110px]">
           <div className="flex items-center justify-between text-zinc-400 mb-1">
             <span className="text-zinc-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">PRONTOS</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -917,7 +917,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
       </div>
 
       {/* 8. TOOLBAR (Matching Products Filter & Search Bar) */}
-      <div className="flex flex-col md:flex-row items-center gap-3 bg-[#0F0F12] p-3 border border-white/5 rounded-2xl shadow-lg">
+      <div className="flex flex-col md:flex-row items-center gap-3 bg-[#171717] p-3 border border-white/[0.08] rounded-2xl shadow-xl">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input
@@ -925,7 +925,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`Buscar em ${videosList.length} vídeos...`}
-            className="w-full bg-[#16161C] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-red-500/50 transition-all placeholder:text-zinc-500 [&::-webkit-search-cancel-button]:hidden"
+            className="w-full bg-[#111215] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-[#3984FF] transition-all placeholder:text-zinc-500 [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
 
@@ -937,7 +937,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-[#16161C] border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-red-500/50 transition-all w-full md:w-40 appearance-none"
+            className="bg-[#111215] border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-[#3984FF] transition-all w-full md:w-40 appearance-none"
           >
             <option value="ALL">Todos os status</option>
             <option value="READY">Prontos</option>
@@ -950,15 +950,15 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           {filteredVideos.length > 0 && (
             <div
               onClick={handleSelectAllFiltered}
-              className="flex items-center gap-2 px-3 py-2 bg-[#16161C] hover:bg-zinc-800/80 rounded-xl border border-white/10 cursor-pointer transition select-none shrink-0"
+              className="flex items-center gap-2 px-3 py-2 bg-[#111215] hover:bg-white/5 rounded-xl border border-white/10 cursor-pointer transition select-none shrink-0"
               title="Selecionar todos os vídeos exibidos"
             >
               <div
                 className={`w-4 h-4 rounded border flex items-center justify-center transition ${
                   isAllFilteredSelected
-                    ? "bg-red-600 border-red-500 text-white"
+                    ? "bg-[#3984FF] border-[#3984FF] text-white"
                     : selectedVideoIds.size > 0
-                    ? "bg-red-950 border-red-500/50 text-red-400"
+                    ? "bg-[#3984FF]/20 border-[#3984FF]/50 text-[#3984FF]"
                     : "bg-zinc-800 border-zinc-600 text-transparent"
                 }`}
               >
@@ -970,17 +970,17 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
             </div>
           )}
 
-          <div className="flex bg-[#16161C] p-1 rounded-xl border border-white/10 shrink-0">
+          <div className="flex bg-[#111215] p-1 rounded-xl border border-white/10 shrink-0">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-red-600 text-white shadow" : "text-zinc-500 hover:text-white"}`}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === "grid" ? "bg-[#3984FF] text-white shadow-xs" : "text-zinc-500 hover:text-white"}`}
               title="Visualização em Grade"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-red-600 text-white shadow" : "text-zinc-500 hover:text-white"}`}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === "list" ? "bg-[#3984FF] text-white shadow-xs" : "text-zinc-500 hover:text-white"}`}
               title="Visualização em Lista"
             >
               <List className="w-4 h-4" />
@@ -991,7 +991,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
 
       {/* Floating Bulk Action Bar */}
       {selectedVideoIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#121216]/95 border border-red-500/40 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-2xl shadow-black/90 flex items-center gap-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#171717]/95 border border-red-500/40 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-2xl shadow-black/90 flex items-center gap-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
           <div className="flex items-center gap-2.5 text-white font-semibold">
             <span className="w-6 h-6 rounded-lg bg-red-600/20 border border-red-500/40 text-red-400 font-mono font-bold flex items-center justify-center text-xs">
               {selectedVideoIds.size}
@@ -1003,7 +1003,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
 
           <button
             onClick={handleClearSelection}
-            className="text-zinc-400 hover:text-white transition px-2 py-1 rounded-lg hover:bg-white/5 font-medium"
+            className="text-zinc-400 hover:text-white transition px-2 py-1 rounded-lg hover:bg-white/5 font-medium cursor-pointer"
           >
             Desmarcar todos
           </button>
@@ -1011,7 +1011,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           <Button
             size="sm"
             onClick={handleOpenBulkDelete}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-red-600/30 transition flex items-center gap-1.5"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-red-600/30 transition flex items-center gap-1.5 cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
             Excluir selecionados
@@ -1022,8 +1022,8 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
       {/* 9 & 10. GRID & LIST VIEWS / COMPACT EMPTY STATE */}
       {filteredVideos.length === 0 ? (
         /* 10. COMPACT EMPTY STATE */
-        <div className="py-12 text-center flex flex-col items-center justify-center bg-[#0F0F12] rounded-2xl border border-white/5 shadow-xl p-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#16161C] flex items-center justify-center mb-3 border border-white/5">
+        <div className="py-12 text-center flex flex-col items-center justify-center bg-[#171717] rounded-2xl border border-white/[0.08] shadow-xl p-6">
+          <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-3 border border-white/10">
             <Film className="w-7 h-7 text-zinc-500" />
           </div>
           <h3 className="text-white font-bold text-sm mb-1">Nenhum vídeo encontrado</h3>
@@ -1034,7 +1034,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
           </p>
           <Button
             onClick={() => setIsUploadModalOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-red-600/20"
+            className="bg-[#3984FF] hover:bg-[#2563EB] text-white font-bold text-xs rounded-xl px-4 py-2 shadow-lg shadow-[#3984FF]/20 cursor-pointer"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Adicionar vídeo

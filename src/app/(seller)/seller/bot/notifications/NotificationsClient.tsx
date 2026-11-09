@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Bell, 
-  Sparkles, 
-  Check, 
-  Trash2, 
-  ArrowUp, 
-  ArrowDown, 
-  Eye, 
-  EyeOff, 
-  Package, 
+import {
+  Bell,
+  Sparkles,
+  Check,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  EyeOff,
+  Package,
   RotateCcw,
   Sliders,
   Smartphone,
@@ -20,12 +20,12 @@ import {
   CheckSquare,
   Square
 } from "lucide-react";
-import { 
-  updateFloatingSettingsAction, 
-  toggleFloatingNotificationAction, 
-  deleteFloatingNotificationAction, 
-  reorderFloatingNotificationsAction, 
-  seedDefaultFloatingNotificationsAction 
+import {
+  updateFloatingSettingsAction,
+  toggleFloatingNotificationAction,
+  deleteFloatingNotificationAction,
+  reorderFloatingNotificationsAction,
+  seedDefaultFloatingNotificationsAction
 } from "./actions";
 import { NotificationModal } from "./NotificationModal";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
@@ -218,16 +218,16 @@ export function NotificationsClient({ initialSettings, notifications, products, 
       )}
 
       {/* Grid: 2 Columns on XL screens (Settings & Preview left, Messages CRUD right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
         {/* Left Column: General Configuration & Interactive Preview (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          
+
           {/* Card 1: Configuration Form */}
-          <form onSubmit={handleSaveSettings} className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl space-y-6">
+          <form onSubmit={handleSaveSettings} className="bg-[#171717] border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-6">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+                <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/20 flex items-center justify-center text-[#3984FF]">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div>
@@ -240,14 +240,12 @@ export function NotificationsClient({ initialSettings, notifications, products, 
               <button
                 type="button"
                 onClick={() => setEnabled(!enabled)}
-                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
-                  enabled ? "bg-emerald-600" : "bg-zinc-700"
-                }`}
+                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${enabled ? "bg-emerald-600" : "bg-zinc-700"
+                  }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    enabled ? "translate-x-6" : "translate-x-0"
-                  }`}
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-0"
+                    }`}
                 />
               </button>
             </div>
@@ -265,23 +263,22 @@ export function NotificationsClient({ initialSettings, notifications, products, 
             )}
 
             {/* Master Enabled Status Banner */}
-            <div className={`p-3.5 rounded-xl border text-xs flex items-center gap-3 ${
-              enabled 
-                ? "bg-emerald-950/30 border-emerald-500/20 text-emerald-300"
-                : "bg-zinc-800/40 border-white/5 text-zinc-400"
-            }`}>
+            <div className={`p-3.5 rounded-xl border text-xs flex items-center gap-3 ${enabled
+              ? "bg-emerald-950/30 border-emerald-500/20 text-emerald-300"
+              : "bg-zinc-800/40 border-white/5 text-zinc-400"
+              }`}>
               <div className={`w-2 h-2 rounded-full shrink-0 ${enabled ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`} />
               <span>
-                {enabled 
-                  ? "Notificações flutuantes ATIVAS na Mini App." 
-                  : "Notificações flutuantes DESATIVADAS. Nenhum aviso será exibido na Mini App."}
+                {enabled
+                  ? "Notificações flutuantes ATIVAS no Mini App."
+                  : "Notificações flutuantes DESATIVADAS. Nenhum aviso será exibido no Mini App."}
               </span>
             </div>
 
             {/* Where to Display (Onde Exibir) */}
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-white flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-red-500" />
+                <Layers className="w-3.5 h-3.5 text-[#3984FF]" />
                 <span>Onde Exibir</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -292,14 +289,13 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                       key={page.id}
                       type="button"
                       onClick={() => handleTogglePage(page.id)}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-medium transition-all text-left cursor-pointer ${
-                        isChecked
-                          ? "bg-red-500/10 border-red-500/30 text-white font-semibold"
-                          : "bg-[#18181C] border-white/5 text-zinc-400 hover:text-white"
-                      }`}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-medium transition-all text-left cursor-pointer ${isChecked
+                        ? "bg-[#3984FF]/10 border-[#3984FF]/30 text-white font-semibold"
+                        : "bg-[#111215] border-white/5 text-zinc-400 hover:text-white"
+                        }`}
                     >
                       {isChecked ? (
-                        <CheckSquare className="w-4 h-4 text-red-500 shrink-0" />
+                        <CheckSquare className="w-4 h-4 text-[#3984FF] shrink-0" />
                       ) : (
                         <Square className="w-4 h-4 text-zinc-600 shrink-0" />
                       )}
@@ -313,7 +309,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
             {/* Timings (Tempo visível & Intervalos) */}
             <div className="space-y-4 pt-2 border-t border-white/5">
               <label className="text-xs font-bold text-white flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-red-500" />
+                <Clock className="w-3.5 h-3.5 text-[#3984FF]" />
                 <span>Tempo & Intervalo (Segundos)</span>
               </label>
 
@@ -327,7 +323,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                       max="60"
                       value={displayDuration}
                       onChange={(e) => setDisplayDuration(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-[#18181C] border border-white/10 text-white text-xs font-bold text-center focus:outline-none focus:border-red-500/50"
+                      className="w-full px-3 py-2 rounded-xl bg-[#111215] border border-white/10 text-white text-xs font-bold text-center focus:outline-none focus:border-[#3984FF]"
                     />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500">seg</span>
                   </div>
@@ -342,7 +338,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                       max="300"
                       value={intervalMin}
                       onChange={(e) => setIntervalMin(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-[#18181C] border border-white/10 text-white text-xs font-bold text-center focus:outline-none focus:border-red-500/50"
+                      className="w-full px-3 py-2 rounded-xl bg-[#111215] border border-white/10 text-white text-xs font-bold text-center focus:outline-none focus:border-[#3984FF]"
                     />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500">seg</span>
                   </div>
@@ -357,7 +353,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                       max="300"
                       value={intervalMax}
                       onChange={(e) => setIntervalMax(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-[#18181C] border border-white/10 text-white text-xs font-bold text-center focus:outline-none focus:border-red-500/50"
+                      className="w-full px-3 py-2 rounded-xl bg-[#111215] border border-white/10 text-white text-xs font-bold text-center focus:outline-none focus:border-[#3984FF]"
                     />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500">seg</span>
                   </div>
@@ -372,7 +368,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
             <button
               type="submit"
               disabled={savingSettings}
-              className="w-full py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl bg-[#3984FF] hover:bg-[#2563EB] text-white font-bold text-xs shadow-lg shadow-[#3984FF]/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               <span>{savingSettings ? "Salvando..." : "Salvar Configurações"}</span>
@@ -380,11 +376,11 @@ export function NotificationsClient({ initialSettings, notifications, products, 
           </form>
 
           {/* Card 2: Simulated Mini App Live Preview */}
-          <div className="bg-[#121214] border border-white/5 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <div className="flex items-center gap-2">
-                <Smartphone className="w-4 h-4 text-red-500" />
-                <h3 className="text-sm font-bold text-white">Preview Interativo na Mini App</h3>
+                <Smartphone className="w-4 h-4 text-[#3984FF]" />
+                <h3 className="text-sm font-bold text-white">Preview Interativo no Mini App</h3>
               </div>
               <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Modo Studio</span>
             </div>
@@ -394,7 +390,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
               {/* Top Mini App Bar */}
               <div className="flex items-center justify-between pb-3 border-b border-white/5">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <div className="w-2 h-2 rounded-full bg-[#3984FF]" />
                   <span className="text-[11px] font-bold text-zinc-300">Minha Loja WebGran</span>
                 </div>
                 <span className="text-[10px] text-zinc-500">Preview</span>
@@ -408,7 +404,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
 
               {/* Floating Toast Notification Preview Card */}
               <div className="my-2 p-3 bg-[#14151C]/95 border border-white/10 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in text-left">
-                <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0 text-base shadow-inner">
+                <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/20 flex items-center justify-center shrink-0 text-base shadow-inner">
                   {selectedForPreview.icon || "🔥"}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -416,7 +412,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                     {previewText}
                   </p>
                   {previewProductTitle && !previewText.toLowerCase().includes(previewProductTitle.toLowerCase()) && (
-                    <p className="text-[11px] font-bold text-red-400 truncate mt-0.5">
+                    <p className="text-[11px] font-bold text-[#3984FF] truncate mt-0.5">
                       {previewProductTitle}
                     </p>
                   )}
@@ -425,7 +421,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
 
               {/* Bottom Nav Bar Preview */}
               <div className="pt-3 border-t border-white/5 flex justify-around text-zinc-600 text-[10px]">
-                <span className="text-red-500 font-bold">Início</span>
+                <span className="text-[#3984FF] font-bold">Início</span>
                 <span>Produtos</span>
                 <span>Carrinho</span>
               </div>
@@ -437,7 +433,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              <Bell className="w-5 h-5 text-red-500" />
+              <Bell className="w-5 h-5 text-[#3984FF]" />
               <span>Mensagens Promocionais</span>
             </h3>
             <span className="text-xs text-zinc-400 font-medium">
@@ -446,8 +442,8 @@ export function NotificationsClient({ initialSettings, notifications, products, 
           </div>
 
           {notifications.length === 0 ? (
-            <div className="py-16 text-center flex flex-col items-center justify-center bg-[#121214] rounded-2xl border border-white/5 shadow-xl p-8 space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-inner">
+            <div className="py-16 text-center flex flex-col items-center justify-center bg-[#171717] rounded-2xl border border-white/[0.08] shadow-xl p-8 space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
                 <Bell className="w-7 h-7 text-zinc-500" />
               </div>
               <div>
@@ -476,15 +472,14 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                 return (
                   <div
                     key={item.id}
-                    className={`bg-[#121214] border rounded-2xl p-4 shadow-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                      isSelected
-                        ? "border-red-500/40 bg-red-950/10"
-                        : "border-white/5 hover:border-white/10"
-                    }`}
+                    className={`bg-[#171717] border rounded-2xl p-4 shadow-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isSelected
+                      ? "border-[#3984FF]/40 bg-[#3984FF]/5"
+                      : "border-white/[0.08] hover:border-white/20"
+                      }`}
                   >
                     {/* Icon & Message Text */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-xl bg-[#18181F] border border-white/10 flex items-center justify-center shrink-0 text-xl shadow-inner">
+                      <div className="w-10 h-10 rounded-xl bg-[#111215] border border-white/10 flex items-center justify-center shrink-0 text-xl shadow-inner">
                         {item.icon}
                       </div>
 
@@ -492,11 +487,10 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-xs font-bold text-white truncate">{item.text}</p>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border shrink-0 ${
-                              item.enabled
-                                ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30"
-                                : "bg-zinc-800 text-zinc-400 border-white/10"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border shrink-0 ${item.enabled
+                              ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30"
+                              : "bg-zinc-800 text-zinc-400 border-white/10"
+                              }`}
                           >
                             {item.enabled ? (
                               <>
@@ -512,7 +506,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
 
                         <div className="flex items-center gap-3 text-[11px] text-zinc-400 flex-wrap">
                           {item.product ? (
-                            <span className="flex items-center gap-1 text-red-400 font-semibold">
+                            <span className="flex items-center gap-1 text-[#3984FF] font-semibold">
                               <Package className="w-3 h-3" />
                               {item.product.title}
                             </span>
@@ -535,11 +529,10 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                       <button
                         type="button"
                         onClick={() => setPreviewId(item.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          isSelected
-                            ? "bg-red-500 text-white"
-                            : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
-                        }`}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${isSelected
+                          ? "bg-[#3984FF] text-white"
+                          : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                          }`}
                         title="Visualizar no preview"
                       >
                         Preview
@@ -570,15 +563,13 @@ export function NotificationsClient({ initialSettings, notifications, products, 
                       <button
                         type="button"
                         onClick={() => handleToggleNotification(item.id, item.enabled)}
-                        className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
-                          item.enabled ? "bg-emerald-600" : "bg-zinc-700"
-                        }`}
+                        className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${item.enabled ? "bg-emerald-600" : "bg-zinc-700"
+                          }`}
                         title={item.enabled ? "Desativar" : "Ativar"}
                       >
                         <div
-                          className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                            item.enabled ? "translate-x-4" : "translate-x-0"
-                          }`}
+                          className={`w-4 h-4 rounded-full bg-white transition-transform ${item.enabled ? "translate-x-4" : "translate-x-0"
+                            }`}
                         />
                       </button>
 

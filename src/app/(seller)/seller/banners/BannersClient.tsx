@@ -326,9 +326,9 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       )}
 
       {/* Banner Size Recommendation Notice Card */}
-      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/20 flex items-center justify-center text-[#3984FF] shrink-0">
             <ImageIcon className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
@@ -338,7 +338,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
               <span className="text-amber-400 font-semibold">🌟 Tamanho Ideal: 1200 x 540 px (ou 1200 x 675 px)</span>
               <span className="text-zinc-600">•</span>
-              <span className="text-sky-400 font-semibold">⚡ Tamanho Mínimo: 800 x 360 px</span>
+              <span className="text-[#3984FF] font-semibold">⚡ Tamanho Mínimo: 800 x 360 px</span>
             </div>
           </div>
         </div>
@@ -348,10 +348,10 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
       </div>
 
       {/* Interval Setting Control */}
-      <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 shrink-0">
-            <Clock className="w-5 h-5 text-blue-400" />
+            <Clock className="w-5 h-5 text-[#3984FF]" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">Intervalo do Slider</h3>
@@ -365,10 +365,10 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
               key={seconds}
               onClick={() => handleIntervalChange(seconds)}
               disabled={isSavingInterval}
-              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 bannerInterval === seconds
-                  ? "bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/20"
-                  : "bg-[#15171D] text-zinc-400 border-white/[0.08] hover:text-white hover:border-white/20"
+                  ? "bg-[#3984FF] text-white border-[#3984FF] shadow-md shadow-[#3984FF]/20"
+                  : "bg-white/[0.04] text-zinc-400 border-white/[0.08] hover:text-white hover:border-white/20"
               }`}
             >
               {seconds}s
@@ -379,7 +379,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
 
       {/* Banners List Grid */}
       {bannersList.length === 0 ? (
-        <div className="bg-[#0F1014] border border-white/[0.08] rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+        <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-xl">
           <ImageIcon className="w-12 h-12 text-zinc-600 mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Nenhum banner cadastrado</h3>
           <p className="text-xs text-zinc-400 max-w-sm mb-6">
@@ -387,7 +387,7 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
           </p>
           <Button
             onClick={openAddModal}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl px-5 py-2"
+            className="bg-[#3984FF] hover:bg-[#2563EB] text-white text-xs font-semibold rounded-xl px-5 py-2 cursor-pointer"
           >
             + Adicionar Primeiro Banner
           </Button>
@@ -399,8 +399,8 @@ export default function BannersClient({ initialBanners, initialInterval, maxLimi
             return (
               <div
                 key={banner.id}
-                className={`bg-[#0F1014] border rounded-2xl overflow-hidden transition-all flex flex-col justify-between shadow-xl ${
-                  isActive ? "border-white/10" : "border-white/[0.08] opacity-60"
+                className={`bg-[#171717] border rounded-2xl overflow-hidden transition-all flex flex-col justify-between shadow-xl ${
+                  isActive ? "border-white/10 hover:border-white/20" : "border-white/[0.08] opacity-60"
                 }`}
               >
                 {/* Banner Image Preview Container — Compact & Balanced Height */}

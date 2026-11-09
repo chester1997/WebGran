@@ -166,13 +166,13 @@ export default function CarouselsClient({
       {/* 📦 Section 2: Standard Custom Carousels */}
       <div className="space-y-4 pt-2">
         <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-          <Layers className="w-5 h-5 text-red-500" />
+          <Layers className="w-5 h-5 text-[#3984FF]" />
           <span>Outros Carrosséis da Loja</span>
         </h3>
 
         {standardCarousels.length === 0 ? (
-          <div className="py-16 text-center flex flex-col items-center justify-center bg-[#121214] rounded-2xl border border-white/5 shadow-xl">
-            <div className="w-14 h-14 rounded-2xl bg-[#1A1A1E] flex items-center justify-center mb-3 border border-white/5 shadow-inner">
+          <div className="py-16 text-center flex flex-col items-center justify-center bg-[#171717] rounded-2xl border border-white/[0.08] shadow-xl">
+            <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-3 border border-white/10 shadow-inner">
               <Layers className="w-7 h-7 text-zinc-500" />
             </div>
             <p className="text-zinc-300 font-medium text-sm mb-1">Nenhum carrossel padrão criado</p>
@@ -182,7 +182,7 @@ export default function CarouselsClient({
             <CarouselModal products={storeProducts} triggerText="Criar Carrossel" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {standardCarousels.map((c, idx) => {
               const activeProducts = c.items?.map((i: any) => i.product).filter(Boolean) || [];
               const selectedProductIds = c.items?.map((i: any) => i.productId) || [];
@@ -190,7 +190,7 @@ export default function CarouselsClient({
               return (
                 <div
                   key={c.id}
-                  className="bg-[#121214] border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4"
+                  className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4 transition-all"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -215,7 +215,7 @@ export default function CarouselsClient({
                     </div>
 
                     {/* List of included products */}
-                    <div className="bg-[#1A1A1E] rounded-xl p-3 space-y-1.5 border border-white/5">
+                    <div className="bg-[#111215] rounded-xl p-3 space-y-1.5 border border-white/5">
                       {activeProducts.length === 0 ? (
                         <div className="py-2.5 text-center space-y-1">
                           <p className="text-zinc-500 text-xs font-medium">Nenhum produto vinculado ainda</p>

@@ -63,7 +63,7 @@ export default function CategoriesClient({
       <CategoryStyleToggle initialStyle={initialStyle} />
 
       {/* Filters Area */}
-      <div className="flex flex-col md:flex-row gap-4 bg-[var(--seller-surface,#101218)] p-3 sm:p-4 border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none">
+      <div className="flex flex-col md:flex-row gap-4 bg-[#171717] p-3 sm:p-4 border border-white/[0.08] rounded-2xl shadow-xl">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input
@@ -71,14 +71,14 @@ export default function CategoriesClient({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Pesquisar categoria..."
-            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600 [&::-webkit-search-cancel-button]:hidden"
+            className="w-full bg-[#111215] border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#3984FF] focus:ring-1 focus:ring-[#3984FF] transition-all placeholder:text-zinc-600 [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
         <div className="flex items-center gap-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none min-w-[120px]"
+            className="bg-[#111215] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#3984FF] appearance-none min-w-[120px] cursor-pointer"
           >
             <option value="all">Todos Status</option>
             <option value="active">Ativos</option>
@@ -88,7 +88,7 @@ export default function CategoriesClient({
       </div>
 
       {/* Categories List — Desktop Table (>= md) & Mobile Cards (< md) */}
-      <div className="bg-[var(--seller-surface,#101218)] border border-[var(--seller-border,rgba(255,255,255,0.06))] rounded-[12px] shadow-none relative min-h-[260px] overflow-hidden">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-2xl shadow-xl relative min-h-[260px] overflow-hidden">
         {filteredCategories.length === 0 ? (
           <div className="py-16 text-center">
             <div className="flex flex-col items-center justify-center">

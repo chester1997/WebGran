@@ -25,7 +25,7 @@ export function CategoryStyleToggle({ initialStyle }: CategoryStyleToggleProps) 
   };
 
   return (
-    <div className="bg-[#121214] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+    <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-white tracking-wide uppercase flex items-center gap-2">
@@ -36,14 +36,14 @@ export function CategoryStyleToggle({ initialStyle }: CategoryStyleToggleProps) 
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#0A0A0C] border border-white/10 rounded-xl shrink-0 w-full md:w-auto">
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#111215] border border-white/10 rounded-xl shrink-0 w-full md:w-auto">
           <button
             type="button"
             onClick={() => handleSelect("IMAGE")}
             disabled={isPending}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
               style === "IMAGE"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                ? "bg-[#3984FF] text-white shadow-md shadow-[#3984FF]/25"
                 : "text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -56,9 +56,9 @@ export function CategoryStyleToggle({ initialStyle }: CategoryStyleToggleProps) 
             type="button"
             onClick={() => handleSelect("ICON")}
             disabled={isPending}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
               style === "ICON"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                ? "bg-[#3984FF] text-white shadow-md shadow-[#3984FF]/25"
                 : "text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >

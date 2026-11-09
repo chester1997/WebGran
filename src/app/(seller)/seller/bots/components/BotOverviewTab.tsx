@@ -135,9 +135,7 @@ export default function BotOverviewTab({
                 <HelpCircle className="w-3.5 h-3.5" />
               </span>
             </span>
-            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
-              <DollarSign className="w-4 h-4 stroke-[2.5]" />
-            </div>
+            <DollarSign className="w-5 h-5 text-[#3984FF] stroke-[2.2] shrink-0" />
           </div>
 
           <div className="mt-3">
@@ -162,9 +160,7 @@ export default function BotOverviewTab({
             <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
               Total de clientes
             </span>
-            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
-              <Users className="w-4 h-4 stroke-[2.2]" />
-            </div>
+            <Users className="w-5 h-5 text-[#3984FF] stroke-[2] shrink-0" />
           </div>
 
           <div className="mt-3">
@@ -183,9 +179,7 @@ export default function BotOverviewTab({
             <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
               Ticket médio
             </span>
-            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
-              <TrendingUp className="w-4 h-4 stroke-[2.2]" />
-            </div>
+            <TrendingUp className="w-5 h-5 text-[#3984FF] stroke-[2] shrink-0" />
           </div>
 
           <div className="mt-3">
@@ -207,9 +201,7 @@ export default function BotOverviewTab({
             <span className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
               Produtos ativos
             </span>
-            <div className="w-9 h-9 rounded-xl bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center shrink-0 text-[#3984FF]">
-              <Package className="w-4 h-4 stroke-[2.2]" />
-            </div>
+            <Package className="w-5 h-5 text-[#3984FF] stroke-[2] shrink-0" />
           </div>
 
           <div className="mt-3">
