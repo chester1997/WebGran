@@ -9,6 +9,7 @@ import { getCurrentStore } from "@/lib/auth";
 import { verifyOwnerActionAccess } from "@/lib/bots/owner-guard";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { TelegramBotService } from "@/lib/telegram/bot";
+import { prepareAudioForTelegram } from "@/lib/telegram/audio-remuxer";
 
 export type ActionResponse<T = any> = {
   success: boolean;
@@ -603,6 +604,7 @@ export async function getBotCustomerMessagesAction(params: {
         status: m.status,
         createdAt: m.createdAt.toISOString(),
         errorMessage: m.errorMessage,
+        mediaUrl: m.mediaUrl,
         metadata: (m.metadata as Record<string, any>) || null,
       })),
       total: msgs.length,
@@ -1206,32 +1208,59 @@ export async function sendTelegramDirectMessageAction(params: {
     let tgResult: any;
 
     if (mediaType === "voice" && params.mediaBase64) {
-      const buffer = Buffer.from(params.mediaBase64, "base64");
-      const fileName = sanitizedMediaName || "audio.ogg";
+      const rawBuffer = Buffer.from(params.mediaBase64, "base64");
+      const prepared = prepareAudioForTelegram(rawBuffer, sanitizedMediaName || "audio");
 
-      // Validação por Magic Bytes do formato real:
-      // OggS: 0x4f 0x67 0x67 0x53
-      // MP4/M4A: 'ftyp' no offset 4
-      const isOgg = buffer.length >= 4 && buffer[0] === 0x4f && buffer[1] === 0x67 && buffer[2] === 0x67 && buffer[3] === 0x53;
-      const isM4A = buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70;
+      let audioSent = false;
 
-      try {
-        const voiceFileName = isOgg
-          ? (fileName.endsWith(".ogg") ? fileName : `${fileName}.ogg`)
-          : isM4A
-            ? (fileName.endsWith(".m4a") ? fileName : `${fileName}.m4a`)
-            : fileName;
-        tgResult = await botService.sendVoice(targetChatId, buffer, voiceFileName, trimmedText || undefined);
-      } catch (voiceErr: any) {
-        const vMsg = String(voiceErr?.message || "").toLowerCase();
-        // Se a API do Telegram recusar o container de voz (ex: WebM do Chromium ou codec não aceito como voice note),
-        // fallback automático para sendDocument preservando a entrega do áudio ao cliente
-        if (vMsg.includes("wrong file format") || vMsg.includes("can't parse voice message") || vMsg.includes("voice")) {
-          console.warn("[sendTelegramDirectMessageAction] Fallback de áudio:", voiceErr?.message);
-          tgResult = await botService.sendDocument(targetChatId, buffer, fileName, trimmedText || undefined);
-        } else {
-          throw voiceErr;
+      // 1. Prioridade máxima: sendVoice (nota de voz nativa com forma de onda) se for OGG/Opus ou M4A
+      if (prepared.isVoiceCompatible) {
+        try {
+          tgResult = await botService.sendVoice(
+            targetChatId,
+            prepared.buffer,
+            prepared.fileName,
+            trimmedText || undefined
+          );
+          audioSent = true;
+        } catch (voiceErr: any) {
+          // AUDITORIA DE SEGURANÇA DOS FALLBACKS:
+          // Fallback somente diante de rejeição definitiva e comprovada de formato pela API.
+          // NÃO executar fallback se o erro for ambíguo (timeout, conexão, rede) para evitar mensagens duplicadas.
+          const errMsg = String(voiceErr?.message || "").toLowerCase();
+          const isFormatRejection =
+            voiceErr?.code === 400 &&
+            (errMsg.includes("wrong remote file identifier") ||
+              errMsg.includes("wrong file format") ||
+              errMsg.includes("can't parse voice") ||
+              errMsg.includes("voice message") ||
+              errMsg.includes("audio format"));
+
+          if (isFormatRejection) {
+            console.warn(
+              "[sendTelegramDirectMessageAction] sendVoice rejeitado comprovadamente por formato, acionando fallback seguro sendDocument:",
+              voiceErr?.message
+            );
+          } else {
+            // Erro ambíguo de rede (timeout/unavailable), rate limit (429), bloqueio (403) ou chat not found:
+            // Interrompe imediatamente para preservar o estado sem duplicar envios no chat do cliente.
+            console.error(
+              "[sendTelegramDirectMessageAction] sendVoice falhou com erro ambíguo ou definitivo não recuperável. Abortando fallback para evitar duplicação:",
+              voiceErr?.message
+            );
+            throw voiceErr;
+          }
         }
+      }
+
+      // 2. Fallback seguro: sendDocument se formato original não for compatível com voz ou se houve rejeição comprovada
+      if (!audioSent) {
+        tgResult = await botService.sendDocument(
+          targetChatId,
+          prepared.buffer,
+          prepared.fileName,
+          trimmedText || undefined
+        );
       }
     } else if (mediaType === "photo" && params.mediaBase64) {
       const buffer = Buffer.from(params.mediaBase64, "base64");

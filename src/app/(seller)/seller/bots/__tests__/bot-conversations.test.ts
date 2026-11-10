@@ -59,6 +59,7 @@ let mockSendMessageImpl: (chatId: string | number, text: string) => Promise<any>
 });
 
 let mockSendVoiceImpl = vi.fn().mockResolvedValue({ message_id: 88881 });
+let mockSendAudioImpl = vi.fn().mockResolvedValue({ message_id: 88885 });
 let mockSendPhotoImpl = vi.fn().mockResolvedValue({ message_id: 88882 });
 let mockSendDocImpl = vi.fn().mockResolvedValue({ message_id: 88883 });
 
@@ -70,6 +71,9 @@ vi.mock("@/lib/telegram/bot", () => {
       });
       this.sendVoice = vi.fn().mockImplementation((chatId: string | number, buffer: any, name: string, caption?: string) => {
         return mockSendVoiceImpl(chatId, buffer, name, caption);
+      });
+      this.sendAudio = vi.fn().mockImplementation((chatId: string | number, buffer: any, name: string, caption?: string) => {
+        return mockSendAudioImpl(chatId, buffer, name, caption);
       });
       this.sendPhotoUpload = vi.fn().mockImplementation((chatId: string | number, buffer: any, name: string, caption?: string) => {
         return mockSendPhotoImpl(chatId, buffer, name, caption);

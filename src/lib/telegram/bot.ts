@@ -71,9 +71,20 @@ export class TelegramBotService {
   async sendVoice(chatId: string | number, voiceBuffer: Buffer | Uint8Array, fileName: string = 'voice.ogg', caption?: string): Promise<unknown> {
     const fd = new FormData();
     fd.append('chat_id', String(chatId));
-    fd.append('voice', new Blob([voiceBuffer as any], { type: 'audio/ogg' }), fileName);
+    const mimeType = fileName.toLowerCase().endsWith('.m4a') ? 'audio/mp4' : 'audio/ogg';
+    fd.append('voice', new Blob([voiceBuffer as any], { type: mimeType }), fileName);
     if (caption) fd.append('caption', caption);
     return telegramFetch(this.token, 'sendVoice', fd);
+  }
+
+  async sendAudio(chatId: string | number, audioBuffer: Buffer | Uint8Array, fileName: string = 'audio.mp3', caption?: string, performer?: string, title?: string): Promise<unknown> {
+    const fd = new FormData();
+    fd.append('chat_id', String(chatId));
+    fd.append('audio', new Blob([audioBuffer as any]), fileName);
+    if (caption) fd.append('caption', caption);
+    if (performer) fd.append('performer', performer);
+    if (title) fd.append('title', title);
+    return telegramFetch(this.token, 'sendAudio', fd);
   }
 
   async sendDocument(chatId: string | number, docBuffer: Buffer | Uint8Array, fileName: string, caption?: string): Promise<unknown> {

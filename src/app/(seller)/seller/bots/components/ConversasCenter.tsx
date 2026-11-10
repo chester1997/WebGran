@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -14,25 +14,26 @@ import {
   Trash2,
   X,
   ArrowLeft,
-  CheckCircle2,
   Clock,
   AlertCircle,
-  HelpCircle,
   Hand,
   Volume2,
   FileText,
   Image as ImageIcon,
   Check,
   CheckCheck,
-  ExternalLink
+  Play,
+  Pause,
+  RotateCcw,
 } from "lucide-react";
 import {
   getBotCustomerMessagesAction,
   getBotCustomersAction,
   sendTelegramDirectMessageAction,
-  toggleBotCustomerManualModeAction
+  toggleBotCustomerManualModeAction,
 } from "../actions";
 import BotAvatar from "./BotAvatar";
+import { SolarSellerConversasIcon } from "@/components/icons/solar/seller-icons";
 
 export interface CustomerItem {
   id: string;
@@ -77,51 +78,130 @@ interface ConversasCenterProps {
   showNotification?: (type: "success" | "error", message: string) => void;
 }
 
-// Categorias e emojis para o Seletor
+// Emojis organizados por categorias para a gaveta do compositor
 const EMOJI_CATEGORIES = [
   {
     id: "smileys",
     name: "Smileys",
     icon: "😄",
-    emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣"]
+    emojis: [
+      "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰",
+      "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏",
+      "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣"
+    ]
   },
   {
     id: "gestures",
     name: "Gestos & Pessoas",
     icon: "👍",
-    emojis: ["👍", "👎", "👌", "🤌", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "🤝", "👏", "🙌", "👐", "🤲", "🙏", "💪", "🦾", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "💯", "🔥"]
+    emojis: [
+      "👍", "👎", "👌", "🤌", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚",
+      "🖐️", "🖖", "👋", "🤝", "👏", "🙌", "👐", "🤲", "🙏", "💪", "🦾", "❤️", "🧡", "💛", "💚", "💙",
+      "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "💯", "🔥"
+    ]
   },
   {
     id: "animals",
     name: "Animais",
     icon: "🐶",
-    emojis: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌", "🐞", "🐜", "🪰", "🪲", "🐙", "🦑", "🦐", "🦞"]
+    emojis: [
+      "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔",
+      "🐧", "🐦", "🐤", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌",
+      "🐞", "🐜", "🪰", "🪲", "🐙", "🦑", "🦐", "🦞"
+    ]
   },
   {
     id: "food",
     name: "Comida",
     icon: "🍕",
-    emojis: ["🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🥑", "🥦", "🌽", "🌶️", "🍔", "🍟", "🍕", "🌭", "🥪", "🌮", "🌯", "🫔", "🥙", "🧆", "🥚", "🍳", "🥘", "🍲", "🫕", "🥣", "🥗", "🍿"]
+    emojis: [
+      "🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥",
+      "🥝", "🍅", "🥑", "🥦", "🌽", "🌶️", "🍔", "🍟", "🍕", "🌭", "🥪", "🌮", "🌯", "🫔", "🥙", "🧆",
+      "🥚", "🍳", "🥘", "🍲", "🫕", "🥣", "🥗", "🍿"
+    ]
   },
   {
     id: "activities",
     name: "Atividades",
     icon: "⚽",
-    emojis: ["⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🪀", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🪃", "🥅", "⛳", "🪁", "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛼", "🛷", "⛸️", "🥌", "🎿", "⛷️", "🏂", "🪂", "🏋️", "🤼", "🤸", "🤺"]
+    emojis: [
+      "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🪀", "🏓", "🏸", "🏒", "🏑", "🥍",
+      "🏏", "🪃", "🥅", "⛳", "🪁", "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛼", "🛷", "⛸️", "🥌",
+      "🎿", "⛷️", "🏂", "🪂", "🏋️", "🤼", "🤸", "🤺"
+    ]
   },
   {
     id: "objects",
     name: "Objetos",
     icon: "💡",
-    emojis: ["💡", "🔦", "🕯️", "🪔", "📱", "📲", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "📷", "📸", "📹", "🎥", "📽️", "🎞️", "📞", "☎️", "📟", "📠", "📺", "📻", "🎙️", "🎚️", "🎛️", "⏱️", "⏲️", "⏰", "🕰️", "⌛", "⏳", "📡", "🔋", "🔌", "💸", "💵", "💴", "💶", "💷"]
+    emojis: [
+      "💡", "🔦", "🕯️", "🪔", "📱", "📲", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "📷", "📸", "📹", "🎥", "📽️",
+      "🎞️", "📞", "☎️", "📟", "📠", "📺", "📻", "🎙️", "🎚️", "🎛️", "⏱️", "⏲️", "⏰", "🕰️", "⌛", "⏳",
+      "📡", "🔋", "🔌", "💸", "💵", "💴", "💶", "💷"
+    ]
   },
   {
     id: "symbols",
     name: "Símbolos",
     icon: "💖",
-    emojis: ["✨", "⭐️", "🌟", "💫", "⚡️", "☄️", "💥", "🔥", "🌈", "☀️", "🌤️", "⛅️", "🌥️", "☁️", "🌦️", "🌧️", "⛈️", "🌩️", "🌨️", "❄️", "☃️", "⛄️", "🌬️", "💨", "💧", "💦", "🫧", "☂️", "☔️", "⛱️", "⚡️", "🌀", "🌁", "🎯", "🎉", "🎊", "🎈", "🎁", "🏆", "🥇"]
+    emojis: [
+      "✨", "⭐️", "🌟", "💫", "⚡️", "☄️", "💥", "🔥", "🌈", "☀️", "🌤️", "⛅️", "🌥️", "☁️", "🌦️", "🌧️",
+      "⛈️", "🌩️", "🌨️", "❄️", "☃️", "⛄️", "🌬️", "💨", "💧", "💦", "🫧", "☂️", "☔️", "⛱️", "⚡️", "🌀",
+      "🌁", "🎯", "🎉", "🎊", "🎈", "🎁", "🏆", "🥇"
+    ]
   }
 ];
+
+// Paleta de gradientes dinâmicos para avatares sem foto estilo Telegram
+const AVATAR_GRADIENTS = [
+  "from-[#3984FF] to-[#1D4ED8]",
+  "from-[#8B5CF6] to-[#6D28D9]",
+  "from-[#EC4899] to-[#BE185D]",
+  "from-[#10B981] to-[#047857]",
+  "from-[#F59E0B] to-[#B45309]",
+  "from-[#06B6D4] to-[#0E7490]",
+  "from-[#6366F1] to-[#4338CA]",
+];
+
+function getAvatarGradient(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
+
+// Agrupador cronológico de mensagens por data
+function groupMessagesByDate(messages: MessageItem[]) {
+  const groups: { dateLabel: string; messages: MessageItem[] }[] = [];
+  const now = new Date();
+  const todayStr = now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayStr = yesterday.toDateString();
+
+  for (const msg of messages) {
+    const d = new Date(msg.createdAt);
+    const dStr = d.toDateString();
+    let dateLabel = "";
+    if (dStr === todayStr) {
+      dateLabel = "Hoje";
+    } else if (dStr === yesterdayStr) {
+      dateLabel = "Ontem";
+    } else {
+      dateLabel = d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+    }
+
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.dateLabel === dateLabel) {
+      lastGroup.messages.push(msg);
+    } else {
+      groups.push({ dateLabel, messages: [msg] });
+    }
+  }
+  return groups;
+}
 
 export default function ConversasCenter({
   bot,
@@ -129,7 +209,7 @@ export default function ConversasCenter({
   initialMessages = [],
   onClose,
   isModal = false,
-  showNotification
+  showNotification,
 }: ConversasCenterProps) {
   const [customersList, setCustomersList] = useState<CustomerItem[]>(initialCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerItem | null>(null);
@@ -159,11 +239,20 @@ export default function ConversasCenter({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Gravação de Áudio State
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [audioRecordingState, setAudioRecordingState] = useState<"idle" | "recording" | "preview" | "sending">("idle");
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Áudio Player da Timeline State
+  const [activeAudioPlayingId, setActiveAudioPlayingId] = useState<string | null>(null);
+  const timelineAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Navegação Mobile (exibe lista ou chat individual)
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
@@ -173,12 +262,12 @@ export default function ConversasCenter({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll para última mensagem
+  // Auto-scroll suave para última mensagem
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, selectedFile, showEmojiPicker]);
+  }, [messages, selectedFile, showEmojiPicker, audioRecordingState]);
 
   // Tecla ESC para fechar modal ou gaveta de emojis
   useEffect(() => {
@@ -195,6 +284,15 @@ export default function ConversasCenter({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showEmojiPicker, onClose]);
 
+  // Limpar URLs de áudio preview ao desmontar
+  useEffect(() => {
+    return () => {
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+      }
+    };
+  }, [recordedAudioUrl]);
+
   // Carregar mensagens e status manual do cliente ao selecionar
   const handleSelectCustomer = async (cust: CustomerItem) => {
     setSelectedCustomer(cust);
@@ -202,6 +300,7 @@ export default function ConversasCenter({
     setSendError(null);
     setShowEmojiPicker(false);
     setSelectedFile(null);
+    handleDiscardRecordedAudio();
     activeClientMessageIdRef.current = null;
     setLoadingMessages(true);
 
@@ -254,7 +353,7 @@ export default function ConversasCenter({
     }
   };
 
-  // Auto-sincronização periódica da lista de clientes e da conversa ativa (Polling suave a cada 2.5s)
+  // Auto-sincronização periódica da timeline e da lista de clientes (Polling inteligente a cada 2.5s)
   useEffect(() => {
     let isMounted = true;
     let isSyncing = false;
@@ -264,7 +363,6 @@ export default function ConversasCenter({
       isSyncing = true;
 
       try {
-        // 1. Sincronizar timeline da conversa ativa se houver cliente selecionado
         if (selectedCustomer) {
           const res = await getBotCustomerMessagesAction({
             botId: bot.id,
@@ -285,7 +383,6 @@ export default function ConversasCenter({
           }
         }
 
-        // 2. Sincronizar lista lateral de clientes em tempo real (última mensagem, hora, ordem)
         const custRes = await getBotCustomersAction(bot.id);
         if (isMounted && custRes.success && custRes.data) {
           setCustomersList((prev) => {
@@ -298,7 +395,7 @@ export default function ConversasCenter({
           });
         }
       } catch {
-        // Erro transitório de rede ignorado silenciosamente
+        // Erro de rede ignorado silenciosamente durante background polling
       } finally {
         isSyncing = false;
       }
@@ -338,7 +435,6 @@ export default function ConversasCenter({
         setIsManualActive(res.data.isManualMode);
         setManualExpiresAt(res.data.expiresAt || null);
 
-        // Inserir mensagem do sistema na timeline cronológica
         const sysMsg: MessageItem = {
           id: res.data.systemMessage.id,
           direction: "outbound",
@@ -350,70 +446,77 @@ export default function ConversasCenter({
         setMessages((prev) => [...prev, sysMsg]);
 
         if (showNotification) {
-          showNotification("success", res.message || (nextState ? "Modo manual ativado" : "Modo manual desativado"));
+          showNotification(
+            "success",
+            nextState ? "Modo manual ativado por 1 hora para esta conversa." : "Modo manual desativado. O bot retomou o atendimento automático."
+          );
         }
       } else {
-        if (showNotification) showNotification("error", res.error || "Falha ao alterar modo manual.");
+        if (showNotification) {
+          showNotification("error", res.error || "Não foi possível alternar o modo manual.");
+        }
       }
     } catch {
-      if (showNotification) showNotification("error", "Erro ao conectar com o servidor.");
+      if (showNotification) {
+        showNotification("error", "Erro ao comunicar alteração do modo manual.");
+      }
     } finally {
       setTogglingManual(false);
     }
   };
 
-  // Inserir Emoji no input
+  // Inserção de Emoji no Input
   const handleInsertEmoji = (emoji: string) => {
     setMessageText((prev) => prev + emoji);
-    if (textInputRef.current) {
-      textInputRef.current.focus();
-    }
+    textInputRef.current?.focus();
   };
 
-  // Manipular Anexo de Arquivo
+  // Upload e Seleção de Anexo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 20 * 1024 * 1024) {
-      if (showNotification) showNotification("error", "Arquivo muito grande. O limite máximo é 20MB.");
+      if (showNotification) {
+        showNotification("error", "O arquivo selecionado excede o limite máximo permitido de 20 MB.");
+      }
       return;
     }
 
-    const reader = new FileReader();
-    const isImage = file.type.startsWith("image/");
+    let detectedType: "photo" | "document" | "voice" = "document";
+    if (file.type.startsWith("image/")) detectedType = "photo";
+    else if (file.type.startsWith("audio/")) detectedType = "voice";
 
+    const reader = new FileReader();
     reader.onload = () => {
       const resultStr = reader.result as string;
       const base64 = resultStr.includes(",") ? resultStr.split(",")[1] : resultStr;
+      const previewUrl = detectedType === "photo" ? resultStr : undefined;
 
       setSelectedFile({
         file,
-        previewUrl: isImage ? URL.createObjectURL(file) : undefined,
+        previewUrl,
         base64,
-        type: isImage ? "photo" : "document"
+        type: detectedType,
       });
     };
     reader.readAsDataURL(file);
-
-    // Reset input
     e.target.value = "";
   };
 
-  // Iniciar Gravação de Áudio com Detecção do Melhor Formato Suportado
+  // Iniciar Gravação de Áudio com Negociação de Formatos
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
 
-      // Priorizar codecs/containers compatíveis: Ogg/Opus (Firefox), MP4 (Safari/iOS), WebM/Opus (Chromium)
       let selectedMime = "";
       const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
         "audio/ogg;codecs=opus",
         "audio/ogg",
         "audio/mp4",
-        "audio/webm;codecs=opus",
-        "audio/webm"
       ];
       if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported) {
         for (const candidate of candidates) {
@@ -436,7 +539,7 @@ export default function ConversasCenter({
       };
 
       mediaRecorder.start(100);
-      setIsRecordingAudio(true);
+      setAudioRecordingState("recording");
       setRecordingSeconds(0);
 
       recordingTimerRef.current = setInterval(() => {
@@ -445,58 +548,100 @@ export default function ConversasCenter({
     } catch (err: any) {
       console.error("[ConversasCenter] Erro ao acessar microfone:", err);
       if (showNotification) {
-        showNotification("error", "Permissão para acessar o microfone negada ou indisponível.");
+        showNotification("error", "Permissão para acessar o microfone negada ou microfone indisponível.");
       }
     }
   };
 
-  // Cancelar Gravação
-  const handleCancelRecording = () => {
+  // Parar gravação e entrar em modo de Pré-visualização do Áudio
+  const handleStopRecordingToPreview = () => {
+    if (!mediaRecorderRef.current) return;
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+
+    mediaRecorderRef.current.onstop = () => {
+      const actualMime = mediaRecorderRef.current?.mimeType || "audio/webm";
+      const blob = new Blob(audioChunksRef.current, { type: actualMime });
+      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+
+      const url = URL.createObjectURL(blob);
+      setRecordedAudioBlob(blob);
+      setRecordedAudioUrl(url);
+      setAudioRecordingState("preview");
+    };
+
+    mediaRecorderRef.current.stop();
+  };
+
+  // Cancelar e descartar áudio gravado
+  const handleDiscardRecordedAudio = () => {
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
     }
-    setIsRecordingAudio(false);
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+    }
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+    }
+    setIsPlayingPreview(false);
+    setRecordedAudioBlob(null);
+    setRecordedAudioUrl(null);
+    setAudioRecordingState("idle");
     setRecordingSeconds(0);
     audioChunksRef.current = [];
   };
 
-  // Finalizar e Enviar Gravação
-  const handleSendRecording = () => {
-    if (!mediaRecorderRef.current || !selectedCustomer) return;
+  // Alternar reprodução do áudio de pré-visualização
+  const handleTogglePlayPreview = () => {
+    if (!previewAudioRef.current && recordedAudioUrl) {
+      previewAudioRef.current = new Audio(recordedAudioUrl);
+      previewAudioRef.current.onended = () => setIsPlayingPreview(false);
+    }
 
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (!previewAudioRef.current) return;
 
-    mediaRecorderRef.current.onstop = async () => {
-      const actualMime = mediaRecorderRef.current?.mimeType || "audio/webm";
-      const audioBlob = new Blob(audioChunksRef.current, { type: actualMime });
-      audioChunksRef.current = [];
-      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    if (isPlayingPreview) {
+      previewAudioRef.current.pause();
+      setIsPlayingPreview(false);
+    } else {
+      previewAudioRef.current.play().catch(() => {});
+      setIsPlayingPreview(true);
+    }
+  };
 
-      // Extensão correspondente ao container real
+  // Confirmar e Enviar Áudio Gravado
+  const handleSendRecordedAudio = async () => {
+    if (!recordedAudioBlob || !selectedCustomer) return;
+
+    setAudioRecordingState("sending");
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const resultStr = reader.result as string;
+      const base64 = resultStr.includes(",") ? resultStr.split(",")[1] : resultStr;
+      const mime = recordedAudioBlob.type || "audio/webm";
+
       let ext = "webm";
-      if (actualMime.includes("ogg")) ext = "ogg";
-      else if (actualMime.includes("mp4")) ext = "m4a";
+      if (mime.includes("ogg")) ext = "ogg";
+      else if (mime.includes("mp4")) ext = "m4a";
 
-      // Converter para base64
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const resultStr = reader.result as string;
-        const base64 = resultStr.includes(",") ? resultStr.split(",")[1] : resultStr;
-        await dispatchMessage({
-          mediaType: "voice",
-          mediaBase64: base64,
-          mediaName: `audio_${Date.now()}.${ext}`,
-          caption: "",
-        });
-      };
-      reader.readAsDataURL(audioBlob);
+      const sendSuccess = await dispatchMessage({
+        mediaType: "voice",
+        mediaBase64: base64,
+        mediaName: `voice_${Date.now()}.${ext}`,
+        caption: "",
+      });
+
+      if (sendSuccess) {
+        handleDiscardRecordedAudio();
+      } else {
+        // Se falhar, preserva em preview para retry
+        setAudioRecordingState("preview");
+      }
     };
-
-    mediaRecorderRef.current.stop();
-    setIsRecordingAudio(false);
-    setRecordingSeconds(0);
+    reader.readAsDataURL(recordedAudioBlob);
   };
 
   // Despacho unificado com idempotência estrita
@@ -505,24 +650,25 @@ export default function ConversasCenter({
     mediaBase64?: string;
     mediaName?: string;
     caption?: string;
-  }) => {
-    if (!selectedCustomer || sendingMessage) return;
+  }): Promise<boolean> => {
+    if (!selectedCustomer || sendingMessage) return false;
 
     const mediaType = options?.mediaType || (selectedFile ? selectedFile.type : "text");
     const mediaBase64 = options?.mediaBase64 || selectedFile?.base64;
     const mediaName = options?.mediaName || selectedFile?.file.name;
     const textToSend = options?.caption !== undefined ? options.caption : messageText.trim();
 
-    if (!textToSend && !mediaBase64) return;
+    if (!textToSend && !mediaBase64) return false;
 
     if (!activeClientMessageIdRef.current) {
-      activeClientMessageIdRef.current = typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-          const r = (Math.random() * 16) | 0;
-          const v = c === "x" ? r : (r & 0x3) | 0x8;
-          return v.toString(16);
-        });
+      activeClientMessageIdRef.current =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+              const r = (Math.random() * 16) | 0;
+              const v = c === "x" ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
+            });
     }
 
     const clientMessageId = activeClientMessageIdRef.current;
@@ -559,28 +705,37 @@ export default function ConversasCenter({
           showNotification("success", "Mensagem enviada com sucesso ao cliente no Telegram!");
         }
 
-        // Atualizar lista de conversas
+        // Atualizar lista de contatos em memória
         setCustomersList((prev) =>
           prev.map((c) =>
             c.id === selectedCustomer.id
               ? {
-                ...c,
-                messagesCount: (c.messagesCount || 0) + 1,
-                lastMessageText: textToSend || (mediaType === "voice" ? "Áudio gravado" : "Arquivo anexo"),
-                lastMessageAt: new Date().toISOString(),
-                lastMessageDirection: "outbound",
-              }
+                  ...c,
+                  messagesCount: (c.messagesCount || 0) + 1,
+                  lastMessageText:
+                    textToSend ||
+                    (mediaType === "voice"
+                      ? "Mensagem de voz"
+                      : mediaType === "photo"
+                      ? "Foto"
+                      : "Arquivo anexado"),
+                  lastMessageAt: new Date().toISOString(),
+                  lastMessageDirection: "outbound",
+                }
               : c
           )
         );
+        return true;
       } else {
         setSendError(res.error || "Falha ao enviar mensagem pelo Telegram.");
         if (showNotification) showNotification("error", res.error || "Falha no envio.");
+        return false;
       }
     } catch {
       const err = "Erro de conexão ao enviar mensagem.";
       setSendError(err);
       if (showNotification) showNotification("error", err);
+      return false;
     } finally {
       setSendingMessage(false);
     }
@@ -610,7 +765,7 @@ export default function ConversasCenter({
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
-  // Formatação de data/hora amigável
+  // Formatação amigável de horário ou dia da semana estilo Telegram
   const formatTimeOrDate = (isoDate?: string | null) => {
     if (!isoDate) return "";
     const date = new Date(isoDate);
@@ -627,16 +782,19 @@ export default function ConversasCenter({
     return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   };
 
+  // Agrupamento das mensagens por data cronológica
+  const messageGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
+
   // Conteúdo principal
   const content = (
-    <div className="flex flex-col h-full min-h-0 bg-[#111215] text-white overflow-hidden relative select-none">
+    <div className="flex flex-col h-full min-h-0 bg-[#0e1117] text-white overflow-hidden relative select-none">
       {/* ========================================================= */}
       {/* 1. TOPO DA CENTRAL DE CONVERSAS                           */}
       {/* ========================================================= */}
-      <div className="h-14 px-4 sm:px-6 bg-[#16171C] border-b border-white/[0.08] flex items-center justify-between shrink-0 z-20">
+      <div className="h-14 px-4 sm:px-6 bg-[#131720] border-b border-white/[0.08] flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-[10px] bg-[#3984FF]/15 border border-[#3984FF]/30 flex items-center justify-center text-[#3984FF]">
-            <MessageSquare className="w-4 h-4" />
+            <SolarSellerConversasIcon size={18} />
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
@@ -666,16 +824,15 @@ export default function ConversasCenter({
       {/* ========================================================= */}
       <div className="flex-1 flex overflow-hidden min-h-0 relative">
         {/* ======================================================= */}
-        {/* COLUNA ESQUERDA: LISTA DE CONVERSAS                     */}
-        {/* (No mobile oculta se houver chat individual aberto)     */}
+        {/* COLUNA ESQUERDA: LISTA DE CONVERSAS (Estilo Telegram)   */}
         {/* ======================================================= */}
         <div
-          className={`w-full md:w-[320px] lg:w-[360px] xl:w-[380px] bg-[#14151A] border-r border-white/[0.08] flex flex-col shrink-0 transition-all z-10 ${
+          className={`w-full md:w-[320px] lg:w-[360px] xl:w-[380px] bg-[#12151c] border-r border-white/[0.08] flex flex-col shrink-0 transition-all z-10 ${
             mobileChatOpen ? "hidden md:flex" : "flex"
           }`}
         >
           {/* Card do Bot Responsável */}
-          <div className="p-3.5 border-b border-white/[0.06] bg-[#17181F] flex items-center justify-between gap-3">
+          <div className="p-3.5 border-b border-white/[0.06] bg-[#151922] flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden border border-white/10 relative">
                 <BotAvatar
@@ -695,8 +852,8 @@ export default function ConversasCenter({
             </div>
           </div>
 
-          {/* Campo de Busca de Contatos */}
-          <div className="p-3 border-b border-white/[0.06] bg-[#14151A]">
+          {/* Campo de Busca de Contatos Estilo Telegram */}
+          <div className="p-3 border-b border-white/[0.06] bg-[#12151c]">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input
@@ -704,13 +861,13 @@ export default function ConversasCenter({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por nome, @user ou ID..."
-                className="w-full bg-[#1A1C23] border border-white/10 rounded-[10px] pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#3984FF] transition-colors"
+                className="w-full bg-[#181d26] border border-white/10 rounded-full pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#3984FF] transition-colors"
               />
             </div>
           </div>
 
-          {/* Lista Rolável de Clientes */}
-          <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03]">
+          {/* Lista Rolável de Contatos */}
+          <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03] p-1.5 space-y-0.5">
             {filteredCustomers.length === 0 ? (
               <div className="p-8 text-center text-xs text-zinc-500 space-y-2">
                 <MessageSquare className="w-8 h-8 text-zinc-600 mx-auto stroke-1" />
@@ -722,32 +879,43 @@ export default function ConversasCenter({
             ) : (
               filteredCustomers.map((cust) => {
                 const isSelected = selectedCustomer?.id === cust.id;
-                const name = [cust.firstName, cust.lastName].filter(Boolean).join(" ") || cust.username || `ID ${cust.telegramUserId}`;
+                const name =
+                  [cust.firstName, cust.lastName].filter(Boolean).join(" ") ||
+                  cust.username ||
+                  `ID ${cust.telegramUserId}`;
                 const initial = name.charAt(0).toUpperCase();
+                const avatarBg = getAvatarGradient(name);
 
                 return (
                   <div
                     key={cust.id}
                     data-customer-card={cust.id}
                     onClick={() => handleSelectCustomer(cust)}
-                    className={`p-3 sm:p-3.5 flex items-center gap-3 cursor-pointer transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${
                       isSelected
-                        ? "bg-[#3984FF]/15 border-l-3 border-[#3984FF] text-white shadow-sm"
-                        : "hover:bg-white/[0.03] text-zinc-300"
+                        ? "bg-[#3984FF]/15 text-white border-l-2 border-[#3984FF] shadow-sm"
+                        : "hover:bg-white/[0.04] text-zinc-300"
                     }`}
                   >
-                    {/* Avatar do Cliente */}
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1E293B] to-[#0F172A] border border-white/10 flex items-center justify-center font-bold text-xs text-[#3984FF] shrink-0 shadow-sm">
+                    {/* Avatar do Contato em Destaque */}
+                    <div
+                      className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarBg} border border-white/15 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm`}
+                    >
                       {initial}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-bold truncate tracking-tight">{name}</span>
+                        <span className="text-xs font-bold truncate tracking-tight text-zinc-100">{name}</span>
                         {cust.lastMessageAt && (
-                          <span className="text-[10px] text-zinc-500 shrink-0 font-medium">
-                            {formatTimeOrDate(cust.lastMessageAt)}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {cust.lastMessageDirection === "outbound" && (
+                              <Check className="w-3 h-3 text-zinc-400" />
+                            )}
+                            <span className="text-[11px] text-zinc-400 font-medium">
+                              {formatTimeOrDate(cust.lastMessageAt)}
+                            </span>
+                          </div>
                         )}
                       </div>
 
@@ -755,7 +923,7 @@ export default function ConversasCenter({
                         {cust.lastMessageText ? (
                           <>
                             {cust.lastMessageDirection === "outbound" && (
-                              <span className="text-zinc-500 text-[10px] shrink-0">Você:</span>
+                              <span className="text-zinc-500 text-[10px] shrink-0 font-medium">Você:</span>
                             )}
                             <span className="truncate">{cust.lastMessageText}</span>
                           </>
@@ -773,19 +941,21 @@ export default function ConversasCenter({
 
         {/* ======================================================= */}
         {/* COLUNA DIREITA: TELA INDIVIDUAL DE CONVERSA             */}
-        {/* (No mobile oculta se nenhum chat selecionado)           */}
         {/* ======================================================= */}
         <div
-          className={`flex-1 flex flex-col h-full min-h-0 bg-[#0C0D10] relative overflow-hidden ${
+          className={`flex-1 flex flex-col h-full min-h-0 bg-[#0c1017] relative overflow-hidden ${
             !mobileChatOpen ? "hidden md:flex" : "flex"
           }`}
         >
-          {/* Fundo com Textura Sutil Inspirada no Telegram Doodle */}
+          {/* Fundo Telegram com Ilustrações Doodles Originais WebGran */}
           <div
-            className="absolute inset-0 opacity-[0.035] pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              backgroundImage: `radial-gradient(circle at 25px 25px, white 2%, transparent 0%), radial-gradient(circle at 75px 75px, white 2%, transparent 0%)`,
-              backgroundSize: "100px 100px",
+              backgroundColor: "#0c1017",
+              backgroundImage: `url('/images/chat-pattern.svg')`,
+              backgroundRepeat: "repeat",
+              backgroundSize: "380px 380px",
+              opacity: 0.95,
             }}
           />
 
@@ -794,7 +964,7 @@ export default function ConversasCenter({
               {/* =================================================== */}
               {/* HEADER DO CHAT SELECIONADO                          */}
               {/* =================================================== */}
-              <div className="h-16 px-4 sm:px-6 bg-[#14151A] border-b border-white/[0.08] flex items-center justify-between shrink-0 gap-3">
+              <div className="h-16 px-4 sm:px-6 bg-[#131720]/95 backdrop-blur-md border-b border-white/[0.08] flex items-center justify-between shrink-0 gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   {/* Botão Voltar para Lista no Mobile */}
                   <button
@@ -807,7 +977,11 @@ export default function ConversasCenter({
                   </button>
 
                   {/* Avatar do Contato */}
-                  <div className="w-10 h-10 rounded-full bg-[#3984FF]/15 border border-[#3984FF]/30 flex items-center justify-center font-bold text-sm text-[#3984FF] shrink-0">
+                  <div
+                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(
+                      selectedCustomer.firstName || selectedCustomer.username || "Cliente"
+                    )} border border-white/20 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm`}
+                  >
                     {(selectedCustomer.firstName || selectedCustomer.username || "U").charAt(0).toUpperCase()}
                   </div>
 
@@ -818,12 +992,12 @@ export default function ConversasCenter({
                         "Cliente"}
                     </h3>
 
-                    {/* Subtítulo Dinâmico: Modo manual ou username */}
+                    {/* Subtítulo: username ou status do modo manual */}
                     <div className="flex items-center gap-2">
                       {isManualActive && manualExpiresAt ? (
                         <span className="text-[11px] font-medium text-[#3984FF] flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          modo manual até {new Date(manualExpiresAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          modo manual ativo até {new Date(manualExpiresAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       ) : (
                         <span className="text-xs text-zinc-400 font-mono truncate">
@@ -834,7 +1008,7 @@ export default function ConversasCenter({
                   </div>
                 </div>
 
-                {/* Ações do Header do Chat: Modo Manual e Atualizar */}
+                {/* Ações do Header: Atualizar e Modo Manual */}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -872,22 +1046,15 @@ export default function ConversasCenter({
               {/* HISTÓRICO DE MENSAGENS COM SCROLL                   */}
               {/* =================================================== */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                {/* Banner Central de Mensagens Temporárias (Fiel à Referência) */}
-                <div className="max-w-md mx-auto bg-[#17181F]/90 border border-white/10 rounded-2xl p-4 text-center shadow-lg space-y-1 backdrop-blur-md">
-                  <div className="w-8 h-8 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto text-zinc-300 mb-1">
+                {/* Banner Central de Mensagens Temporárias Inspirado no Telegram */}
+                <div className="max-w-md mx-auto bg-[#171c26]/90 border border-white/10 rounded-2xl p-4 text-center shadow-xl space-y-1.5 backdrop-blur-md">
+                  <div className="w-8 h-8 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center mx-auto text-zinc-300 mb-1">
                     <Clock className="w-4 h-4 text-[#3984FF]" />
                   </div>
-                  <h4 className="text-xs font-bold text-white">Mensagens temporárias ativadas</h4>
+                  <h4 className="text-xs font-bold text-white">Mensagens sincronizadas em tempo real</h4>
                   <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    As mensagens desta conversa são sincronizadas em tempo real com o Telegram e preservadas no histórico da sua conta WebGran.
+                    As mensagens desta conversa são transmitidas diretamente entre o WebGran e o Telegram do cliente.
                   </p>
-                </div>
-
-                {/* Divisor de Data "Hoje" */}
-                <div className="flex items-center justify-center my-3">
-                  <span className="px-3 py-1 rounded-full text-[10px] font-semibold bg-white/[0.05] border border-white/10 text-zinc-400">
-                    Hoje
-                  </span>
                 </div>
 
                 {loadingMessages ? (
@@ -895,7 +1062,7 @@ export default function ConversasCenter({
                     <Loader2 className="w-4 h-4 animate-spin text-[#3984FF]" />
                     <span>Carregando histórico do Telegram...</span>
                   </div>
-                ) : messages.length === 0 ? (
+                ) : messageGroups.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-zinc-500 text-xs space-y-2">
                     <MessageSquare className="w-8 h-8 text-zinc-600 stroke-1" />
                     <p className="font-semibold text-zinc-400">Nenhuma mensagem registrada ainda</p>
@@ -904,110 +1071,175 @@ export default function ConversasCenter({
                     </p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
-                    const isInbound = msg.direction === "inbound";
-                    const isSystem = msg.messageType === "system";
-                    const isVoice = msg.messageType === "voice";
-                    const isPhoto = msg.messageType === "photo";
-                    const isDoc = msg.messageType === "document";
-                    const isSent = msg.status === "sent" || msg.status === "delivered";
-                    const isFailed = msg.status === "failed";
-                    const isSending = msg.status === "sending";
-                    const timeStr = new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-                    // Mensagens de Evento do Sistema (Ex: "Modo manual ativado até 18:21")
-                    if (isSystem) {
-                      return (
-                        <div key={msg.id} className="flex justify-center my-2">
-                          <div className="px-3.5 py-1.5 rounded-full bg-[#181A22] border border-white/10 text-zinc-300 text-[11px] font-medium shadow-sm flex items-center gap-1.5">
-                            <Hand className="w-3 h-3 text-[#3984FF]" />
-                            <span>{msg.text}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // Balões de Mensagens Inbound (Cliente) vs Outbound (Vendedor)
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
-                      >
-                        <div
-                          className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-xs shadow-md space-y-1 ${
-                            isInbound
-                              ? "bg-[#181A22] text-zinc-200 border border-white/10 rounded-tl-xs"
-                              : "bg-[#2563EB] text-white rounded-tr-xs"
-                          }`}
-                        >
-                          {/* Conteúdo de Imagem / Anexo */}
-                          {isPhoto && msg.mediaUrl && (
-                            <div className="rounded-xl overflow-hidden mb-2 border border-white/10 max-h-60 bg-black/40">
-                              <img src={msg.mediaUrl} alt="Foto enviada" className="w-full h-auto object-cover" />
-                            </div>
-                          )}
-
-                          {/* Conteúdo de Áudio / Voz */}
-                          {isVoice && (
-                            <div className="flex items-center gap-2 py-1">
-                              <Volume2 className="w-4 h-4 shrink-0 text-white" />
-                              <span className="font-semibold text-[11px]">Mensagem de voz</span>
-                            </div>
-                          )}
-
-                          {/* Conteúdo de Documento */}
-                          {isDoc && (
-                            <div className="flex items-center gap-2 py-1">
-                              <FileText className="w-4 h-4 shrink-0 text-white" />
-                              <span className="font-semibold text-[11px]">Documento anexado</span>
-                            </div>
-                          )}
-
-                          {/* Texto da Mensagem */}
-                          {msg.text && (
-                            <p className="whitespace-pre-wrap leading-relaxed break-words text-xs">
-                              {msg.text}
-                            </p>
-                          )}
-
-                          {/* Rodapé do Balão com Horário e Status */}
-                          <div
-                            className={`flex items-center gap-1.5 pt-0.5 text-[10px] ${
-                              isInbound ? "justify-start text-zinc-400" : "justify-end text-blue-100/80"
-                            }`}
-                          >
-                            <span>{timeStr}</span>
-                            {!isInbound && (
-                              <span className="inline-flex items-center">
-                                {isSent && (
-                                  <span title="Enviado ao Telegram">
-                                    <CheckCheck className="w-3.5 h-3.5 text-white inline" />
-                                  </span>
-                                )}
-                                {isSending && (
-                                  <span title="Enviando...">
-                                    <Loader2 className="w-3 h-3 animate-spin inline text-white" />
-                                  </span>
-                                )}
-                                {isFailed && (
-                                  <span title="Falha no envio">
-                                    <AlertCircle className="w-3 h-3 text-rose-300 inline" />
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                  messageGroups.map((group, groupIdx) => (
+                    <div key={groupIdx} className="space-y-3">
+                      {/* Separador de Data Cronológica (Hoje, Ontem, etc.) */}
+                      <div className="flex items-center justify-center my-3 sticky top-1 z-10">
+                        <span className="px-3.5 py-1 rounded-full text-[11px] font-semibold bg-black/50 border border-white/10 text-zinc-300 shadow-sm backdrop-blur-sm">
+                          {group.dateLabel}
+                        </span>
                       </div>
-                    );
-                  })
+
+                      {/* Lista de Mensagens do Grupo */}
+                      {group.messages.map((msg) => {
+                        const isInbound = msg.direction === "inbound";
+                        const isSystem = msg.messageType === "system";
+                        const isVoice = msg.messageType === "voice";
+                        const isPhoto = msg.messageType === "photo";
+                        const isDoc = msg.messageType === "document";
+                        const isSent = msg.status === "sent" || msg.status === "delivered";
+                        const isFailed = msg.status === "failed";
+                        const isSending = msg.status === "sending";
+                        const timeStr = new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
+
+                        // Mensagem de Evento do Sistema
+                        if (isSystem) {
+                          return (
+                            <div key={msg.id} className="flex justify-center my-2">
+                              <div className="px-3.5 py-1.5 rounded-full bg-[#181d27]/90 border border-white/10 text-zinc-300 text-[11px] font-medium shadow-sm flex items-center gap-1.5 backdrop-blur-sm">
+                                <Hand className="w-3 h-3 text-[#3984FF]" />
+                                <span>{msg.text}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Balões de Mensagens Estilo Telegram
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
+                          >
+                            <div
+                              className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-xs shadow-md space-y-1 relative ${
+                                isInbound
+                                  ? "bg-[#1d232e] text-zinc-100 border border-white/5 rounded-bl-xs"
+                                  : "bg-[#3984FF] text-white rounded-br-xs"
+                              }`}
+                            >
+                              {/* Conteúdo de Foto */}
+                              {isPhoto && msg.mediaUrl && (
+                                <div className="rounded-xl overflow-hidden mb-2 border border-white/10 max-h-60 bg-black/40">
+                                  <img
+                                    src={msg.mediaUrl}
+                                    alt="Foto"
+                                    className="w-full h-auto object-cover"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Conteúdo de Áudio / Nota de Voz */}
+                              {isVoice && (
+                                <div className="flex items-center gap-3 py-1.5 pr-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (activeAudioPlayingId === msg.id) {
+                                        timelineAudioRef.current?.pause();
+                                        setActiveAudioPlayingId(null);
+                                      } else if (msg.mediaUrl) {
+                                        if (timelineAudioRef.current) {
+                                          timelineAudioRef.current.pause();
+                                        }
+                                        const aud = new Audio(msg.mediaUrl);
+                                        aud.onended = () => setActiveAudioPlayingId(null);
+                                        aud.play().catch(() => {});
+                                        timelineAudioRef.current = aud;
+                                        setActiveAudioPlayingId(msg.id);
+                                      }
+                                    }}
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer shadow-sm ${
+                                      isInbound
+                                        ? "bg-[#3984FF] text-white"
+                                        : "bg-white text-[#3984FF]"
+                                    }`}
+                                  >
+                                    {activeAudioPlayingId === msg.id ? (
+                                      <Pause className="w-4 h-4 fill-current" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    )}
+                                  </button>
+                                  <div className="flex-1 min-w-[120px]">
+                                    <div className="flex items-center gap-1 h-3">
+                                      {/* Onda decorativa de áudio */}
+                                      {[40, 70, 30, 90, 60, 80, 45, 95, 30, 75, 55, 85, 35, 65].map((h, i) => (
+                                        <span
+                                          key={i}
+                                          className={`w-1 rounded-full ${
+                                            isInbound ? "bg-zinc-500" : "bg-blue-100/70"
+                                          }`}
+                                          style={{ height: `${h}%` }}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="text-[10px] opacity-80 mt-1 inline-block">
+                                      Mensagem de voz
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Conteúdo de Documento */}
+                              {isDoc && (
+                                <div className="flex items-center gap-2.5 py-1">
+                                  <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center">
+                                    <FileText className="w-4 h-4 text-white" />
+                                  </div>
+                                  <span className="font-semibold text-[11px] truncate">Documento anexado</span>
+                                </div>
+                              )}
+
+                              {/* Texto da Mensagem */}
+                              {msg.text && (
+                                <p className="whitespace-pre-wrap leading-relaxed break-words text-xs">
+                                  {msg.text}
+                                </p>
+                              )}
+
+                              {/* Rodapé do Balão com Horário e Status */}
+                              <div
+                                className={`flex items-center gap-1.5 pt-0.5 text-[10px] ${
+                                  isInbound ? "justify-start text-zinc-400" : "justify-end text-blue-100/90"
+                                }`}
+                              >
+                                <span>{timeStr}</span>
+                                {!isInbound && (
+                                  <span className="inline-flex items-center">
+                                    {isSent && (
+                                      <span title="Enviado ao Telegram">
+                                        <CheckCheck className="w-3.5 h-3.5 text-white inline" />
+                                      </span>
+                                    )}
+                                    {isSending && (
+                                      <span title="Enviando...">
+                                        <Loader2 className="w-3 h-3 animate-spin inline text-white" />
+                                      </span>
+                                    )}
+                                    {isFailed && (
+                                      <span title="Falha no envio">
+                                        <AlertCircle className="w-3 h-3 text-rose-300 inline" />
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Banner de Erro se houver falha de envio */}
               {sendError && (
-                <div className="mx-4 mb-2 p-3 rounded-[10px] bg-rose-950/80 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2">
+                <div className="mx-4 mb-2 p-3 rounded-xl bg-rose-950/85 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2 shadow-lg backdrop-blur-md">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{sendError}</span>
@@ -1015,7 +1247,7 @@ export default function ConversasCenter({
                   <button
                     type="button"
                     onClick={() => setSendError(null)}
-                    className="text-rose-400 hover:text-white"
+                    className="text-rose-400 hover:text-white cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -1024,16 +1256,16 @@ export default function ConversasCenter({
 
               {/* Pré-visualização de Anexo antes do Envio */}
               {selectedFile && (
-                <div className="mx-4 mb-2 p-2.5 bg-[#181A22] border border-white/10 rounded-[10px] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2">
+                <div className="mx-4 mb-2 p-2.5 bg-[#171c26] border border-white/10 rounded-xl flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 shadow-xl">
                   <div className="flex items-center gap-2.5 min-w-0">
                     {selectedFile.previewUrl ? (
                       <img
                         src={selectedFile.previewUrl}
                         alt="Preview"
-                        className="w-10 h-10 rounded-[6px] object-cover border border-white/10"
+                        className="w-10 h-10 rounded-lg object-cover border border-white/10"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-[6px] bg-white/[0.05] border border-white/10 flex items-center justify-center text-zinc-300">
+                      <div className="w-10 h-10 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center text-zinc-300">
                         <FileText className="w-5 h-5 text-[#3984FF]" />
                       </div>
                     )}
@@ -1047,7 +1279,7 @@ export default function ConversasCenter({
                   <button
                     type="button"
                     onClick={() => setSelectedFile(null)}
-                    className="p-1.5 rounded-[6px] hover:bg-white/[0.08] text-zinc-400 hover:text-white"
+                    className="p-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-400 hover:text-white cursor-pointer"
                     title="Remover anexo"
                   >
                     <X className="w-4 h-4" />
@@ -1059,15 +1291,14 @@ export default function ConversasCenter({
               {/* GAVETA DE EMOJIS EXPANSÍVEL                         */}
               {/* =================================================== */}
               {showEmojiPicker && (
-                <div className="mx-4 mb-2 bg-[#181A22] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-56 animate-in fade-in slide-in-from-bottom-3 z-30">
-                  {/* Categorias no topo */}
-                  <div className="flex items-center border-b border-white/[0.06] bg-[#14151B] px-2 py-1 gap-1 overflow-x-auto">
+                <div className="mx-4 mb-2 bg-[#171c26] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-56 animate-in fade-in slide-in-from-bottom-3 z-30">
+                  <div className="flex items-center border-b border-white/[0.06] bg-[#131720] px-2 py-1 gap-1 overflow-x-auto">
                     {EMOJI_CATEGORIES.map((cat) => (
                       <button
                         key={cat.id}
                         type="button"
                         onClick={() => setActiveEmojiCategory(cat.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-sm transition-colors ${
+                        className={`px-2.5 py-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
                           activeEmojiCategory === cat.id
                             ? "bg-[#3984FF]/20 border border-[#3984FF]/40 text-white"
                             : "hover:bg-white/[0.04] text-zinc-400"
@@ -1080,21 +1311,20 @@ export default function ConversasCenter({
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(false)}
-                      className="ml-auto p-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-400 hover:text-white"
+                      className="ml-auto p-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-400 hover:text-white cursor-pointer"
                       title="Fechar emojis"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Grade de Emojis Rolável */}
                   <div className="flex-1 overflow-y-auto p-3 grid grid-cols-8 sm:grid-cols-10 gap-1 text-xl select-none">
                     {EMOJI_CATEGORIES.find((c) => c.id === activeEmojiCategory)?.emojis.map((emoji, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => handleInsertEmoji(emoji)}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors flex items-center justify-center hover:scale-125"
+                        className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors flex items-center justify-center hover:scale-125 cursor-pointer"
                       >
                         {emoji}
                       </button>
@@ -1104,10 +1334,9 @@ export default function ConversasCenter({
               )}
 
               {/* =================================================== */}
-              {/* COMPOSITOR DE MENSAGENS                             */}
+              {/* COMPOSITOR DE MENSAGENS FIXO (Estilo Telegram)       */}
               {/* =================================================== */}
-              <div className="p-3 sm:p-4 bg-[#14151A] border-t border-white/[0.08] relative">
-                {/* Input Invisível de Upload de Arquivos */}
+              <div className="p-3 sm:p-4 bg-[#12161f] border-t border-white/[0.08] relative pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1116,50 +1345,106 @@ export default function ConversasCenter({
                   className="hidden"
                 />
 
-                {isRecordingAudio ? (
-                  /* Modo Gravador de Áudio Ativo */
-                  <div className="flex items-center justify-between gap-3 bg-[#1A1C23] border border-rose-500/30 rounded-[10px] px-3.5 py-2.5 animate-in fade-in">
+                {audioRecordingState === "recording" ? (
+                  /* 1. Modo Gravação Ativa */
+                  <div className="flex items-center justify-between gap-3 bg-[#181d27] border border-rose-500/30 rounded-full px-4 py-2 animate-in fade-in">
                     <button
                       type="button"
-                      onClick={handleCancelRecording}
-                      className="p-2 rounded-[8px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
-                      title="Cancelar gravação"
+                      onClick={handleDiscardRecordedAudio}
+                      className="p-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                      title="Descartar gravação"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
                       <span className="text-xs font-mono font-bold text-white tracking-wide">
                         {formatTimer(recordingSeconds)}
                       </span>
-                      <span className="text-[11px] text-zinc-400 hidden sm:inline">Gravando áudio para o cliente...</span>
+                      <span className="text-[11px] text-zinc-400 hidden sm:inline">
+                        Gravando áudio para o cliente...
+                      </span>
                     </div>
 
                     <button
                       type="button"
-                      onClick={handleSendRecording}
-                      className="p-2 rounded-[8px] bg-[#3984FF] hover:bg-[#2563EB] text-white transition-colors cursor-pointer shadow-md shadow-[#3984FF]/25"
-                      title="Enviar áudio gravado"
+                      onClick={handleStopRecordingToPreview}
+                      className="p-2 rounded-full bg-[#3984FF] hover:bg-[#2563EB] text-white transition-colors cursor-pointer shadow-md shadow-[#3984FF]/25"
+                      title="Parar e ouvir prévia"
                     >
-                      <SendHorizontal className="w-4 h-4" />
+                      <Pause className="w-4 h-4 fill-current" />
                     </button>
                   </div>
+                ) : audioRecordingState === "preview" ? (
+                  /* 2. Modo Pré-visualização do Áudio com Player */
+                  <div className="flex items-center justify-between gap-3 bg-[#181d27] border border-[#3984FF]/30 rounded-full px-4 py-2 animate-in fade-in">
+                    <button
+                      type="button"
+                      onClick={handleDiscardRecordedAudio}
+                      className="p-2 rounded-full hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Excluir áudio gravado"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={handleTogglePlayPreview}
+                        className="w-8 h-8 rounded-full bg-[#3984FF] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
+                        title={isPlayingPreview ? "Pausar" : "Ouvir"}
+                      >
+                        {isPlayingPreview ? (
+                          <Pause className="w-3.5 h-3.5 fill-current" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                        )}
+                      </button>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">Nota de voz pronta</p>
+                        <p className="text-[10px] text-zinc-400">
+                          {formatTimer(recordingSeconds)} • Toque em enviar para despachar
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSendRecordedAudio}
+                      disabled={sendingMessage}
+                      className="p-2.5 rounded-full bg-[#3984FF] hover:bg-[#2563EB] text-white transition-all cursor-pointer shadow-lg shadow-[#3984FF]/25 flex items-center justify-center"
+                      title="Enviar áudio"
+                    >
+                      {sendingMessage ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <SendHorizontal className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                ) : audioRecordingState === "sending" ? (
+                  /* 3. Modo Transmissão do Áudio */
+                  <div className="flex items-center justify-center gap-2 bg-[#181d27] border border-[#3984FF]/30 rounded-full px-4 py-2.5 text-xs text-[#3984FF] font-medium">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Preparando container e transmitindo áudio ao Telegram...</span>
+                  </div>
                 ) : (
-                  /* Modo Normal de Composição */
+                  /* 4. Modo Normal de Composição (Inspirado no Telegram) */
                   <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    {/* Botão de Anexo */}
+                    {/* Botão de Anexo (Paperclip) */}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={sendingMessage}
-                      className="p-2.5 rounded-[10px] bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer shrink-0"
-                      title="Anexar imagem ou arquivo"
+                      className="p-2.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer shrink-0"
+                      title="Anexar imagem ou documento"
                     >
                       <Paperclip className="w-4 h-4" />
                     </button>
 
-                    {/* Campo de Entrada de Mensagem */}
+                    {/* Campo de Entrada de Mensagem com Pílula Redonda */}
                     <div className="flex-1 relative flex items-center">
                       <input
                         ref={textInputRef}
@@ -1171,7 +1456,7 @@ export default function ConversasCenter({
                         }}
                         disabled={sendingMessage}
                         placeholder="Mensagem"
-                        className="w-full bg-[#18191E] border border-white/10 rounded-[10px] pl-4 pr-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#3984FF] transition-colors"
+                        className="w-full bg-[#181d26] border border-white/10 rounded-full pl-4 pr-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#3984FF] transition-colors"
                       />
 
                       {/* Botão de Emojis dentro do Input */}
@@ -1185,12 +1470,12 @@ export default function ConversasCenter({
                       </button>
                     </div>
 
-                    {/* Botão Enviar ou Gravar Áudio */}
+                    {/* Botão Dinâmico: Microfone se vazio, Enviar se houver texto */}
                     {messageText.trim() || selectedFile ? (
                       <button
                         type="submit"
                         disabled={sendingMessage}
-                        className="p-2.5 rounded-[10px] bg-[#3984FF] hover:bg-[#2563EB] text-white transition-all disabled:opacity-50 flex items-center justify-center shrink-0 shadow-lg shadow-[#3984FF]/25 cursor-pointer"
+                        className="w-10 h-10 rounded-full bg-[#3984FF] hover:bg-[#2563EB] text-white transition-all disabled:opacity-50 flex items-center justify-center shrink-0 shadow-lg shadow-[#3984FF]/25 cursor-pointer"
                         title="Enviar mensagem"
                       >
                         {sendingMessage ? (
@@ -1203,7 +1488,7 @@ export default function ConversasCenter({
                       <button
                         type="button"
                         onClick={handleStartRecording}
-                        className="p-2.5 rounded-[10px] bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer shrink-0"
+                        className="w-10 h-10 rounded-full bg-[#3984FF] hover:bg-[#2563EB] text-white transition-all flex items-center justify-center shrink-0 shadow-lg shadow-[#3984FF]/25 cursor-pointer"
                         title="Gravar áudio"
                       >
                         <Mic className="w-4 h-4" />
@@ -1218,7 +1503,7 @@ export default function ConversasCenter({
             /* TELA VAZIA (NENHUMA CONVERSA SELECIONADA)           */
             /* =================================================== */
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 relative z-10 select-none">
-              <div className="max-w-sm bg-[#17181F]/90 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-4">
+              <div className="max-w-sm bg-[#161a24]/90 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-4">
                 <div className="w-16 h-16 rounded-full bg-[#3984FF]/10 border border-[#3984FF]/25 flex items-center justify-center mx-auto text-[#3984FF]">
                   <MessageSquare className="w-8 h-8" />
                 </div>
@@ -1230,7 +1515,7 @@ export default function ConversasCenter({
                 </div>
                 <div className="p-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-[11px] text-zinc-400 flex items-center gap-2 text-left">
                   <Clock className="w-4 h-4 text-[#3984FF] shrink-0" />
-                  <span>Mensagens temporárias ativadas • Histórico sincronizado em tempo real.</span>
+                  <span>Mensagens sincronizadas em tempo real com o Telegram.</span>
                 </div>
               </div>
             </div>
