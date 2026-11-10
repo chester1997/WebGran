@@ -495,8 +495,11 @@ export async function getBotCustomerMessagesAction(params: {
     status: string;
     createdAt: string;
     errorMessage?: string | null;
+    metadata?: Record<string, any> | null;
   }>;
   total: number;
+  isManualMode?: boolean;
+  manualModeExpiresAt?: string;
 }>> {
   const auth = await verifyOwnerActionAccess();
   if (!auth.authorized) {
@@ -542,6 +545,22 @@ export async function getBotCustomerMessagesAction(params: {
     offset,
   });
 
+  // Verificar estado de modo manual recente para este cliente
+  const lastManualEvent = [...msgs]
+    .reverse()
+    .find(m => m.messageType === "system" && (m.metadata as any)?.event === "manual_mode_toggle");
+
+  const isManualMode = !!(
+    lastManualEvent &&
+    (lastManualEvent.metadata as any)?.enabled === true &&
+    (lastManualEvent.metadata as any)?.expiresAt &&
+    new Date((lastManualEvent.metadata as any).expiresAt).getTime() > Date.now()
+  );
+
+  const manualModeExpiresAt = isManualMode
+    ? (lastManualEvent?.metadata as any)?.expiresAt
+    : undefined;
+
   return {
     success: true,
     data: {
@@ -553,8 +572,111 @@ export async function getBotCustomerMessagesAction(params: {
         status: m.status,
         createdAt: m.createdAt.toISOString(),
         errorMessage: m.errorMessage,
+        metadata: (m.metadata as Record<string, any>) || null,
       })),
       total: msgs.length,
+      isManualMode,
+      manualModeExpiresAt,
+    }
+  };
+}
+
+/**
+ * Alternar modo manual de atendimento para um cliente específico
+ */
+export async function toggleBotCustomerManualModeAction(params: {
+  botId: string;
+  customerId: string;
+  enabled: boolean;
+  durationMinutes?: number;
+}): Promise<ActionResponse<{
+  isManualMode: boolean;
+  expiresAt?: string;
+  systemMessage: {
+    id: string;
+    direction: "outbound";
+    messageType: "system";
+    text: string;
+    createdAt: string;
+    status: string;
+  };
+}>> {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized) {
+    return { success: false, error: auth.error };
+  }
+
+  const store = await getCurrentStore();
+  if (!store) {
+    return { success: false, error: "Loja não encontrada." };
+  }
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(
+      eq(telegramBots.id, params.botId),
+      eq(telegramBots.storeId, store.id)
+    )
+  });
+  if (!bot) {
+    return { success: false, error: "Bot não encontrado para esta loja." };
+  }
+
+  const customer = await db.query.telegramCustomers.findFirst({
+    where: and(
+      eq(telegramCustomers.id, params.customerId),
+      eq(telegramCustomers.storeId, store.id)
+    )
+  });
+  if (!customer) {
+    return { success: false, error: "Cliente não encontrado para esta loja." };
+  }
+
+  const durationMinutes = Math.min(Math.max(params.durationMinutes || 60, 5), 1440); // 1h default, max 24h
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+  const timeFormatted = expiresAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  const eventText = params.enabled
+    ? `Modo manual ativado até ${timeFormatted}`
+    : "Modo manual desativado";
+
+  const [inserted] = await db.insert(telegramMessages).values({
+    storeId: store.id,
+    botId: bot.id,
+    customerId: customer.id,
+    telegramUserId: customer.telegramUserId,
+    telegramChatId: customer.telegramUserId,
+    direction: "outbound",
+    messageType: "system",
+    text: eventText,
+    status: "delivered",
+    metadata: {
+      event: "manual_mode_toggle",
+      enabled: params.enabled,
+      expiresAt: params.enabled ? expiresAt.toISOString() : null,
+      durationMinutes,
+      activatedAt: now.toISOString(),
+      operatorUserId: store.ownerId,
+    },
+    createdAt: now,
+  }).returning({ id: telegramMessages.id });
+
+  revalidatePath(`/seller/bots/${bot.id}`);
+
+  return {
+    success: true,
+    message: eventText,
+    data: {
+      isManualMode: params.enabled,
+      expiresAt: params.enabled ? expiresAt.toISOString() : undefined,
+      systemMessage: {
+        id: inserted.id,
+        direction: "outbound",
+        messageType: "system",
+        text: eventText,
+        createdAt: now.toISOString(),
+        status: "delivered",
+      }
     }
   };
 }
@@ -565,14 +687,18 @@ export async function getBotCustomerMessagesAction(params: {
 export async function sendTelegramDirectMessageAction(params: {
   botId: string;
   customerId: string;
-  text: string;
+  text?: string;
   clientMessageId: string;
+  mediaType?: "text" | "photo" | "voice" | "document";
+  mediaBase64?: string;
+  mediaName?: string;
 }): Promise<ActionResponse<{
   id: string;
   telegramMessageId?: string;
   text: string;
   createdAt: string;
   status: "sent" | "failed" | "unknown" | "sending" | "pending";
+  messageType?: string;
 }>> {
   const auth = await verifyOwnerActionAccess();
   if (!auth.authorized) {
@@ -586,12 +712,38 @@ export async function sendTelegramDirectMessageAction(params: {
     return { success: false, error: "Identificador de idempotência (clientMessageId) inválido. Deve ser um UUID válido." };
   }
 
+  const mediaType = params.mediaType || "text";
+  if (!["text", "photo", "voice", "document"].includes(mediaType)) {
+    return { success: false, error: "Tipo de mídia inválido." };
+  }
+
   const trimmedText = (params.text || "").trim();
-  if (!trimmedText) {
-    return { success: false, error: "O conteúdo da mensagem não pode ficar vazio." };
+  if (!trimmedText && !params.mediaBase64) {
+    return { success: false, error: "O conteúdo da mensagem ou anexo não pode ficar vazio." };
   }
   if (trimmedText.length > 4096) {
     return { success: false, error: "A mensagem excede o limite máximo permitido pelo Telegram (4.096 caracteres)." };
+  }
+
+  // 1.2. Validações rigorosas de segurança para Anexos e Mídia
+  let mediaSizeBytes = 0;
+  let sanitizedMediaName = "";
+  if (params.mediaBase64) {
+    mediaSizeBytes = Buffer.byteLength(params.mediaBase64, "base64");
+    // Limite máximo de 20 MB para anexos
+    if (mediaSizeBytes > 20 * 1024 * 1024) {
+      return { success: false, error: "O anexo excede o tamanho máximo permitido de 20 MB." };
+    }
+
+    sanitizedMediaName = (params.mediaName || (mediaType === "photo" ? "foto.jpg" : mediaType === "voice" ? "audio.ogg" : "arquivo"))
+      .replace(/[^a-zA-Z0-9._-]/g, "_")
+      .slice(0, 120);
+
+    // Bloquear executáveis ou scripts potencialmente perigosos
+    const blockedExtRegex = /\.(exe|bat|cmd|sh|php|phtml|vbs|msi|scr)$/i;
+    if (blockedExtRegex.test(sanitizedMediaName)) {
+      return { success: false, error: "Extensão de arquivo não permitida por motivos de segurança." };
+    }
   }
 
   const store = await getCurrentStore();
@@ -735,13 +887,16 @@ export async function sendTelegramDirectMessageAction(params: {
         telegramChatId: targetChatId,
         clientMessageId,
         direction: "outbound",
-        messageType: "text",
-        text: trimmedText,
+        messageType: mediaType,
+        text: trimmedText || (mediaType === "voice" ? "[Mensagem de Voz]" : mediaType === "photo" ? "[Foto]" : "[Arquivo]"),
         status: "pending",
         metadata: {
           isTest: true,
           testScope: "outbound_homologation",
           operatorUserId: store.ownerId,
+          mediaType,
+          mediaName: sanitizedMediaName || params.mediaName,
+          mediaSizeBytes: mediaSizeBytes > 0 ? mediaSizeBytes : undefined,
         },
         createdAt: now,
       }).returning({ id: telegramMessages.id });
@@ -783,7 +938,45 @@ export async function sendTelegramDirectMessageAction(params: {
 
   try {
     const botService = new TelegramBotService(rawToken);
-    const tgResult = await botService.sendMessage(targetChatId, trimmedText) as any;
+    let tgResult: any;
+
+    if (mediaType === "voice" && params.mediaBase64) {
+      const buffer = Buffer.from(params.mediaBase64, "base64");
+      const fileName = sanitizedMediaName || "audio.ogg";
+
+      // Validação por Magic Bytes do formato real:
+      // OggS: 0x4f 0x67 0x67 0x53
+      // MP4/M4A: 'ftyp' no offset 4
+      const isOgg = buffer.length >= 4 && buffer[0] === 0x4f && buffer[1] === 0x67 && buffer[2] === 0x67 && buffer[3] === 0x53;
+      const isM4A = buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70;
+
+      try {
+        const voiceFileName = isOgg
+          ? (fileName.endsWith(".ogg") ? fileName : `${fileName}.ogg`)
+          : isM4A
+            ? (fileName.endsWith(".m4a") ? fileName : `${fileName}.m4a`)
+            : fileName;
+        tgResult = await botService.sendVoice(targetChatId, buffer, voiceFileName, trimmedText || undefined);
+      } catch (voiceErr: any) {
+        const vMsg = String(voiceErr?.message || "").toLowerCase();
+        // Se a API do Telegram recusar o container de voz (ex: WebM do Chromium ou codec não aceito como voice note),
+        // fallback automático para sendDocument preservando a entrega do áudio ao cliente
+        if (vMsg.includes("wrong file format") || vMsg.includes("can't parse voice message") || vMsg.includes("voice")) {
+          console.warn("[sendTelegramDirectMessageAction] Fallback de áudio:", voiceErr?.message);
+          tgResult = await botService.sendDocument(targetChatId, buffer, fileName, trimmedText || undefined);
+        } else {
+          throw voiceErr;
+        }
+      }
+    } else if (mediaType === "photo" && params.mediaBase64) {
+      const buffer = Buffer.from(params.mediaBase64, "base64");
+      tgResult = await botService.sendPhotoUpload(targetChatId, buffer, sanitizedMediaName || "photo.jpg", trimmedText || undefined);
+    } else if (mediaType === "document" && params.mediaBase64) {
+      const buffer = Buffer.from(params.mediaBase64, "base64");
+      tgResult = await botService.sendDocument(targetChatId, buffer, sanitizedMediaName || "document", trimmedText || undefined);
+    } else {
+      tgResult = await botService.sendMessage(targetChatId, trimmedText);
+    }
     const sentMsgId = tgResult?.message_id ? String(tgResult.message_id) : null;
 
     // 5. Telegram confirmou aceitação: transição atômica de 'sending' para 'sent'
@@ -801,9 +994,10 @@ export async function sendTelegramDirectMessageAction(params: {
       data: {
         id: recordId,
         telegramMessageId: sentMsgId ?? undefined,
-        text: trimmedText,
+        text: trimmedText || (mediaType === "voice" ? "Áudio gravado" : "Arquivo"),
         createdAt: now.toISOString(),
         status: "sent",
+        messageType: mediaType,
       }
     };
   } catch (tgError: any) {

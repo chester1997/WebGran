@@ -60,6 +60,30 @@ export class TelegramBotService {
     return telegramFetch(this.token, 'sendPhoto', payload);
   }
 
+  async sendPhotoUpload(chatId: string | number, fileBuffer: Buffer | Uint8Array, fileName: string, caption?: string): Promise<unknown> {
+    const fd = new FormData();
+    fd.append('chat_id', String(chatId));
+    fd.append('photo', new Blob([fileBuffer as any]), fileName);
+    if (caption) fd.append('caption', caption);
+    return telegramFetch(this.token, 'sendPhoto', fd);
+  }
+
+  async sendVoice(chatId: string | number, voiceBuffer: Buffer | Uint8Array, fileName: string = 'voice.ogg', caption?: string): Promise<unknown> {
+    const fd = new FormData();
+    fd.append('chat_id', String(chatId));
+    fd.append('voice', new Blob([voiceBuffer as any], { type: 'audio/ogg' }), fileName);
+    if (caption) fd.append('caption', caption);
+    return telegramFetch(this.token, 'sendVoice', fd);
+  }
+
+  async sendDocument(chatId: string | number, docBuffer: Buffer | Uint8Array, fileName: string, caption?: string): Promise<unknown> {
+    const fd = new FormData();
+    fd.append('chat_id', String(chatId));
+    fd.append('document', new Blob([docBuffer as any]), fileName);
+    if (caption) fd.append('caption', caption);
+    return telegramFetch(this.token, 'sendDocument', fd);
+  }
+
   async sendVideo(
     chatId: string | number,
     video: string,

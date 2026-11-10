@@ -14,6 +14,7 @@ import BotHeader from "../components/BotHeader";
 import BotTabsNav from "../components/BotTabsNav";
 import BotOverviewTab from "../components/BotOverviewTab";
 import BotConversationsTab, { CustomerItem, MessageItem } from "../components/BotConversationsTab";
+import ConversasCenter from "../components/ConversasCenter";
 import BotSettingsTab from "../components/BotSettingsTab";
 
 import WelcomeClient from "@/app/(seller)/seller/boas-vindas/WelcomeClient";
@@ -119,6 +120,7 @@ export default function SingleBotClient({
   const [tabCache, setTabCache] = useState<BotTabData>(tabData || {});
   const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year">("month");
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isConversasModalOpen, setIsConversasModalOpen] = useState(false);
 
   // Sincronizar cache de dados ao receber novas abas carregadas
   useEffect(() => {
@@ -371,7 +373,20 @@ export default function SingleBotClient({
         isAdmin={isAdmin}
         selectedPeriod={selectedPeriod}
         onSelectPeriod={setSelectedPeriod}
+        onOpenConversasModal={() => setIsConversasModalOpen(true)}
       />
+
+      {/* MODAL IMERSIVO DE CONVERSAS (CENTRAL DE ATENDIMENTO) */}
+      {isConversasModalOpen && (
+        <ConversasCenter
+          bot={bot}
+          initialCustomers={initialCustomers}
+          initialMessages={initialMessages}
+          onClose={() => setIsConversasModalOpen(false)}
+          isModal={true}
+          showNotification={showNotification}
+        />
+      )}
 
       {/* 2. CONTEÚDO DAS ABAS */}
       {/* 2.1 GERENCIAMENTO DO BOT */}
@@ -383,7 +398,7 @@ export default function SingleBotClient({
           topSellingProducts={topSellingProducts}
           selectedPeriod={selectedPeriod}
           onSelectPeriod={setSelectedPeriod}
-          onOpenConversas={() => handleSelectTab("conversas")}
+          onOpenConversas={() => setIsConversasModalOpen(true)}
           isAdmin={isAdmin}
           userRole={userRole}
           showOperationalStatus={false}
@@ -397,6 +412,7 @@ export default function SingleBotClient({
           initialCustomers={initialCustomers}
           initialMessages={initialMessages}
           showNotification={showNotification}
+          bot={bot}
         />
       )}
 

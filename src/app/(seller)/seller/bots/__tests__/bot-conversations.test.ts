@@ -58,11 +58,24 @@ let mockSendMessageImpl: (chatId: string | number, text: string) => Promise<any>
   message_id: 998877,
 });
 
+let mockSendVoiceImpl = vi.fn().mockResolvedValue({ message_id: 88881 });
+let mockSendPhotoImpl = vi.fn().mockResolvedValue({ message_id: 88882 });
+let mockSendDocImpl = vi.fn().mockResolvedValue({ message_id: 88883 });
+
 vi.mock("@/lib/telegram/bot", () => {
   return {
     TelegramBotService: vi.fn().mockImplementation(function (this: any, token: string) {
       this.sendMessage = vi.fn().mockImplementation((chatId: string | number, text: string) => {
         return mockSendMessageImpl(chatId, text);
+      });
+      this.sendVoice = vi.fn().mockImplementation((chatId: string | number, buffer: any, name: string, caption?: string) => {
+        return mockSendVoiceImpl(chatId, buffer, name, caption);
+      });
+      this.sendPhotoUpload = vi.fn().mockImplementation((chatId: string | number, buffer: any, name: string, caption?: string) => {
+        return mockSendPhotoImpl(chatId, buffer, name, caption);
+      });
+      this.sendDocument = vi.fn().mockImplementation((chatId: string | number, buffer: any, name: string, caption?: string) => {
+        return mockSendDocImpl(chatId, buffer, name, caption);
       });
     }),
   };
@@ -76,7 +89,8 @@ import { getCurrentUser, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { 
   getBotCustomerMessagesAction, 
-  sendTelegramDirectMessageAction 
+  sendTelegramDirectMessageAction,
+  toggleBotCustomerManualModeAction,
 } from "../actions";
 
 describe("WebGran — Sistema Real de Conversas do Bot", () => {
@@ -523,6 +537,163 @@ describe("WebGran — Sistema Real de Conversas do Bot", () => {
         process.env.AUTHORIZED_TEST_CHAT_ID = prevEnv;
         (process.env as any).NODE_ENV = prevNodeEnv;
       }
+    });
+  });
+
+  // -------------------------------------------------------------
+  // 4. ATENDIMENTO MANUAL E MULTIMÍDIA
+  // -------------------------------------------------------------
+  describe("4. Atendimento Manual e Multimídia", () => {
+    it("ativa modo manual e insere evento de sistema na timeline com expiração", async () => {
+      const res = await toggleBotCustomerManualModeAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        enabled: true,
+        durationMinutes: 60,
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.isManualMode).toBe(true);
+      expect(res.data?.expiresAt).toBeDefined();
+      expect(res.data?.systemMessage.messageType).toBe("system");
+      expect(res.data?.systemMessage.text).toContain("Modo manual ativado");
+    });
+
+    it("desativa modo manual e insere evento de encerramento", async () => {
+      const res = await toggleBotCustomerManualModeAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        enabled: false,
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.isManualMode).toBe(false);
+      expect(res.data?.systemMessage.text).toBe("Modo manual desativado");
+    });
+
+    it("detecta modo manual ativo ao carregar mensagens do cliente", async () => {
+      const mockMsgs = [
+        {
+          id: "sys-1",
+          direction: "outbound",
+          messageType: "system",
+          text: "Modo manual ativado até 20:00",
+          status: "delivered",
+          createdAt: new Date(),
+          metadata: {
+            event: "manual_mode_toggle",
+            enabled: true,
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          },
+        },
+      ];
+      vi.mocked(db.query.telegramMessages.findMany).mockResolvedValue(mockMsgs as any);
+
+      const res = await getBotCustomerMessagesAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.isManualMode).toBe(true);
+      expect(res.data?.manualModeExpiresAt).toBeDefined();
+    });
+
+    it("envia mensagem de voz/áudio com sucesso", async () => {
+      const res = await sendTelegramDirectMessageAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        clientMessageId: "b08bf60e-b7e6-4d1a-8530-1c64073d7f96",
+        mediaType: "voice",
+        mediaBase64: Buffer.from("fake-audio-data").toString("base64"),
+        mediaName: "voice_note.ogg",
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe("sent");
+      expect(res.data?.messageType).toBe("voice");
+      expect(mockSendVoiceImpl).toHaveBeenCalled();
+    });
+
+    it("envia imagem/foto com sucesso", async () => {
+      const res = await sendTelegramDirectMessageAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        clientMessageId: "c08bf60e-b7e6-4d1a-8530-1c64073d7f97",
+        mediaType: "photo",
+        mediaBase64: Buffer.from("fake-image-data").toString("base64"),
+        mediaName: "banner.png",
+        text: "Veja o novo produto",
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe("sent");
+      expect(res.data?.messageType).toBe("photo");
+      expect(mockSendPhotoImpl).toHaveBeenCalled();
+    });
+
+    it("envia documento com sucesso", async () => {
+      const res = await sendTelegramDirectMessageAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        clientMessageId: "d08bf60e-b7e6-4d1a-8530-1c64073d7f98",
+        mediaType: "document",
+        mediaBase64: Buffer.from("fake-doc-data").toString("base64"),
+        mediaName: "catalogo.pdf",
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe("sent");
+      expect(res.data?.messageType).toBe("document");
+      expect(mockSendDocImpl).toHaveBeenCalled();
+    });
+
+    it("rejeita arquivo executável potencialmente perigoso", async () => {
+      const res = await sendTelegramDirectMessageAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        clientMessageId: "e08bf60e-b7e6-4d1a-8530-1c64073d7f99",
+        mediaType: "document",
+        mediaBase64: Buffer.from("malicious-code").toString("base64"),
+        mediaName: "trojan.exe",
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("não permitida");
+    });
+
+    it("rejeita anexo maior que o limite de 20MB", async () => {
+      // 21 MB payload
+      const hugeBuffer = Buffer.alloc(21 * 1024 * 1024);
+      const res = await sendTelegramDirectMessageAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        clientMessageId: "f08bf60e-b7e6-4d1a-8530-1c64073d7f00",
+        mediaType: "document",
+        mediaBase64: hugeBuffer.toString("base64"),
+        mediaName: "huge.zip",
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("20 MB");
+    });
+
+    it("executa fallback gracioso para documento se sendVoice for recusado por formato incompatível", async () => {
+      mockSendVoiceImpl.mockRejectedValueOnce(new Error("Bad Request: wrong file format"));
+      mockSendDocImpl.mockResolvedValueOnce({ message_id: 998877 });
+
+      const res = await sendTelegramDirectMessageAction({
+        botId: BOT_DATA.id,
+        customerId: CUSTOMER_DATA.id,
+        clientMessageId: "a18bf60e-b7e6-4d1a-8530-1c64073d7f01",
+        mediaType: "voice",
+        mediaBase64: Buffer.from("webm-opus-data").toString("base64"),
+        mediaName: "recording.webm",
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe("sent");
+      expect(mockSendDocImpl).toHaveBeenCalled();
     });
   });
 });

@@ -45,6 +45,7 @@ interface BotHeaderProps {
   isAdmin?: boolean;
   selectedPeriod?: "today" | "week" | "month" | "year";
   onSelectPeriod?: (period: "today" | "week" | "month" | "year") => void;
+  onOpenConversasModal?: () => void;
 }
 
 export default function BotHeader({
@@ -58,6 +59,7 @@ export default function BotHeader({
   isAdmin = false,
   selectedPeriod = "month",
   onSelectPeriod,
+  onOpenConversasModal,
 }: BotHeaderProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -173,7 +175,10 @@ export default function BotHeader({
             {/* 1. Botão Conversas */}
             <button
               type="button"
-              onClick={() => onSelectTab("conversas")}
+              onClick={() => {
+                if (onOpenConversasModal) onOpenConversasModal();
+                else onSelectTab("conversas");
+              }}
               className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium border transition-all cursor-pointer h-9 group ${activeTab === "conversas"
                   ? "bg-[#3984FF]/15 text-[#3984FF] border-[#3984FF]/40 shadow-xs"
                   : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60 hover:border-zinc-500/80"
@@ -348,7 +353,10 @@ export default function BotHeader({
           <div className="flex items-center gap-2 w-full">
             <button
               type="button"
-              onClick={() => onSelectTab("conversas")}
+              onClick={() => {
+                if (onOpenConversasModal) onOpenConversasModal();
+                else onSelectTab("conversas");
+              }}
               className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-[10px] text-xs sm:text-sm font-semibold border transition-all cursor-pointer h-10 ${
                 activeTab === "conversas"
                   ? "bg-[#3984FF]/15 text-[#3984FF] border-[#3984FF]/40 shadow-xs"
