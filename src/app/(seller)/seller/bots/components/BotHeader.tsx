@@ -4,9 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  ExternalLink,
-  MessageSquare,
-  MoreVertical,
   Play,
   Pause,
   Edit3,
@@ -16,9 +13,14 @@ import {
   Check,
   Link2,
   Bookmark,
-  Filter,
   ChevronDown
 } from "lucide-react";
+import {
+  SolarSellerConversasIcon,
+  SolarSellerFilterIcon,
+  SolarSquareShareLineBoldDuotone,
+  SolarMenuDotsVerticalBoldDuotone,
+} from "@/components/icons/solar/seller-icons";
 import BotAvatar from "./BotAvatar";
 import BotStatusBadge from "./BotStatusBadge";
 import BotTabsNav from "./BotTabsNav";
@@ -184,7 +186,7 @@ export default function BotHeader({
                   : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60 hover:border-zinc-500/80"
                 }`}
             >
-              <MessageSquare className={`w-4 h-4 ${activeTab === "conversas" ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"}`} strokeWidth={1.8} />
+              <SolarSellerConversasIcon size={16} className={`w-4 h-4 shrink-0 transition-colors ${activeTab === "conversas" ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"}`} />
               <span>Conversas</span>
             </button>
 
@@ -201,7 +203,7 @@ export default function BotHeader({
                   }`}
                 title="Filtrar período da análise"
               >
-                <Filter className={`w-3.5 h-3.5 ${filterOpen ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"} transition-colors`} strokeWidth={1.8} />
+                <SolarSellerFilterIcon size={14} className={`w-3.5 h-3.5 shrink-0 ${filterOpen ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"} transition-colors`} />
                 <span>Filtros</span>
                 <span className="text-zinc-500 text-xs font-normal">•</span>
                 <span className="text-[#3984FF] text-xs font-semibold">{currentPeriodLabel}</span>
@@ -260,7 +262,7 @@ export default function BotHeader({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 hover:border-zinc-500/80 text-xs sm:text-sm font-medium transition-all h-9 group"
             >
-              <ExternalLink className="w-4 h-4 text-zinc-400 group-hover:text-zinc-200" strokeWidth={1.8} />
+              <SolarSquareShareLineBoldDuotone size={16} className="w-4 h-4 shrink-0 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
               <span>Abrir no Telegram</span>
             </a>
 
@@ -272,7 +274,7 @@ export default function BotHeader({
                 className="p-2 rounded-[10px] text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer h-9 w-9 flex items-center justify-center shrink-0 border border-zinc-700/60 hover:border-zinc-500/80 bg-[#18181B]"
                 title="Opções do bot"
               >
-                <MoreVertical className="w-4 h-4" strokeWidth={1.8} />
+                <SolarMenuDotsVerticalBoldDuotone size={16} className="w-4 h-4 shrink-0" />
               </button>
 
               {menuOpen && (
@@ -363,7 +365,7 @@ export default function BotHeader({
                   : "bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border-zinc-700/60"
               }`}
             >
-              <MessageSquare className={`w-4 h-4 ${activeTab === "conversas" ? "text-[#3984FF]" : "text-zinc-400"}`} strokeWidth={1.8} />
+              <SolarSellerConversasIcon size={18} className={`w-4 h-4 shrink-0 transition-colors ${activeTab === "conversas" ? "text-[#3984FF]" : "text-zinc-400"}`} />
               <span>Conversas</span>
             </button>
 
@@ -377,7 +379,7 @@ export default function BotHeader({
                 aria-label="Opções do bot"
                 aria-expanded={menuOpen}
               >
-                <MoreVertical className="w-4 h-4" strokeWidth={1.8} />
+                <SolarMenuDotsVerticalBoldDuotone size={18} className="w-4 h-4 shrink-0" />
               </button>
 
               {menuOpen && (
@@ -461,7 +463,7 @@ export default function BotHeader({
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] bg-[#18181B] hover:bg-[#202024] text-zinc-200 hover:text-white border border-zinc-700/60 text-xs font-medium transition-all h-10 truncate"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-zinc-400 shrink-0" strokeWidth={1.8} />
+              <SolarSquareShareLineBoldDuotone size={14} className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
               <span className="truncate">Abrir no Telegram</span>
             </a>
 
@@ -479,7 +481,7 @@ export default function BotHeader({
                 }`}
                 title="Filtrar período da análise"
               >
-                <Filter className={`w-3.5 h-3.5 ${filterOpen ? "text-[#3984FF]" : "text-zinc-400"} shrink-0`} strokeWidth={1.8} />
+                <SolarSellerFilterIcon size={14} className={`w-3.5 h-3.5 ${filterOpen ? "text-[#3984FF]" : "text-zinc-400"} shrink-0`} />
                 <span className="truncate">Filtros • <strong className="text-[#3984FF] font-semibold">{currentPeriodLabel}</strong></span>
                 <ChevronDown className={`w-3 h-3 text-zinc-400 shrink-0 transition-transform ${filterOpen ? "rotate-180" : ""}`} strokeWidth={1.8} />
               </button>

@@ -2,18 +2,21 @@
 
 import React, { useState, useEffect } from "react";
 import { 
-  ChartNoAxesCombined, 
-  Settings, 
-  Sparkles, 
-  Image as ImageIcon, 
-  Package, 
-  Layers3, 
-  Video, 
-  GalleryHorizontal, 
-  Tags, 
-  Clapperboard, 
-  Bell, 
-  Ticket,
+  SolarSellerOverviewIcon,
+  SolarSellerBotIcon,
+  SolarSellerWelcomeIcon,
+  SolarSellerBannersIcon,
+  SolarSellerProductsIcon,
+  SolarSellerCombosIcon,
+  SolarSellerVideosIcon,
+  SolarSellerCarouselsIcon,
+  SolarSellerCategoriesIcon,
+  SolarSellerClipsIcon,
+  SolarSellerNotificationsIcon,
+  SolarSellerCouponsIcon,
+  type SolarIconProps,
+} from "@/components/icons/solar/seller-icons";
+import { 
   ChevronDown,
   X,
   Check
@@ -22,7 +25,7 @@ import {
 export interface TabDefinition {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<SolarIconProps>;
 }
 
 interface BotTabsNavProps {
@@ -61,24 +64,24 @@ export default function BotTabsNav({
 
   // GRUPO 1: GERENCIAMENTO DO BOT (Conversas removida da barra horizontal, acessível via botão dedicado no header)
   const botManagementTabs: TabDefinition[] = [
-    { id: "visao-geral", label: "Visão geral", icon: ChartNoAxesCombined },
-    { id: "configuracao", label: "Configuração", icon: Settings },
-    { id: "boas-vindas", label: "Boas-vindas", icon: Sparkles },
+    { id: "visao-geral", label: "Visão geral", icon: SolarSellerOverviewIcon },
+    { id: "configuracao", label: "Configuração", icon: SolarSellerBotIcon },
+    { id: "boas-vindas", label: "Boas-vindas", icon: SolarSellerWelcomeIcon },
   ];
 
   // GRUPO 2: MINI APP (Visível quando mode === 'MINI_APP')
   const isMiniApp = mode === "MINI_APP";
   const miniAppTabs: TabDefinition[] = isMiniApp
     ? [
-        { id: "banners", label: "Banners", icon: ImageIcon },
-        { id: "produtos", label: "Produtos", icon: Package },
-        { id: "combos", label: "Combos", icon: Layers3 },
-        { id: "videos", label: "Biblioteca de Vídeos", icon: Video },
-        { id: "carrosseis", label: "Carrosséis", icon: GalleryHorizontal },
-        ...(isAdmin ? [{ id: "categorias", label: "Categorias", icon: Tags }] : []),
-        { id: "clips", label: "Clipes", icon: Clapperboard },
-        { id: "notificacoes", label: "Notificações", icon: Bell },
-        { id: "cupons", label: "Cupons", icon: Ticket },
+        { id: "banners", label: "Banners", icon: SolarSellerBannersIcon },
+        { id: "produtos", label: "Produtos", icon: SolarSellerProductsIcon },
+        { id: "combos", label: "Combos", icon: SolarSellerCombosIcon },
+        { id: "videos", label: "Biblioteca de Vídeos", icon: SolarSellerVideosIcon },
+        { id: "carrosseis", label: "Carrosséis", icon: SolarSellerCarouselsIcon },
+        ...(isAdmin ? [{ id: "categorias", label: "Categorias", icon: SolarSellerCategoriesIcon }] : []),
+        { id: "clips", label: "Clipes", icon: SolarSellerClipsIcon },
+        { id: "notificacoes", label: "Notificações", icon: SolarSellerNotificationsIcon },
+        { id: "cupons", label: "Cupons", icon: SolarSellerCouponsIcon },
       ]
     : [];
 
@@ -102,7 +105,7 @@ export default function BotTabsNav({
           aria-label="Abrir seções do bot"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <CurrentIcon className="w-5 h-5 text-[#3984FF] shrink-0" strokeWidth={1.8} />
+            <CurrentIcon className="w-5 h-5 text-[#3984FF] shrink-0" size={20} />
             <span className="text-sm font-semibold text-white truncate">
               {currentTab.label}
             </span>
@@ -168,12 +171,12 @@ export default function BotTabsNav({
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
                         <Icon
+                          size={20}
                           className={`w-5 h-5 shrink-0 transition-colors ${
                             isActive
                               ? "text-[#3984FF]"
                               : "text-zinc-400 group-hover:text-zinc-200"
                           }`}
-                          strokeWidth={1.8}
                         />
                         <span
                           className={`text-sm truncate transition-colors ${
@@ -221,10 +224,10 @@ export default function BotTabsNav({
                   }`}
                 >
                   <Icon
+                    size={16}
                     className={`w-4 h-4 shrink-0 transition-colors ${
                       isActive ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"
                     }`}
-                    strokeWidth={1.8}
                   />
                   <span>{tab.label}</span>
 
@@ -256,10 +259,10 @@ export default function BotTabsNav({
                     }`}
                   >
                     <Icon
+                      size={16}
                       className={`w-4 h-4 shrink-0 transition-colors ${
                         isActive ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"
                       }`}
-                      strokeWidth={1.8}
                     />
                     <span>{tab.label}</span>
 

@@ -145,5 +145,63 @@ describe("WebGran Bots — Padronização de Avatares, Navegação e Identidade 
       expect(headerElement.props.bot.displayName).toBe("App studio");
     });
   });
+
+  describe("4. Solar Icons Bold Duotone — Identidade Visual e Conformidade", () => {
+    it("garante que os ícones Solar Bold Duotone possuem camadas duotone (fill e opacity=.5)", async () => {
+      const { renderToStaticMarkup } = await import("react-dom/server");
+      const {
+        SolarSellerOverviewIcon,
+        SolarSellerBotIcon,
+        SolarSellerWelcomeIcon,
+        SolarSellerBannersIcon,
+        SolarSellerProductsIcon,
+        SolarSellerCombosIcon,
+        SolarSellerVideosIcon,
+        SolarSellerCarouselsIcon,
+        SolarSellerCategoriesIcon,
+        SolarSellerClipsIcon,
+        SolarSellerNotificationsIcon,
+        SolarSellerCouponsIcon,
+        SolarSellerConversasIcon,
+        SolarSellerFilterIcon,
+        SolarSquareShareLineBoldDuotone,
+        SolarMenuDotsVerticalBoldDuotone,
+      } = await import("@/components/icons/solar/seller-icons");
+
+      const icons = [
+        { name: "Visão Geral", Component: SolarSellerOverviewIcon },
+        { name: "Configuração", Component: SolarSellerBotIcon },
+        { name: "Boas-vindas", Component: SolarSellerWelcomeIcon },
+        { name: "Banners", Component: SolarSellerBannersIcon },
+        { name: "Produtos", Component: SolarSellerProductsIcon },
+        { name: "Combos", Component: SolarSellerCombosIcon },
+        { name: "Biblioteca de Vídeos", Component: SolarSellerVideosIcon },
+        { name: "Carrosséis", Component: SolarSellerCarouselsIcon },
+        { name: "Categorias", Component: SolarSellerCategoriesIcon },
+        { name: "Clipes", Component: SolarSellerClipsIcon },
+        { name: "Notificações", Component: SolarSellerNotificationsIcon },
+        { name: "Cupons", Component: SolarSellerCouponsIcon },
+        { name: "Conversas", Component: SolarSellerConversasIcon },
+        { name: "Filtros", Component: SolarSellerFilterIcon },
+        { name: "Abrir no Telegram", Component: SolarSquareShareLineBoldDuotone },
+        { name: "Menu 3 Pontos", Component: SolarMenuDotsVerticalBoldDuotone },
+      ];
+
+      for (const item of icons) {
+        const markup = renderToStaticMarkup(
+          React.createElement(item.Component, {
+            size: 20,
+            className: "text-[#3984FF]",
+          })
+        );
+
+        expect(markup).toContain("<svg");
+        expect(markup).toContain('viewBox="0 0 24 24"');
+        expect(markup).toContain('fill="currentColor"');
+        expect(markup).toContain('opacity=".5"');
+        expect(markup).toContain('class="text-[#3984FF]"');
+      }
+    });
+  });
 });
 
