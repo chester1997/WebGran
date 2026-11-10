@@ -351,12 +351,25 @@ export async function updateBotTokenAction(botId: string, newToken: string): Pro
     const tokenEncrypted = encrypt(token);
     const secretToken = bot.secretToken || crypto.randomBytes(32).toString("hex");
 
+    // Atualização de foto de perfil recente do Telegram
+    let freshPhotoUrl: string | null = null;
+    try {
+      freshPhotoUrl = await botService.getProfilePhotoUrl();
+    } catch {}
+
     await db.update(telegramBots).set({
       tokenEncrypted,
       secretToken,
       username: botInfo.username || bot.username,
+      photoUrl: freshPhotoUrl !== null ? freshPhotoUrl : bot.photoUrl,
       updatedAt: new Date(),
     }).where(eq(telegramBots.id, botId));
+
+    try {
+      const { invalidateBotAvatarCache } = await import("@/app/api/telegram/bot-avatar/route");
+      invalidateBotAvatarCache(bot.id);
+      invalidateBotAvatarCache(bot.botId);
+    } catch {}
 
     // Re-registrar webhook no Telegram com o novo token
     let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -771,6 +784,66 @@ export async function syncBotWebhookAction(botId: string): Promise<ActionRespons
       pendingUpdateCount: 0,
     }
   };
+}
+
+/**
+ * Sincronizar e re-reconhecer a foto de perfil do bot diretamente do Telegram
+ */
+export async function syncBotAvatarAction(botId: string): Promise<ActionResponse<{ photoUrl: string | null; updated: boolean }>> {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized) {
+    return { success: false, error: auth.error };
+  }
+
+  const store = await getCurrentStore();
+  if (!store) {
+    return { success: false, error: "Loja não encontrada." };
+  }
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(
+      eq(telegramBots.id, botId),
+      eq(telegramBots.storeId, store.id)
+    )
+  });
+  if (!bot) {
+    return { success: false, error: "Bot não encontrado para esta loja." };
+  }
+
+  try {
+    const token = decrypt(bot.tokenEncrypted);
+    const botService = new TelegramBotService(token);
+    const details = await botService.getProfilePhotoDetails();
+    const freshPhotoUrl = details?.url || null;
+
+    await db.update(telegramBots).set({
+      photoUrl: freshPhotoUrl,
+      updatedAt: new Date(),
+    }).where(eq(telegramBots.id, bot.id));
+
+    try {
+      const { invalidateBotAvatarCache } = await import("@/app/api/telegram/bot-avatar/route");
+      invalidateBotAvatarCache(bot.id);
+      invalidateBotAvatarCache(bot.botId);
+    } catch {}
+
+    revalidatePath("/seller/bots");
+    revalidatePath(`/seller/bots/${bot.id}`);
+
+    return {
+      success: true,
+      message: freshPhotoUrl ? "Foto do bot sincronizada com sucesso!" : "Bot verificado (sem foto no Telegram).",
+      data: {
+        photoUrl: freshPhotoUrl,
+        updated: freshPhotoUrl !== bot.photoUrl,
+      }
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: "Erro ao sincronizar avatar com o Telegram: " + (err?.message || "Falha na API")
+    };
+  }
 }
 
 /**

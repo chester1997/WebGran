@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { 
   ChartNoAxesCombined, 
-  MessageSquare, 
   Settings, 
   Sparkles, 
   Image as ImageIcon, 
@@ -23,7 +22,7 @@ import {
 export interface TabDefinition {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
 interface BotTabsNavProps {
@@ -60,10 +59,9 @@ export default function BotTabsNav({
     }
   }, [sheetOpen]);
 
-  // GRUPO 1: GERENCIAMENTO DO BOT
+  // GRUPO 1: GERENCIAMENTO DO BOT (Conversas removida da barra horizontal, acessível via botão dedicado no header)
   const botManagementTabs: TabDefinition[] = [
     { id: "visao-geral", label: "Visão geral", icon: ChartNoAxesCombined },
-    { id: "conversas", label: "Conversas", icon: MessageSquare },
     { id: "configuracao", label: "Configuração", icon: Settings },
     { id: "boas-vindas", label: "Boas-vindas", icon: Sparkles },
   ];
@@ -104,14 +102,14 @@ export default function BotTabsNav({
           aria-label="Abrir seções do bot"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <CurrentIcon className="w-5 h-5 text-[#3984FF] shrink-0" />
+            <CurrentIcon className="w-5 h-5 text-[#3984FF] shrink-0" strokeWidth={1.8} />
             <span className="text-sm font-semibold text-white truncate">
               {currentTab.label}
             </span>
           </div>
 
           <div className="flex items-center text-zinc-400 group-hover:text-white transition-colors shrink-0">
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="w-4 h-4" strokeWidth={1.8} />
           </div>
         </button>
 
@@ -148,7 +146,7 @@ export default function BotTabsNav({
                   title="Fechar painel"
                   aria-label="Fechar painel"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" strokeWidth={1.8} />
                 </button>
               </div>
 
@@ -175,6 +173,7 @@ export default function BotTabsNav({
                               ? "text-[#3984FF]"
                               : "text-zinc-400 group-hover:text-zinc-200"
                           }`}
+                          strokeWidth={1.8}
                         />
                         <span
                           className={`text-sm truncate transition-colors ${
@@ -218,19 +217,20 @@ export default function BotTabsNav({
                   className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none whitespace-nowrap ${
                     isActive
                       ? "text-white font-semibold"
-                      : "text-zinc-400 hover:text-zinc-200"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   <Icon
                     className={`w-4 h-4 shrink-0 transition-colors ${
-                      isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
+                      isActive ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"
                     }`}
+                    strokeWidth={1.8}
                   />
                   <span>{tab.label}</span>
 
-                  {/* Indicador de aba ativa: linha inferior contínua e nítida */}
+                  {/* Indicador de aba ativa: linha inferior contínua e nítida no azul WebGran */}
                   {isActive && (
-                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#3984FF] rounded-full transition-all" />
                   )}
                 </button>
               );
@@ -252,18 +252,19 @@ export default function BotTabsNav({
                     className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none whitespace-nowrap ${
                       isActive
                         ? "text-white font-semibold"
-                        : "text-zinc-400 hover:text-zinc-200"
+                        : "text-zinc-400 hover:text-white"
                     }`}
                   >
                     <Icon
                       className={`w-4 h-4 shrink-0 transition-colors ${
-                        isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
+                        isActive ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"
                       }`}
+                      strokeWidth={1.8}
                     />
                     <span>{tab.label}</span>
 
                     {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full transition-all" />
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#3984FF] rounded-full transition-all" />
                     )}
                   </button>
                 );

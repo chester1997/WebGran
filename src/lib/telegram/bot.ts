@@ -108,21 +108,27 @@ export class TelegramBotService {
   }
 
   /**
-   * Fetches the bot's profile photo URL.
-   * Uses Telegram getChat API (primary for bot avatars) and getUserProfilePhotos as fallback.
+   * Fetches the bot's profile photo URL along with file metadata (file_id and file_unique_id).
+   * Uses Telegram getChat API (primary for bot accounts) and getUserProfilePhotos as fallback.
    */
-  async getProfilePhotoUrl(): Promise<string | null> {
+  async getProfilePhotoDetails(): Promise<{
+    url: string;
+    fileId: string;
+    fileUniqueId: string;
+  } | null> {
     try {
       const me = await this.getMe();
       if (!me?.id) return null;
 
       let fileId: string | null = null;
+      let fileUniqueId: string | null = null;
 
       // Method 1: getChat (Official & reliable for Bot accounts on Telegram)
       try {
         const chatInfo = await telegramFetch<any>(this.token, 'getChat', { chat_id: me.id });
         if (chatInfo?.photo?.big_file_id || chatInfo?.photo?.small_file_id) {
           fileId = chatInfo.photo.big_file_id || chatInfo.photo.small_file_id;
+          fileUniqueId = chatInfo.photo.big_file_unique_id || chatInfo.photo.small_file_unique_id || fileId;
         }
       } catch (err) {
         console.warn("[TelegramBotService] getChat photo error:", err);
@@ -134,7 +140,9 @@ export class TelegramBotService {
           const photos = await telegramFetch<any>(this.token, 'getUserProfilePhotos', { user_id: me.id, limit: 1 });
           if (photos?.photos?.length && photos.photos[0]?.length) {
             const sizes = photos.photos[0];
-            fileId = sizes[sizes.length - 1].file_id; // Get highest resolution
+            const best = sizes[sizes.length - 1]; // Highest resolution
+            fileId = best.file_id;
+            fileUniqueId = best.file_unique_id || fileId;
           }
         } catch (err) {
           console.warn("[TelegramBotService] getUserProfilePhotos error:", err);
@@ -146,11 +154,23 @@ export class TelegramBotService {
       const fileInfo = await telegramFetch<any>(this.token, 'getFile', { file_id: fileId });
       if (!fileInfo?.file_path) return null;
 
-      return `https://api.telegram.org/file/bot${this.token}/${fileInfo.file_path}`;
+      return {
+        url: `https://api.telegram.org/file/bot${this.token}/${fileInfo.file_path}`,
+        fileId,
+        fileUniqueId: fileUniqueId || fileId,
+      };
     } catch (err) {
-      console.error("[TelegramBotService] Error in getProfilePhotoUrl:", err);
+      console.error("[TelegramBotService] Error in getProfilePhotoDetails:", err);
       return null;
     }
+  }
+
+  /**
+   * Fetches the bot's profile photo URL.
+   */
+  async getProfilePhotoUrl(): Promise<string | null> {
+    const details = await this.getProfilePhotoDetails();
+    return details?.url || null;
   }
 
   async createChatInviteLink(chatId: string | number, name?: string, memberLimit: number = 1, expireDate?: number): Promise<{ invite_link: string; expire_date?: number }> {
