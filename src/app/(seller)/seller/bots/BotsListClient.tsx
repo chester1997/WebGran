@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import BotCard, { BotCardData } from "./components/BotCard";
+import NewBotModal from "./components/NewBotModal";
 import { 
   toggleBotStatusAction, 
   renameBotAction, 
@@ -31,6 +32,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
   const [bots, setBots] = useState<BotItem[]>(initialBots);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isNewBotModalOpen, setIsNewBotModalOpen] = useState(false);
 
   // Estados de Modais
   const [renameModalBot, setRenameModalBot] = useState<BotItem | null>(null);
@@ -157,13 +159,14 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
         }
         subtitle="Gerencie seus bots do Telegram, acompanhe o status de conexão, métricas de vendas e configure os modos de funcionamento."
         actions={
-          <Link
-            href="/seller/bots/new"
-            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white text-xs font-semibold transition-all shadow-sm shadow-[#3984FF]/25 active:scale-[0.98]"
+          <button
+            type="button"
+            onClick={() => setIsNewBotModalOpen(true)}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white text-xs font-semibold transition-all shadow-sm shadow-[#3984FF]/25 active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Adicionar Bot</span>
-          </Link>
+          </button>
         }
       />
 
@@ -191,13 +194,14 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
             Conecte seu primeiro bot do Telegram em menos de 2 minutos para começar a vender com a loja integrada ao Mini App da WebGran.
           </p>
           <div className="pt-2">
-            <Link
-              href="/seller/bots/new"
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white text-xs font-semibold transition-all shadow-sm shadow-[#3984FF]/25 active:scale-[0.98]"
+            <button
+              type="button"
+              onClick={() => setIsNewBotModalOpen(true)}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#3984FF] hover:bg-[#2F73E6] border border-[#3984FF]/30 text-white text-xs font-semibold transition-all shadow-sm shadow-[#3984FF]/25 active:scale-[0.98] cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Conectar meu primeiro bot</span>
-            </Link>
+            </button>
           </div>
         </div>
       ) : (
@@ -324,6 +328,16 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
           </div>
         </div>
       )}
+
+      {/* Modal: Novo Bot (Onboarding / Conexão em 3 passos) */}
+      <NewBotModal
+        isOpen={isNewBotModalOpen}
+        onClose={() => setIsNewBotModalOpen(false)}
+        onBotCreated={(botId) => {
+          setIsNewBotModalOpen(false);
+          router.push(`/seller/bots/${botId}`);
+        }}
+      />
     </div>
   );
 }

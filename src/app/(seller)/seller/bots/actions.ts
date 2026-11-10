@@ -101,6 +101,7 @@ export async function createNewBotAction(params: {
   token: string;
   mode: "MINI_APP";
   buttonText?: string;
+  displayName?: string;
 }): Promise<ActionResponse<{ botId: string; slug: string }>> {
   const auth = await verifyOwnerActionAccess();
   if (!auth.authorized) {
@@ -172,6 +173,7 @@ export async function createNewBotAction(params: {
     } catch {}
 
     const tokenEncrypted = encrypt(token);
+    const resolvedDisplayName = (params.displayName || "").trim() || botInfo.first_name || botInfo.username || "Bot";
 
     // Verificar se já existia na mesma loja
     const existingInStore = await db.query.telegramBots.findFirst({
@@ -186,7 +188,7 @@ export async function createNewBotAction(params: {
     if (existingInStore) {
       await db.update(telegramBots).set({
         username: botInfo.username || "",
-        displayName: botInfo.first_name || "",
+        displayName: resolvedDisplayName,
         photoUrl: photoUrl ?? existingInStore.photoUrl,
         tokenEncrypted,
         secretToken,
@@ -200,7 +202,7 @@ export async function createNewBotAction(params: {
         storeId: store.id,
         botId: botTelegramId,
         username: botInfo.username || "",
-        displayName: botInfo.first_name || "",
+        displayName: resolvedDisplayName,
         photoUrl: photoUrl ?? null,
         tokenEncrypted,
         secretToken,
