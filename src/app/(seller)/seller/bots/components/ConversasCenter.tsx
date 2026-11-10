@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import {
   getBotCustomerMessagesAction,
+  getBotCustomersAction,
   sendTelegramDirectMessageAction,
   toggleBotCustomerManualModeAction
 } from "../actions";
@@ -228,25 +229,96 @@ export default function ConversasCenter({
     }
   };
 
-  // Recarregar mensagens
+  // Recarregar mensagens e lista de clientes manualmente
   const handleRefreshMessages = async () => {
-    if (!selectedCustomer) return;
     setLoadingMessages(true);
     setSendError(null);
     try {
-      const res = await getBotCustomerMessagesAction({
-        botId: bot.id,
-        customerId: selectedCustomer.id,
-      });
-      if (res.success && res.data) {
-        setMessages(res.data.messages);
-        setIsManualActive(!!res.data.isManualMode);
-        setManualExpiresAt(res.data.manualModeExpiresAt || null);
+      if (selectedCustomer) {
+        const res = await getBotCustomerMessagesAction({
+          botId: bot.id,
+          customerId: selectedCustomer.id,
+        });
+        if (res.success && res.data) {
+          setMessages(res.data.messages);
+          setIsManualActive(!!res.data.isManualMode);
+          setManualExpiresAt(res.data.manualModeExpiresAt || null);
+        }
+      }
+      const custRes = await getBotCustomersAction(bot.id);
+      if (custRes.success && custRes.data) {
+        setCustomersList(custRes.data.customers);
       }
     } finally {
       setLoadingMessages(false);
     }
   };
+
+  // Auto-sincronização periódica da lista de clientes e da conversa ativa (Polling suave a cada 2.5s)
+  useEffect(() => {
+    let isMounted = true;
+    let isSyncing = false;
+
+    const syncConversations = async () => {
+      if (!isMounted || isSyncing || typeof document === "undefined" || document.hidden) return;
+      isSyncing = true;
+
+      try {
+        // 1. Sincronizar timeline da conversa ativa se houver cliente selecionado
+        if (selectedCustomer) {
+          const res = await getBotCustomerMessagesAction({
+            botId: bot.id,
+            customerId: selectedCustomer.id,
+          });
+
+          if (isMounted && res.success && res.data) {
+            setMessages((prev) => {
+              const prevSig = prev.map((m) => `${m.id}:${m.status}`).join("|");
+              const nextSig = res.data!.messages.map((m) => `${m.id}:${m.status}`).join("|");
+              if (prevSig !== nextSig) {
+                return res.data!.messages;
+              }
+              return prev;
+            });
+            setIsManualActive(!!res.data.isManualMode);
+            setManualExpiresAt(res.data.manualModeExpiresAt || null);
+          }
+        }
+
+        // 2. Sincronizar lista lateral de clientes em tempo real (última mensagem, hora, ordem)
+        const custRes = await getBotCustomersAction(bot.id);
+        if (isMounted && custRes.success && custRes.data) {
+          setCustomersList((prev) => {
+            const prevSig = prev.map((c) => `${c.id}:${c.lastMessageText}:${c.lastMessageAt}`).join("|");
+            const nextSig = custRes.data!.customers.map((c) => `${c.id}:${c.lastMessageText}:${c.lastMessageAt}`).join("|");
+            if (prevSig !== nextSig) {
+              return custRes.data!.customers;
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // Erro transitório de rede ignorado silenciosamente
+      } finally {
+        isSyncing = false;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        syncConversations();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    const interval = setInterval(syncConversations, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [bot.id, selectedCustomer?.id]);
 
   // Alternar Modo Manual
   const handleToggleManualMode = async () => {

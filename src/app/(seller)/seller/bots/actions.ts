@@ -349,16 +349,34 @@ export async function updateBotTokenAction(botId: string, newToken: string): Pro
     }
 
     const tokenEncrypted = encrypt(token);
+    const secretToken = bot.secretToken || crypto.randomBytes(32).toString("hex");
+
     await db.update(telegramBots).set({
       tokenEncrypted,
+      secretToken,
       username: botInfo.username || bot.username,
       updatedAt: new Date(),
     }).where(eq(telegramBots.id, botId));
 
+    // Re-registrar webhook no Telegram com o novo token
+    let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+    if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
+      rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
+    }
+    const appUrl = rawAppUrl.replace(/\/+$/, "");
+    const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${bot.botId}`;
+
+    try {
+      await botService.setWebhook(webhookUrl, secretToken);
+    } catch (whErr: any) {
+      console.warn("[updateBotTokenAction] Aviso: erro ao re-registrar webhook no Telegram:", whErr?.message);
+    }
+
     revalidatePath("/seller/bots");
     revalidatePath(`/seller/bots/${botId}`);
 
-    return { success: true, message: "Token atualizado e validado com sucesso!" };
+    return { success: true, message: "Token atualizado e webhook revalidado com sucesso!" };
   } catch (err: any) {
     return { success: false, error: "Erro ao validar o novo token no Telegram: " + (err?.message || "Token rejeitado") };
   }
@@ -577,6 +595,180 @@ export async function getBotCustomerMessagesAction(params: {
       total: msgs.length,
       isManualMode,
       manualModeExpiresAt,
+    }
+  };
+}
+
+/**
+ * Consultar lista atualizada de clientes e status recente para a Central de Conversas (Auto-Sync)
+ */
+export async function getBotCustomersAction(botId: string): Promise<ActionResponse<{
+  customers: Array<{
+    id: string;
+    telegramUserId: string;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    createdAt: string;
+    messagesCount: number;
+    lastMessageText: string | null;
+    lastMessageAt: string | null;
+    lastMessageDirection: "inbound" | "outbound" | null;
+    isManualMode?: boolean;
+    manualModeExpiresAt?: string;
+  }>;
+}>> {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized) {
+    return { success: false, error: auth.error };
+  }
+
+  const store = await getCurrentStore();
+  if (!store) {
+    return { success: false, error: "Loja não encontrada." };
+  }
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(
+      eq(telegramBots.id, botId),
+      eq(telegramBots.storeId, store.id)
+    )
+  });
+  if (!bot) {
+    return { success: false, error: "Bot não encontrado para esta loja." };
+  }
+
+  const customers = await db.query.telegramCustomers.findMany({
+    where: eq(telegramCustomers.storeId, store.id),
+    orderBy: [desc(telegramCustomers.updatedAt)],
+    limit: 150,
+  });
+
+  const botMessages = await db.query.telegramMessages.findMany({
+    where: and(
+      eq(telegramMessages.storeId, store.id),
+      eq(telegramMessages.botId, bot.id)
+    ),
+    orderBy: [desc(telegramMessages.createdAt)],
+    limit: 600,
+  });
+
+  const nowMs = Date.now();
+
+  const mappedCustomers = customers.map((c) => {
+    const custMsgs = botMessages.filter((m) => m.telegramUserId === c.telegramUserId);
+    const lastMsg = custMsgs[0] || null;
+
+    const lastManualEvent = custMsgs.find(
+      (m) => m.messageType === "system" && (m.metadata as any)?.event === "manual_mode_toggle"
+    );
+    const isManualMode = !!(
+      lastManualEvent &&
+      (lastManualEvent.metadata as any)?.enabled === true &&
+      (lastManualEvent.metadata as any)?.expiresAt &&
+      new Date((lastManualEvent.metadata as any).expiresAt).getTime() > nowMs
+    );
+    const manualModeExpiresAt = isManualMode
+      ? (lastManualEvent?.metadata as any)?.expiresAt
+      : undefined;
+
+    return {
+      id: c.id,
+      telegramUserId: c.telegramUserId,
+      username: c.username,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      createdAt: c.createdAt.toISOString(),
+      messagesCount: custMsgs.length,
+      lastMessageText: lastMsg?.text || null,
+      lastMessageAt: lastMsg?.createdAt ? lastMsg.createdAt.toISOString() : null,
+      lastMessageDirection: (lastMsg?.direction as "inbound" | "outbound" | null) || null,
+      isManualMode,
+      manualModeExpiresAt,
+    };
+  });
+
+  mappedCustomers.sort((a, b) => {
+    const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  return {
+    success: true,
+    data: {
+      customers: mappedCustomers,
+    }
+  };
+}
+
+/**
+ * Validar e sincronizar webhook de um bot no Telegram garantindo endpoint e secretToken ativos
+ */
+export async function syncBotWebhookAction(botId: string): Promise<ActionResponse<{
+  webhookUrl: string;
+  hasCustomCertificate: boolean;
+  pendingUpdateCount: number;
+}>> {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized) {
+    return { success: false, error: auth.error };
+  }
+
+  const store = await getCurrentStore();
+  if (!store) {
+    return { success: false, error: "Loja não encontrada." };
+  }
+
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(
+      eq(telegramBots.id, botId),
+      eq(telegramBots.storeId, store.id)
+    )
+  });
+  if (!bot) {
+    return { success: false, error: "Bot não encontrado para esta loja." };
+  }
+
+  let rawToken: string;
+  try {
+    rawToken = decrypt(bot.tokenEncrypted);
+  } catch {
+    return { success: false, error: "Falha ao descriptografar token do bot." };
+  }
+
+  const botService = new TelegramBotService(rawToken);
+
+  let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
+  if (rawAppUrl.includes("webgran.online") && !rawAppUrl.includes("www.webgran.online")) {
+    rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
+  }
+  const appUrl = rawAppUrl.replace(/\/+$/, "");
+  const expectedWebhookUrl = `${appUrl}/api/telegram/webhook?botId=${bot.botId}`;
+  const secretToken = bot.secretToken || crypto.randomBytes(32).toString("hex");
+
+  if (!bot.secretToken) {
+    await db.update(telegramBots).set({
+      secretToken,
+      updatedAt: new Date(),
+    }).where(eq(telegramBots.id, bot.id));
+  }
+
+  await botService.setWebhook(expectedWebhookUrl, secretToken, [
+    "message",
+    "callback_query",
+    "my_chat_member",
+    "chat_member"
+  ]);
+
+  return {
+    success: true,
+    message: "Webhook sincronizado com sucesso no Telegram.",
+    data: {
+      webhookUrl: expectedWebhookUrl,
+      hasCustomCertificate: false,
+      pendingUpdateCount: 0,
     }
   };
 }

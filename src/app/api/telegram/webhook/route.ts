@@ -514,6 +514,13 @@ export async function POST(req: NextRequest) {
           },
           createdAt: msg.date ? new Date(msg.date * 1000) : now,
         }).onConflictDoNothing();
+
+        // Invalidação atômica de cache Next.js para atualizar painel e conversas
+        try {
+          const { revalidatePath } = await import("next/cache");
+          revalidatePath(`/seller/bots/${resolved.bot.id}`);
+          revalidatePath(`/seller/bots`);
+        } catch {}
       } catch (persistErr: any) {
         console.error("[TELEGRAM WEBHOOK] Erro não-crítico ao persistir mensagem recebida:", persistErr?.message || persistErr);
       }
