@@ -65,12 +65,12 @@ import { db } from "@/db";
 import { OWNER_USER_ID, OWNER_EMAIL } from "@/lib/bots/owner-guard";
 import { validateBotTokenAction, createNewBotAction } from "../actions";
 
-describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Wizard 3 Passos)", () => {
+describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Independentes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("Validação de Token (Passo 2)", () => {
+  describe("Validação de Token (Passo 2 / 2.5)", () => {
     it("deve rejeitar tokens sem formato válido (numérico:hash)", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "store-slug" });
@@ -119,8 +119,8 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Wizard 3 Passos
     });
   });
 
-  describe("Finalização do Cadastro com Apelido Interno (Passo 3)", () => {
-    it("deve gravar o bot salvando o apelido interno personalizado (displayName)", async () => {
+  describe("Fluxo A — Criação pelo Telegram & Conexão", () => {
+    it("deve gravar o bot criado com apelido interno e configurar webhook com secret", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
       (db.query.telegramBots.findFirst as any).mockResolvedValue(null);
@@ -129,7 +129,7 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Wizard 3 Passos
         token: "987654321:valid_token_sample",
         mode: "MINI_APP",
         displayName: "Loja Principal VIP",
-        buttonText: "Abrir Loja",
+        buttonText: "Abrir App",
       });
 
       expect(res.success).toBe(true);
@@ -137,7 +137,7 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Wizard 3 Passos
       expect(db.insert).toHaveBeenCalled();
     });
 
-    it("deve usar o nome do Telegram caso o usuário não informe apelido interno", async () => {
+    it("deve preservar o nome original do bot criado caso o apelido interno fique vazio", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
       (db.query.telegramBots.findFirst as any).mockResolvedValue(null);
@@ -151,19 +151,44 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Wizard 3 Passos
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("created-bot-uuid");
     });
+  });
 
-    it("deve rejeitar tentativas com modo diferente de MINI_APP", async () => {
+  describe("Fluxo B — Conexão de Bot Existente com Token", () => {
+    it("deve aceitar conexão de bot existente já verificado no @BotFather", async () => {
+      (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
+      (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
+      (db.query.telegramBots.findFirst as any).mockResolvedValue(null);
+
+      const res = await createNewBotAction({
+        token: "987654321:valid_token_sample",
+        mode: "MINI_APP",
+        displayName: "Bot Existente",
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.botId).toBe("created-bot-uuid");
+    });
+
+    it("deve rejeitar tentativas com modo não autorizado", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "OUTRO_MODO" as any,
+        mode: "INVALIDO" as any,
       });
 
       expect(res.success).toBe(false);
       expect(res.error).toContain("Apenas o modo Mini App está liberado");
     });
   });
-});
 
+  describe("Estrutura do Modal Mobile e Isolamento de Scroll", () => {
+    it("deve exportar as constantes e tipagens dos dois fluxos de onboarding", async () => {
+      const modalModule = await import("../components/NewBotModal");
+      expect(modalModule.default).toBeDefined();
+      expect(modalModule.PhoneBotIllustration).toBeDefined();
+      expect(modalModule.TokenKeyIllustration).toBeDefined();
+    });
+  });
+});
