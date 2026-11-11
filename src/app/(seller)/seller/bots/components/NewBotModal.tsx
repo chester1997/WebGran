@@ -248,37 +248,44 @@ export function PhoneChatSalesIllustration({ isSelected = true }: { isSelected?:
 }
 
 /**
- * Ilustração vetorial do Card 2 (Passo 3): Smartphone representando Loja/Mini App (Em breve)
+ * Ilustração vetorial do Card 2 (Passo 3): Smartphone representando Loja/Mini App (Ativo/Disponível)
  */
-export function PhoneMiniAppStoreIllustration() {
+export function PhoneMiniAppStoreIllustration({ isSelected = true }: { isSelected?: boolean }) {
   return (
-    <div className="relative w-full h-32 sm:h-36 flex items-center justify-center select-none pointer-events-none opacity-60">
+    <div className="relative w-full h-32 sm:h-36 flex items-center justify-center select-none pointer-events-none">
+      {/* Glow de fundo */}
+      <div className={`absolute w-28 h-28 rounded-full blur-2xl -z-10 transition-colors ${
+        isSelected ? "bg-[#3984FF]/20" : "bg-white/5"
+      }`} />
+
       {/* Smartphone */}
-      <div className="relative w-44 sm:w-48 h-28 sm:h-32 bg-[#121318] border border-white/10 rounded-2xl p-2.5 shadow-lg flex flex-col justify-between overflow-hidden">
-        {/* Barra superior de loja (awning/marquise) */}
+      <div className={`relative w-44 sm:w-48 h-28 sm:h-32 bg-[#0E131F] rounded-2xl p-2.5 shadow-xl flex flex-col justify-between overflow-hidden transition-colors ${
+        isSelected ? "border border-[#3984FF]/40" : "border border-white/10"
+      }`}>
+        {/* Barra superior de loja (marquise com toque azul) */}
         <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-zinc-500" />
-            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Loja Telegram</span>
+            <div className={`w-2 h-2 rounded-full ${isSelected ? "bg-[#3984FF]" : "bg-zinc-500"}`} />
+            <span className="text-[9px] font-bold text-zinc-200 uppercase tracking-wider">Loja Telegram</span>
           </div>
-          <div className="w-5 h-1 rounded-full bg-zinc-600" />
+          <div className="w-5 h-1 rounded-full bg-white/30" />
         </div>
 
-        {/* Grade de 2 produtos em miniatura */}
+        {/* Grade de 2 produtos com cards iluminados */}
         <div className="grid grid-cols-2 gap-1.5">
-          <div className="bg-white/5 border border-white/5 rounded p-1.5 space-y-1">
-            <div className="w-full h-4 rounded bg-white/10" />
-            <div className="w-8 h-1 rounded bg-zinc-500" />
+          <div className="bg-[#192238] border border-[#3984FF]/25 rounded p-1.5 space-y-1">
+            <div className="w-full h-4 rounded bg-[#3984FF]/30" />
+            <div className="w-8 h-1 rounded bg-white/40" />
           </div>
-          <div className="bg-white/5 border border-white/5 rounded p-1.5 space-y-1">
-            <div className="w-full h-4 rounded bg-white/10" />
-            <div className="w-8 h-1 rounded bg-zinc-500" />
+          <div className="bg-[#192238] border border-[#3984FF]/25 rounded p-1.5 space-y-1">
+            <div className="w-full h-4 rounded bg-[#3984FF]/30" />
+            <div className="w-8 h-1 rounded bg-white/40" />
           </div>
         </div>
 
-        {/* Botão de abrir catálogo */}
-        <div className="w-full bg-white/5 rounded py-1 text-center">
-          <span className="text-[9px] text-zinc-500 font-medium">Abrir Loja Completa</span>
+        {/* Botão de abrir catálogo com destaque */}
+        <div className="w-full bg-[#3984FF]/20 border border-[#3984FF]/30 rounded py-1 text-center">
+          <span className="text-[9px] text-[#3984FF] font-semibold">Abrir Loja Completa</span>
         </div>
       </div>
     </div>
@@ -308,7 +315,7 @@ export default function NewBotModal({
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [displayName, setDisplayName] = useState(initialValidatedBot?.firstName || "");
-  const [salesMode, setSalesMode] = useState<"PADRAO" | "MINI_APP">("PADRAO");
+  const [salesMode, setSalesMode] = useState<"PADRAO" | "MINI_APP">("MINI_APP");
 
   // Estados de comunicação e feedback
   const [validating, setValidating] = useState(false);
@@ -1048,31 +1055,31 @@ export default function NewBotModal({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* CARD 1 — PADRÃO (Venda na conversa) */}
+                      {/* CARD 1 — MINI APP (Loja dentro do Telegram - FUNCIONANDO / PADRÃO) */}
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => setSalesMode("PADRAO")}
+                        onClick={() => setSalesMode("MINI_APP")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            setSalesMode("PADRAO");
+                            setSalesMode("MINI_APP");
                           }
                         }}
                         className={`relative rounded-2xl p-5 transition-all cursor-pointer flex flex-col justify-between text-left group ${
-                          salesMode === "PADRAO"
+                          salesMode === "MINI_APP"
                             ? "bg-[#131B2E] border-2 border-[#3984FF] shadow-[0_0_25px_rgba(57,132,255,0.18)]"
                             : "bg-[#12151F] border border-white/10 hover:border-white/20"
                         }`}
-                        data-testid="card-mode-padrao"
-                        aria-pressed={salesMode === "PADRAO"}
+                        data-testid="card-mode-miniapp"
+                        aria-pressed={salesMode === "MINI_APP"}
                       >
-                        {/* Header do Card com Tag PADRÃO e Selo Selecionado */}
+                        {/* Header do Card com Tag MINI APP e Selo Selecionado */}
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                            PADRÃO
+                            MINI APP
                           </span>
-                          {salesMode === "PADRAO" && (
+                          {salesMode === "MINI_APP" && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#3984FF] text-white shadow-sm shadow-[#3984FF]/40">
                               <Check className="w-3 h-3 stroke-[3]" />
                               Selecionado
@@ -1080,46 +1087,46 @@ export default function NewBotModal({
                           )}
                         </div>
 
-                        {/* Ilustração vetorial do smartphone com conversa e venda */}
-                        <PhoneChatSalesIllustration isSelected={salesMode === "PADRAO"} />
+                        {/* Ilustração vetorial do smartphone com loja */}
+                        <PhoneMiniAppStoreIllustration isSelected={salesMode === "MINI_APP"} />
 
                         {/* Textos descritivos */}
                         <div className="space-y-1.5 mt-3">
                           <h4 className="text-base font-bold text-white group-hover:text-[#3984FF] transition-colors">
-                            Venda na conversa
+                            Loja dentro do Telegram
                           </h4>
                           <p className="text-xs text-zinc-400 leading-relaxed">
-                            O bot mostra os produtos em mensagens e manda o Pix ali mesmo. O cartão abre uma tela de pagamento.
+                            Um botão abre uma loja com fotos, planos e pagamento, sem sair do Telegram.
                           </p>
                         </div>
                       </div>
 
-                      {/* CARD 2 — MINI APP (Loja dentro do Telegram - Em breve) */}
+                      {/* CARD 2 — PADRÃO (Venda na conversa - EM BREVE) */}
                       <div
                         aria-disabled="true"
-                        className="relative rounded-2xl p-5 bg-[#101218]/70 border border-white/[0.06] opacity-60 cursor-not-allowed flex flex-col justify-between text-left select-none"
-                        data-testid="card-mode-miniapp"
+                        className="relative rounded-2xl p-5 bg-[#101218]/70 border border-white/[0.06] opacity-60 cursor-not-allowed flex flex-col justify-between text-left select-none pointer-events-none"
+                        data-testid="card-mode-padrao"
                       >
-                        {/* Header do Card com Tag MINI APP e Selo Em breve */}
+                        {/* Header do Card com Tag PADRÃO e Selo Em breve */}
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 text-zinc-400 border border-white/10">
-                            MINI APP
+                            PADRÃO
                           </span>
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-white/10">
                             Em breve
                           </span>
                         </div>
 
-                        {/* Ilustração vetorial do smartphone com loja */}
-                        <PhoneMiniAppStoreIllustration />
+                        {/* Ilustração vetorial do smartphone com conversa e venda */}
+                        <PhoneChatSalesIllustration isSelected={false} />
 
                         {/* Textos descritivos */}
                         <div className="space-y-1.5 mt-3">
                           <h4 className="text-base font-bold text-zinc-300">
-                            Loja dentro do Telegram
+                            Venda na conversa
                           </h4>
                           <p className="text-xs text-zinc-500 leading-relaxed">
-                            Um botão abre uma loja com fotos, planos e pagamento, sem sair do Telegram.
+                            O bot mostra os produtos em mensagens e manda o Pix ali mesmo. O cartão abre uma tela de pagamento.
                           </p>
                         </div>
                       </div>

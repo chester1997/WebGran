@@ -77,68 +77,80 @@ describe("WebGran Bots — Auditoria do Modelo de Modos de Venda e Testes de Reg
     } as any);
   });
 
-  describe("1. Comportamento do Bot Padrão (Venda na Conversa)", () => {
-    it("conclui cadastro com sucesso no modo PADRAO e restaura o menu default do Telegram", async () => {
+  describe("1. Comportamento do Bot Mini App (Ativo) vs Padrão (Em Breve)", () => {
+    it("conclui cadastro com sucesso no modo MINI_APP e configura o MenuButton da loja", async () => {
       vi.mocked(db.query.telegramBots.findFirst).mockResolvedValue(null as any);
 
       const res = await createNewBotAction({
         token: "777888999:valid_token_secret",
-        mode: "PADRAO",
-        displayName: "Bot Atendimento Padrão",
+        mode: "MINI_APP",
+        displayName: "Bot Loja Mini App",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("new-bot-uuid");
-      expect(res.data?.bot?.mode).toBe("PADRAO");
-      expect(res.data?.bot?.displayName).toBe("Bot Atendimento Padrão");
+      expect(res.data?.bot?.mode).toBe("MINI_APP");
+      expect(res.data?.bot?.displayName).toBe("Bot Loja Mini App");
       expect(db.insert).toHaveBeenCalled();
     });
 
-    it("valida rigorosamente no backend e bloqueia tentativa de selecionar Mini App (Em breve)", async () => {
+    it("adota MINI_APP como padrão quando mode não for informado", async () => {
+      vi.mocked(db.query.telegramBots.findFirst).mockResolvedValue(null as any);
+
       const res = await createNewBotAction({
         token: "777888999:valid_token_secret",
-        mode: "MINI_APP",
+        displayName: "Bot Modo Default",
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data?.bot?.mode).toBe("MINI_APP");
+    });
+
+    it("valida rigorosamente no backend e bloqueia tentativa de selecionar Padrão (Venda na conversa - Em breve)", async () => {
+      const res = await createNewBotAction({
+        token: "777888999:valid_token_secret",
+        mode: "PADRAO",
       });
 
       expect(res.success).toBe(false);
-      expect(res.error).toContain("Mini App) estará disponível em breve");
+      expect(res.error).toContain("Venda na conversa (Padrão) estará disponível em breve");
     });
   });
 
   describe("2. Preservação dos Bots Existentes e Não Confusão de button_text", () => {
-    it("confirma que bots legados com textos customizados de botão mantêm identificação sem corrupção", () => {
-      // Cenário de dados reais em produção:
-      // Lojistas usam button_text para o nome do botão no Telegram ("Bot telegram", "Mundo Lgbt", "ABRIR LOJA APP")
+    it("confirma que bots legados mantêm identificação MINI_APP sem depender de button_text", () => {
       const mockLegacyBots = [
         {
           id: "legacy-1",
           username: "Appdoramacafebot",
           buttonText: "Bot telegram",
+          salesMode: "MINI_APP",
           status: "active",
         },
         {
           id: "legacy-2",
           username: "Nossaseriesblbot",
-          buttonText: "Mundo Lgbt",
+          buttonText: "Conversa", // Mesmo se buttonText tiver texto qualquer
+          salesMode: "MINI_APP",
           status: "active",
         },
         {
           id: "legacy-3",
           username: "apppstudio_bot",
           buttonText: "ABRIR LOJA APP",
+          salesMode: "MINI_APP",
           status: "active",
         },
       ];
 
-      // A regra de mapeamento garante que nenhum bot existente é corrompido
+      // A regra consulta exclusivamente sales_mode, sem deduzir por button_text
       const mapped = mockLegacyBots.map((bot) => ({
         ...bot,
-        mode: bot.buttonText === "Conversa" ? ("PADRAO" as const) : ("MINI_APP" as const),
+        mode: bot.salesMode === "PADRAO" ? ("PADRAO" as const) : ("MINI_APP" as const),
       }));
 
       mapped.forEach((b) => {
         expect(b.mode).toBe("MINI_APP");
-        expect(b.buttonText).not.toBe("Conversa");
       });
     });
 
@@ -147,7 +159,7 @@ describe("WebGran Bots — Auditoria do Modelo de Modos de Venda e Testes de Reg
 
       await createNewBotAction({
         token: "777888999:valid_token_secret",
-        mode: "PADRAO",
+        mode: "MINI_APP",
         displayName: "Novo Bot Isolado",
       });
 
@@ -180,7 +192,7 @@ describe("WebGran Bots — Auditoria do Modelo de Modos de Venda e Testes de Reg
 
       const res = await createNewBotAction({
         token: "777888999:valid_token_secret",
-        mode: "PADRAO",
+        mode: "MINI_APP",
       });
 
       expect(res.success).toBe(false);

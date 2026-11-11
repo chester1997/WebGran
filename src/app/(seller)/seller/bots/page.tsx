@@ -27,7 +27,7 @@ export default async function SellerBotsPage() {
     }
   });
 
-  // Mapeamento dos modos: bots cadastrados com buttonText === "Conversa" são PADRÃO (Venda na conversa); demais são MINI_APP
+  // Mapeamento dos modos: consulta exclusivamente o campo persistido sales_mode no banco
   const bots = rawBots.map((bot) => ({
     id: bot.id,
     botId: bot.botId,
@@ -37,8 +37,8 @@ export default async function SellerBotsPage() {
     buttonText: bot.buttonText || "Abrir App",
     status: (bot.status as "active" | "paused" | "disconnected") || "active",
     createdAt: bot.createdAt.toISOString(),
-    // Modalidade comercial: consulta sales_mode diretamente, com fallback defensivo para a fase de transição
-    mode: ((bot as any).salesMode || (bot.buttonText === "Conversa" ? "PADRAO" : "MINI_APP")) as "PADRAO" | "MINI_APP",
+    // Modalidade comercial: consulta exclusivamente sales_mode persistido no banco
+    mode: ((bot as any).salesMode === "PADRAO" ? "PADRAO" : "MINI_APP") as "PADRAO" | "MINI_APP",
     recipientsCount: bot.notificationRecipients?.length || 0,
     chatsCount: bot.chats?.length || 0,
     storeSlug: store.slug,

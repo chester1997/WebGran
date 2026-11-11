@@ -127,14 +127,14 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "PADRAO",
+        mode: "MINI_APP",
         displayName: "Loja Principal VIP",
-        buttonText: "Conversa",
+        buttonText: "Abrir App",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("created-bot-uuid");
-      expect(res.data?.bot?.mode).toBe("PADRAO");
+      expect(res.data?.bot?.mode).toBe("MINI_APP");
       expect(db.insert).toHaveBeenCalled();
     });
 
@@ -145,7 +145,7 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "PADRAO",
+        mode: "MINI_APP",
         displayName: "",
       });
 
@@ -155,20 +155,20 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
   });
 
   describe("Fluxo B — Conexão de Bot Existente com Token", () => {
-    it("deve aceitar conexão de bot existente já verificado no @BotFather no modo PADRAO", async () => {
+    it("deve aceitar conexão de bot existente já verificado no @BotFather no modo MINI_APP", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
       (db.query.telegramBots.findFirst as any).mockResolvedValue(null);
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "PADRAO",
+        mode: "MINI_APP",
         displayName: "Bot Existente",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("created-bot-uuid");
-      expect(res.data?.bot?.mode).toBe("PADRAO");
+      expect(res.data?.bot?.mode).toBe("MINI_APP");
     });
 
     it("deve rejeitar tentativas com modo não autorizado ou inválido", async () => {
@@ -184,17 +184,17 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
       expect(res.error).toContain("Modo de venda inválido");
     });
 
-    it("deve rejeitar modo MINI_APP enquanto estiver com selo 'Em breve'", async () => {
+    it("deve rejeitar modo PADRAO enquanto estiver com selo 'Em breve'", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "MINI_APP",
+        mode: "PADRAO",
       });
 
       expect(res.success).toBe(false);
-      expect(res.error).toContain("Mini App) estará disponível em breve");
+      expect(res.error).toContain("Venda na conversa (Padrão) estará disponível em breve");
     });
   });
 

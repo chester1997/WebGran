@@ -115,7 +115,7 @@ export type BotItemData = {
  */
 export async function createNewBotAction(params: {
   token: string;
-  mode: "PADRAO" | "MINI_APP";
+  mode?: "PADRAO" | "MINI_APP";
   buttonText?: string;
   displayName?: string;
 }): Promise<ActionResponse<{ botId: string; slug: string; bot?: BotItemData }>> {
@@ -124,15 +124,17 @@ export async function createNewBotAction(params: {
     return { success: false, error: auth.error };
   }
 
-  // Validação estrita do modo no backend
-  if (params.mode === "MINI_APP") {
+  // Validação estrita do modo no backend: MINI_APP é o modo ativo; PADRAO está em breve
+  const selectedMode = params.mode || "MINI_APP";
+
+  if (selectedMode === "PADRAO") {
     return {
       success: false,
-      error: "O modo Loja dentro do Telegram (Mini App) estará disponível em breve. Selecione o modo Padrão (Venda na conversa)."
+      error: "O modo Venda na conversa (Padrão) estará disponível em breve. Selecione o modo Loja dentro do Telegram (Mini App)."
     };
   }
 
-  if (params.mode !== "PADRAO") {
+  if (selectedMode !== "MINI_APP") {
     return {
       success: false,
       error: "Modo de venda inválido. Selecione uma modalidade disponível."
@@ -181,9 +183,14 @@ export async function createNewBotAction(params: {
     // Configurar webhook no Telegram
     await botService.setWebhook(webhookUrl, secretToken);
 
-    // No modo PADRÃO (Venda na conversa), restaura o botão de menu default do Telegram
+    // No modo MINI_APP, configura o botão de menu do Telegram para abrir o Mini App da loja
     try {
-      await botService.setChatMenuButton({ type: "default" });
+      const miniappUrl = `${appUrl}/miniapp/${store.slug}`;
+      await botService.setChatMenuButton({
+        type: "web_app",
+        text: buttonName || "Abrir App",
+        web_app: { url: miniappUrl }
+      });
     } catch (err: any) {
       console.warn("[createNewBotAction] Aviso no MenuButton:", err?.message || err);
     }
@@ -215,7 +222,7 @@ export async function createNewBotAction(params: {
         tokenEncrypted,
         secretToken,
         buttonText: buttonName,
-        salesMode: params.mode,
+        salesMode: selectedMode,
         status: "active",
         updatedAt: new Date(),
       }).where(eq(telegramBots.id, existingInStore.id));
@@ -230,7 +237,7 @@ export async function createNewBotAction(params: {
         tokenEncrypted,
         secretToken,
         buttonText: buttonName,
-        salesMode: params.mode,
+        salesMode: selectedMode,
         status: "active",
       }).returning({ id: telegramBots.id });
       savedBotId = inserted.id;
@@ -251,7 +258,7 @@ export async function createNewBotAction(params: {
       buttonText: buttonName,
       status: "active",
       createdAt: (existingInStore?.createdAt || new Date()).toISOString(),
-      mode: params.mode,
+      mode: selectedMode,
       recipientsCount: 0,
       chatsCount: 0,
       storeSlug: store.slug,
@@ -260,7 +267,7 @@ export async function createNewBotAction(params: {
 
     return {
       success: true,
-      message: `Bot @${botInfo.username} conectado com sucesso no modo Venda na conversa!`,
+      message: `Bot @${botInfo.username} conectado com sucesso no modo Mini App!`,
       data: {
         botId: savedBotId,
         slug: store.slug,

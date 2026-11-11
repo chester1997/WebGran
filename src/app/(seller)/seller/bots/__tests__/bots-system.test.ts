@@ -197,26 +197,26 @@ describe("WebGran — Sistema de Gerenciamento de Bots (Fases B & C)", () => {
       expect(res.error).toContain("Modo de venda inválido");
     });
 
-    it("rejeita modo MINI_APP indicando que estará disponível em breve", async () => {
-      const res = await createNewBotAction({
-        token: "123456:VALID_TOKEN",
-        mode: "MINI_APP",
-      });
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("Mini App) estará disponível em breve");
-    });
-
-    it("conclui o cadastro com sucesso no modo PADRAO (Venda na conversa)", async () => {
+    it("rejeita modo PADRAO indicando que estará disponível em breve", async () => {
       const res = await createNewBotAction({
         token: "123456:VALID_TOKEN",
         mode: "PADRAO",
-        buttonText: "Conversa",
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Venda na conversa (Padrão) estará disponível em breve");
+    });
+
+    it("conclui o cadastro com sucesso no modo MINI_APP (Loja dentro do Telegram)", async () => {
+      const res = await createNewBotAction({
+        token: "123456:VALID_TOKEN",
+        mode: "MINI_APP",
+        buttonText: "Abrir App",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("new-bot-uuid");
       expect(res.data?.slug).toBe("studio-shorts-6025");
-      expect(res.data?.bot?.mode).toBe("PADRAO");
+      expect(res.data?.bot?.mode).toBe("MINI_APP");
     });
   });
 
