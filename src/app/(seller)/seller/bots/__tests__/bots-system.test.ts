@@ -171,7 +171,7 @@ describe("WebGran — Sistema de Gerenciamento de Bots (Fases B & C)", () => {
     });
   });
 
-  // 3. SELEÇÃO EXCLUSIVA DO MODO MINI APP
+  // 3. SELEÇÃO DO MODO DE VENDA (PADRÃO / VENDA NA CONVERSA VS MINI APP EM BREVE)
   describe("3. Seleção de Modos de Funcionamento", () => {
     beforeEach(() => {
       vi.mocked(getCurrentUser).mockResolvedValue({
@@ -188,25 +188,35 @@ describe("WebGran — Sistema de Gerenciamento de Bots (Fases B & C)", () => {
       vi.mocked(db.query.telegramBots.findFirst).mockResolvedValue(null as any);
     });
 
-    it("rejeita modos não autorizados nesta fase", async () => {
+    it("rejeita modos não autorizados ou inválidos", async () => {
       const res = await createNewBotAction({
         token: "123456:VALID_TOKEN",
         mode: "BASICO" as any,
       });
       expect(res.success).toBe(false);
-      expect(res.error).toContain("Apenas o modo Mini App está liberado");
+      expect(res.error).toContain("Modo de venda inválido");
     });
 
-    it("conclui o cadastro com sucesso no modo MINI_APP configurando webhook e menu button", async () => {
+    it("rejeita modo MINI_APP indicando que estará disponível em breve", async () => {
       const res = await createNewBotAction({
         token: "123456:VALID_TOKEN",
         mode: "MINI_APP",
-        buttonText: "Acessar Loja",
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Mini App) estará disponível em breve");
+    });
+
+    it("conclui o cadastro com sucesso no modo PADRAO (Venda na conversa)", async () => {
+      const res = await createNewBotAction({
+        token: "123456:VALID_TOKEN",
+        mode: "PADRAO",
+        buttonText: "Conversa",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("new-bot-uuid");
       expect(res.data?.slug).toBe("studio-shorts-6025");
+      expect(res.data?.bot?.mode).toBe("PADRAO");
     });
   });
 

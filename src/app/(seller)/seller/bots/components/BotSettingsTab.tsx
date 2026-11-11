@@ -29,6 +29,7 @@ interface BotSettingsTabProps {
     displayName: string;
     buttonText: string;
     status: "active" | "paused" | "disconnected";
+    mode?: "PADRAO" | "MINI_APP";
     storeSlug: string;
     storeName: string;
     chatsCount: number;
@@ -231,8 +232,14 @@ export default function BotSettingsTab({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
               <span className="text-[11px] font-medium text-zinc-500 block">Modo Operacional</span>
-              <span className="text-xs font-bold text-white block">MINI APP Integrado</span>
-              <p className="text-[10px] text-zinc-500">Abre a vitrine nativa direto no Telegram.</p>
+              <span className="text-xs font-bold text-white block">
+                {bot.mode === "PADRAO" ? "Venda na conversa" : "MINI APP Integrado"}
+              </span>
+              <p className="text-[10px] text-zinc-500">
+                {bot.mode === "PADRAO"
+                  ? "Atende, envia catálogo e Pix direto na conversa."
+                  : "Abre a vitrine nativa direto no Telegram."}
+              </p>
             </div>
 
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">

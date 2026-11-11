@@ -80,7 +80,7 @@ interface SingleBotClientProps {
     buttonText: string;
     status: "active" | "paused" | "disconnected";
     createdAt: string;
-    mode: "MINI_APP";
+    mode: "PADRAO" | "MINI_APP";
     storeSlug: string;
     storeName: string;
     chatsCount: number;

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Play,
@@ -36,7 +37,7 @@ interface BotHeaderProps {
     status: "active" | "paused" | "disconnected";
     storeName?: string;
     createdAt?: string;
-    mode?: "MINI_APP" | string;
+    mode?: "PADRAO" | "MINI_APP" | string;
   };
   activeTab: string;
   onSelectTab: (tabId: string) => void;
@@ -63,6 +64,7 @@ export default function BotHeader({
   onSelectPeriod,
   onOpenConversasModal,
 }: BotHeaderProps) {
+  const router = useRouter();
   const [copiedLink, setCopiedLink] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -102,6 +104,10 @@ export default function BotHeader({
             {/* Breadcrumb ← Bots discreto e elegante com ótimo respiro superior e inferior */}
             <Link
               href="/seller/bots"
+              prefetch={false}
+              onClick={() => {
+                router.refresh();
+              }}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors w-fit group py-1"
               title="Voltar para a lista de bots"
             >

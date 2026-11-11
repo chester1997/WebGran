@@ -27,7 +27,7 @@ export type NewBotFlow = "telegram" | "token";
 export interface NewBotModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onBotCreated?: (botId: string) => void;
+  onBotCreated?: (botId: string, newBot?: any) => void;
   initialStep?: 1 | 2 | 2.5 | 3;
   initialFlow?: NewBotFlow;
   initialValidatedBot?: {
@@ -195,6 +195,96 @@ export function TokenKeyIllustration() {
   );
 }
 
+/**
+ * Ilustração vetorial do Card 1 (Passo 3): Smartphone com mensagens de conversa e venda (Pix)
+ */
+export function PhoneChatSalesIllustration({ isSelected = true }: { isSelected?: boolean }) {
+  return (
+    <div className="relative w-full h-32 sm:h-36 flex items-center justify-center select-none pointer-events-none">
+      {/* Glow de fundo */}
+      <div className={`absolute w-28 h-28 rounded-full blur-2xl -z-10 transition-colors ${
+        isSelected ? "bg-[#3984FF]/20" : "bg-white/5"
+      }`} />
+
+      {/* Smartphone */}
+      <div className={`relative w-44 sm:w-48 h-28 sm:h-32 bg-[#0E131F] rounded-2xl p-2.5 shadow-xl flex flex-col justify-between overflow-hidden transition-colors ${
+        isSelected ? "border border-[#3984FF]/40" : "border border-white/10"
+      }`}>
+        {/* Barra superior com notch */}
+        <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-[#3984FF]" />
+            <div className="w-12 h-1 rounded-full bg-white/30" />
+          </div>
+          <div className="w-6 h-1 rounded-full bg-white/20" />
+        </div>
+
+        {/* Mensagem 1: Balão do bot com produto */}
+        <div className="bg-[#192238] border border-[#3984FF]/25 rounded-lg p-2 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-white flex items-center gap-1 truncate">
+              📦 Produto Digital
+            </span>
+            <span className="text-[10px] font-bold text-[#3984FF] shrink-0">R$ 49,90</span>
+          </div>
+          <div className="w-full h-1 rounded-full bg-white/10" />
+        </div>
+
+        {/* Mensagem 2: Cobrança Pix na conversa */}
+        <div className="bg-[#0D241E] border border-emerald-500/30 rounded-lg px-2 py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3.5 h-3.5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[9px] font-bold">
+              ❖
+            </div>
+            <span className="text-[10px] font-semibold text-emerald-300">Pix Copia e Cola</span>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
+            Gerado
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ilustração vetorial do Card 2 (Passo 3): Smartphone representando Loja/Mini App (Em breve)
+ */
+export function PhoneMiniAppStoreIllustration() {
+  return (
+    <div className="relative w-full h-32 sm:h-36 flex items-center justify-center select-none pointer-events-none opacity-60">
+      {/* Smartphone */}
+      <div className="relative w-44 sm:w-48 h-28 sm:h-32 bg-[#121318] border border-white/10 rounded-2xl p-2.5 shadow-lg flex flex-col justify-between overflow-hidden">
+        {/* Barra superior de loja (awning/marquise) */}
+        <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-zinc-500" />
+            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Loja Telegram</span>
+          </div>
+          <div className="w-5 h-1 rounded-full bg-zinc-600" />
+        </div>
+
+        {/* Grade de 2 produtos em miniatura */}
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="bg-white/5 border border-white/5 rounded p-1.5 space-y-1">
+            <div className="w-full h-4 rounded bg-white/10" />
+            <div className="w-8 h-1 rounded bg-zinc-500" />
+          </div>
+          <div className="bg-white/5 border border-white/5 rounded p-1.5 space-y-1">
+            <div className="w-full h-4 rounded bg-white/10" />
+            <div className="w-8 h-1 rounded bg-zinc-500" />
+          </div>
+        </div>
+
+        {/* Botão de abrir catálogo */}
+        <div className="w-full bg-white/5 rounded py-1 text-center">
+          <span className="text-[9px] text-zinc-500 font-medium">Abrir Loja Completa</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function NewBotModal({ 
   isOpen, 
   onClose, 
@@ -218,6 +308,7 @@ export default function NewBotModal({
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [displayName, setDisplayName] = useState(initialValidatedBot?.firstName || "");
+  const [salesMode, setSalesMode] = useState<"PADRAO" | "MINI_APP">("PADRAO");
 
   // Estados de comunicação e feedback
   const [validating, setValidating] = useState(false);
@@ -317,16 +408,15 @@ export default function NewBotModal({
     try {
       const res = await createNewBotAction({
         token: token.trim(),
-        mode: "MINI_APP",
+        mode: salesMode,
         displayName: displayName.trim() || validatedBot?.firstName || validatedBot?.username,
-        buttonText: "Abrir App",
       });
 
       if (res.success && res.data?.botId) {
         setCreatedBotId(res.data.botId);
         setConnectedSuccess(true);
         if (onBotCreated) {
-          onBotCreated(res.data.botId);
+          onBotCreated(res.data.botId, res.data.bot);
         }
       } else {
         setErrorMessage(res.error || "Falha ao registrar o bot.");
@@ -340,6 +430,7 @@ export default function NewBotModal({
 
   // Redirecionar ao concluir
   const handleFinishAndRedirect = () => {
+    router.refresh();
     if (createdBotId) {
       router.push(`/seller/bots/${createdBotId}`);
     } else {
@@ -446,7 +537,9 @@ export default function NewBotModal({
                       {flow === "telegram" ? "Bot criado e conectado com sucesso!" : "Bot conectado com sucesso!"}
                     </h3>
                     <p className="text-xs text-zinc-400 leading-relaxed">
-                      Seu bot já está configurado no modo Mini App e pronto para vender com entrega automática no Telegram.
+                      {salesMode === "PADRAO"
+                        ? "Seu bot já está configurado no modo Venda na conversa e pronto para vender com entrega automática no Telegram."
+                        : "Seu bot já está configurado no modo Mini App e pronto para vender com entrega automática no Telegram."}
                     </p>
                   </div>
 
@@ -864,7 +957,7 @@ export default function NewBotModal({
               )}
 
               {/* ========================================================= */}
-              {/* PASSO 3: APELIDO INTERNO PARA O BOT                       */}
+              {/* PASSO 3: APELIDO INTERNO E SELEÇÃO DO MODO DE VENDA       */}
               {/* Mantém o contexto de cada fluxo (Novo vs Existente)       */}
               {/* ========================================================= */}
               {step === 3 && (
@@ -874,10 +967,10 @@ export default function NewBotModal({
                       {flow === "telegram" ? "FINALIZAR CRIAÇÃO · PASSO 3 DE 3" : "FINALIZAR CONEXÃO · PASSO 3 DE 3"}
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                      Um apelido interno para o bot
+                      {flow === "telegram" ? "Configure seu novo bot" : "Configure o bot conectado"}
                     </h2>
                     <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      Esse apelido vale só aqui no painel. No Telegram, o comprador continua vendo o nome e o @ do bot.
+                      Defina o apelido interno para sua equipe e escolha o modo de venda no Telegram.
                     </p>
                   </div>
 
@@ -888,7 +981,7 @@ export default function NewBotModal({
                     </div>
                   )}
 
-                  {/* Card de identificação do bot validado */}
+                  {/* 1. Card de identificação do bot validado */}
                   {validatedBot && (
                     <div className="bg-[#141926] border border-white/10 rounded-2xl p-4 flex items-center gap-3.5">
                       {validatedBot.photoUrl ? (
@@ -921,8 +1014,8 @@ export default function NewBotModal({
                     </div>
                   )}
 
-                  {/* Campo de Apelido com contador de caracteres */}
-                  <div className="bg-[#121622] border border-white/10 rounded-2xl p-5 space-y-4">
+                  {/* 2. Campo de Apelido com contador de caracteres */}
+                  <div className="bg-[#121622] border border-white/10 rounded-2xl p-5 space-y-3">
                     <label className="block text-xs font-bold text-white">
                       Apelido interno no WebGran
                     </label>
@@ -941,35 +1034,134 @@ export default function NewBotModal({
                       <span>Identificador usado apenas para organização da sua equipe.</span>
                       <span className="font-mono">{displayName.length}/40 · dá para mudar depois</span>
                     </div>
+                  </div>
 
-                    {/* Botões de Ação */}
-                    <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (flow === "telegram") {
-                            setStep(2.5);
-                          } else {
-                            setStep(2);
+                  {/* 3. Seção "Como você quer vender?" & 4. Cards de Seleção dos Modos de Venda */}
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold text-white tracking-tight">
+                        Como você quer vender?
+                      </h3>
+                      <p className="text-xs text-zinc-400 leading-relaxed">
+                        Selecione o formato de atendimento e checkout do seu bot no Telegram.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* CARD 1 — PADRÃO (Venda na conversa) */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSalesMode("PADRAO")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSalesMode("PADRAO");
                           }
                         }}
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
-                        data-testid="button-back-to-step-2"
+                        className={`relative rounded-2xl p-5 transition-all cursor-pointer flex flex-col justify-between text-left group ${
+                          salesMode === "PADRAO"
+                            ? "bg-[#131B2E] border-2 border-[#3984FF] shadow-[0_0_25px_rgba(57,132,255,0.18)]"
+                            : "bg-[#12151F] border border-white/10 hover:border-white/20"
+                        }`}
+                        data-testid="card-mode-padrao"
+                        aria-pressed={salesMode === "PADRAO"}
                       >
-                        Voltar
-                      </button>
+                        {/* Header do Card com Tag PADRÃO e Selo Selecionado */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                            PADRÃO
+                          </span>
+                          {salesMode === "PADRAO" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#3984FF] text-white shadow-sm shadow-[#3984FF]/40">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              Selecionado
+                            </span>
+                          )}
+                        </div>
 
-                      <button
-                        type="button"
-                        onClick={handleFinalizeConnection}
-                        disabled={connecting}
-                        className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#3984FF] hover:bg-[#2F73E6] text-white text-xs font-bold transition-all shadow-lg shadow-[#3984FF]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                        data-testid="button-finalize-creation"
+                        {/* Ilustração vetorial do smartphone com conversa e venda */}
+                        <PhoneChatSalesIllustration isSelected={salesMode === "PADRAO"} />
+
+                        {/* Textos descritivos */}
+                        <div className="space-y-1.5 mt-3">
+                          <h4 className="text-base font-bold text-white group-hover:text-[#3984FF] transition-colors">
+                            Venda na conversa
+                          </h4>
+                          <p className="text-xs text-zinc-400 leading-relaxed">
+                            O bot mostra os produtos em mensagens e manda o Pix ali mesmo. O cartão abre uma tela de pagamento.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* CARD 2 — MINI APP (Loja dentro do Telegram - Em breve) */}
+                      <div
+                        aria-disabled="true"
+                        className="relative rounded-2xl p-5 bg-[#101218]/70 border border-white/[0.06] opacity-60 cursor-not-allowed flex flex-col justify-between text-left select-none"
+                        data-testid="card-mode-miniapp"
                       >
-                        <span>{flow === "telegram" ? "Finalizar criação" : "Finalizar conexão"}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                        {/* Header do Card com Tag MINI APP e Selo Em breve */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 text-zinc-400 border border-white/10">
+                            MINI APP
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-white/10">
+                            Em breve
+                          </span>
+                        </div>
+
+                        {/* Ilustração vetorial do smartphone com loja */}
+                        <PhoneMiniAppStoreIllustration />
+
+                        {/* Textos descritivos */}
+                        <div className="space-y-1.5 mt-3">
+                          <h4 className="text-base font-bold text-zinc-300">
+                            Loja dentro do Telegram
+                          </h4>
+                          <p className="text-xs text-zinc-500 leading-relaxed">
+                            Um botão abre uma loja com fotos, planos e pagamento, sem sair do Telegram.
+                          </p>
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* 5. Botões de Finalização */}
+                  <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (flow === "telegram") {
+                          setStep(2.5);
+                        } else {
+                          setStep(2);
+                        }
+                      }}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                      data-testid="button-back-to-step-2"
+                    >
+                      Voltar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleFinalizeConnection}
+                      disabled={connecting}
+                      className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#3984FF] hover:bg-[#2F73E6] text-white text-xs font-bold transition-all shadow-lg shadow-[#3984FF]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-50"
+                      data-testid="button-finalize-creation"
+                    >
+                      {connecting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{flow === "telegram" ? "Finalizando criação..." : "Finalizando conexão..."}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{flow === "telegram" ? "Finalizar criação" : "Finalizar conexão"}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}

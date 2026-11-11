@@ -32,7 +32,7 @@ interface BotTabsNavProps {
   activeTab: string;
   onSelectTab: (tabId: string) => void;
   isAdmin: boolean;
-  mode?: "MINI_APP" | string;
+  mode?: "PADRAO" | "MINI_APP" | string;
 }
 
 export default function BotTabsNav({

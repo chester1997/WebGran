@@ -155,7 +155,8 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     buttonText: botRecord.buttonText || "Abrir App",
     status: (botRecord.status as "active" | "paused" | "disconnected") || "active",
     createdAt: botRecord.createdAt.toISOString(),
-    mode: "MINI_APP" as const,
+    // Modalidade comercial: consulta sales_mode diretamente, com fallback defensivo para a fase de transição
+    mode: ((botRecord as any).salesMode || (botRecord.buttonText === "Conversa" ? "PADRAO" : "MINI_APP")) as "PADRAO" | "MINI_APP",
     storeSlug: store.slug,
     storeName: store.name,
     chatsCount: botRecord.chats?.length || 0,

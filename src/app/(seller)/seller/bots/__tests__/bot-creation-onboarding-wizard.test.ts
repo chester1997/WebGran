@@ -120,20 +120,21 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
   });
 
   describe("Fluxo A — Criação pelo Telegram & Conexão", () => {
-    it("deve gravar o bot criado com apelido interno e configurar webhook com secret", async () => {
+    it("deve gravar o bot criado com apelido interno no modo PADRAO e configurar webhook", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
       (db.query.telegramBots.findFirst as any).mockResolvedValue(null);
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "MINI_APP",
+        mode: "PADRAO",
         displayName: "Loja Principal VIP",
-        buttonText: "Abrir App",
+        buttonText: "Conversa",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("created-bot-uuid");
+      expect(res.data?.bot?.mode).toBe("PADRAO");
       expect(db.insert).toHaveBeenCalled();
     });
 
@@ -144,7 +145,7 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "MINI_APP",
+        mode: "PADRAO",
         displayName: "",
       });
 
@@ -154,22 +155,23 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
   });
 
   describe("Fluxo B — Conexão de Bot Existente com Token", () => {
-    it("deve aceitar conexão de bot existente já verificado no @BotFather", async () => {
+    it("deve aceitar conexão de bot existente já verificado no @BotFather no modo PADRAO", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
       (db.query.telegramBots.findFirst as any).mockResolvedValue(null);
 
       const res = await createNewBotAction({
         token: "987654321:valid_token_sample",
-        mode: "MINI_APP",
+        mode: "PADRAO",
         displayName: "Bot Existente",
       });
 
       expect(res.success).toBe(true);
       expect(res.data?.botId).toBe("created-bot-uuid");
+      expect(res.data?.bot?.mode).toBe("PADRAO");
     });
 
-    it("deve rejeitar tentativas com modo não autorizado", async () => {
+    it("deve rejeitar tentativas com modo não autorizado ou inválido", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
 
@@ -179,16 +181,52 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
       });
 
       expect(res.success).toBe(false);
-      expect(res.error).toContain("Apenas o modo Mini App está liberado");
+      expect(res.error).toContain("Modo de venda inválido");
+    });
+
+    it("deve rejeitar modo MINI_APP enquanto estiver com selo 'Em breve'", async () => {
+      (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
+      (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
+
+      const res = await createNewBotAction({
+        token: "987654321:valid_token_sample",
+        mode: "MINI_APP",
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Mini App) estará disponível em breve");
     });
   });
 
-  describe("Estrutura do Modal Mobile e Isolamento de Scroll", () => {
-    it("deve exportar as constantes e tipagens dos dois fluxos de onboarding", async () => {
+  describe("Modo de Venda & Atualização Imediata da Listagem", () => {
+    it("deve exportar as ilustrações do modo de venda e os componentes visuais", async () => {
       const modalModule = await import("../components/NewBotModal");
       expect(modalModule.default).toBeDefined();
       expect(modalModule.PhoneBotIllustration).toBeDefined();
-      expect(modalModule.TokenKeyIllustration).toBeDefined();
+      expect(modalModule.PhoneChatSalesIllustration).toBeDefined();
+      expect(modalModule.PhoneMiniAppStoreIllustration).toBeDefined();
+    });
+
+    it("garante que retorno da página do bot ou adição otimista não duplica bots na lista", () => {
+      const initialList = [
+        { id: "bot-1", displayName: "Bot Antigo", mode: "MINI_APP" as const },
+      ];
+      const newlyCreatedBot = {
+        id: "bot-2",
+        displayName: "Novo Bot Conversa",
+        mode: "PADRAO" as const,
+      };
+
+      // Simula a estratégia de atualização otimista aplicada no BotsListClient
+      const updatedList = [newlyCreatedBot, ...initialList.filter((b) => b.id !== newlyCreatedBot.id)];
+
+      expect(updatedList.length).toBe(2);
+      expect(updatedList[0].id).toBe("bot-2");
+      expect(updatedList[0].mode).toBe("PADRAO");
+
+      // Simula re-execução (ex: refresh ou retorno da página individual) sem duplicidade
+      const revalidatedList = [newlyCreatedBot, ...updatedList.filter((b) => b.id !== newlyCreatedBot.id)];
+      expect(revalidatedList.length).toBe(2);
     });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
@@ -30,6 +30,11 @@ interface BotsListClientProps {
 export default function BotsListClient({ bots: initialBots, storeSlug }: BotsListClientProps) {
   const router = useRouter();
   const [bots, setBots] = useState<BotItem[]>(initialBots);
+
+  // Sincronização estrita com os dados recebidos do servidor ao revalidar
+  useEffect(() => {
+    setBots(initialBots);
+  }, [initialBots]);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isNewBotModalOpen, setIsNewBotModalOpen] = useState(false);
@@ -333,8 +338,12 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
       <NewBotModal
         isOpen={isNewBotModalOpen}
         onClose={() => setIsNewBotModalOpen(false)}
-        onBotCreated={(botId) => {
+        onBotCreated={(botId, newBot) => {
           setIsNewBotModalOpen(false);
+          if (newBot) {
+            setBots((prev) => [newBot, ...prev.filter((b) => b.id !== newBot.id)]);
+          }
+          router.refresh();
           router.push(`/seller/bots/${botId}`);
         }}
       />

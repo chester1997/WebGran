@@ -76,6 +76,7 @@ export const telegramBots = pgTable('telegram_bots', {
   tokenEncrypted: text('token_encrypted').notNull(),
   secretToken: text('secret_token'),
   buttonText: text('button_text').default('Abrir App'),
+  salesMode: text('sales_mode').notNull().default('MINI_APP'), // 'PADRAO' | 'MINI_APP'
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

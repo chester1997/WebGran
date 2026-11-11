@@ -26,7 +26,7 @@ export interface BotCardData {
   buttonText: string;
   status: "active" | "paused" | "disconnected";
   createdAt: string;
-  mode: "MINI_APP";
+  mode: "PADRAO" | "MINI_APP";
   recipientsCount: number;
   chatsCount: number;
   storeSlug: string;
@@ -258,7 +258,7 @@ export default function BotCard({
 
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25 tracking-wider uppercase shrink-0">
           <Smartphone className="w-3 h-3" />
-          Mini App
+          {bot.mode === "PADRAO" ? "Venda na conversa" : "Mini App"}
         </span>
       </div>
     </div>

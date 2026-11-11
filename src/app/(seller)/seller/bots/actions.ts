@@ -94,22 +94,49 @@ export async function validateBotTokenAction(rawToken: string): Promise<ActionRe
   }
 }
 
+export type BotItemData = {
+  id: string;
+  botId: string;
+  username: string;
+  displayName: string;
+  photoUrl: string | null;
+  buttonText: string;
+  status: "active" | "paused" | "disconnected";
+  createdAt: string;
+  mode: "PADRAO" | "MINI_APP";
+  recipientsCount: number;
+  chatsCount: number;
+  storeSlug: string;
+  storeName?: string;
+};
+
 /**
- * Finalização do cadastro do bot (Modo MINI_APP)
+ * Finalização do cadastro do bot (Modos: PADRAO [Venda na conversa] ou MINI_APP [Loja no Telegram])
  */
 export async function createNewBotAction(params: {
   token: string;
-  mode: "MINI_APP";
+  mode: "PADRAO" | "MINI_APP";
   buttonText?: string;
   displayName?: string;
-}): Promise<ActionResponse<{ botId: string; slug: string }>> {
+}): Promise<ActionResponse<{ botId: string; slug: string; bot?: BotItemData }>> {
   const auth = await verifyOwnerActionAccess();
   if (!auth.authorized) {
     return { success: false, error: auth.error };
   }
 
-  if (params.mode !== "MINI_APP") {
-    return { success: false, error: "Apenas o modo Mini App está liberado nesta fase de testes." };
+  // Validação estrita do modo no backend
+  if (params.mode === "MINI_APP") {
+    return {
+      success: false,
+      error: "O modo Loja dentro do Telegram (Mini App) estará disponível em breve. Selecione o modo Padrão (Venda na conversa)."
+    };
+  }
+
+  if (params.mode !== "PADRAO") {
+    return {
+      success: false,
+      error: "Modo de venda inválido. Selecione uma modalidade disponível."
+    };
   }
 
   const token = (params.token || "").trim();
@@ -139,7 +166,7 @@ export async function createNewBotAction(params: {
       };
     }
 
-    // Configurar URL do app para webhook e web_app
+    // Configurar URL do app para webhook
     let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     if (!rawAppUrl.startsWith("http")) rawAppUrl = `https://${rawAppUrl}`;
@@ -147,7 +174,6 @@ export async function createNewBotAction(params: {
       rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
     }
     const appUrl = rawAppUrl.replace(/\/+$/, "");
-    const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
 
     const secretToken = crypto.randomBytes(32).toString("hex");
     const webhookUrl = `${appUrl}/api/telegram/webhook?botId=${botTelegramId}`;
@@ -155,13 +181,9 @@ export async function createNewBotAction(params: {
     // Configurar webhook no Telegram
     await botService.setWebhook(webhookUrl, secretToken);
 
-    // Configurar botão de menu
+    // No modo PADRÃO (Venda na conversa), restaura o botão de menu default do Telegram
     try {
-      await botService.setChatMenuButton({
-        type: "web_app",
-        text: buttonName,
-        web_app: { url: miniAppUrl }
-      });
+      await botService.setChatMenuButton({ type: "default" });
     } catch (err: any) {
       console.warn("[createNewBotAction] Aviso no MenuButton:", err?.message || err);
     }
@@ -193,6 +215,7 @@ export async function createNewBotAction(params: {
         tokenEncrypted,
         secretToken,
         buttonText: buttonName,
+        salesMode: params.mode,
         status: "active",
         updatedAt: new Date(),
       }).where(eq(telegramBots.id, existingInStore.id));
@@ -207,19 +230,42 @@ export async function createNewBotAction(params: {
         tokenEncrypted,
         secretToken,
         buttonText: buttonName,
+        salesMode: params.mode,
         status: "active",
       }).returning({ id: telegramBots.id });
       savedBotId = inserted.id;
     }
 
     revalidatePath("/seller/bots");
+    revalidatePath("/seller/bots", "page");
+    revalidatePath("/seller/bots", "layout");
     revalidatePath(`/seller/bots/${savedBotId}`);
     revalidatePath("/seller/store");
 
+    const createdBotItem: BotItemData = {
+      id: savedBotId,
+      botId: botTelegramId,
+      username: botInfo.username || "",
+      displayName: resolvedDisplayName,
+      photoUrl: photoUrl ?? (existingInStore?.photoUrl ?? null),
+      buttonText: buttonName,
+      status: "active",
+      createdAt: (existingInStore?.createdAt || new Date()).toISOString(),
+      mode: params.mode,
+      recipientsCount: 0,
+      chatsCount: 0,
+      storeSlug: store.slug,
+      storeName: store.name,
+    };
+
     return {
       success: true,
-      message: `Bot @${botInfo.username} conectado com sucesso no modo Mini App!`,
-      data: { botId: savedBotId, slug: store.slug }
+      message: `Bot @${botInfo.username} conectado com sucesso no modo Venda na conversa!`,
+      data: {
+        botId: savedBotId,
+        slug: store.slug,
+        bot: createdBotItem,
+      }
     };
   } catch (err: any) {
     console.error("[createNewBotAction] Erro ao cadastrar bot:", err);

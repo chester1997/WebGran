@@ -27,7 +27,7 @@ export default async function SellerBotsPage() {
     }
   });
 
-  // Reconhecimento automático dos bots existentes como MINI_APP
+  // Mapeamento dos modos: bots cadastrados com buttonText === "Conversa" são PADRÃO (Venda na conversa); demais são MINI_APP
   const bots = rawBots.map((bot) => ({
     id: bot.id,
     botId: bot.botId,
@@ -37,7 +37,8 @@ export default async function SellerBotsPage() {
     buttonText: bot.buttonText || "Abrir App",
     status: (bot.status as "active" | "paused" | "disconnected") || "active",
     createdAt: bot.createdAt.toISOString(),
-    mode: "MINI_APP" as const, // Reconhecido automaticamente
+    // Modalidade comercial: consulta sales_mode diretamente, com fallback defensivo para a fase de transição
+    mode: ((bot as any).salesMode || (bot.buttonText === "Conversa" ? "PADRAO" : "MINI_APP")) as "PADRAO" | "MINI_APP",
     recipientsCount: bot.notificationRecipients?.length || 0,
     chatsCount: bot.chats?.length || 0,
     storeSlug: store.slug,
