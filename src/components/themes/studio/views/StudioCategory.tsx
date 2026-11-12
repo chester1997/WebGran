@@ -1,14 +1,23 @@
 import React from "react";
 import { db } from "@/db";
 import { products, categories } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ProductCard } from "../components/ProductCard";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getStoreBySlug } from "@/lib/store-cache";
+import { CatalogResolverService } from "@/lib/products/catalog-resolver";
 
-export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: string, categorySlug: string }) {
+export async function StudioCategory({ 
+  storeSlug, 
+  categorySlug,
+  originBotId
+}: { 
+  storeSlug: string; 
+  categorySlug: string;
+  originBotId?: string | null;
+}) {
   const store = await getStoreBySlug(storeSlug);
 
   if (!store) notFound();
@@ -19,11 +28,20 @@ export async function StudioCategory({ storeSlug, categorySlug }: { storeSlug: s
 
   if (!category) notFound();
 
-  const categoryProducts = await db.query.products.findMany({
-    where: and(eq(products.storeId, store.id), eq(products.categoryId, category.id)),
-    orderBy: (products, { desc }) => [desc(products.createdAt)],
-    limit: 100
-  });
+  const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, originBotId);
+
+  const categoryProducts = visibleProductIds.length > 0
+    ? await db.query.products.findMany({
+        where: and(
+          eq(products.storeId, store.id),
+          eq(products.categoryId, category.id),
+          eq(products.status, 'active'),
+          inArray(products.id, visibleProductIds)
+        ),
+        orderBy: (products, { desc }) => [desc(products.createdAt)],
+        limit: 100
+      })
+    : [];
 
   return (
     <div className="w-full bg-transparent text-white p-4">

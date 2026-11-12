@@ -294,7 +294,7 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     : [];
 
   const currentTab = tab || "visao-geral";
-  const tabData = await loadBotTabData(currentTab, store, user.id);
+  const tabData = await loadBotTabData(currentTab, store, user.id, botRecord.id);
 
   return (
     <Suspense fallback={<div className="p-8 text-zinc-400 text-sm">Carregando painel do bot...</div>}>

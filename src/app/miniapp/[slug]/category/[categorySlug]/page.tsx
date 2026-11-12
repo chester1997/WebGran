@@ -1,4 +1,5 @@
 import { ThemeEngineCategory } from "@/components/themes/engine";
+import { getMiniAppSession } from "@/lib/telegram/session";
 
 export default async function MiniAppCategory({ 
   params 
@@ -6,5 +7,6 @@ export default async function MiniAppCategory({
   params: Promise<{ slug: string, categorySlug: string }> 
 }) {
   const resolvedParams = await params;
-  return <ThemeEngineCategory storeSlug={resolvedParams.slug} categorySlug={resolvedParams.categorySlug} />;
+  const session = await getMiniAppSession();
+  return <ThemeEngineCategory storeSlug={resolvedParams.slug} categorySlug={resolvedParams.categorySlug} originBotId={session?.originBotId || null} />;
 }

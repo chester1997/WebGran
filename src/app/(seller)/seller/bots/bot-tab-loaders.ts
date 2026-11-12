@@ -6,6 +6,7 @@ import {
   productCarousels,
   carouselProducts,
   storeFloatingNotifications,
+  productBotVisibility,
 } from "@/db/schema";
 import { eq, desc, and, asc, inArray } from "drizzle-orm";
 import { getWelcomeSettingsAction } from "../boas-vindas/actions";
@@ -68,7 +69,8 @@ export interface BotTabData {
 export async function loadBotTabData(
   tab: string,
   store: { id: string; slug: string; name: string; categoryDisplayStyle?: string | null; floatingNotificationsEnabled?: boolean | null; floatingNotificationsPages?: any; floatingNotificationsDisplayDuration?: number | null; floatingNotificationsIntervalMin?: number | null; floatingNotificationsIntervalMax?: number | null },
-  userId: string
+  userId: string,
+  currentBotId?: string
 ): Promise<BotTabData> {
   const result: BotTabData = {};
 
@@ -95,13 +97,44 @@ export async function loadBotTabData(
       }
 
       case "produtos": {
-        const allProducts = await db.query.products.findMany({
-          where: eq(products.storeId, store.id),
-          orderBy: [desc(products.createdAt)],
-          with: {
-            category: true,
-          },
-        });
+        // Se currentBotId for informado (visão dentro do bot), filtra produtos visíveis para este bot
+        let visibleProductIds: string[] | null = null;
+        let visibilityMap: Record<string, { isOwner: boolean; canDeliver: boolean }> = {};
+
+        if (currentBotId) {
+          const visibilities = await db.query.productBotVisibility.findMany({
+            where: and(
+              eq(productBotVisibility.storeId, store.id),
+              eq(productBotVisibility.botId, currentBotId)
+            ),
+          });
+
+          visibleProductIds = visibilities.map((v) => v.productId);
+          for (const v of visibilities) {
+            visibilityMap[v.productId] = { isOwner: v.isOwner, canDeliver: v.canDeliver };
+          }
+        }
+
+        let allProducts: any[] = [];
+        if (currentBotId) {
+          if (visibleProductIds && visibleProductIds.length > 0) {
+            allProducts = await db.query.products.findMany({
+              where: and(eq(products.storeId, store.id), inArray(products.id, visibleProductIds)),
+              orderBy: [desc(products.createdAt)],
+              with: {
+                category: true,
+              },
+            });
+          }
+        } else {
+          allProducts = await db.query.products.findMany({
+            where: eq(products.storeId, store.id),
+            orderBy: [desc(products.createdAt)],
+            with: {
+              category: true,
+            },
+          });
+        }
 
         const allCategories = await db.query.categories.findMany({
           where: eq(categories.storeId, store.id),
@@ -153,6 +186,8 @@ export async function loadBotTabData(
         const enrichedProducts = allProducts.map((p) => ({
           ...p,
           carouselIds: productCarouselMap[p.id] || [],
+          isOwnerOfCurrentBot: visibilityMap[p.id]?.isOwner ?? (p.botId === currentBotId),
+          canDeliverInCurrentBot: visibilityMap[p.id]?.canDeliver ?? true,
         }));
 
         result.productsData = {

@@ -42,7 +42,10 @@ export function EditProductModal({
   const [deliveryValue, setDeliveryValue] = useState(product?.deliveryValue || "");
   const [imageUrl, setImageUrl] = useState(product?.coverUrl || "");
   const [bannerUrl, setBannerUrl] = useState(product?.bannerUrl || "");
+  const initialScope = (product?.catalogScope as any) || (product?.botId ? "BOT_SPECIFIC" : "STORE_GENERAL");
+  const [catalogScope, setCatalogScope] = useState<"STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC">(initialScope);
   const [selectedBotId, setSelectedBotId] = useState(product?.botId || "");
+  const [sharingMode, setSharingMode] = useState<"EXCLUSIVE" | "ALL_EXISTING">(((product?.sharingMode as any) === "ALL_EXISTING") ? "ALL_EXISTING" : "EXCLUSIVE");
   const [selectedCarouselIds, setSelectedCarouselIds] = useState<string[]>(product?.carouselIds || []);
   const [testingAccess, setTestingAccess] = useState(false);
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
@@ -374,22 +377,134 @@ export function EditProductModal({
               )}
             </div>
 
-            {/* Bot + Categoria */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
+            {/* Governança de Catálogo: 3 Níveis */}
+            <div className="w-full space-y-3 p-3.5 bg-white/[0.02] border border-white/[0.06] rounded-xl">
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Vincular Bot</label>
-                <select 
-                  name="botId" 
-                  value={selectedBotId} 
-                  onChange={(e) => setSelectedBotId(e.target.value)} 
-                  className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
-                >
-                  <option value="">Todos os Bots (Loja Geral)</option>
-                  {bots?.map(b => (
-                    <option key={b.id} value={b.id}>{b.displayName || `@${b.username}`}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                  Disponibilização do Catálogo
+                </label>
+                <input type="hidden" name="catalogScope" value={catalogScope} />
+                <input type="hidden" name="sharingMode" value={sharingMode} />
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogScope("STORE_GENERAL");
+                      setSelectedBotId("");
+                    }}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                      catalogScope === "STORE_GENERAL"
+                        ? "border-[#3984FF] bg-[#3984FF]/10 text-white font-medium"
+                        : "border-white/[0.08] bg-[#15171D] text-zinc-400 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="font-semibold text-[13px] text-white">Loja Geral</div>
+                    <div className="text-[11px] text-zinc-400 mt-0.5 leading-tight">Catálogo web geral da loja</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogScope("BOT_GENERAL");
+                      setSelectedBotId("");
+                    }}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                      catalogScope === "BOT_GENERAL"
+                        ? "border-[#3984FF] bg-[#3984FF]/10 text-white font-medium"
+                        : "border-white/[0.08] bg-[#15171D] text-zinc-400 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="font-semibold text-[13px] text-white">Bot Geral</div>
+                    <div className="text-[11px] text-zinc-400 mt-0.5 leading-tight">Mini App de todos os bots ativos</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogScope("BOT_SPECIFIC");
+                      if (!selectedBotId && bots && bots.length > 0) {
+                        setSelectedBotId(bots[0].id);
+                      }
+                    }}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
+                      catalogScope === "BOT_SPECIFIC"
+                        ? "border-[#3984FF] bg-[#3984FF]/10 text-white font-medium"
+                        : "border-white/[0.08] bg-[#15171D] text-zinc-400 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="font-semibold text-[13px] text-white">Bot Específico</div>
+                    <div className="text-[11px] text-zinc-400 mt-0.5 leading-tight">Pertence a um bot proprietário</div>
+                  </button>
+                </div>
               </div>
+
+              {catalogScope === "BOT_SPECIFIC" && (
+                <div className="space-y-3 pt-2 border-t border-white/[0.06]">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                      Bot Proprietário (Dono do Produto)
+                    </label>
+                    <select
+                      name="botId"
+                      value={selectedBotId}
+                      onChange={(e) => setSelectedBotId(e.target.value)}
+                      className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
+                    >
+                      <option value="">Selecione o bot proprietário...</option>
+                      {bots?.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.displayName || `@${b.username}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                      Compartilhamento
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSharingMode("EXCLUSIVE")}
+                        className={`p-2 rounded-lg border text-xs text-left ${
+                          sharingMode === "EXCLUSIVE"
+                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 font-medium"
+                            : "border-white/[0.08] bg-[#15171D] text-zinc-400"
+                        }`}
+                      >
+                        ✓ Somente este bot
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSharingMode("ALL_EXISTING")}
+                        className={`p-2 rounded-lg border text-xs text-left ${
+                          sharingMode === "ALL_EXISTING"
+                            ? "border-[#3984FF] bg-[#3984FF]/10 text-white font-medium"
+                            : "border-white/[0.08] bg-[#15171D] text-zinc-400"
+                        }`}
+                      >
+                        🌐 Todos os bots existentes hoje
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      {sharingMode === "ALL_EXISTING"
+                        ? "O produto será visível nos bots atuais da loja. Novos bots criados posteriormente não receberão automaticamente."
+                        : "Visível exclusivamente no Mini App do bot proprietário."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {catalogScope === "BOT_GENERAL" && (
+                <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-300">
+                  ℹ️ O produto será adicionado aos Mini Apps de todos os bots existentes hoje ({bots?.length || 0} bots).
+                </div>
+              )}
+            </div>
+
+            {/* Categoria */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">Categoria</label>
                 <select name="categoryId" defaultValue={product?.categoryId || ''} className="w-full bg-[#15171D] border border-white/[0.08] rounded-lg px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none">

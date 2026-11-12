@@ -11,7 +11,8 @@ import {
   decimal,
   index,
   uniqueIndex,
-  check
+  check,
+  foreignKey
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -80,7 +81,9 @@ export const telegramBots = pgTable('telegram_bots', {
   status: text('status').notNull().default('active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  botIdStoreUnique: unique('telegram_bots_id_store_id_unique').on(t.id, t.storeId),
+}));
 
 export const telegramBotChats = pgTable('telegram_bot_chats', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -187,6 +190,8 @@ export const products = pgTable('products', {
   position: integer('position').notNull().default(0),
   deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
   deliveryValue: text('delivery_value'),
+  catalogScope: text('catalog_scope').notNull().default('STORE_GENERAL'), // 'STORE_GENERAL' | 'BOT_GENERAL' | 'BOT_SPECIFIC'
+  sharingMode: text('sharing_mode').notNull().default('EXCLUSIVE'), // 'EXCLUSIVE' | 'ALL_EXISTING' | 'CUSTOM'
   showViews: boolean('show_views').default(false),
   viewsCount: integer('views_count').default(0),
   showFire: boolean('show_fire').default(false),
@@ -196,7 +201,8 @@ export const products = pgTable('products', {
 }, (t) => ({
   storeSlugUnique: unique().on(t.storeId, t.slug),
   storeStatusIdx: index('products_store_status_idx').on(t.storeId, t.status),
-  storeCategoryIdx: index('products_store_category_idx').on(t.storeId, t.categoryId)
+  storeCategoryIdx: index('products_store_category_idx').on(t.storeId, t.categoryId),
+  productIdStoreUnique: unique('products_id_store_id_unique').on(t.id, t.storeId),
 }));
 
 export const combos = pgTable('combos', {
@@ -229,6 +235,33 @@ export const comboProducts = pgTable('combo_products', {
   comboProductUnique: unique('combo_products_combo_product_unique').on(t.comboId, t.productId),
   comboIdx: index('combo_products_combo_idx').on(t.comboId),
   productIdx: index('combo_products_product_idx').on(t.productId),
+}));
+
+export const productBotVisibility = pgTable('product_bot_visibility', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  isOwner: boolean('is_owner').notNull().default(false),
+  canDeliver: boolean('can_deliver').notNull().default(true),
+  deliveryBlockReason: text('delivery_block_reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  productBotUnique: unique().on(t.productId, t.botId),
+  productStoreFk: foreignKey({
+    name: 'product_bot_visibility_product_store_fk',
+    columns: [t.productId, t.storeId],
+    foreignColumns: [products.id, products.storeId],
+  }).onDelete('cascade'),
+  botStoreFk: foreignKey({
+    name: 'product_bot_visibility_bot_store_fk',
+    columns: [t.botId, t.storeId],
+    foreignColumns: [telegramBots.id, telegramBots.storeId],
+  }).onDelete('cascade'),
+  botProductIdx: index('product_bot_visibility_bot_product_idx').on(t.botId, t.productId),
+  storeBotIdx: index('product_bot_visibility_store_bot_idx').on(t.storeId, t.botId),
+  productIdx: index('product_bot_visibility_product_idx').on(t.productId),
 }));
 
 export const comboTiers = pgTable('combo_tiers', {
@@ -284,6 +317,9 @@ export const orders = pgTable('orders', {
   sellerNotificationClaimedAt: timestamp('seller_notification_claimed_at'),
   sellerNotificationClaimToken: text('seller_notification_claim_token'),
   sessionId: text('session_id'),
+  originBotId: uuid('origin_bot_id').references(() => telegramBots.id, { onDelete: 'set null' }),
+  ownerBotId: uuid('owner_bot_id').references(() => telegramBots.id, { onDelete: 'set null' }),
+  deliveryMode: text('delivery_mode').notNull().default('LINK'), // 'LINK' | 'BOT_PERMISSION'
   splitStatus: text('split_status').default('PENDING'), // 'PENDING' | 'REQUESTED' | 'GATEWAY_ACCEPTED' | 'PROCESSED' | 'SETTLED' | 'FAILED' | 'SKIPPED' | 'CONFIRMED'
   splitAmountCents: integer('split_amount_cents').default(50),
   splitConfirmedAt: timestamp('split_confirmed_at'),
@@ -519,6 +555,9 @@ export const telegramBotsRelations = relations(telegramBots, ({ one, many }) => 
   notificationDeliveries: many(orderBotNotificationDeliveries),
   messages: many(telegramMessages),
   webhookUpdates: many(telegramWebhookUpdates),
+  productVisibilities: many(productBotVisibility),
+  originOrders: many(orders, { relationName: 'orderOriginBot' }),
+  ownerOrders: many(orders, { relationName: 'orderOwnerBot' }),
 }));
 
 export const botSaleNotificationRecipientsRelations = relations(botSaleNotificationRecipients, ({ one, many }) => ({
@@ -596,6 +635,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   productVideos: many(productVideos),
   cartItems: many(cartItems),
   comboProducts: many(comboProducts),
+  botVisibilities: many(productBotVisibility),
 }));
 
 export const telegramCustomersRelations = relations(telegramCustomers, ({ one, many }) => ({
@@ -624,6 +664,16 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   session: one(storeSessions, {
     fields: [orders.sessionId],
     references: [storeSessions.id],
+  }),
+  originBot: one(telegramBots, {
+    fields: [orders.originBotId],
+    references: [telegramBots.id],
+    relationName: 'orderOriginBot',
+  }),
+  ownerBot: one(telegramBots, {
+    fields: [orders.ownerBotId],
+    references: [telegramBots.id],
+    relationName: 'orderOwnerBot',
   }),
   progressiveCombo: one(combos, {
     fields: [orders.progressiveComboId],
@@ -1568,3 +1618,27 @@ export const telegramWebhookUpdatesRelations = relations(telegramWebhookUpdates,
   }),
 }));
 
+
+export const productBotVisibilityRelations = relations(productBotVisibility, ({ one }) => ({
+  store: one(stores, {
+    fields: [productBotVisibility.storeId],
+    references: [stores.id],
+  }),
+  product: one(products, {
+    fields: [productBotVisibility.productId],
+    references: [products.id],
+  }),
+  bot: one(telegramBots, {
+    fields: [productBotVisibility.botId],
+    references: [telegramBots.id],
+  }),
+}));
+
+export const authRateLimits = pgTable('auth_rate_limits', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(1),
+  resetAt: timestamp('reset_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  resetAtIdx: index('auth_rate_limits_reset_at_idx').on(t.resetAt),
+}));

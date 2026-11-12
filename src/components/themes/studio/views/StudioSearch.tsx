@@ -1,38 +1,53 @@
 import React from "react";
 import { db } from "@/db";
 import { products } from "@/db/schema";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ProductCard } from "../components/ProductCard";
 import { SearchInput } from "../components/SearchInput";
 import { getStoreBySlug } from "@/lib/store-cache";
+import { CatalogResolverService } from "@/lib/products/catalog-resolver";
 
-export async function StudioSearch({ storeSlug, q }: { storeSlug: string, q: string }) {
+export async function StudioSearch({ 
+  storeSlug, 
+  q,
+  originBotId
+}: { 
+  storeSlug: string; 
+  q: string;
+  originBotId?: string | null;
+}) {
   const store = await getStoreBySlug(storeSlug);
 
   if (!store) notFound();
 
+  const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, originBotId);
+
   let searchResults: any[] = [];
   
-  if (q) {
-    searchResults = await db.query.products.findMany({
-      where: and(
-        eq(products.storeId, store.id),
-        eq(products.status, 'active'),
-        ilike(products.title, `%${q}%`)
-      ),
-      orderBy: (products, { desc }) => [desc(products.createdAt)],
-      limit: 100
-    });
-  } else {
-    searchResults = await db.query.products.findMany({
-      where: and(
-        eq(products.storeId, store.id),
-        eq(products.status, 'active')
-      ),
-      orderBy: (products, { desc }) => [desc(products.createdAt)],
-      limit: 100
-    });
+  if (visibleProductIds.length > 0) {
+    if (q) {
+      searchResults = await db.query.products.findMany({
+        where: and(
+          eq(products.storeId, store.id),
+          eq(products.status, 'active'),
+          inArray(products.id, visibleProductIds),
+          ilike(products.title, `%${q}%`)
+        ),
+        orderBy: (products, { desc }) => [desc(products.createdAt)],
+        limit: 100
+      });
+    } else {
+      searchResults = await db.query.products.findMany({
+        where: and(
+          eq(products.storeId, store.id),
+          eq(products.status, 'active'),
+          inArray(products.id, visibleProductIds)
+        ),
+        orderBy: (products, { desc }) => [desc(products.createdAt)],
+        limit: 100
+      });
+    }
   }
 
   return (

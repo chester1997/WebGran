@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { 
   CommercialMetricsService, 
   resolvePeriodDateRange, 
@@ -26,6 +26,11 @@ describe("CommercialMetricsService Suite", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.setSystemTime(baseDate);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("1. Soma correta das vendas aprovadas & Formatação", () => {

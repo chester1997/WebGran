@@ -7,8 +7,18 @@ import { ArrowLeft, PackageX } from "lucide-react";
 import { StudioProductClient } from "./StudioProductClient";
 import { getStoreBySlug } from "@/lib/store-cache";
 import { getMiniAppSession } from "@/lib/telegram/session";
+import { CatalogResolverService } from "@/lib/products/catalog-resolver";
+import { inArray } from "drizzle-orm";
 
-export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: string, productSlug: string }) {
+export async function StudioProduct({ 
+  storeSlug, 
+  productSlug,
+  originBotId: propOriginBotId
+}: { 
+  storeSlug: string; 
+  productSlug: string;
+  originBotId?: string | null;
+}) {
   const store = await getStoreBySlug(storeSlug);
 
   if (!store) {
@@ -55,31 +65,64 @@ export async function StudioProduct({ storeSlug, productSlug }: { storeSlug: str
 
   // Concurrently fetch secondary data: bot username & recommendation candidates & user session access
   const session = await getMiniAppSession();
+  const effectiveBotId = propOriginBotId || session?.originBotId || null;
+
+  const isVisible = await CatalogResolverService.isProductVisible(product.id, store.id, effectiveBotId);
+
+  if (!isVisible) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center text-white space-y-4">
+        <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-500 shadow-xl">
+          <PackageX className="w-8 h-8 text-zinc-500" />
+        </div>
+        <h2 className="text-xl font-bold">Produto Indisponível neste Bot</h2>
+        <p className="text-xs text-zinc-400 max-w-xs">
+          Este produto não está disponível no catálogo deste bot.
+        </p>
+        <Link
+          href={`/miniapp/${storeSlug}`}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs shadow-lg transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar ao Catálogo</span>
+        </Link>
+      </div>
+    );
+  }
+
+  const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, effectiveBotId);
+  const candidateIds = visibleProductIds.filter(id => id !== product.id);
 
   const [firstBot, sameCategoryProducts, storeProducts, accessRecord] = await Promise.all([
-    db.query.telegramBots.findFirst({
-      where: eq(telegramBots.storeId, store.id)
-    }),
-    product.categoryId
+    effectiveBotId
+      ? db.query.telegramBots.findFirst({
+          where: and(eq(telegramBots.id, effectiveBotId), eq(telegramBots.storeId, store.id))
+        })
+      : db.query.telegramBots.findFirst({
+          where: eq(telegramBots.storeId, store.id)
+        }),
+    product.categoryId && candidateIds.length > 0
       ? db.query.products.findMany({
           where: and(
             eq(products.storeId, store.id),
             eq(products.categoryId, product.categoryId),
             eq(products.status, 'active'),
-            ne(products.id, product.id)
+            inArray(products.id, candidateIds)
           ),
           limit: 10
         })
       : Promise.resolve([]),
-    db.query.products.findMany({
-      where: and(
-        eq(products.storeId, store.id),
-        eq(products.status, 'active'),
-        ne(products.id, product.id)
-      ),
-      orderBy: [desc(products.createdAt)],
-      limit: 12
-    }),
+    candidateIds.length > 0
+      ? db.query.products.findMany({
+          where: and(
+            eq(products.storeId, store.id),
+            eq(products.status, 'active'),
+            inArray(products.id, candidateIds)
+          ),
+          orderBy: [desc(products.createdAt)],
+          limit: 12
+        })
+      : Promise.resolve([]),
     session?.customerId
       ? db.query.accesses.findFirst({
           where: and(

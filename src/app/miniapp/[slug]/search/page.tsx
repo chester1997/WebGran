@@ -1,4 +1,5 @@
 import { ThemeEngineSearch } from "@/components/themes/engine";
+import { getMiniAppSession } from "@/lib/telegram/session";
 
 export default async function MiniAppSearch({ 
   params, 
@@ -10,6 +11,7 @@ export default async function MiniAppSearch({
   const resolvedParams = await params;
   const resolvedSearch = await searchParams;
   const q = typeof resolvedSearch.q === 'string' ? resolvedSearch.q : "";
+  const session = await getMiniAppSession();
   
-  return <ThemeEngineSearch storeSlug={resolvedParams.slug} q={q} />;
+  return <ThemeEngineSearch storeSlug={resolvedParams.slug} q={q} originBotId={session?.originBotId || null} />;
 }

@@ -42,8 +42,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Authenticate Telegram User Session (Optional: if valid, check for existing access)
+    // Authenticate Telegram User Session
     const session = (await resolveMiniAppCustomerSession(req)) || (await getMiniAppSession());
+    const originBotId = session?.originBotId || null;
+
+    // Validate visibility: product must be visible in this bot's catalog
+    const { CatalogResolverService } = await import("@/lib/products/catalog-resolver");
+    const isVisible = await CatalogResolverService.isProductVisible(product.id, store.id, originBotId);
+
+    if (!isVisible) {
+      return NextResponse.json({
+        success: true,
+        destinationUrl: `/miniapp/${storeSlug}`
+      });
+    }
+
     const customerId = session?.customerId;
 
     let activeAccess = null;

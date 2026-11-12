@@ -32,6 +32,7 @@ export async function createCheckoutSession(
       couponCode,
       paymentGateway,
       sessionId,
+      originBotId: session.originBotId || null,
     });
   } catch (error: any) {
     console.error("[actions.createCheckoutSession] Unexpected error:", error);

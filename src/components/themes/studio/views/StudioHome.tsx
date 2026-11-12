@@ -2,7 +2,7 @@ import React from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { stores, products, categories, banners, telegramBots, productCarousels } from "@/db/schema";
-import { eq, desc, and, asc } from "drizzle-orm";
+import { eq, desc, and, asc, inArray } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
@@ -19,22 +19,25 @@ import { ComboService } from "@/lib/combos/combo-service";
 import { CombosCarousel } from "../components/CombosCarousel";
 
 import { getStoreBySlug } from "@/lib/store-cache";
+import { CatalogResolverService } from "@/lib/products/catalog-resolver";
 
-export async function StudioHome({ storeSlug }: { storeSlug: string }) {
+export async function StudioHome({ storeSlug, originBotId }: { storeSlug: string; originBotId?: string | null }) {
   "use cache";
   cacheLife("minutes");
-  cacheTag(`store-home-${storeSlug}`);
+  cacheTag(`store-home-${storeSlug}-${originBotId || "web"}`);
 
   const store = await getStoreBySlug(storeSlug);
 
   if (!store) return null;
 
+  const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, originBotId);
+  const visibleSet = new Set(visibleProductIds);
 
   const [
     storeBanners,
     rankingCarousel,
     standardCarousels,
-    firstBot,
+    activeBot,
     activeCombos
   ] = await Promise.all([
     db.query.banners.findMany({
@@ -73,19 +76,32 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         }
       }
     }),
-    db.query.telegramBots.findFirst({
-      where: eq(telegramBots.storeId, store.id),
-    }),
+    originBotId
+      ? db.query.telegramBots.findFirst({
+          where: and(eq(telegramBots.id, originBotId), eq(telegramBots.storeId, store.id)),
+        })
+      : db.query.telegramBots.findFirst({
+          where: eq(telegramBots.storeId, store.id),
+        }),
     ComboService.getActiveCombos(store.id)
   ]);
 
-  const rankingProducts = rankingCarousel?.items?.map(i => i.product).filter(p => p && p.status === 'active') || [];
+  const rankingProducts = rankingCarousel?.items
+    ?.map(i => i.product)
+    .filter(p => p && p.status === 'active' && visibleSet.has(p.id)) || [];
 
-  let headerLogoUrl = firstBot?.photoUrl || store.logoUrl || null;
+  const filteredStandardCarousels = standardCarousels
+    .map(c => ({
+      ...c,
+      items: c.items.filter(i => i.product && i.product.status === 'active' && visibleSet.has(i.product.id))
+    }))
+    .filter(c => c.items.length > 0);
 
-  if (!headerLogoUrl && firstBot?.tokenEncrypted) {
+  let headerLogoUrl = activeBot?.photoUrl || store.logoUrl || null;
+
+  if (!headerLogoUrl && activeBot?.tokenEncrypted) {
     try {
-      const token = decrypt(firstBot.tokenEncrypted);
+      const token = decrypt(activeBot.tokenEncrypted);
       const botService = new TelegramBotService(token);
       const fetchedPhoto = await botService.getProfilePhotoUrl();
       if (fetchedPhoto) {
@@ -93,7 +109,7 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         // Asynchronously update DB so future requests hit cache
         db.update(telegramBots)
           .set({ photoUrl: fetchedPhoto, updatedAt: new Date() })
-          .where(eq(telegramBots.id, firstBot.id))
+          .where(eq(telegramBots.id, activeBot.id))
           .then(() => {})
           .catch(() => {});
       }
@@ -106,12 +122,18 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
   let recents: any[] = [];
   let bestSellers: any[] = [];
 
-  if (standardCarousels.length === 0) {
-    const allProducts = await db.query.products.findMany({
-      where: eq(products.storeId, store.id),
-      orderBy: [desc(products.createdAt)],
-      limit: 20
-    });
+  if (filteredStandardCarousels.length === 0) {
+    const allProducts = visibleProductIds.length > 0
+      ? await db.query.products.findMany({
+          where: and(
+            eq(products.storeId, store.id),
+            eq(products.status, 'active'),
+            inArray(products.id, visibleProductIds)
+          ),
+          orderBy: [desc(products.createdAt)],
+          limit: 20
+        })
+      : [];
     recents = allProducts.slice(0, 8);
     bestSellers = allProducts.slice(0, 5);
   }
@@ -176,8 +198,8 @@ export async function StudioHome({ storeSlug }: { storeSlug: string }) {
         )}
 
         {/* Custom Standard Carousels configured by seller */}
-        {standardCarousels.length > 0 ? (
-          standardCarousels.map(carousel => {
+        {filteredStandardCarousels.length > 0 ? (
+          filteredStandardCarousels.map(carousel => {
             const carouselProductsList = carousel.items
               .map(i => i.product)
               .filter(p => p && p.status === 'active');

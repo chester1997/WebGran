@@ -42,6 +42,34 @@ vi.mock("@/db", () => ({
           tokenEncrypted: "enc_token",
         }),
       },
+      telegramBotChats: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "chat-1",
+          storeId: "store-1",
+          botId: "bot-1",
+          telegramChatId: "-100123456789",
+          botStatus: "administrator",
+          canInviteUsers: true,
+          isActive: true,
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "chat-1",
+            storeId: "store-1",
+            botId: "bot-1",
+            telegramChatId: "-100123456789",
+            botStatus: "administrator",
+            canInviteUsers: true,
+            isActive: true,
+            bot: {
+              id: "bot-1",
+              storeId: "store-1",
+              status: "active",
+              tokenEncrypted: "enc_token",
+            },
+          },
+        ]),
+      },
       telegramCustomers: {
         findFirst: vi.fn().mockImplementation(async () => Object.values(dbCustomers)[0] || null),
       },

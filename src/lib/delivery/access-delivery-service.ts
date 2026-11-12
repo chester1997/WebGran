@@ -431,6 +431,7 @@ export class AccessDeliveryService {
             itemBot = await BotDeliveryResolver.resolveBotForDelivery({
               storeId: order.storeId,
               botId: productData.botId,
+              originBotId: (order as any).originBotId || null,
               deliveryType: productData.deliveryType,
               deliveryValue: productData.deliveryValue,
             });
@@ -624,6 +625,7 @@ export class AccessDeliveryService {
         itemBot = await BotDeliveryResolver.resolveBotForDelivery({
           storeId: order.storeId,
           botId: product.botId,
+          originBotId: (order as any).originBotId || null,
           deliveryType: product.deliveryType,
           deliveryValue: product.deliveryValue,
         });
@@ -745,6 +747,7 @@ export class AccessDeliveryService {
     const itemBot = await BotDeliveryResolver.resolveBotForDelivery({
       storeId: sellerStoreId,
       botId: productData.botId,
+      originBotId: (accessRecord as any)?.order?.originBotId || null,
       deliveryType: productData.deliveryType,
       deliveryValue: productData.deliveryValue,
     });

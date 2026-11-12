@@ -1,4 +1,5 @@
 import { ThemeEngineProduct } from "@/components/themes/engine";
+import { getMiniAppSession } from "@/lib/telegram/session";
 
 export default async function MiniAppProduct({ 
   params 
@@ -6,5 +7,6 @@ export default async function MiniAppProduct({
   params: Promise<{ slug: string, productSlug: string }> 
 }) {
   const resolvedParams = await params;
-  return <ThemeEngineProduct storeSlug={resolvedParams.slug} productSlug={resolvedParams.productSlug} />;
+  const session = await getMiniAppSession();
+  return <ThemeEngineProduct storeSlug={resolvedParams.slug} productSlug={resolvedParams.productSlug} originBotId={session?.originBotId || null} />;
 }

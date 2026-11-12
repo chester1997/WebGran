@@ -16,7 +16,15 @@ export async function getMiniAppSession() {
     return {
       customerId: payload.customerId as string,
       storeId: payload.storeId as string,
-      telegramId: payload.telegramId as string
+      telegramId: payload.telegramId as string,
+      originBotId: (payload.originBotId as string | undefined) || null,
+      originBotUsername: (payload.originBotUsername as string | undefined) || null,
+    } as {
+      customerId: string;
+      storeId: string;
+      telegramId: string;
+      originBotId?: string | null;
+      originBotUsername?: string | null;
     };
   } catch (e) {
     return null;
@@ -83,6 +91,14 @@ export async function resolveMiniAppCustomerSession(req: any) {
     customerId: customer.id,
     storeId: store.id,
     telegramId: String(tgUser.id),
+    originBotId: null,
+    originBotUsername: null,
+  } as {
+    customerId: string;
+    storeId: string;
+    telegramId: string;
+    originBotId?: string | null;
+    originBotUsername?: string | null;
   };
 }
 

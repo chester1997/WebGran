@@ -30,16 +30,16 @@ export async function ThemeEngineLayout({ storeSlug, children }: { storeSlug: st
   return <StudioLayout storeSlug={storeSlug}>{children}</StudioLayout>;
 }
 
-export async function ThemeEngineHome({ storeSlug }: { storeSlug: string }) {
+export async function ThemeEngineHome({ storeSlug, originBotId }: { storeSlug: string; originBotId?: string | null }) {
   const theme = await getResolvedThemeSlug(storeSlug);
-  if (theme === 'studio') return <StudioHome storeSlug={storeSlug} />;
-  return <StudioHome storeSlug={storeSlug} />;
+  if (theme === 'studio') return <StudioHome storeSlug={storeSlug} originBotId={originBotId} />;
+  return <StudioHome storeSlug={storeSlug} originBotId={originBotId} />;
 }
 
-export async function ThemeEngineSearch({ storeSlug, q }: { storeSlug: string, q: string }) {
+export async function ThemeEngineSearch({ storeSlug, q, originBotId }: { storeSlug: string; q: string; originBotId?: string | null }) {
   const theme = await getResolvedThemeSlug(storeSlug);
-  if (theme === 'studio') return <StudioSearch storeSlug={storeSlug} q={q} />;
-  return <StudioSearch storeSlug={storeSlug} q={q} />;
+  if (theme === 'studio') return <StudioSearch storeSlug={storeSlug} q={q} originBotId={originBotId} />;
+  return <StudioSearch storeSlug={storeSlug} q={q} originBotId={originBotId} />;
 }
 
 export async function ThemeEngineCart({ storeSlug }: { storeSlug: string }) {
@@ -70,24 +70,24 @@ export async function ThemeEngineProfile({ storeSlug }: { storeSlug: string }) {
   return <StudioProfile storeSlug={storeSlug} />;
 }
 
-export async function ThemeEngineProduct({ storeSlug, productSlug }: { storeSlug: string, productSlug: string }) {
+export async function ThemeEngineProduct({ storeSlug, productSlug, originBotId }: { storeSlug: string; productSlug: string; originBotId?: string | null }) {
   const theme = await getResolvedThemeSlug(storeSlug);
   if (theme === 'studio') {
     const { StudioProduct } = await import("../studio/views/StudioProduct");
-    return <StudioProduct storeSlug={storeSlug} productSlug={productSlug} />;
+    return <StudioProduct storeSlug={storeSlug} productSlug={productSlug} originBotId={originBotId} />;
   }
   const { StudioProduct } = await import("../studio/views/StudioProduct");
-  return <StudioProduct storeSlug={storeSlug} productSlug={productSlug} />;
+  return <StudioProduct storeSlug={storeSlug} productSlug={productSlug} originBotId={originBotId} />;
 }
 
-export async function ThemeEngineCategory({ storeSlug, categorySlug }: { storeSlug: string, categorySlug: string }) {
+export async function ThemeEngineCategory({ storeSlug, categorySlug, originBotId }: { storeSlug: string; categorySlug: string; originBotId?: string | null }) {
   const theme = await getResolvedThemeSlug(storeSlug);
   if (theme === 'studio') {
     const { StudioCategory } = await import("../studio/views/StudioCategory");
-    return <StudioCategory storeSlug={storeSlug} categorySlug={categorySlug} />;
+    return <StudioCategory storeSlug={storeSlug} categorySlug={categorySlug} originBotId={originBotId} />;
   }
   const { StudioCategory } = await import("../studio/views/StudioCategory");
-  return <StudioCategory storeSlug={storeSlug} categorySlug={categorySlug} />;
+  return <StudioCategory storeSlug={storeSlug} categorySlug={categorySlug} originBotId={originBotId} />;
 }
 
 export async function ThemeEngineClips({ storeSlug }: { storeSlug: string }) {

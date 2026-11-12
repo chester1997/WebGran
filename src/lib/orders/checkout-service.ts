@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { products, orders, orderItems, stores, coupons, combos, comboProducts } from "@/db/schema";
+import { products, orders, orderItems, stores, coupons, combos, comboProducts, telegramBots } from "@/db/schema";
 import { eq, inArray, and, sql, asc, desc } from "drizzle-orm";
 import { paymentService } from "@/lib/payments/payment-service";
 import { ComboService } from "@/lib/combos/combo-service";
@@ -20,6 +20,7 @@ export interface CreateCheckoutInput {
   couponCode?: string;
   paymentGateway?: "mercadopago" | "pushinpay" | "syncpay";
   sessionId?: string | null;
+  originBotId?: string | null;
 }
 
 export interface CheckoutResult {
@@ -54,6 +55,7 @@ export class CheckoutService {
       couponCode,
       paymentGateway,
       sessionId,
+      originBotId,
     } = input;
 
     try {
@@ -400,7 +402,40 @@ export class CheckoutService {
         initialSplitError = 'COMISSAO_ZERO';
       }
 
-      // 10. CREATE ORDER
+      // 10. DETERMINE BOT OWNER AND DELIVERY MODE
+      let validatedOriginBotId: string | null = null;
+      if (originBotId) {
+        const originBotRecord = await db.query.telegramBots.findFirst({
+          where: and(eq(telegramBots.id, originBotId), eq(telegramBots.storeId, storeId)),
+          columns: { id: true },
+        });
+        if (originBotRecord) {
+          validatedOriginBotId = originBotRecord.id;
+        }
+      }
+
+      // Preserve per-item ownership without assuming a single universal owner
+      const allItemProducts = [
+        ...realProducts,
+        ...(realCombos.flatMap((c) => c.products?.map((p: any) => p.product) || [])),
+      ].filter(Boolean);
+
+      const uniqueOwnerBotIds = Array.from(
+        new Set(allItemProducts.map((p) => p.botId).filter(Boolean))
+      );
+      // If all items belong to one single bot, that is the ownerBotId; if mixed or none, null
+      const orderOwnerBotId = uniqueOwnerBotIds.length === 1 ? uniqueOwnerBotIds[0] : null;
+
+      // Determine order-level delivery mode (if any item requires bot permission, mark as BOT_PERMISSION)
+      const hasDynamicTgItem = allItemProducts.some(
+        (p) =>
+          (p.deliveryType === "telegram" || p.deliveryType === "TELEGRAM_CHAT") &&
+          p.deliveryValue &&
+          !String(p.deliveryValue).trim().startsWith("http")
+      );
+      const orderDeliveryMode = hasDynamicTgItem ? "BOT_PERMISSION" : "LINK";
+
+      // 10.1 CREATE ORDER
       const newOrderArr = await db
         .insert(orders)
         .values({
@@ -416,6 +451,9 @@ export class CheckoutService {
           total: finalTotal.toFixed(2),
           currency: "BRL",
           sessionId: sessionId || null,
+          originBotId: validatedOriginBotId,
+          ownerBotId: orderOwnerBotId,
+          deliveryMode: orderDeliveryMode,
           splitAmountCents: snapshotSplitAmountCents,
           splitStatus: initialSplitStatus,
           splitError: initialSplitError,

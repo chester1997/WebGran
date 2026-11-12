@@ -42,6 +42,10 @@ interface ProductItem {
   deliveryType?: string | null;
   deliveryValue?: string | null;
   botId?: string | null;
+  catalogScope?: string | null;
+  sharingMode?: string | null;
+  isOwnerOfCurrentBot?: boolean;
+  canDeliverInCurrentBot?: boolean;
   categoryId?: string | null;
   category?: { id: string; name: string } | null;
   carouselIds?: string[];
@@ -55,6 +59,52 @@ interface Props {
   userRole?: string | null;
   carousels?: any[];
   hideHeader?: boolean;
+}
+
+function renderCatalogBadge(prod: ProductItem, bots: { id: string; username: string; displayName?: string | null }[]) {
+  const scope = prod.catalogScope || (prod.botId ? "BOT_SPECIFIC" : "STORE_GENERAL");
+
+  if (scope === "STORE_GENERAL") {
+    return (
+      <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded font-medium flex items-center gap-1" title="Disponível na Loja Geral (catálogo web)">
+        <Globe className="w-3 h-3 shrink-0" />
+        <span>Loja Geral</span>
+      </span>
+    );
+  }
+
+  if (scope === "BOT_GENERAL") {
+    return (
+      <span className="text-[10px] text-purple-400 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded font-medium flex items-center gap-1" title="Bot Geral: Disponível em todos os bots ativos">
+        <Bot className="w-3 h-3 shrink-0" />
+        <span>Bot Geral</span>
+      </span>
+    );
+  }
+
+  // BOT_SPECIFIC
+  const targetBot = bots.find((b) => b.id === prod.botId);
+  const botLabel = targetBot?.displayName || (targetBot?.username ? `@${targetBot.username}` : "Bot");
+  const isShared = prod.sharingMode === "ALL_EXISTING" || prod.isOwnerOfCurrentBot === false;
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <span className="text-[10px] text-[#3984FF] bg-[#3984FF]/10 border border-[#3984FF]/20 px-1.5 py-0.5 rounded font-medium flex items-center gap-1 max-w-[130px] truncate" title={`Bot Proprietário: ${botLabel}`}>
+        <Bot className="w-3 h-3 shrink-0" />
+        <span className="truncate">{botLabel}</span>
+      </span>
+      {isShared && (
+        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded font-medium">
+          Compartilhado
+        </span>
+      )}
+      {prod.canDeliverInCurrentBot === false && (
+        <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded font-medium" title="Bot atual não possui permissão no canal">
+          Entrega Indisponível
+        </span>
+      )}
+    </div>
+  );
 }
 
 const durationMap: Record<string, string> = {
@@ -119,8 +169,10 @@ export default function ProductsListClient({ storeName, products, categories, bo
     const matchesBot = 
       selectedBot === "all"
         ? true
-        : selectedBot === "global"
-        ? !prod.botId
+        : selectedBot === "store_general" || selectedBot === "global"
+        ? (prod.catalogScope === "STORE_GENERAL" || (!prod.catalogScope && !prod.botId))
+        : selectedBot === "bot_general"
+        ? prod.catalogScope === "BOT_GENERAL"
         : prod.botId === selectedBot;
 
     const matchesStatus = 
@@ -200,10 +252,11 @@ export default function ProductsListClient({ storeName, products, categories, bo
           <select
             value={selectedBot}
             onChange={(e) => setSelectedBot(e.target.value)}
-            className="bg-[#16161C] border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-blue-500/50 transition-all w-full md:w-44 appearance-none"
+            className="bg-[#16161C] border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-blue-500/50 transition-all w-full md:w-48 appearance-none"
           >
-            <option value="all">Todos os Bots</option>
-            <option value="global">Todos os Bots (Loja Geral)</option>
+            <option value="all">Todos os Escopos / Bots</option>
+            <option value="store_general">Loja Geral (Web)</option>
+            <option value="bot_general">Bot Geral (Todos os Bots)</option>
             {bots.map((b) => (
               <option key={b.id} value={b.id}>{b.displayName || `@${b.username}`}</option>
             ))}
@@ -337,22 +390,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
                         {prod.category.name}
                       </span>
                     )}
-                    {prod.botId ? (
-                      (() => {
-                        const targetBot = bots.find(b => b.id === prod.botId);
-                        return (
-                          <span className="text-[10px] text-teal-400 bg-teal-500/10 border border-teal-500/20 px-1.5 py-0.5 rounded font-medium flex items-center gap-1 max-w-[130px] truncate" title={`Vinculado ao Bot: ${targetBot?.displayName || targetBot?.username || prod.botId}`}>
-                            <Bot className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{targetBot?.displayName || (targetBot?.username ? `@${targetBot.username}` : "Bot")}</span>
-                          </span>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded font-medium flex items-center gap-1" title="Disponível em todos os bots">
-                        <Globe className="w-3 h-3 shrink-0" />
-                        <span>Loja Geral</span>
-                      </span>
-                    )}
+                    {renderCatalogBadge(prod, bots)}
                   </div>
                 </div>
 
@@ -448,22 +486,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
                       <span>•</span>
                       <span>Duração: {durationMap[prod.duration || 'lifetime']}</span>
                       <span>•</span>
-                      {prod.botId ? (
-                        (() => {
-                          const targetBot = bots.find(b => b.id === prod.botId);
-                          return (
-                            <span className="text-[10px] text-teal-400 bg-teal-500/10 border border-teal-500/20 px-1.5 py-0.5 rounded font-medium flex items-center gap-1">
-                              <Bot className="w-3 h-3" />
-                              <span>{targetBot?.displayName || (targetBot?.username ? `@${targetBot.username}` : "Bot")}</span>
-                            </span>
-                          );
-                        })()
-                      ) : (
-                        <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded font-medium flex items-center gap-1">
-                          <Globe className="w-3 h-3" />
-                          <span>Loja Geral</span>
-                        </span>
-                      )}
+                      {renderCatalogBadge(prod, bots)}
                     </div>
                   </div>
                 </div>

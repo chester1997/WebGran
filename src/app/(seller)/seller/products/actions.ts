@@ -2,7 +2,7 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { products, productVideos, productCarousels, carouselProducts } from "@/db/schema";
+import { products, productVideos, productCarousels, carouselProducts, productBotVisibility, telegramBots } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, and, count, inArray } from "drizzle-orm";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
@@ -166,19 +166,24 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
     }
   }
 
-  const botId = (formData.get("botId") as string) || null;
-  if (botId) {
-    try {
-      const { telegramBots } = await import("@/db/schema");
-      const botRecord = await db.query.telegramBots.findFirst({
-        where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
-      });
-      if (!botRecord) {
-        return { success: false, error: "O bot selecionado não pertence a esta loja." };
-      }
-    } catch (botErr: any) {
-      console.error("[createProductAction] Erro ao validar bot selecionado:", botErr);
-      return { success: false, error: "Erro ao consultar dados do bot selecionado." };
+  const rawScope = formData.get("catalogScope") as string | null;
+  let botId = (formData.get("botId") as string) || null;
+  // Inferência automática de compatibilidade: se botId foi passado e não há rawScope, infere BOT_SPECIFIC
+  const catalogScope: "STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC" =
+    rawScope ? (rawScope as any) : botId ? "BOT_SPECIFIC" : "STORE_GENERAL";
+  const sharingMode = ((formData.get("sharingMode") as string) || "EXCLUSIVE") as "EXCLUSIVE" | "ALL_EXISTING" | "CUSTOM";
+
+  if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
+    botId = null;
+  } else if (catalogScope === "BOT_SPECIFIC") {
+    if (!botId) {
+      return { success: false, error: "Para cadastrar no modo Bot Específico, selecione o bot proprietário." };
+    }
+    const botRecord = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+    if (!botRecord) {
+      return { success: false, error: "O bot selecionado não pertence a esta loja." };
     }
   }
 
@@ -304,6 +309,8 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
       .values({
         storeId: store.id,
         botId: botId || null,
+        catalogScope,
+        sharingMode,
         title,
         slug,
         shortDescription,
@@ -326,6 +333,29 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
       })
       .returning();
     createdProduct = inserted;
+
+    const rawTargetBotIds = formData.get("targetBotIds") as string | null;
+    let targetBotIds: string[] = [];
+    if (rawTargetBotIds) {
+      try {
+        const parsed = JSON.parse(rawTargetBotIds);
+        if (Array.isArray(parsed)) targetBotIds = parsed;
+      } catch {
+        targetBotIds = formData.getAll("targetBotIds").map(String);
+      }
+    } else {
+      targetBotIds = formData.getAll("targetBotIds").map(String);
+    }
+
+    const { ProductVisibilityService } = await import("@/lib/products/catalog-resolver");
+    await ProductVisibilityService.syncProductVisibility(db, {
+      storeId: store.id,
+      productId: createdProduct.id,
+      botId,
+      catalogScope,
+      sharingMode,
+      targetBotIds,
+    });
   } catch (dbErr: any) {
     console.error("[createProductAction] Erro ao gravar produto no Neon:", dbErr);
     if (dbErr?.code === "23505") {
@@ -437,19 +467,23 @@ export async function updateProductAction(productId: string, formData: FormData)
     }
   }
 
-  const botId = (formData.get("botId") as string) || null;
-  if (botId) {
-    try {
-      const { telegramBots } = await import("@/db/schema");
-      const botRecord = await db.query.telegramBots.findFirst({
-        where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
-      });
-      if (!botRecord) {
-        return { success: false, error: "O bot selecionado não pertence a esta loja." };
-      }
-    } catch (botErr: any) {
-      console.error("[updateProductAction] Erro ao validar bot:", botErr);
-      return { success: false, error: "Erro ao consultar dados do bot selecionado." };
+  const rawScope = formData.get("catalogScope") as string | null;
+  let botId = (formData.get("botId") as string) || null;
+  const catalogScope: "STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC" =
+    rawScope ? (rawScope as any) : botId ? "BOT_SPECIFIC" : "STORE_GENERAL";
+  const sharingMode = ((formData.get("sharingMode") as string) || "EXCLUSIVE") as "EXCLUSIVE" | "ALL_EXISTING" | "CUSTOM";
+
+  if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
+    botId = null;
+  } else if (catalogScope === "BOT_SPECIFIC") {
+    if (!botId) {
+      return { success: false, error: "Para salvar no modo Bot Específico, selecione o bot proprietário." };
+    }
+    const botRecord = await db.query.telegramBots.findFirst({
+      where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id))
+    });
+    if (!botRecord) {
+      return { success: false, error: "O bot selecionado não pertence a esta loja." };
     }
   }
 
@@ -569,6 +603,8 @@ export async function updateProductAction(productId: string, formData: FormData)
 
     await db.update(products).set({
       botId: botId || null,
+      catalogScope,
+      sharingMode,
       title,
       shortDescription,
       description,
@@ -588,6 +624,29 @@ export async function updateProductAction(productId: string, formData: FormData)
       fireCount: isNaN(fireCount) ? 0 : fireCount,
       updatedAt: new Date(),
     }).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
+
+    const rawTargetBotIds = formData.get("targetBotIds") as string | null;
+    let targetBotIds: string[] = [];
+    if (rawTargetBotIds) {
+      try {
+        const parsed = JSON.parse(rawTargetBotIds);
+        if (Array.isArray(parsed)) targetBotIds = parsed;
+      } catch {
+        targetBotIds = formData.getAll("targetBotIds").map(String);
+      }
+    } else {
+      targetBotIds = formData.getAll("targetBotIds").map(String);
+    }
+
+    const { ProductVisibilityService } = await import("@/lib/products/catalog-resolver");
+    await ProductVisibilityService.syncProductVisibility(db, {
+      storeId: store.id,
+      productId,
+      botId,
+      catalogScope,
+      sharingMode,
+      targetBotIds,
+    });
   } catch (updateErr: any) {
     console.error("[updateProductAction] Erro ao atualizar produto no banco:", updateErr);
     return { success: false, error: "Erro ao atualizar produto no banco de dados. Tente novamente." };
