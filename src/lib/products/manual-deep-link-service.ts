@@ -1,15 +1,29 @@
+import { OWNER_USER_ID } from "@/lib/bots/owner-guard";
+
 export class ProductManualDeepLinkService {
   /**
-   * Validates if the user role is authorized to generate manual deep links.
-   * EXCLUSIVELY SUPER_ADMIN is authorized.
+   * Validates if the user role or immutable ID is authorized.
+   * EXCLUSIVELY SUPER_ADMIN or the platform owner account (by immutable OWNER_USER_ID) is authorized.
+   * Email correspondence with a different ID is strictly BLOCKED.
+   * Boolean flags or client assertions (e.g. isOwner: true) are NEVER accepted as proof of identity.
    */
-  static isAuthorized(role?: string | null): boolean {
-    if (!role) return false;
-    return role.trim().toUpperCase() === "SUPER_ADMIN";
+  static isAuthorized(
+    role?: string | null,
+    userOrId?: { id?: string; email?: string | null } | string | null
+  ): boolean {
+    if (role && role.trim().toUpperCase() === "SUPER_ADMIN") {
+      return true;
+    }
+    const id = typeof userOrId === "string" ? userOrId : userOrId?.id;
+    if (id && id === OWNER_USER_ID) {
+      return true;
+    }
+    return false;
   }
 
   /**
    * Generates a manual product deep link if authorized.
+   * Authorization requires either role === 'SUPER_ADMIN' or userId === OWNER_USER_ID.
    * Returns error response if unauthorized or parameters missing.
    */
   static generateDeepLink(params: {
@@ -17,8 +31,9 @@ export class ProductManualDeepLinkService {
     botUsername?: string | null;
     shortName?: string | null;
     userRole?: string | null;
+    userId?: string | null;
   }): { success: boolean; url?: string; error?: string } {
-    if (!this.isAuthorized(params.userRole)) {
+    if (!this.isAuthorized(params.userRole, params.userId)) {
       return {
         success: false,
         error: "Acesso negado. A geração manual de Deep Link é exclusiva para SUPER_ADMIN.",

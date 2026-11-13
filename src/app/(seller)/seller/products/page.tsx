@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { OWNER_USER_ID } from "@/lib/bots/owner-guard";
 import { db } from "@/db";
 import { products, categories, telegramBots, productCarousels, carouselProducts } from "@/db/schema";
 import { eq, desc, and, asc, inArray } from "drizzle-orm";
@@ -86,6 +87,7 @@ export default async function SellerProductsPage() {
       categories={allCategories}
       bots={storeBots}
       userRole={user?.role}
+      isOwnerAccount={user?.id === OWNER_USER_ID}
       carousels={allCarousels}
     />
   );

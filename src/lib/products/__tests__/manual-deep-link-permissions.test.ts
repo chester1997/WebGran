@@ -136,4 +136,33 @@ describe("Manual Product Deep Link Access Restriction Suite (SUPER_ADMIN Exclusi
     const targetUrl = `/miniapp/${storeSlug}/product/${productSlug}`;
     expect(targetUrl).toBe("/miniapp/studio-shorts/product/a-loba-negra");
   });
+
+  it("12. Conta proprietária autenticada no servidor (role 'admin' + OWNER_USER_ID) é autorizada na API", async () => {
+    const { OWNER_USER_ID } = await import("@/lib/bots/owner-guard");
+    (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, role: "admin" });
+
+    const req = new NextRequest("https://www.webgran.online/api/seller/products/deep-link", {
+      method: "POST",
+      body: JSON.stringify({ productId: "prod-456", botUsername: "studiioshorts_bot" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.deepLink).toContain("product_prod-456");
+  });
+
+  it("13. isOwner: true enviado isoladamente ou sem identidade válida é estritamente rejeitado", () => {
+    // Tentativa de passar isOwner: true ou userId falso não autoriza a geração
+    const res = ProductManualDeepLinkService.generateDeepLink({
+      productId: "prod-123",
+      botUsername: "@studiioshorts_bot",
+      userRole: "SELLER",
+      userId: "hacker-user-id",
+      ...({ isOwner: true } as any),
+    } as any);
+
+    expect(res.success).toBe(false);
+    expect(res.error).toContain("exclusiva para SUPER_ADMIN");
+  });
 });

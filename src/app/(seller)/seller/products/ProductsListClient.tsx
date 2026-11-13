@@ -59,6 +59,7 @@ interface Props {
   categories: { id: string; name: string }[];
   bots: { id: string; username: string; displayName?: string | null }[];
   userRole?: string | null;
+  isOwnerAccount?: boolean;
   carousels?: any[];
   hideHeader?: boolean;
 }
@@ -119,7 +120,16 @@ const durationMap: Record<string, string> = {
   annual: 'Anual'
 };
 
-export default function ProductsListClient({ storeName, products, categories, bots, userRole, carousels = [], hideHeader = false }: Props) {
+export default function ProductsListClient({ 
+  storeName, 
+  products, 
+  categories, 
+  bots, 
+  userRole, 
+  isOwnerAccount = false, 
+  carousels = [], 
+  hideHeader = false 
+}: Props) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -130,32 +140,40 @@ export default function ProductsListClient({ storeName, products, categories, bo
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
 
-  const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(userRole);
+  const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(userRole) || isOwnerAccount;
 
-  const handleCopyDeepLink = (prod: ProductItem) => {
+  const handleCopyDeepLink = async (prod: ProductItem) => {
     if (!isSuperAdmin) {
       alert("Acesso negado. A geração manual de Deep Link é exclusiva para SUPER_ADMIN.");
       return;
     }
 
-    const targetBot = (prod.botId && bots.find(b => b.id === prod.botId)) || bots[0];
-    const result = ProductManualDeepLinkService.generateDeepLink({
-      productId: prod.id,
-      botUsername: targetBot?.username,
-      shortName: "shorts",
-      userRole,
-    });
+    try {
+      const targetBot = (prod.botId && bots.find(b => b.id === prod.botId)) || bots[0];
+      const res = await fetch("/api/seller/products/deep-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: prod.id,
+          botUsername: targetBot?.username,
+          botId: targetBot?.id,
+        }),
+      });
 
-    if (!result.success || !result.url) {
-      alert(result.error || "Erro ao gerar o Deep Link.");
-      return;
-    }
+      const data = await res.json();
+      if (!res.ok || !data.deepLink) {
+        alert(data.error || "Erro ao gerar o Deep Link.");
+        return;
+      }
 
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-      navigator.clipboard.writeText(result.url);
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(data.deepLink);
+      }
+      setCopiedId(prod.id);
+      setTimeout(() => setCopiedId(null), 2500);
+    } catch (err: any) {
+      alert(err?.message || "Erro ao gerar o Deep Link.");
     }
-    setCopiedId(prod.id);
-    setTimeout(() => setCopiedId(null), 2500);
   };
 
   const filteredProducts = products.filter((prod) => {

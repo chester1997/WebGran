@@ -27,6 +27,7 @@ vi.mock("../actions", () => ({
 import { renderToStaticMarkup } from "react-dom/server";
 import ProductsListClient from "../ProductsListClient";
 import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
+import { OWNER_USER_ID, OWNER_EMAIL } from "@/lib/bots/owner-guard";
 
 // Mock do useRouter
 vi.mock("next/navigation", () => ({
@@ -96,39 +97,100 @@ const mockProducts = [
   },
 ];
 
-describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN vs Lojistas Comuns)", () => {
+describe("Isolamento Estrito da Interface Experimental do Catálogo (Conta Proprietária vs Demais Lojistas e Admins)", () => {
   // =========================================================================
-  // 1. REGRA DE IDENTIFICAÇÃO DO SUPER_ADMIN
+  // 1. REGRA DE IDENTIFICAÇÃO DA CONTA PROPRIETÁRIA E SUPER_ADMIN
   // =========================================================================
   describe("1. Identificação de Perfil via ProductManualDeepLinkService", () => {
-    it("Autoriza exclusivamente perfil SUPER_ADMIN", () => {
+    it("SUPER_ADMIN explícito: autorizado", () => {
       expect(ProductManualDeepLinkService.isAuthorized("SUPER_ADMIN")).toBe(true);
       expect(ProductManualDeepLinkService.isAuthorized("super_admin")).toBe(true);
       expect(ProductManualDeepLinkService.isAuthorized(" SUPER_ADMIN ")).toBe(true);
+    });
 
-      // Bloqueia qualquer outro perfil
+    it("ID correto do proprietário (OWNER_USER_ID): autorizado mesmo com role 'admin'", () => {
+      // 1. ID passado como string
+      expect(ProductManualDeepLinkService.isAuthorized("admin", OWNER_USER_ID)).toBe(true);
+
+      // 2. ID passado em objeto de usuário com role 'admin'
+      expect(
+        ProductManualDeepLinkService.isAuthorized("admin", { id: OWNER_USER_ID, email: OWNER_EMAIL })
+      ).toBe(true);
+
+      expect(
+        ProductManualDeepLinkService.isAuthorized("admin", { id: OWNER_USER_ID })
+      ).toBe(true);
+    });
+
+    it("E-mail correto, mas ID diferente: estritamente BLOQUEADO", () => {
+      // Tentativa de acesso com email do proprietário mas id divergente
+      expect(
+        ProductManualDeepLinkService.isAuthorized("admin", { id: "outro-id-falso", email: OWNER_EMAIL })
+      ).toBe(false);
+      expect(
+        ProductManualDeepLinkService.isAuthorized("seller", { id: "outro-id-falso", email: OWNER_EMAIL })
+      ).toBe(false);
+    });
+
+    it("Outro ADMIN (não proprietário): estritamente BLOQUEADO", () => {
+      expect(
+        ProductManualDeepLinkService.isAuthorized("admin", { id: "admin-secundario-id", email: "secundario@empresa.com" })
+      ).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized("ADMIN")).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized("admin")).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized("admin", "outro-id-qualquer")).toBe(false);
+    });
+
+    it("SELLER: estritamente BLOQUEADO", () => {
       expect(ProductManualDeepLinkService.isAuthorized("SELLER")).toBe(false);
       expect(ProductManualDeepLinkService.isAuthorized("seller")).toBe(false);
-      expect(ProductManualDeepLinkService.isAuthorized("ADMIN")).toBe(false);
-      expect(ProductManualDeepLinkService.isAuthorized("USER")).toBe(false);
+      expect(
+        ProductManualDeepLinkService.isAuthorized("seller", { id: "lojista-1", email: "lojista@webgran.app" })
+      ).toBe(false);
+    });
+
+    it("Usuário sem identificação ou sem perfil válido: estritamente BLOQUEADO", () => {
       expect(ProductManualDeepLinkService.isAuthorized(null)).toBe(false);
       expect(ProductManualDeepLinkService.isAuthorized(undefined)).toBe(false);
       expect(ProductManualDeepLinkService.isAuthorized("")).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized("USER")).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized(null, null)).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized(undefined, undefined)).toBe(false);
+    });
+
+    it("isOwner: true enviado isoladamente ou forjado no cliente: estritamente NÃO concede autorização", () => {
+      // 1. isAuthorized com booleano ou objeto arbitrário sem ID válido
+      expect(ProductManualDeepLinkService.isAuthorized("SELLER", { isOwner: true } as any)).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized("admin", { isOwner: true } as any)).toBe(false);
+      expect(ProductManualDeepLinkService.isAuthorized(null, { isOwner: true } as any)).toBe(false);
+
+      // 2. generateDeepLink rejeita qualquer tentativa de bypass com isOwner: true
+      const res = ProductManualDeepLinkService.generateDeepLink({
+        productId: "prod-hack",
+        botUsername: "testbot",
+        userRole: "SELLER",
+        userId: "hacker-123",
+        ...({ isOwner: true } as any),
+      } as any);
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("exclusiva para SUPER_ADMIN");
     });
   });
 
   // =========================================================================
-  // 2. EXPERIÊNCIA DO SUPER_ADMIN (VERSÃO NOVA / EXPERIMENTAL)
+  // 2. EXPERIÊNCIA DA CONTA PROPRIETÁRIA (MODAL EXPERIMENTAL ATIVO)
   // =========================================================================
-  describe("2. SUPER_ADMIN — Nova Versão Experimental Ativa", () => {
-    it("SUPER_ADMIN: renderiza cabeçalho novo, contador discreto e botão experimental", () => {
+  describe("2. Conta Proprietária — Nova Versão Experimental Ativa", () => {
+    it("Proprietário com role 'admin' e isOwnerAccount=true: renderiza cabeçalho novo, contador discreto e DeliveryChoiceModal", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
           storeName="Loja Teste"
           products={mockProducts as any}
           categories={mockCategories}
           bots={mockBots}
-          userRole="SUPER_ADMIN"
+          userRole="admin"
+          isOwnerAccount={true}
           carousels={mockCarousels}
         />
       );
@@ -140,25 +202,25 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
       expect(html).toContain("2 produtos");
       expect(html).toContain("text-zinc-400 font-normal tabular-nums");
 
-      // 3. Renderiza o modal DeliveryChoiceModal no DOM exclusivo para SUPER_ADMIN
+      // 3. Renderiza o modal DeliveryChoiceModal no DOM exclusivo para a conta proprietária
       expect(html).toContain("COMO DESEJA ENTREGAR");
       expect(html).toContain("Grupo / Canal Telegram");
       expect(html).toContain("Link externo");
       expect(html).toContain("Vídeo do Produto");
 
-      // 4. No cabeçalho, o botão de ação NÃO renderiza o NewProductModal diretamente
-      // Em vez disso, é o botão experimental com estilo novo que aciona o DeliveryChoiceModal
+      // 4. Botão experimental com cantos retos
       expect(html).toContain("h-10 px-4 sm:px-5 rounded-lg bg-blue-600");
     });
 
-    it("SUPER_ADMIN com catálogo vazio: botão do estado vazio também respeita o fluxo experimental", () => {
+    it("Proprietário com catálogo vazio: botão do estado vazio respeita o fluxo experimental", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
           storeName="Loja Teste"
           products={[]}
           categories={mockCategories}
           bots={mockBots}
-          userRole="SUPER_ADMIN"
+          userRole="admin"
+          isOwnerAccount={true}
           carousels={mockCarousels}
         />
       );
@@ -172,9 +234,41 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
   });
 
   // =========================================================================
-  // 3. EXPERIÊNCIA DO LOJISTA COMUM (VERSÃO ANTERIOR RESTAURADA)
+  // 3. EXPERIÊNCIA DE OUTROS ADMINISTRADORES (NÃO PROPRIETÁRIOS)
   // =========================================================================
-  describe("3. LOJISTA COMUM — Versão Anterior 100% Restaurada (Commit 3791f51)", () => {
+  describe("3. Administradores Comuns (Não Proprietários) — Mantidos na Versão Clássica", () => {
+    it("Admin secundário (role 'admin', isOwnerAccount=false): recebe cabeçalho clássico e NÃO recebe DeliveryChoiceModal", () => {
+      const html = renderToStaticMarkup(
+        <ProductsListClient
+          storeName="Loja Teste"
+          products={mockProducts as any}
+          categories={mockCategories}
+          bots={mockBots}
+          userRole="admin"
+          isOwnerAccount={false}
+          carousels={mockCarousels}
+        />
+      );
+
+      // 1. Título clássico
+      expect(html).toContain("Produtos");
+
+      // 2. Badge pill estilizado clássico
+      expect(html).toContain("rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25");
+
+      // 3. Botão abre NewProductModal diretamente
+      expect(html).toContain("Novo Produto");
+
+      // 4. DeliveryChoiceModal NÃO PODE EXISTIR no DOM
+      expect(html).not.toContain("COMO DESEJA ENTREGAR");
+      expect(html).not.toContain("Grupo / Canal Telegram");
+    });
+  });
+
+  // =========================================================================
+  // 4. EXPERIÊNCIA DO LOJISTA COMUM (VERSÃO ANTERIOR RESTAURADA)
+  // =========================================================================
+  describe("4. LOJISTA COMUM — Versão Anterior 100% Restaurada", () => {
     it("Lojista comum (role SELLER): renderiza cabeçalho clássico 'Produtos' com badge azul", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
@@ -183,6 +277,7 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
           categories={mockCategories}
           bots={mockBots}
           userRole="SELLER"
+          isOwnerAccount={false}
           carousels={mockCarousels}
         />
       );
@@ -195,12 +290,10 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
       expect(html).toContain("2 produtos");
 
       // 3. Botão abre DIRETAMENTE o NewProductModal clássico
-      // O NewProductModal renderiza seu DialogTrigger clássico
       expect(html).toContain("Novo Produto");
 
       // 4. CRÍTICO: DeliveryChoiceModal NÃO PODE EXISTIR no DOM do lojista comum
       expect(html).not.toContain("COMO DESEJA ENTREGAR");
-      expect(html).not.toContain("delivery-modal-title");
       expect(html).not.toContain("Grupo / Canal Telegram");
     });
 
@@ -212,6 +305,7 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
           categories={mockCategories}
           bots={mockBots}
           userRole="SELLER"
+          isOwnerAccount={false}
           carousels={mockCarousels}
         />
       );
@@ -222,7 +316,6 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
 
       // DeliveryChoiceModal NÃO está no DOM
       expect(html).not.toContain("COMO DESEJA ENTREGAR");
-      expect(html).not.toContain("delivery-modal-title");
     });
 
     it("Usuário com userRole nulo ou indefinido: recebe obrigatoriamente a versão clássica do lojista", () => {
@@ -233,6 +326,7 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
           categories={mockCategories}
           bots={mockBots}
           userRole={null}
+          isOwnerAccount={false}
           carousels={mockCarousels}
         />
       );
@@ -248,6 +342,7 @@ describe("Isolamento Estrito da Interface Experimental do Catálogo (SUPER_ADMIN
           categories={mockCategories}
           bots={mockBots}
           userRole={undefined}
+          isOwnerAccount={false}
           carousels={mockCarousels}
         />
       );
