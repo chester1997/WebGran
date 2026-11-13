@@ -152,6 +152,21 @@ describe("Manual Product Deep Link Access Restriction Suite (SUPER_ADMIN Exclusi
     expect(data.deepLink).toContain("product_prod-456");
   });
 
+  it("12b. Conta proprietária autenticada no servidor por e-mail normalizado + role 'admin' é autorizada na API", async () => {
+    const { OWNER_EMAIL } = await import("@/lib/bots/owner-guard");
+    (getCurrentUser as any).mockResolvedValue({ id: "any-session-id", email: `  ${OWNER_EMAIL.toUpperCase()}  `, role: "admin" });
+
+    const req = new NextRequest("https://www.webgran.online/api/seller/products/deep-link", {
+      method: "POST",
+      body: JSON.stringify({ productId: "prod-789", botUsername: "studiioshorts_bot" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.deepLink).toContain("product_prod-789");
+  });
+
   it("13. isOwner: true enviado isoladamente ou sem identidade válida é estritamente rejeitado", () => {
     // Tentativa de passar isOwner: true ou userId falso não autoriza a geração
     const res = ProductManualDeepLinkService.generateDeepLink({

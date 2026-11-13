@@ -97,6 +97,7 @@ interface SingleBotClientProps {
   tabData?: BotTabData;
   userRole?: string;
   isAdmin: boolean;
+  isOwnerAccount?: boolean;
 }
 
 export default function SingleBotClient({
@@ -112,6 +113,7 @@ export default function SingleBotClient({
   tabData,
   userRole,
   isAdmin,
+  isOwnerAccount = false,
 }: SingleBotClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -469,6 +471,7 @@ export default function SingleBotClient({
             categories={tabCache.productsData.categories}
             bots={tabCache.productsData.bots}
             userRole={userRole}
+            isOwnerAccount={isOwnerAccount}
             carousels={tabCache.productsData.carousels}
             hideHeader={true}
           />

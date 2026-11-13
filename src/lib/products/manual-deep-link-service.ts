@@ -1,30 +1,61 @@
-import { OWNER_USER_ID } from "@/lib/bots/owner-guard";
+import { OWNER_USER_ID, OWNER_EMAIL } from "@/lib/bots/owner-guard";
+
+export interface AuthUserIdentity {
+  id?: string | null;
+  email?: string | null;
+  role?: string | null;
+}
 
 export class ProductManualDeepLinkService {
   /**
-   * Validates if the user role or immutable ID is authorized.
-   * EXCLUSIVELY SUPER_ADMIN or the platform owner account (by immutable OWNER_USER_ID) is authorized.
-   * Email correspondence with a different ID is strictly BLOCKED.
-   * Boolean flags or client assertions (e.g. isOwner: true) are NEVER accepted as proof of identity.
+   * Função única de autorização da conta proprietária e SUPER_ADMIN.
+   * Regra Central:
+   * 1. SUPER_ADMIN explícito: autorizado (role?.trim().toUpperCase() === "SUPER_ADMIN").
+   * 2. ID correspondente exatamente a OWNER_USER_ID: autorizado.
+   * 3. Role "admin" E email autenticado correspondente exatamente a OWNER_EMAIL (normalizado): autorizado.
+   *
+   * Bloqueios Estritos:
+   * - Outros administradores (role "admin" com outro e-mail e outro ID): BLOQUEADO.
+   * - Vendedores (role "seller" ou qualquer papel não-admin, mesmo se email coincidir): BLOQUEADO.
+   * - E-mail isolado sem role "admin": BLOQUEADO.
+   * - Booleanos ou valores arbitrários enviados pelo cliente: BLOQUEADO.
    */
   static isAuthorized(
     role?: string | null,
-    userOrId?: { id?: string; email?: string | null } | string | null
+    userOrId?: AuthUserIdentity | string | null
   ): boolean {
-    if (role && role.trim().toUpperCase() === "SUPER_ADMIN") {
+    const normalizedRole = (role || "").trim().toLowerCase();
+    if (normalizedRole === "super_admin") {
       return true;
     }
-    const id = typeof userOrId === "string" ? userOrId : userOrId?.id;
-    if (id && id === OWNER_USER_ID) {
-      return true;
+
+    if (typeof userOrId === "string") {
+      return userOrId === OWNER_USER_ID;
     }
+
+    if (userOrId && typeof userOrId === "object") {
+      // 1. Correspondência exata pelo ID imutável do proprietário
+      if (userOrId.id && userOrId.id === OWNER_USER_ID) {
+        return true;
+      }
+
+      // 2. Perfil "admin" E e-mail autenticado correspondente a OWNER_EMAIL (com trim e lowercase)
+      const effectiveRole = (userOrId.role || role || "").trim().toLowerCase();
+      const normalizedEmail = (userOrId.email || "").trim().toLowerCase();
+      const normalizedOwnerEmail = OWNER_EMAIL.trim().toLowerCase();
+
+      if (effectiveRole === "admin" && normalizedEmail !== "" && normalizedEmail === normalizedOwnerEmail) {
+        return true;
+      }
+    }
+
     return false;
   }
 
   /**
    * Generates a manual product deep link if authorized.
-   * Authorization requires either role === 'SUPER_ADMIN' or userId === OWNER_USER_ID.
-   * Returns error response if unauthorized or parameters missing.
+   * Authorization requires either role === 'SUPER_ADMIN' or the platform owner account.
+   * Validated exclusively via server-side identity.
    */
   static generateDeepLink(params: {
     productId: string;
@@ -32,8 +63,10 @@ export class ProductManualDeepLinkService {
     shortName?: string | null;
     userRole?: string | null;
     userId?: string | null;
+    user?: AuthUserIdentity | null;
   }): { success: boolean; url?: string; error?: string } {
-    if (!this.isAuthorized(params.userRole, params.userId)) {
+    const userTarget = params.user || params.userId;
+    if (!this.isAuthorized(params.userRole, userTarget)) {
       return {
         success: false,
         error: "Acesso negado. A geração manual de Deep Link é exclusiva para SUPER_ADMIN.",

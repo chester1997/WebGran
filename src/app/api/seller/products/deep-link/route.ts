@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    if (!ProductManualDeepLinkService.isAuthorized(user.role, user.id)) {
+    if (!ProductManualDeepLinkService.isAuthorized(user.role, user)) {
       return NextResponse.json(
         { error: "Acesso negado. A geração manual de Deep Link é exclusiva para SUPER_ADMIN." },
         { status: 403 }
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       botUsername,
       shortName: "shorts",
       userRole: user.role,
-      userId: user.id,
+      user,
     });
 
     if (!result.success) {
