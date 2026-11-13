@@ -204,16 +204,38 @@ export default function ProductsListClient({ storeName, products, categories, bo
   return (
     <div className="space-y-6 fade-in w-full min-w-0 pb-16">
       {/* Header Padronizado */}
-      {!hideHeader ? (
-        <SellerPageHeader
-          title="Catálogo de Produtos"
-          badge={
-            <span className="text-xs sm:text-sm text-zinc-400 font-normal tabular-nums self-center">
-              {products.length} {products.length === 1 ? "produto" : "produtos"}
-            </span>
-          }
-          subtitle="Gerencie o catálogo de produtos digitais da sua loja."
-          actions={
+      {isSuperAdmin ? (
+        /* Versão Experimental — Exclusiva SUPER_ADMIN */
+        !hideHeader ? (
+          <SellerPageHeader
+            title="Catálogo de Produtos"
+            badge={
+              <span className="text-xs sm:text-sm text-zinc-400 font-normal tabular-nums self-center">
+                {products.length} {products.length === 1 ? "produto" : "produtos"}
+              </span>
+            }
+            subtitle="Gerencie o catálogo de produtos digitais da sua loja."
+            actions={
+              <button
+                type="button"
+                onClick={() => setDeliveryModalOpen(true)}
+                className="h-10 px-4 sm:px-5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all border border-blue-500/20"
+              >
+                <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
+                <span>Novo Produto</span>
+              </button>
+            }
+          />
+        ) : (
+          <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-6">
+            <div className="flex items-baseline gap-2.5">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
+                Catálogo de Produtos
+              </h2>
+              <span className="text-xs sm:text-sm text-zinc-400 font-normal tabular-nums">
+                {products.length} {products.length === 1 ? "produto" : "produtos"}
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => setDeliveryModalOpen(true)}
@@ -222,27 +244,32 @@ export default function ProductsListClient({ storeName, products, categories, bo
               <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
               <span>Novo Produto</span>
             </button>
-          }
-        />
-      ) : (
-        <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-6">
-          <div className="flex items-baseline gap-2.5">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
-              Catálogo de Produtos
-            </h2>
-            <span className="text-xs sm:text-sm text-zinc-400 font-normal tabular-nums">
-              {products.length} {products.length === 1 ? "produto" : "produtos"}
-            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setDeliveryModalOpen(true)}
-            className="h-10 px-4 sm:px-5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all border border-blue-500/20"
-          >
-            <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
-            <span>Novo Produto</span>
-          </button>
-        </div>
+        )
+      ) : (
+        /* Versão Padrão — Lojistas Comuns (Restaurada de 3791f51) */
+        !hideHeader ? (
+          <SellerPageHeader
+            title="Produtos"
+            badge={
+              <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+                {products.length} {products.length === 1 ? "produto" : "produtos"}
+              </span>
+            }
+            subtitle="Gerencie o catálogo de produtos digitais da sua loja."
+            actions={<NewProductModal categories={categories} bots={bots} carousels={carousels} />}
+          />
+        ) : (
+          <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white tracking-tight">Catálogo de Produtos</h3>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+                {products.length} {products.length === 1 ? "produto" : "produtos"}
+              </span>
+            </div>
+            <NewProductModal categories={categories} bots={bots} carousels={carousels} />
+          </div>
+        )
       )}
 
       {/* Filter and Search Bar */}
@@ -340,7 +367,18 @@ export default function ProductsListClient({ storeName, products, categories, bo
             }
           </p>
           {products.length === 0 && (
-            <NewProductModal categories={categories} bots={bots} carousels={carousels} />
+            isSuperAdmin ? (
+              <button
+                type="button"
+                onClick={() => setDeliveryModalOpen(true)}
+                className="h-10 px-4 sm:px-5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all border border-blue-500/20"
+              >
+                <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
+                <span>Novo Produto</span>
+              </button>
+            ) : (
+              <NewProductModal categories={categories} bots={bots} carousels={carousels} />
+            )
           )}
         </div>
       ) : viewMode === "grid" ? (
@@ -557,11 +595,13 @@ export default function ProductsListClient({ storeName, products, categories, bo
           </div>
         </div>
       )}
-      {/* Modal de Escolha da Modalidade de Entrega */}
-      <DeliveryChoiceModal 
-        isOpen={deliveryModalOpen}
-        onClose={() => setDeliveryModalOpen(false)}
-      />
+      {/* Modal de Escolha da Modalidade de Entrega (Exclusivo para SUPER_ADMIN) */}
+      {isSuperAdmin && (
+        <DeliveryChoiceModal 
+          isOpen={deliveryModalOpen}
+          onClose={() => setDeliveryModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

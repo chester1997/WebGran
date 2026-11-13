@@ -199,9 +199,8 @@ export function NewProductModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger className="h-10 px-4 sm:px-5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all border border-blue-500/20 w-full sm:w-auto">
-        <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
-        <span>Novo Produto</span>
+      <DialogTrigger className="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-semibold rounded-xl h-11 px-6 shadow-lg shadow-blue-600/20 w-full sm:w-auto inline-flex items-center justify-center transition-colors">
+        <Plus className="w-5 h-5 mr-2" /> Novo Produto
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-xl w-[94vw] max-w-[calc(100vw-1rem)] bg-[#0F1014] border border-white/[0.08] p-0 overflow-hidden text-zinc-100 flex flex-col max-h-[90vh] max-h-[92dvh] sm:max-h-[88vh] shadow-2xl rounded-2xl">
