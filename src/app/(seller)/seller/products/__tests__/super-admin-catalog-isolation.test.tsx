@@ -285,6 +285,27 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       expect(html).toContain("Nenhum produto encontrado");
       expect(html).toContain("COMO DESEJA ENTREGAR");
     });
+
+    it("3.3 Cards de produtos não exibem botão Deep Link, mantendo exclusivamente Editar e Excluir", () => {
+      const html = renderToStaticMarkup(
+        <ProductsListClient
+          storeName="Loja Teste"
+          products={mockProducts as any}
+          categories={mockCategories}
+          bots={mockBots}
+          userRole="admin"
+          isOwnerAccount={true}
+          carousels={mockCarousels}
+        />
+      );
+
+      // Ação de excluir presente
+      expect(html).toContain("Excluir");
+
+      // Botão Deep Link estritamente ausente dos cards
+      expect(html).not.toContain("Copiar Deep Link do Telegram");
+      expect(html).not.toContain(">Deep Link<");
+    });
   });
 
   // =========================================================================

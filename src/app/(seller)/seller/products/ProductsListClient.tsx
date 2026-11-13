@@ -12,8 +12,6 @@ import {
   CheckCircle2, 
   AlertCircle,
   Tag,
-  Link2,
-  Check,
   Bot,
   Globe,
   Plus
@@ -137,44 +135,9 @@ export default function ProductsListClient({
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
 
   const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(userRole) || isOwnerAccount;
-
-  const handleCopyDeepLink = async (prod: ProductItem) => {
-    if (!isSuperAdmin) {
-      alert("Acesso negado. A geração manual de Deep Link é exclusiva para SUPER_ADMIN.");
-      return;
-    }
-
-    try {
-      const targetBot = (prod.botId && bots.find(b => b.id === prod.botId)) || bots[0];
-      const res = await fetch("/api/seller/products/deep-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: prod.id,
-          botUsername: targetBot?.username,
-          botId: targetBot?.id,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.deepLink) {
-        alert(data.error || "Erro ao gerar o Deep Link.");
-        return;
-      }
-
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        await navigator.clipboard.writeText(data.deepLink);
-      }
-      setCopiedId(prod.id);
-      setTimeout(() => setCopiedId(null), 2500);
-    } catch (err: any) {
-      alert(err?.message || "Erro ao gerar o Deep Link.");
-    }
-  };
 
   const filteredProducts = products.filter((prod) => {
     const matchesSearch = 
@@ -495,26 +458,6 @@ export default function ProductsListClient({
 
               {/* Action Buttons Footer */}
               <div className="p-2.5 border-t border-white/5 flex gap-2 bg-[#141418] shrink-0">
-                {isSuperAdmin && (
-                  <Button
-                    onClick={() => handleCopyDeepLink(prod)}
-                    variant="outline"
-                    className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 h-8 px-2.5 text-xs rounded-lg font-semibold transition-all shrink-0 flex items-center gap-1"
-                    title="Copiar Deep Link do Telegram para divulgação deste produto"
-                  >
-                    {copiedId === prod.id ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Link2 className="w-3.5 h-3.5" />
-                        <span>Deep Link</span>
-                      </>
-                    )}
-                  </Button>
-                )}
                 <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
                 <Button 
                   onClick={() => handleDelete(prod.id, prod.title)}
@@ -576,26 +519,6 @@ export default function ProductsListClient({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {isSuperAdmin && (
-                      <Button
-                        onClick={() => handleCopyDeepLink(prod)}
-                        variant="outline"
-                        className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 h-8 px-2.5 text-xs rounded-lg font-semibold transition-all shrink-0 flex items-center gap-1"
-                        title="Copiar Deep Link do Telegram para divulgação deste produto"
-                      >
-                        {copiedId === prod.id ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            <span className="text-emerald-400">Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Link2 className="w-3.5 h-3.5" />
-                            <span>Deep Link</span>
-                          </>
-                        )}
-                      </Button>
-                    )}
                     <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
                     <Button 
                       onClick={() => handleDelete(prod.id, prod.title)}

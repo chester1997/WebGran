@@ -151,6 +151,11 @@ describe("WEBGRAN — Aba Produtos no Módulo Bots (/seller/bots/[botId]?tab=pro
       expect(html).toContain("Grupo / Canal Telegram");
       expect(html).toContain("Link externo");
       expect(html).toContain("Vídeo do Produto");
+
+      // CRÍTICO: Cards de produtos NÃO devem exibir botão Deep Link
+      expect(html).not.toContain("Copiar Deep Link do Telegram");
+      expect(html).not.toContain(">Deep Link<");
+      expect(html).toContain("Excluir");
     });
 
     it("2.2 Proprietário com catálogo vazio: botão do estado vazio abre DeliveryChoiceModal", () => {
