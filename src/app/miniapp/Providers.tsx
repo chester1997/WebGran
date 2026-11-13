@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo, Suspense } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, Suspense, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { CartProvider } from "@/components/miniapp/CartProvider";
 import { StartAppResolver } from "@/components/miniapp/StartAppResolver";
 import { StoreVisitTracker } from "@/components/analytics/StoreVisitTracker";
@@ -120,6 +121,8 @@ function getFallbackInitData(): string {
 }
 
 export function MiniAppProviders({ children, storeSlug }: { children: React.ReactNode, storeSlug: string }) {
+  const router = useRouter();
+  const authRefreshedRef = useRef(false);
   const [webApp, setWebApp] = useState<unknown>(null);
   const [user, setUser] = useState<unknown>(() => {
     if (typeof window !== "undefined") {
@@ -256,6 +259,10 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
                   authSent = true;
                   const mergedUser = normalizeUser(tgClientUser, data.user);
                   if (mergedUser) saveUser(mergedUser);
+                  if (!authRefreshedRef.current) {
+                    authRefreshedRef.current = true;
+                    router.refresh();
+                  }
                 } else {
                   authSent = false;
                 }
@@ -296,6 +303,10 @@ export function MiniAppProviders({ children, storeSlug }: { children: React.Reac
                   if (data?.success && data?.user) {
                     const previewUser = normalizeUser(wa?.initDataUnsafe?.user, data.user);
                     if (previewUser) saveUser(previewUser);
+                    if (!authRefreshedRef.current) {
+                      authRefreshedRef.current = true;
+                      router.refresh();
+                    }
                   }
                 })
                 .catch(() => {});

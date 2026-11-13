@@ -183,18 +183,6 @@ export async function createNewBotAction(params: {
     // Configurar webhook no Telegram
     await botService.setWebhook(webhookUrl, secretToken);
 
-    // No modo MINI_APP, configura o botão de menu do Telegram para abrir o Mini App da loja
-    try {
-      const miniappUrl = `${appUrl}/miniapp/${store.slug}`;
-      await botService.setChatMenuButton({
-        type: "web_app",
-        text: buttonName || "Abrir App",
-        web_app: { url: miniappUrl }
-      });
-    } catch (err: any) {
-      console.warn("[createNewBotAction] Aviso no MenuButton:", err?.message || err);
-    }
-
     // Foto de perfil
     let photoUrl: string | null = null;
     try {
@@ -241,6 +229,18 @@ export async function createNewBotAction(params: {
         status: "active",
       }).returning({ id: telegramBots.id });
       savedBotId = inserted.id;
+    }
+
+    // No modo MINI_APP, configura o botão de menu do Telegram para abrir o Mini App da loja com contexto do bot (?b=botId)
+    try {
+      const miniappUrl = `${appUrl}/miniapp/${store.slug}?b=${savedBotId}`;
+      await botService.setChatMenuButton({
+        type: "web_app",
+        text: buttonName || "Abrir App",
+        web_app: { url: miniappUrl }
+      });
+    } catch (err: any) {
+      console.warn("[createNewBotAction] Aviso no MenuButton:", err?.message || err);
     }
 
     revalidatePath("/seller/bots");

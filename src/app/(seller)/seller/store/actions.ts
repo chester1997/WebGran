@@ -159,17 +159,6 @@ export async function saveBotAction(formData: FormData): Promise<SaveBotActionRe
       };
     }
 
-    // Botão Azul (Menu Button)
-    try {
-      await botService.setChatMenuButton({
-        type: "web_app",
-        text: buttonName,
-        web_app: { url: miniAppUrl }
-      });
-    } catch (err: any) {
-      console.warn("[saveBotAction] Aviso: Falha não crítica ao definir Chat Menu Button:", err?.message || err);
-    }
-
     // Foto de perfil do bot
     let photoUrl: string | null = null;
     try {
@@ -187,6 +176,7 @@ export async function saveBotAction(formData: FormData): Promise<SaveBotActionRe
     }
 
     // Upsert no Neon DB
+    let savedBotId: string;
     try {
       if (existingBotInStore) {
         await db.update(telegramBots).set({
@@ -199,8 +189,9 @@ export async function saveBotAction(formData: FormData): Promise<SaveBotActionRe
           status: "active",
           updatedAt: new Date()
         }).where(eq(telegramBots.id, existingBotInStore.id));
+        savedBotId = existingBotInStore.id;
       } else {
-        await db.insert(telegramBots).values({
+        const [inserted] = await db.insert(telegramBots).values({
           storeId: store.id,
           botId: botTelegramId,
           username: botInfo.username || "",
@@ -210,7 +201,8 @@ export async function saveBotAction(formData: FormData): Promise<SaveBotActionRe
           secretToken,
           buttonText: buttonName,
           status: "active"
-        });
+        }).returning({ id: telegramBots.id });
+        savedBotId = inserted.id;
       }
     } catch (err: any) {
       console.error("[saveBotAction] Erro ao gravar bot no Neon:", err?.message || err);
@@ -218,6 +210,17 @@ export async function saveBotAction(formData: FormData): Promise<SaveBotActionRe
         success: false,
         error: "Erro ao salvar bot no banco de dados. Verifique os dados e tente novamente."
       };
+    }
+
+    // Botão Azul (Menu Button) com contexto de bot (?b=botId)
+    try {
+      await botService.setChatMenuButton({
+        type: "web_app",
+        text: buttonName,
+        web_app: { url: `${miniAppUrl}?b=${savedBotId}` }
+      });
+    } catch (err: any) {
+      console.warn("[saveBotAction] Aviso: Falha não crítica ao definir Chat Menu Button:", err?.message || err);
     }
   } else if (existingBotId) {
     // --- Edição de bot existente sem novo token ---
@@ -273,7 +276,7 @@ export async function saveBotAction(formData: FormData): Promise<SaveBotActionRe
         await botService.setChatMenuButton({
           type: "web_app",
           text: buttonName,
-          web_app: { url: miniAppUrl }
+          web_app: { url: `${miniAppUrl}?b=${existingBot.id}` }
         });
       } catch (err: any) {
         console.warn("[saveBotAction] Aviso: Erro ao atualizar menu button no Telegram:", err?.message || err);

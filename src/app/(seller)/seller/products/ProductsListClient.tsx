@@ -15,10 +15,12 @@ import {
   Link2,
   Check,
   Bot,
-  Globe
+  Globe,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NewProductModal } from "./NewProductModal";
+import { DeliveryChoiceModal } from "./DeliveryChoiceModal";
 import { EditProductModal } from "./EditProductModal";
 import { deleteProductAction } from "./actions";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
@@ -126,6 +128,7 @@ export default function ProductsListClient({ storeName, products, categories, bo
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
 
   const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(userRole);
 
@@ -203,24 +206,42 @@ export default function ProductsListClient({ storeName, products, categories, bo
       {/* Header Padronizado */}
       {!hideHeader ? (
         <SellerPageHeader
-          title="Produtos"
+          title="Catálogo de Produtos"
           badge={
-            <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+            <span className="text-xs sm:text-sm text-zinc-400 font-normal tabular-nums self-center">
               {products.length} {products.length === 1 ? "produto" : "produtos"}
             </span>
           }
           subtitle="Gerencie o catálogo de produtos digitais da sua loja."
-          actions={<NewProductModal categories={categories} bots={bots} carousels={carousels} />}
+          actions={
+            <button
+              type="button"
+              onClick={() => setDeliveryModalOpen(true)}
+              className="h-10 px-4 sm:px-5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all border border-blue-500/20"
+            >
+              <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
+              <span>Novo Produto</span>
+            </button>
+          }
         />
       ) : (
-        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-white tracking-tight">Catálogo de Produtos</h3>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
+        <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] mb-6">
+          <div className="flex items-baseline gap-2.5">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
+              Catálogo de Produtos
+            </h2>
+            <span className="text-xs sm:text-sm text-zinc-400 font-normal tabular-nums">
               {products.length} {products.length === 1 ? "produto" : "produtos"}
             </span>
           </div>
-          <NewProductModal categories={categories} bots={bots} carousels={carousels} />
+          <button
+            type="button"
+            onClick={() => setDeliveryModalOpen(true)}
+            className="h-10 px-4 sm:px-5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all border border-blue-500/20"
+          >
+            <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
+            <span>Novo Produto</span>
+          </button>
         </div>
       )}
 
@@ -536,6 +557,11 @@ export default function ProductsListClient({ storeName, products, categories, bo
           </div>
         </div>
       )}
+      {/* Modal de Escolha da Modalidade de Entrega */}
+      <DeliveryChoiceModal 
+        isOpen={deliveryModalOpen}
+        onClose={() => setDeliveryModalOpen(false)}
+      />
     </div>
   );
 }

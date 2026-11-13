@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { store, token } = resolved;
+    const { store, token, bot } = resolved;
     update = await req.json();
 
     // Mecanismo de segurança para homologação inbound isolada
@@ -398,7 +398,7 @@ export async function POST(req: NextRequest) {
             rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
           }
           const appUrl = rawAppUrl.replace(/\/+$/, "");
-          const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
+          const miniAppUrl = `${appUrl}/miniapp/${store.slug}${bot?.id ? `?b=${bot.id}` : ""}`;
 
           const { handleCartCallbackQuery } = await import("@/lib/telegram/bot-cart-handler");
           const messageId = update.callback_query.message?.message_id;
@@ -537,7 +537,7 @@ export async function POST(req: NextRequest) {
         rawAppUrl = rawAppUrl.replace("webgran.online", "www.webgran.online");
       }
       const appUrl = rawAppUrl.replace(/\/+$/, "");
-      const miniAppUrl = `${appUrl}/miniapp/${store.slug}`;
+      const miniAppUrl = `${appUrl}/miniapp/${store.slug}${bot?.id ? `?b=${bot.id}` : ""}`;
 
       // Check /carrinho command
       const cleanCmd = text.toLowerCase();

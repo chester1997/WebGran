@@ -56,10 +56,12 @@ export async function resolveMiniAppCustomerSession(req: any) {
   if (!store || !store.bots?.length) return null;
 
   let isValid = false;
+  let matchedBot: any = null;
   for (const bot of store.bots) {
     const token = decrypt(bot.tokenEncrypted);
     if (validateInitData(initData, token)) {
       isValid = true;
+      matchedBot = bot;
       break;
     }
   }
@@ -91,8 +93,8 @@ export async function resolveMiniAppCustomerSession(req: any) {
     customerId: customer.id,
     storeId: store.id,
     telegramId: String(tgUser.id),
-    originBotId: null,
-    originBotUsername: null,
+    originBotId: matchedBot?.id || null,
+    originBotUsername: matchedBot?.username || matchedBot?.displayName || null,
   } as {
     customerId: string;
     storeId: string;
