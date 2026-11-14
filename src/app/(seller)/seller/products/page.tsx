@@ -17,12 +17,13 @@ export default async function SellerProductsPage() {
     return <SetupStoreClient />;
   }
 
-  // Load products with their categories
+  // Load products with their categories and bot visibilities
   const allProducts = await db.query.products.findMany({
     where: eq(products.storeId, store.id),
     orderBy: [desc(products.createdAt)],
     with: {
-      category: true
+      category: true,
+      botVisibilities: true,
     }
   });
 
@@ -33,7 +34,7 @@ export default async function SellerProductsPage() {
 
   const storeBots = await db.query.telegramBots.findMany({
     where: eq(telegramBots.storeId, store.id),
-    columns: { id: true, username: true, displayName: true }
+    columns: { id: true, username: true, displayName: true, photoUrl: true }
   });
 
   // Load custom non-ranking carousels of this store

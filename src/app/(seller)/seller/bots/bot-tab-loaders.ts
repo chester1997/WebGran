@@ -123,6 +123,7 @@ export async function loadBotTabData(
               orderBy: [desc(products.createdAt)],
               with: {
                 category: true,
+                botVisibilities: true,
               },
             });
           }
@@ -132,6 +133,7 @@ export async function loadBotTabData(
             orderBy: [desc(products.createdAt)],
             with: {
               category: true,
+              botVisibilities: true,
             },
           });
         }
@@ -143,7 +145,7 @@ export async function loadBotTabData(
 
         const storeBots = await db.query.telegramBots.findMany({
           where: eq(telegramBots.storeId, store.id),
-          columns: { id: true, username: true, displayName: true },
+          columns: { id: true, username: true, displayName: true, photoUrl: true },
         });
 
         const allCarousels = await db.query.productCarousels.findMany({

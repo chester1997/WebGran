@@ -11,6 +11,7 @@ import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 import { ProductVideoService } from "@/lib/videos/product-video-service";
 import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
+import { isOwnerUser } from "@/lib/bots/owner-guard";
 
 async function processImageUrl(
   rawUrl: string | null,
@@ -327,6 +328,8 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
       catalogScope,
       sharingMode,
       targetBotIds,
+      deliveryType,
+      deliveryValue,
     });
   } catch (dbErr: any) {
     console.error("[createProductAction] Erro ao gravar produto no Neon:", dbErr);
@@ -444,6 +447,27 @@ export async function updateProductAction(productId: string, formData: FormData)
   const catalogScope: "STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC" =
     rawScope ? (rawScope as any) : botId ? "BOT_SPECIFIC" : "STORE_GENERAL";
   const sharingMode = ((formData.get("sharingMode") as string) || "EXCLUSIVE") as "EXCLUSIVE" | "ALL_EXISTING" | "CUSTOM";
+
+  const rawTargetBotIds = formData.get("targetBotIds") as string | null;
+  let targetBotIds: string[] = [];
+  if (rawTargetBotIds) {
+    try {
+      const parsed = JSON.parse(rawTargetBotIds);
+      if (Array.isArray(parsed)) targetBotIds = parsed;
+    } catch {
+      targetBotIds = formData.getAll("targetBotIds").map(String);
+    }
+  } else {
+    targetBotIds = formData.getAll("targetBotIds").map(String);
+  }
+
+  // Validação de segurança no servidor: seleção múltipla é exclusiva do proprietário
+  if (sharingMode === "CUSTOM" || targetBotIds.length > 1) {
+    const isOwner = ProductManualDeepLinkService.isAuthorized(seller.role, seller);
+    if (!isOwner) {
+      return { success: false, error: "A seleção múltipla de bots é exclusiva da conta proprietária." };
+    }
+  }
 
   if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
     botId = null;
@@ -597,19 +621,6 @@ export async function updateProductAction(productId: string, formData: FormData)
       updatedAt: new Date(),
     }).where(and(eq(products.id, productId), eq(products.storeId, store.id)));
 
-    const rawTargetBotIds = formData.get("targetBotIds") as string | null;
-    let targetBotIds: string[] = [];
-    if (rawTargetBotIds) {
-      try {
-        const parsed = JSON.parse(rawTargetBotIds);
-        if (Array.isArray(parsed)) targetBotIds = parsed;
-      } catch {
-        targetBotIds = formData.getAll("targetBotIds").map(String);
-      }
-    } else {
-      targetBotIds = formData.getAll("targetBotIds").map(String);
-    }
-
     const { ProductVisibilityService } = await import("@/lib/products/catalog-resolver");
     await ProductVisibilityService.syncProductVisibility(db, {
       storeId: store.id,
@@ -618,6 +629,8 @@ export async function updateProductAction(productId: string, formData: FormData)
       catalogScope,
       sharingMode,
       targetBotIds,
+      deliveryType,
+      deliveryValue,
     });
   } catch (updateErr: any) {
     console.error("[updateProductAction] Erro ao atualizar produto no banco:", updateErr);
@@ -853,5 +866,33 @@ export async function syncBotChatsAction(botId?: string | null) {
 
   const chats = await syncBotChats(store.id, targetBot.id);
   return chats;
+}
+
+export async function getProductVisibilitiesAction(productId: string) {
+  const seller = await requireSeller();
+  if (!ProductManualDeepLinkService.isAuthorized(seller?.role, seller)) {
+    return { success: false, error: "Acesso restrito ao proprietário." };
+  }
+  const store = await getCurrentStore();
+  if (!store) {
+    return { success: false, error: "Loja não encontrada." };
+  }
+
+  const { productBotVisibility } = await import("@/db/schema");
+  const visibilities = await db.query.productBotVisibility.findMany({
+    where: and(
+      eq(productBotVisibility.storeId, store.id),
+      eq(productBotVisibility.productId, productId)
+    ),
+  });
+
+  return {
+    success: true,
+    visibilities: visibilities.map((v) => ({
+      botId: v.botId,
+      isOwner: v.isOwner,
+      canDeliver: v.canDeliver,
+    })),
+  };
 }
 

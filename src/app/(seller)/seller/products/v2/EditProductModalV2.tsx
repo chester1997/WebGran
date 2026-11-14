@@ -27,7 +27,7 @@ import {
   DELIVERY_TYPE_CONFIG,
 } from "./types";
 import { CarouselOption } from "../ProductCarouselsPicker";
-import { updateProductAction } from "../actions";
+import { updateProductAction, getProductVisibilitiesAction } from "../actions";
 
 export interface EditProductModalV2Props {
   product: any;
@@ -74,9 +74,32 @@ export function EditProductModalV2({
     (product?.catalogScope as any) || (product?.botId ? "BOT_SPECIFIC" : "STORE_GENERAL");
   const [catalogScope, setCatalogScope] = useState<"STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC">(initialScope);
   const [selectedBotId, setSelectedBotId] = useState<string>(product?.botId || "");
-  const [sharingMode, setSharingMode] = useState<"EXCLUSIVE" | "ALL_EXISTING">(
-    product?.sharingMode === "ALL_EXISTING" ? "ALL_EXISTING" : "EXCLUSIVE"
+  const [sharingMode, setSharingMode] = useState<"EXCLUSIVE" | "ALL_EXISTING" | "CUSTOM">(
+    product?.sharingMode || (product?.botId ? "CUSTOM" : "EXCLUSIVE")
   );
+
+  const initialSelectedBotIds = useMemo<string[]>(() => {
+    if (Array.isArray(product?.botVisibilities) && product.botVisibilities.length > 0) {
+      return product.botVisibilities.map((v: any) => v.botId);
+    }
+    if (product?.botId) {
+      return [product.botId];
+    }
+    return bots?.[0]?.id ? [bots[0].id] : [];
+  }, [product?.botVisibilities, product?.botId, bots]);
+
+  const [selectedBotIds, setSelectedBotIds] = useState<string[]>(initialSelectedBotIds);
+  const [botSearch, setBotSearch] = useState<string>("");
+
+  const filteredBots = useMemo(() => {
+    if (!botSearch.trim()) return bots;
+    const term = botSearch.toLowerCase().trim();
+    return bots.filter((b) => {
+      const name = (b.displayName || "").toLowerCase();
+      const user = (b.username || "").toLowerCase();
+      return name.includes(term) || user.includes(term);
+    });
+  }, [bots, botSearch]);
   const [categoryId, setCategoryId] = useState<string>(product?.categoryId || "");
   const [status, setStatus] = useState<"active" | "draft">(
     product?.status === "draft" ? "draft" : "active"
@@ -161,6 +184,18 @@ export function EditProductModalV2({
     }
   }, [isOpen, product.id, initialDeliveryType]);
 
+  // Fetch initial visibilities for multi-bot
+  useEffect(() => {
+    if (!isOpen || !product?.id) return;
+    getProductVisibilitiesAction(product.id)
+      .then((res) => {
+        if (res.success && Array.isArray(res.visibilities) && res.visibilities.length > 0) {
+          setSelectedBotIds(res.visibilities.map((v: any) => v.botId));
+        }
+      })
+      .catch(() => {});
+  }, [isOpen, product?.id]);
+
   // Reset when opening
   const handleOpen = () => {
     setActiveTab("geral");
@@ -174,7 +209,9 @@ export function EditProductModalV2({
     setBannerUrl(product?.bannerUrl || "");
     setCatalogScope(initialScope);
     setSelectedBotId(product?.botId || "");
-    setSharingMode(product?.sharingMode === "ALL_EXISTING" ? "ALL_EXISTING" : "EXCLUSIVE");
+    setSharingMode(product?.sharingMode || (product?.botId ? "CUSTOM" : "EXCLUSIVE"));
+    setSelectedBotIds(initialSelectedBotIds);
+    setBotSearch("");
     setCategoryId(product?.categoryId || "");
     setStatus(product?.status === "draft" ? "draft" : "active");
     setBadge(product?.badge || "");
@@ -206,8 +243,13 @@ export function EditProductModalV2({
     if (deliveryType !== initialDeliveryType) count++;
     if (deliveryType !== "product_video" && deliveryValue.trim() !== (product?.deliveryValue || "").trim()) count++;
     if (catalogScope !== initialScope) count++;
-    if (catalogScope === "BOT_SPECIFIC" && selectedBotId !== (product?.botId || "")) count++;
-    if (sharingMode !== (product?.sharingMode === "ALL_EXISTING" ? "ALL_EXISTING" : "EXCLUSIVE")) count++;
+    if (catalogScope === "BOT_SPECIFIC") {
+      if (selectedBotId !== (product?.botId || "")) count++;
+      const botsChanged =
+        selectedBotIds.length !== initialSelectedBotIds.length ||
+        selectedBotIds.some((id) => !initialSelectedBotIds.includes(id));
+      if (botsChanged) count++;
+    }
     if (categoryId !== (product?.categoryId || "")) count++;
     if (status !== (product?.status === "draft" ? "draft" : "active")) count++;
     if (badge !== (product?.badge || "")) count++;
@@ -237,6 +279,8 @@ export function EditProductModalV2({
     deliveryValue,
     catalogScope,
     selectedBotId,
+    selectedBotIds,
+    initialSelectedBotIds,
     sharingMode,
     categoryId,
     status,
@@ -392,8 +436,13 @@ export function EditProductModalV2({
       }
     }
 
-    if (catalogScope === "BOT_SPECIFIC" && !selectedBotId) {
-      newErrors.selectedBotId = "Selecione o bot proprietário.";
+    if (catalogScope === "BOT_SPECIFIC") {
+      if (!selectedBotId) {
+        newErrors.selectedBotId = "Selecione o bot proprietário.";
+      }
+      if (selectedBotIds.length === 0) {
+        newErrors.selectedBots = "Selecione pelo menos um bot para disponibilizar o produto.";
+      }
     }
 
     setErrors(newErrors);
@@ -407,7 +456,7 @@ export function EditProductModalV2({
         setActiveTab("geral");
       } else if (newErrors.deliveryValue || newErrors.videos) {
         setActiveTab("entrega");
-      } else if (newErrors.selectedBotId) {
+      } else if (newErrors.selectedBotId || newErrors.selectedBots) {
         setActiveTab("catalogo");
       }
 
@@ -447,10 +496,19 @@ export function EditProductModalV2({
       }
 
       formData.set("catalogScope", catalogScope);
-      if (catalogScope === "BOT_SPECIFIC" && selectedBotId) {
-        formData.set("botId", selectedBotId);
+      if (catalogScope === "BOT_SPECIFIC") {
+        if (selectedBotId) {
+          formData.set("botId", selectedBotId);
+        }
+        const mode =
+          selectedBotIds.length === 1 && selectedBotIds[0] === selectedBotId
+            ? "EXCLUSIVE"
+            : "CUSTOM";
+        formData.set("sharingMode", mode);
+        formData.set("targetBotIds", JSON.stringify(selectedBotIds));
+      } else {
+        formData.set("sharingMode", sharingMode);
       }
-      formData.set("sharingMode", sharingMode);
       if (categoryId) formData.set("categoryId", categoryId);
       formData.set("status", status);
       if (badge) formData.set("badge", badge);
@@ -1051,7 +1109,10 @@ export function EditProductModalV2({
 
               {/* Bot selection for BOT_SPECIFIC */}
               {catalogScope === "BOT_SPECIFIC" && (
-                <div className="space-y-3 p-3 rounded-[12px] bg-[#111113] border border-[#26262a]" data-error={Boolean(errors.selectedBotId)}>
+                <div
+                  className="space-y-3.5 p-3.5 rounded-[12px] bg-[#111113] border border-[#26262a]"
+                  data-error={Boolean(errors.selectedBotId || errors.selectedBots)}
+                >
                   <div>
                     <label className="block text-[12px] font-medium text-[#a1a1aa] mb-1.5">
                       Bot proprietário (dono do produto)
@@ -1059,10 +1120,14 @@ export function EditProductModalV2({
                     <select
                       value={selectedBotId}
                       onChange={(e) => {
-                        setSelectedBotId(e.target.value);
+                        const newOwnerId = e.target.value;
+                        setSelectedBotId(newOwnerId);
+                        if (newOwnerId && !selectedBotIds.includes(newOwnerId)) {
+                          setSelectedBotIds((prev) => [...prev, newOwnerId]);
+                        }
                         if (errors.selectedBotId) setErrors((prev) => ({ ...prev, selectedBotId: "" }));
                       }}
-                      className="w-full h-[40px] bg-[#161618] rounded-[8px] px-3 text-[13px] text-[#f4f4f5] border border-[#2a2a2f] focus:border-[var(--cc)] focus:outline-none"
+                      className="w-full h-[40px] bg-[#161618] rounded-[8px] px-3 text-[13px] text-[#f4f4f5] border border-[#2a2a2f] focus:border-[var(--cc)] focus:outline-none cursor-pointer"
                     >
                       <option value="">Selecione um bot...</option>
                       {bots.map((b) => (
@@ -1076,37 +1141,143 @@ export function EditProductModalV2({
                     )}
                   </div>
 
-                  {/* Compartilhamento */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-[#a1a1aa] mb-1.5">
-                      Compartilhamento
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSharingMode("EXCLUSIVE")}
-                        style={{
-                          borderColor: sharingMode === "EXCLUSIVE" ? config.cc : "#26262a",
-                          backgroundColor: sharingMode === "EXCLUSIVE" ? config.colorMixBg5 : "#161618",
-                        }}
-                        className="p-2.5 rounded-[8px] border text-left text-[12px] font-medium text-[#f4f4f5] flex items-center justify-between"
-                      >
-                        <span>Somente este bot</span>
-                        {sharingMode === "EXCLUSIVE" && <Check className="w-3.5 h-3.5" style={{ color: config.cc }} />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSharingMode("ALL_EXISTING")}
-                        style={{
-                          borderColor: sharingMode === "ALL_EXISTING" ? config.cc : "#26262a",
-                          backgroundColor: sharingMode === "ALL_EXISTING" ? config.colorMixBg5 : "#161618",
-                        }}
-                        className="p-2.5 rounded-[8px] border text-left text-[12px] font-medium text-[#f4f4f5] flex items-center justify-between"
-                      >
-                        <span>Todos os bots existentes hoje</span>
-                        {sharingMode === "ALL_EXISTING" && <Check className="w-3.5 h-3.5" style={{ color: config.cc }} />}
-                      </button>
+                  {/* Multi-bot selection list */}
+                  <div className="pt-2 border-t border-[#26262a]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <div>
+                        <label className="block text-[12px] font-semibold text-[#f4f4f5]">
+                          Disponibilidade nos Mini Apps
+                        </label>
+                        <p className="text-[11px] text-[#71717a] mt-0.5">
+                          Selecione um ou mais bots onde este produto ficará disponível.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <span className="text-[11px] font-medium text-[#a78bfa] bg-[#7c3aed]/10 px-2 py-0.5 rounded-full border border-[#7c3aed]/25">
+                          {selectedBotIds.length} {selectedBotIds.length === 1 ? "selecionado" : "selecionados"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBotIds(bots.map((b) => b.id));
+                            if (errors.selectedBots) setErrors((prev) => ({ ...prev, selectedBots: "" }));
+                          }}
+                          className="text-[11px] font-medium text-[#a78bfa] hover:text-[#c4b5fd] transition cursor-pointer"
+                        >
+                          Selecionar todos
+                        </button>
+                        <span className="text-[#3f3f46]">•</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBotIds([])}
+                          className="text-[11px] font-medium text-[#71717a] hover:text-[#a1a1aa] transition cursor-pointer"
+                        >
+                          Desmarcar todos
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Search box */}
+                    <div className="relative mb-2.5">
+                      <Search className="w-3.5 h-3.5 text-[#71717a] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome ou @username..."
+                        value={botSearch}
+                        onChange={(e) => setBotSearch(e.target.value)}
+                        className="w-full bg-[#161618] border border-[#2a2a2f] rounded-[8px] pl-9 pr-3 py-1.5 text-xs text-white placeholder-[#71717a] focus:outline-none focus:border-[#7c3aed] transition"
+                      />
+                    </div>
+
+                    {/* List container */}
+                    <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {filteredBots.length === 0 ? (
+                        <div className="p-4 text-center text-[12px] text-[#71717a] bg-[#161618] rounded-[8px] border border-[#26262a]">
+                          Nenhum bot encontrado com os termos pesquisados.
+                        </div>
+                      ) : (
+                        filteredBots.map((b) => {
+                          const isSelected = selectedBotIds.includes(b.id);
+                          const isOwnerBot = b.id === selectedBotId;
+
+                          return (
+                            <div
+                              key={b.id}
+                              onClick={() => {
+                                setSelectedBotIds((prev) => {
+                                  const next = prev.includes(b.id)
+                                    ? prev.filter((id) => id !== b.id)
+                                    : [...prev, b.id];
+                                  return next;
+                                });
+                                if (errors.selectedBots) {
+                                  setErrors((prev) => ({ ...prev, selectedBots: "" }));
+                                }
+                              }}
+                              className={`p-2.5 rounded-[10px] border flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-[#7c3aed]/10 border-[#7c3aed]/60 shadow-[0_0_12px_rgba(124,58,237,0.12)]"
+                                  : "bg-[#161618] border-[#26262a] hover:border-[#3f3f46]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                {/* Bot Avatar */}
+                                <div className="w-9 h-9 rounded-full shrink-0 overflow-hidden border border-[#2a2a2f] bg-[#222226] flex items-center justify-center relative">
+                                  {b.photoUrl ? (
+                                    <img
+                                      src={b.photoUrl}
+                                      alt={b.displayName || b.username}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLElement).style.display = "none";
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div
+                                    className={`w-full h-full flex items-center justify-center font-bold text-[12px] text-[#a1a1aa] bg-gradient-to-br from-[#27272a] to-[#18181b] ${
+                                      b.photoUrl ? "absolute inset-0 -z-10" : ""
+                                    }`}
+                                  >
+                                    {(b.displayName || b.username || "B").charAt(0).toUpperCase()}
+                                  </div>
+                                </div>
+
+                                {/* Bot Info */}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[13px] font-semibold text-[#f4f4f5] truncate">
+                                      {b.displayName || b.username}
+                                    </span>
+                                    {isOwnerBot && (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#7c3aed]/25 text-[#c4b5fd] border border-[#7c3aed]/40">
+                                        Proprietário
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-[#71717a] truncate font-mono mt-0.5">
+                                    @{b.username}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Checkbox */}
+                              <div
+                                className={`w-5 h-5 rounded-[6px] border flex items-center justify-center shrink-0 transition-all ${
+                                  isSelected
+                                    ? "bg-[#7c3aed] border-[#7c3aed] text-white shadow-sm"
+                                    : "border-[#3f3f46] bg-[#1a1a1e]"
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                    {errors.selectedBots && (
+                      <p className="text-[12px] text-[#f87171] mt-1.5">{errors.selectedBots}</p>
+                    )}
                   </div>
                 </div>
               )}
