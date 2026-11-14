@@ -142,20 +142,21 @@ export function SellerMetricsOverview({
   }
 
   // Normalização da série de dados para o gráfico
+  // Prioriza performanceSeries do CommercialMetricsService para garantir que os pontos correspondam ao total real sem truncamento
   const normalizedSeries = useMemo(() => {
-    if (chartSeries && chartSeries.length > 0) {
-      return chartSeries.map((item) => ({
-        dateLabel: item.dateLabel || item.dateStr || "",
-        fullDateLabel: item.fullDate || item.fullDateLabel || item.dateStr || item.dateLabel,
+    if (performanceSeries && performanceSeries.length > 0) {
+      return performanceSeries.map((item: any) => ({
+        dateLabel: item.dateLabel || item.dateStr || "—",
+        fullDateLabel: item.fullDate || item.fullDateLabel || item.dateStr || "",
         dayName: item.dayName || "",
         revenue: Number(item.revenue || 0),
         salesCount: Number(item.salesCount || 0),
       }));
     }
-    if (performanceSeries && performanceSeries.length > 0) {
-      return performanceSeries.map((item: any) => ({
-        dateLabel: item.dateLabel || item.dateStr || "—",
-        fullDateLabel: item.fullDateLabel || item.dateStr || "",
+    if (chartSeries && chartSeries.length > 0) {
+      return chartSeries.map((item) => ({
+        dateLabel: item.dateLabel || item.dateStr || "",
+        fullDateLabel: item.fullDate || item.fullDateLabel || item.dateStr || item.dateLabel,
         dayName: item.dayName || "",
         revenue: Number(item.revenue || 0),
         salesCount: Number(item.salesCount || 0),
@@ -174,11 +175,11 @@ export function SellerMetricsOverview({
   const totalConfirmedSales = approvedSales?.count ?? normalizedSeries.reduce((acc, curr) => acc + curr.salesCount, 0);
   const totalStartsCount = botStarts?.uniqueUsers || botStarts?.totalStarts || 0;
 
-  // Valores dos 3 indicadores principais
-  const receitaValue = kpis?.revenue?.formatted || approvedSales?.formatted || formatBRL(totalPeriodRevenue);
+  // Valores dos 3 indicadores principais (prioriza CommercialMetricsService para consistência matemática com o gráfico)
+  const receitaValue = approvedSales?.formatted || kpis?.revenue?.formatted || formatBRL(totalPeriodRevenue);
   const ticketValue =
-    kpis?.averageTicket?.formatted ||
     averageTicket?.formatted ||
+    kpis?.averageTicket?.formatted ||
     (totalConfirmedSales > 0 ? formatBRL(totalPeriodRevenue / totalConfirmedSales) : "R$ 0,00");
 
   const consideredSalesCount = averageTicket?.consideredSalesCount ?? totalConfirmedSales;

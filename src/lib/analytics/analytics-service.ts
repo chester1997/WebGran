@@ -10,7 +10,7 @@ import {
   telegramBots,
   botStartEvents
 } from "@/db/schema";
-import { eq, and, gte, lte, count, desc, sum, sql } from "drizzle-orm";
+import { eq, and, gte, lte, count, desc, sum, sql, or } from "drizzle-orm";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
 import { isOrderNetConfirmed } from "@/lib/payments/split-reconciliation-service";
 import { CommercialMetricsService, CommercialMetrics, resolvePeriodDateRange } from "@/lib/analytics/commercial-metrics-service";
@@ -295,7 +295,9 @@ export class AnalyticsService {
     const oldestDate = prevStart || currentStart;
     const orderWhere = period === "ALL" 
       ? eq(orders.storeId, storeId)
-      : and(eq(orders.storeId, storeId), gte(orders.createdAt, oldestDate));
+      : and(eq(orders.storeId, storeId), or(gte(orders.createdAt, oldestDate), gte(orders.paidAt, oldestDate)));
+
+    const selectedBotId = options?.botId;
 
     const fetchBotStarts = async () => {
       try {
@@ -342,31 +344,153 @@ export class AnalyticsService {
       }
     };
 
-    const [allOrders, allStoreAccesses, allStoreProducts, allStoreCategories, botStarts, storeBots] = await Promise.all([
+    // Consulta de agregação SQL direta no PostgreSQL (sem truncamento, apenas SUM e COUNT)
+    const fetchSqlAggregations = async () => {
+      try {
+        if (typeof db.select !== "function") return null;
+
+        const orderDateExpr = sql`COALESCE(${orders.paidAt}, ${orders.createdAt})`;
+        const currentConditions = [
+          eq(orders.storeId, storeId),
+          eq(orders.status, "paid"),
+        ];
+
+        if (period !== "ALL") {
+          currentConditions.push(gte(orderDateExpr, currentStart));
+          currentConditions.push(sql`${orderDateExpr} < ${currentEnd}`);
+        }
+
+        if (selectedBotId) {
+          currentConditions.push(
+            or(
+              eq(orders.originBotId, selectedBotId),
+              sql`EXISTS (
+                SELECT 1 FROM ${orderItems} oi
+                JOIN ${products} p ON oi.product_id = p.id
+                WHERE oi.order_id = ${orders.id} AND p.bot_id = ${selectedBotId}
+              )`
+            )!
+          );
+        }
+
+        const [currRow] = await db
+          .select({
+            total: sql<string>`COALESCE(SUM(${orders.total}), 0)`,
+            salesCount: sql<number>`COUNT(*)`,
+            platformFee: sql<string>`COALESCE(SUM(${orders.platformFee}), 0)`,
+            netAmount: sql<string>`COALESCE(SUM(${orders.netAmount}), 0)`,
+          })
+          .from(orders)
+          .where(and(...currentConditions));
+
+        let prevTotal = 0;
+        let prevCount = 0;
+
+        if (prevStart && prevEnd) {
+          const prevConditions = [
+            eq(orders.storeId, storeId),
+            eq(orders.status, "paid"),
+            gte(orderDateExpr, prevStart),
+            sql`${orderDateExpr} < ${prevEnd}`,
+          ];
+          if (selectedBotId) {
+            prevConditions.push(
+              or(
+                eq(orders.originBotId, selectedBotId),
+                sql`EXISTS (
+                  SELECT 1 FROM ${orderItems} oi
+                  JOIN ${products} p ON oi.product_id = p.id
+                  WHERE oi.order_id = ${orders.id} AND p.bot_id = ${selectedBotId}
+                )`
+              )!
+            );
+          }
+          const [prevRow] = await db
+            .select({
+              total: sql<string>`COALESCE(SUM(${orders.total}), 0)`,
+              salesCount: sql<number>`COUNT(*)`,
+            })
+            .from(orders)
+            .where(and(...prevConditions));
+
+          if (prevRow) {
+            prevTotal = Number(prevRow.total || 0);
+            prevCount = Number(prevRow.salesCount || 0);
+          }
+        }
+
+        return {
+          currTotal: Number(currRow?.total || 0),
+          currCount: Number(currRow?.salesCount || 0),
+          platformFee: Number(currRow?.platformFee || 0),
+          netAmount: Number(currRow?.netAmount || 0),
+          prevTotal,
+          prevCount,
+        };
+      } catch (err: any) {
+        console.warn("[AnalyticsService] SQL aggregation skipped or not supported in current environment:", err?.message);
+        return null;
+      }
+    };
+
+    const [
+      allOrders,
+      recentOrdersRaw,
+      commercialMetrics,
+      sqlAggResult,
+      allStoreAccesses,
+      allStoreProducts,
+      allStoreCategories,
+      botStarts,
+      storeBots
+    ] = await Promise.all([
+      // 1. Pedidos do período SEM limitação artificial (sem relação pesada de cliente para performance)
       db.query.orders.findMany({
         where: orderWhere,
+        with: {
+          items: {
+            with: {
+              product: true,
+            },
+          },
+        },
+        orderBy: [desc(orders.createdAt)],
+      }),
+
+      // 2. Consulta separada e estritamente limitada a 10 registros para Pedidos Recentes
+      db.query.orders.findMany({
+        where: eq(orders.storeId, storeId),
         with: {
           customer: true,
           items: {
             with: {
-              product: true
-            }
-          }
+              product: true,
+            },
+          },
         },
         orderBy: [desc(orders.createdAt)],
-        limit: period === "ALL" ? 1000 : 500
+        limit: 10,
       }),
+
+      // 3. Métricas comerciais consolidadas completas do período
+      CommercialMetricsService.getCommercialMetrics(storeId, period, {
+        botId: selectedBotId,
+      }),
+
+      // 4. Agregações nativas SQL do PostgreSQL
+      fetchSqlAggregations(),
+
       db.query.accesses.findMany({
         where: eq(accesses.storeId, storeId),
-        columns: { id: true, status: true, deliveryStatus: true, orderId: true }
+        columns: { id: true, status: true, deliveryStatus: true, orderId: true },
       }),
       db.query.products.findMany({
         where: eq(products.storeId, storeId),
-        columns: { id: true, status: true }
+        columns: { id: true, status: true },
       }),
       db.query.categories.findMany({
         where: eq(categories.storeId, storeId),
-        columns: { id: true }
+        columns: { id: true },
       }),
       fetchBotStarts(),
       db.query.telegramBots.findMany({
@@ -375,7 +499,6 @@ export class AnalyticsService {
     ]);
 
     // Apply bot-scoping if options.botId is provided (strictly based on explicit product.botId linkage)
-    const selectedBotId = options?.botId;
     const orderMatchesBot = (o: typeof allOrders[0]) => {
       if (!selectedBotId) return true;
       if (o.items && o.items.some(it => it.product?.botId === selectedBotId)) return true;
@@ -401,17 +524,30 @@ export class AnalyticsService {
       return d >= prevStart! && d < prevEnd!;
     }) : [];
 
-    // Current KPIs
-    const currRevenue = currentPaidOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-    const prevRevenue = prevPaidOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-    const revChange = prevStart ? calcChange(currRevenue, prevRevenue) : { changePercent: null, trend: 'none' as const };
+    // Current KPIs: unificado com CommercialMetricsService / Agregações SQL
+    // Elimina qualquer divergência entre o Card 1, Card 2 e o Gráfico de Vendas
+    const fallbackCurrentRevenue = Math.round(currentPaidOrders.reduce((sum, o) => sum + Number(o.total || 0), 0) * 100) / 100;
+    const fallbackCurrentSales = currentPaidOrders.length;
 
-    const currSales = currentPaidOrders.length;
-    const prevSales = prevPaidOrders.length;
-    const salesChange = prevStart ? calcChange(currSales, prevSales) : { changePercent: null, trend: 'none' as const };
+    const rawRevenue = commercialMetrics?.approvedSales?.total !== undefined && commercialMetrics?.approvedSales?.count !== undefined && commercialMetrics.approvedSales.count > 0
+      ? commercialMetrics.approvedSales.total
+      : (sqlAggResult ? sqlAggResult.currTotal : fallbackCurrentRevenue);
+    const currRevenue = Math.round(Number(rawRevenue || 0) * 100) / 100;
 
-    const currTicket = currSales > 0 ? currRevenue / currSales : 0;
+    const currSales = commercialMetrics?.approvedSales?.count !== undefined && commercialMetrics.approvedSales.count > 0
+      ? commercialMetrics.approvedSales.count
+      : (sqlAggResult ? sqlAggResult.currCount : fallbackCurrentSales);
+
+    const currTicket = commercialMetrics?.averageTicket?.averageTicket !== undefined && commercialMetrics.averageTicket.averageTicket > 0
+      ? commercialMetrics.averageTicket.averageTicket
+      : (currSales > 0 ? Math.round((currRevenue / currSales) * 100) / 100 : 0);
+
+    const prevRevenue = sqlAggResult ? sqlAggResult.prevTotal : prevPaidOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const prevSales = sqlAggResult ? sqlAggResult.prevCount : prevPaidOrders.length;
     const prevTicket = prevSales > 0 ? prevRevenue / prevSales : 0;
+
+    const revChange = prevStart ? calcChange(currRevenue, prevRevenue) : { changePercent: null, trend: 'none' as const };
+    const salesChange = prevStart ? calcChange(currSales, prevSales) : { changePercent: null, trend: 'none' as const };
     const ticketChange = prevStart ? calcChange(currTicket, prevTicket) : { changePercent: null, trend: 'none' as const };
 
     // Customers in period
@@ -509,12 +645,24 @@ export class AnalyticsService {
       });
     }
 
-    const chartSeries: ChartPoint[] = Array.from(chartMap.entries()).map(([key, val]) => ({
-      dateLabel: val.fullDate,
-      fullDate: val.fullDate,
-      revenue: Math.round(val.revenue * 100) / 100,
-      salesCount: val.salesCount
-    }));
+    // 1. Chart Series Generation (Grouped by Day or Month)
+    // Sincroniza com performanceSeries de commercialMetrics se disponível para total coerência com o faturamento real
+    let chartSeries: ChartPoint[] = [];
+    if (commercialMetrics?.performanceSeries && commercialMetrics.performanceSeries.length > 0) {
+      chartSeries = commercialMetrics.performanceSeries.map((p) => ({
+        dateLabel: p.dateLabel,
+        fullDate: p.fullDate || p.dateLabel,
+        revenue: p.revenue,
+        salesCount: p.salesCount,
+      }));
+    } else {
+      chartSeries = Array.from(chartMap.entries()).map(([key, val]) => ({
+        dateLabel: val.fullDate,
+        fullDate: val.fullDate,
+        revenue: Math.round(val.revenue * 100) / 100,
+        salesCount: val.salesCount
+      }));
+    }
 
     // 2. Channels Breakdown (Registered Telegram Bots Only)
     const botStatsMap = new Map<string, {
@@ -657,12 +805,17 @@ export class AnalyticsService {
         percentage: currRevenue > 0 ? Math.round((p.revenue / currRevenue) * 100) : 0,
       }));
 
-    // 4. Recent Orders (Latest 10)
-    const recentOrders: RecentOrder[] = allOrders.slice(0, 10).map(o => {
+    // 4. Recent Orders (Latest 10) - Isolado estritamente em consulta dedicada com limit: 10
+    const recentOrdersSource = (recentOrdersRaw && recentOrdersRaw.length > 0)
+      ? recentOrdersRaw
+      : (allOrders as any[]).slice(0, 10);
+
+    const recentOrders: RecentOrder[] = recentOrdersSource.slice(0, 10).map(o => {
       const prodTitle = o.items?.[0]?.product?.title || "Produto Digital";
-      const customerName = o.customer?.firstName 
-        ? `${o.customer.firstName} ${o.customer.lastName || ''}`.trim() 
-        : o.customer?.username ? `@${o.customer.username}` : "Cliente Telegram";
+      const customer = (o as any).customer;
+      const customerName = customer?.firstName 
+        ? `${customer.firstName} ${customer.lastName || ''}`.trim() 
+        : customer?.username ? `@${customer.username}` : "Cliente Telegram";
 
       return {
         id: o.id,
@@ -747,12 +900,7 @@ export class AnalyticsService {
       categoriesCount: allStoreCategories.length
     };
 
-    // 8. Commercial Metrics (4 Reference KPI Cards)
-    const commercialMetrics = await CommercialMetricsService.getCommercialMetrics(storeId, period, {
-      botId: options?.botId,
-    });
-
-    // 9. Activity Log (Tempo real / Acontecimentos da Loja: Novo Lead, Venda Aprovada, Pagamento Pendente)
+    // 8. Activity Log (Tempo real / Acontecimentos da Loja: Novo Lead, Venda Aprovada, Pagamento Pendente)
     const formatEventDateTime = (rawDate: any) => {
       const d = rawDate ? new Date(rawDate) : new Date();
       const validDate = isNaN(d.getTime()) ? new Date() : d;
