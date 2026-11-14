@@ -139,7 +139,7 @@ export default function ProductsListClient({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
 
-  const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(userRole) || isOwnerAccount;
+  const isSuperAdmin = Boolean(isOwnerAccount);
 
   const filteredProducts = products.filter((prod) => {
     const matchesSearch = 

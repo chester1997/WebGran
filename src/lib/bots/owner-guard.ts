@@ -9,7 +9,10 @@ export const OWNER_EMAIL = "lf49127@gmail.com";
  */
 export function isOwnerUser(user?: { id?: string; email?: string | null } | null): boolean {
   if (!user || !user.id) return false;
-  return user.id === OWNER_USER_ID || (!!user.email && user.email === OWNER_EMAIL);
+  return (
+    user.id === OWNER_USER_ID ||
+    (!!user.email && user.email.trim().toLowerCase() === OWNER_EMAIL.trim().toLowerCase())
+  );
 }
 
 /**

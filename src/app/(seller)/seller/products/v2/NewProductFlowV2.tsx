@@ -86,8 +86,6 @@ export function NewProductFlowV2({
           deliveryType: type,
           deliveryValue: "",
           selectedVideos: [],
-          trailerVideoId: null,
-          trailerVideo: null,
         };
       }
       return prev;
@@ -136,9 +134,6 @@ export function NewProductFlowV2({
         formData.append("deliveryValue", firstVidId);
         const videoIds = formState.selectedVideos.map((v) => v.id);
         formData.append("videoIds", JSON.stringify(videoIds));
-        if (formState.trailerVideoId) {
-          formData.append("trailerVideoId", formState.trailerVideoId);
-        }
       } else {
         formData.append("deliveryValue", formState.deliveryValue.trim());
       }

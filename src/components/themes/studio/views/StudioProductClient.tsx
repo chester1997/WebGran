@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock, PlayCircle, Play, Loader2, Volume2, VolumeX, Pause } from "lucide-react";
+import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock, PlayCircle, Play, Loader2 } from "lucide-react";
 import { AddToCartButton } from "../components/AddToCartButton";
 import { HorizontalCarousel } from "../components/HorizontalCarousel";
 import { ProductCard } from "../components/ProductCard";
@@ -45,7 +45,6 @@ interface StudioProductClientProps {
   hasAccess: boolean;
   accessId?: string | null;
   botUsername: string | null;
-  trailerVideo?: { id: string; durationSeconds: number | null } | null;
   recommendedProducts: Product[];
 }
 
@@ -55,7 +54,6 @@ export function StudioProductClient({
   hasAccess,
   accessId,
   botUsername,
-  trailerVideo,
   recommendedProducts,
 }: StudioProductClientProps) {
   const router = useRouter();
@@ -88,79 +86,6 @@ export function StudioProductClient({
 
   // Storage key for Favorites
   const favoritesKey = `webgran_favorites_${storeSlug}`;
-
-  // Trailer Player State (Part C)
-  const [trailerState, setTrailerState] = useState<"idle" | "loading" | "playing" | "ended">("idle");
-  const [trailerPlaybackUrl, setTrailerPlaybackUrl] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
-  const [trailerProgress, setTrailerProgress] = useState(0);
-  const [trailerCurrentTime, setTrailerCurrentTime] = useState(0);
-  const [trailerDuration, setTrailerDuration] = useState(trailerVideo?.durationSeconds || 0);
-  const [trailerPaused, setTrailerPaused] = useState(false);
-  const trailerVideoRef = useRef<HTMLVideoElement>(null);
-
-  const handleStartTrailer = async () => {
-    if (!trailerPlaybackUrl) {
-      setTrailerState("loading");
-      try {
-        const res = await fetch(`/api/miniapp/products/${product.id}/trailer`);
-        const data = await res.json();
-        if (data.success && data.playbackUrl) {
-          setTrailerPlaybackUrl(data.playbackUrl);
-          setTrailerState("playing");
-          setIsMuted(false);
-        } else {
-          setTrailerState("idle");
-        }
-      } catch (err) {
-        console.error("Error loading trailer:", err);
-        setTrailerState("idle");
-      }
-    } else {
-      setTrailerState("playing");
-      trailerVideoRef.current?.play().catch(() => {});
-    }
-  };
-
-  const handleStopTrailer = () => {
-    if (trailerVideoRef.current) {
-      trailerVideoRef.current.pause();
-      trailerVideoRef.current.currentTime = 0;
-    }
-    setTrailerState("idle");
-    setTrailerPaused(false);
-  };
-
-  const handleReplayTrailer = () => {
-    if (trailerVideoRef.current) {
-      trailerVideoRef.current.currentTime = 0;
-      trailerVideoRef.current.play().catch(() => {});
-    }
-    setTrailerState("playing");
-    setTrailerPaused(false);
-  };
-
-  const toggleTrailerPlayPause = () => {
-    if (!trailerVideoRef.current) return;
-    if (trailerVideoRef.current.paused) {
-      trailerVideoRef.current.play().catch(() => {});
-      setTrailerPaused(false);
-    } else {
-      trailerVideoRef.current.pause();
-      setTrailerPaused(true);
-    }
-  };
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && trailerVideoRef.current && trailerState === "playing") {
-        trailerVideoRef.current.pause();
-        setTrailerPaused(true);
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [trailerState]);
 
   useEffect(() => {
     setClientHasAccess(hasAccess);
@@ -403,196 +328,25 @@ export function StudioProductClient({
   return (
     <div className="w-full min-h-screen bg-transparent text-zinc-900 dark:text-white pb-28">
       {/* 1. TOP BANNER / BACKDROP AREA */}
-      {trailerVideo ? (
-        <div className="relative w-full h-[214px] sm:h-[260px] bg-black overflow-hidden flex items-center justify-center">
-          {/* Back button (always visible) */}
-          <button
-            type="button"
-            onClick={trailerState === "idle" ? handleBack : handleStopTrailer}
-            aria-label="Voltar"
-            className="absolute top-3 left-3 z-30 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-all border border-white/10 active:scale-95 cursor-pointer shadow-lg"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
+      <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] max-h-[360px] bg-zinc-950 overflow-hidden">
+        <img
+          src={heroImage}
+          alt={product.title}
+          loading="eager"
+          decoding="async"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f5f7] via-[#f4f5f7]/40 to-black/30 dark:from-[#141416] dark:via-[#141416]/40 dark:to-black/50 pointer-events-none" />
 
-          {/* STATE 1: IDLE (Cover with play button) */}
-          {trailerState === "idle" && (
-            <>
-              <img
-                src={heroImage}
-                alt={product.title}
-                loading="eager"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/40" />
-
-              {/* Central 58px Play Button */}
-              <button
-                type="button"
-                onClick={handleStartTrailer}
-                aria-label="Assistir trailer"
-                className="w-[58px] h-[58px] rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-2xl active:scale-95 transition-all cursor-pointer z-20 group"
-              >
-                <Play className="w-6 h-6 fill-white ml-0.5 text-white transition-transform group-hover:scale-110" />
-              </button>
-
-              {/* Bottom Right Chip */}
-              <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-md">
-                <span>Trailer · {formatSeconds(trailerVideo.durationSeconds || 0)}</span>
-              </div>
-            </>
-          )}
-
-          {/* STATE 1.5: LOADING */}
-          {trailerState === "loading" && (
-            <>
-              <img
-                src={heroImage}
-                alt={product.title}
-                className="w-full h-full object-cover opacity-50"
-              />
-              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-20">
-                <Loader2 className="w-8 h-8 animate-spin text-white" />
-                <span className="text-xs text-white/80 font-medium">Carregando trailer...</span>
-              </div>
-            </>
-          )}
-
-          {/* STATE 2: PLAYING */}
-          {(trailerState === "playing" || trailerState === "ended") && trailerPlaybackUrl && (
-            <div className="relative w-full h-full flex items-center justify-center bg-black">
-              <video
-                ref={trailerVideoRef}
-                src={trailerPlaybackUrl}
-                playsInline
-                autoPlay
-                muted={isMuted}
-                onTimeUpdate={() => {
-                  if (trailerVideoRef.current) {
-                    const ct = trailerVideoRef.current.currentTime;
-                    const dur = trailerVideoRef.current.duration || trailerDuration || 1;
-                    setTrailerCurrentTime(ct);
-                    setTrailerDuration(dur);
-                    setTrailerProgress((ct / dur) * 100);
-                  }
-                }}
-                onEnded={() => {
-                  setTrailerState("ended");
-                }}
-                className="w-full h-full object-contain cursor-pointer"
-                onClick={toggleTrailerPlayPause}
-              />
-
-              {/* Red Badge top-left: #e50914 */}
-              <div className="absolute top-3 left-14 z-20 px-2 py-0.5 rounded bg-[#e50914] text-white text-[10px] font-extrabold uppercase tracking-wider shadow">
-                TRAILER
-              </div>
-
-              {/* Sound Toggle top-right */}
-              <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-                {isMuted && (
-                  <span className="text-[11px] font-medium bg-black/70 backdrop-blur-md text-white/90 px-2 py-0.5 rounded-full border border-white/10 animate-pulse">
-                    Toque para ativar o som
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (trailerVideoRef.current) {
-                      trailerVideoRef.current.muted = !isMuted;
-                    }
-                    setIsMuted(!isMuted);
-                  }}
-                  className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black/80 transition-colors"
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-              </div>
-
-              {/* Bottom Custom Controls Bar */}
-              {trailerState === "playing" && (
-                <div className="absolute bottom-0 inset-x-0 z-20 p-2.5 bg-gradient-to-t from-black/80 to-transparent flex flex-col gap-1.5">
-                  {/* Progress bar */}
-                  <div
-                    className="w-full h-1 bg-white/20 rounded-full cursor-pointer relative overflow-hidden"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const clickX = e.clientX - rect.left;
-                      const newPct = clickX / rect.width;
-                      if (trailerVideoRef.current) {
-                        trailerVideoRef.current.currentTime = newPct * (trailerVideoRef.current.duration || 1);
-                      }
-                    }}
-                  >
-                    <div
-                      style={{ width: `${trailerProgress}%` }}
-                      className="h-full bg-[#e50914] rounded-full transition-all"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-white/90">
-                    <button
-                      type="button"
-                      onClick={toggleTrailerPlayPause}
-                      className="flex items-center gap-1 hover:text-white"
-                    >
-                      {trailerPaused ? <Play className="w-3.5 h-3.5 fill-white" /> : <Pause className="w-3.5 h-3.5 fill-white" />}
-                      <span>{trailerPaused ? "Reproduzir" : "Pausar"}</span>
-                    </button>
-                    <span>
-                      {formatSeconds(trailerCurrentTime)} / {formatSeconds(trailerDuration)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* STATE 3: ENDED OVERLAY */}
-              {trailerState === "ended" && (
-                <div className="absolute inset-0 z-30 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center space-y-3 animate-in fade-in">
-                  <span className="text-[16px] font-bold text-white">Gostou do que viu?</span>
-                  <button
-                    type="button"
-                    onClick={handleDirectBuy}
-                    className="bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow-lg shadow-red-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Comprar por R$ {Number(product.price || 0).toFixed(2).replace(".", ",")}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReplayTrailer}
-                    className="text-zinc-400 hover:text-white text-xs underline cursor-pointer pt-1"
-                  >
-                    Rever trailer
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        /* Standalone classic backdrop when no trailer */
-        <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] max-h-[360px] bg-zinc-950 overflow-hidden">
-          <img
-            src={heroImage}
-            alt={product.title}
-            loading="eager"
-            decoding="async"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f4f5f7] via-[#f4f5f7]/40 to-black/30 dark:from-[#141416] dark:via-[#141416]/40 dark:to-black/50 pointer-events-none" />
-
-          <button
-            type="button"
-            onClick={handleBack}
-            aria-label="Voltar"
-            className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-all border border-white/10 active:scale-95 cursor-pointer shadow-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={handleBack}
+          aria-label="Voltar"
+          className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 transition-all border border-white/10 active:scale-95 cursor-pointer shadow-lg"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* 2. MAIN PAGE CONTAINER */}
       <div className="px-4 max-w-lg mx-auto relative z-10 space-y-4">

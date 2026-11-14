@@ -138,33 +138,6 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
     } catch {}
   }
 
-  // Trailer Video Handling (Admin Only)
-  const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(seller?.role, seller);
-  const rawTrailerVideoId = (formData.get("trailerVideoId") as string)?.trim() || null;
-  let trailerVideoId: string | null = null;
-
-  if (rawTrailerVideoId) {
-    if (!isSuperAdmin) {
-      return { success: false, error: "Apenas administradores podem configurar trailer de produto." };
-    }
-    if (deliveryType === "product_video") {
-      if (Array.isArray(videoIds) && videoIds.includes(rawTrailerVideoId)) {
-        return { success: false, error: "O trailer precisa ser um arquivo separado do vídeo do produto." };
-      }
-      const trailerVid = await db.query.productVideos.findFirst({
-        where: and(eq(productVideos.id, rawTrailerVideoId), eq(productVideos.storeId, store.id)),
-      });
-      if (!trailerVid) {
-        return { success: false, error: "Vídeo de trailer não encontrado ou não pertence a esta loja." };
-      }
-      if (trailerVid.status !== "READY") {
-        return { success: false, error: `O vídeo de trailer "${trailerVid.title}" ainda não está pronto para uso.` };
-      }
-      trailerVideoId = rawTrailerVideoId;
-    }
-  }
-
-
   const rawScope = formData.get("catalogScope") as string | null;
   let botId = (formData.get("botId") as string) || null;
   // Inferência automática de compatibilidade: se botId foi passado e não há rawScope, infere BOT_SPECIFIC
@@ -324,7 +297,6 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
         bannerUrl,
         deliveryType,
         deliveryValue,
-        trailerVideoId,
         showViews,
         viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
         showFire,
@@ -433,16 +405,6 @@ export async function updateProductAction(productId: string, formData: FormData)
     };
   }
 
-  // Trailer Video Handling (Admin Only) - Pre-check permissions
-  const isSuperAdminUpdate = ProductManualDeepLinkService.isAuthorized(seller?.role, seller);
-  const rawTrailerVideoId = (formData.get("trailerVideoId") as string)?.trim() || null;
-  const hasTrailerField = formData.has("trailerVideoId");
-  let trailerVideoIdToSet: string | null | undefined = undefined;
-
-  if (rawTrailerVideoId && !isSuperAdminUpdate) {
-    return { success: false, error: "Apenas administradores podem configurar trailer de produto." };
-  }
-
   if (deliveryType === "product_video") {
     const videoIdsRaw = (formData.get("videoIds") as string) || (formData.get("selectedVideoIds") as string);
     if (videoIdsRaw) {
@@ -476,33 +438,6 @@ export async function updateProductAction(productId: string, formData: FormData)
       return { success: false, error: "Erro ao consultar vídeos vinculados ao produto." };
     }
   }
-
-  if (rawTrailerVideoId) {
-    if (deliveryType === "product_video") {
-      const assignedVideos = await ProductVideoService.listProductVideos(store.id, productId);
-      const assignedIds = assignedVideos.map((v) => v.id);
-      if (assignedIds.includes(rawTrailerVideoId)) {
-        return { success: false, error: "O trailer precisa ser um arquivo separado do vídeo do produto." };
-      }
-      const trailerVid = await db.query.productVideos.findFirst({
-        where: and(eq(productVideos.id, rawTrailerVideoId), eq(productVideos.storeId, store.id)),
-      });
-      if (!trailerVid) {
-        return { success: false, error: "Vídeo de trailer não encontrado ou não pertence a esta loja." };
-      }
-      if (trailerVid.status !== "READY") {
-        return { success: false, error: `O vídeo de trailer "${trailerVid.title}" ainda não está pronto para uso.` };
-      }
-      trailerVideoIdToSet = rawTrailerVideoId;
-    } else {
-      trailerVideoIdToSet = null;
-    }
-  } else if (hasTrailerField && isSuperAdminUpdate) {
-    trailerVideoIdToSet = null;
-  } else if (deliveryType !== "product_video") {
-    trailerVideoIdToSet = null;
-  }
-
 
   const rawScope = formData.get("catalogScope") as string | null;
   let botId = (formData.get("botId") as string) || null;
@@ -655,7 +590,6 @@ export async function updateProductAction(productId: string, formData: FormData)
       bannerUrl,
       deliveryType,
       deliveryValue,
-      ...(trailerVideoIdToSet !== undefined ? { trailerVideoId: trailerVideoIdToSet } : {}),
       showViews,
       viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
       showFire,

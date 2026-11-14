@@ -72,7 +72,6 @@ export function ProductDetailsStep({
 
   // Video picker state
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
-  const [pickerMode, setPickerMode] = useState<"delivery" | "trailer">("delivery");
   const [libraryVideos, setLibraryVideos] = useState<any[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [librarySearch, setLibrarySearch] = useState("");
@@ -140,7 +139,6 @@ export function ProductDetailsStep({
 
   // Open Video Picker Modal for Delivery
   const handleOpenLibraryPicker = async () => {
-    setPickerMode("delivery");
     setIsLibraryPickerOpen(true);
     setSelectedInModal(state.selectedVideos.map((v) => v.id));
     setLoadingLibrary(true);
@@ -157,74 +155,24 @@ export function ProductDetailsStep({
     }
   };
 
-  // Open Video Picker Modal for Trailer
-  const handleOpenTrailerPicker = async () => {
-    setPickerMode("trailer");
-    setIsLibraryPickerOpen(true);
-    setSelectedInModal(state.trailerVideoId ? [state.trailerVideoId] : []);
-    setLoadingLibrary(true);
-    try {
-      const res = await fetch("/api/seller/videos");
-      const data = await res.json();
-      if (data.success) {
-        setLibraryVideos(data.videos || []);
-      }
-    } catch (err) {
-      console.error("Error fetching seller videos:", err);
-    } finally {
-      setLoadingLibrary(false);
-    }
-  };
-
   // Confirm video selection from library
   const handleConfirmAddVideos = () => {
-    if (pickerMode === "delivery") {
-      const selected = libraryVideos
-        .filter((v) => selectedInModal.includes(v.id) && v.status === "READY")
-        .map((v) => ({
-          id: v.id,
-          title: v.title,
-          thumbnailUrl: v.thumbnailUrl,
-          durationSeconds: v.durationSeconds,
-          fileSizeBytes: v.fileSizeBytes,
-          status: v.status,
-        }));
-
-      setState((prev) => ({
-        ...prev,
-        selectedVideos: selected,
-        trailerVideoId: prev.trailerVideoId && selectedInModal.includes(prev.trailerVideoId) ? null : prev.trailerVideoId,
-        trailerVideo: prev.trailerVideo && selectedInModal.includes(prev.trailerVideo.id) ? null : prev.trailerVideo,
+    const selected = libraryVideos
+      .filter((v) => selectedInModal.includes(v.id) && v.status === "READY")
+      .map((v) => ({
+        id: v.id,
+        title: v.title,
+        thumbnailUrl: v.thumbnailUrl,
+        durationSeconds: v.durationSeconds,
+        fileSizeBytes: v.fileSizeBytes,
+        status: v.status,
       }));
-      clearError("videos");
-    } else {
-      const selectedVid = libraryVideos.find((v) => selectedInModal[0] === v.id && v.status === "READY");
-      if (selectedVid) {
-        if (state.selectedVideos.some((v) => v.id === selectedVid.id)) {
-          alert("O trailer precisa ser um arquivo separado do vídeo do produto.");
-          return;
-        }
-        setState((prev) => ({
-          ...prev,
-          trailerVideoId: selectedVid.id,
-          trailerVideo: {
-            id: selectedVid.id,
-            title: selectedVid.title,
-            thumbnailUrl: selectedVid.thumbnailUrl,
-            durationSeconds: selectedVid.durationSeconds,
-            fileSizeBytes: selectedVid.fileSizeBytes,
-            status: selectedVid.status,
-          },
-        }));
-        clearError("trailer");
-      } else {
-        setState((prev) => ({
-          ...prev,
-          trailerVideoId: null,
-          trailerVideo: null,
-        }));
-      }
-    }
+
+    setState((prev) => ({
+      ...prev,
+      selectedVideos: selected,
+    }));
+    clearError("videos");
     setIsLibraryPickerOpen(false);
   };
 
@@ -558,56 +506,6 @@ export function ProductDetailsStep({
                   Nenhum vídeo vinculado. Selecione vídeos já processados da biblioteca.
                 </div>
               )}
-
-              {/* Bloco de Trailer (opcional) */}
-              <div className="mt-4 pt-3.5 border-t border-[#232326]">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[14px] font-medium text-[#f4f4f5]">Trailer</span>
-                  <span className="text-[12px] text-[#71717a]">· opcional</span>
-                </div>
-                <p className="text-[12px] text-[#71717a] mt-0.5 leading-[1.45]">
-                  Use um arquivo separado do vídeo do produto, de 15 a 45 segundos.
-                </p>
-
-                {state.trailerVideo ? (
-                  <div className="mt-2.5 flex items-center justify-between bg-[#111113] border border-[#2a2a2f] rounded-[10px] p-2 px-3 text-[13px] text-[#f4f4f5]">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Film className="w-4 h-4 shrink-0" style={{ color: config.cc }} />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{state.trailerVideo.title}</p>
-                        {state.trailerVideo.durationSeconds ? (
-                          <p className="text-[11px] text-[#71717a]">
-                            {Math.floor(state.trailerVideo.durationSeconds / 60)}:
-                            {String(state.trailerVideo.durationSeconds % 60).padStart(2, "0")}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setState((prev) => ({ ...prev, trailerVideoId: null, trailerVideo: null }))}
-                      aria-label="Remover trailer"
-                      className="text-[#71717a] hover:text-[#f87171] p-1 cursor-pointer transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-2.5">
-                    <button
-                      type="button"
-                      onClick={handleOpenTrailerPicker}
-                      className="h-[38px] px-3.5 rounded-[10px] border border-[#2a2a2f] bg-[#111113] hover:border-[#3a3a40] text-[13px] font-medium text-[#f4f4f5] inline-flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4 text-[#71717a]" />
-                      <span>Escolher da biblioteca</span>
-                    </button>
-                  </div>
-                )}
-                {errors.trailer && (
-                  <p className="text-[12px] text-[#f87171] mt-1.5">{errors.trailer}</p>
-                )}
-              </div>
             </div>
           )}
         </div>
@@ -1210,12 +1108,10 @@ export function ProductDetailsStep({
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Film className="w-4 h-4" style={{ color: config.cc }} />
-                  {pickerMode === "trailer" ? "Selecionar trailer da biblioteca" : "Selecionar vídeos da biblioteca"}
+                  Selecionar vídeos da biblioteca
                 </h3>
                 <p className="text-xs text-[#9a9aa2] mt-0.5">
-                  {pickerMode === "trailer"
-                    ? "Escolha um vídeo PRONTO de 15 a 45s separado dos vídeos de entrega."
-                    : "Apenas vídeos com status PRONTO podem ser vinculados."}
+                  Apenas vídeos com status PRONTO podem ser vinculados.
                 </p>
               </div>
               <button
@@ -1257,23 +1153,18 @@ export function ProductDetailsStep({
                   .map((video) => {
                     const isSelected = selectedInModal.includes(video.id);
                     const isReady = video.status === "READY";
-                    const isAssignedToDelivery = pickerMode === "trailer" && state.selectedVideos.some((v) => v.id === video.id);
-                    const isDisabled = !isReady || isAssignedToDelivery;
+                    const isDisabled = !isReady;
 
                     return (
                       <div
                         key={video.id}
                         onClick={() => {
                           if (isDisabled) return;
-                          if (pickerMode === "trailer") {
-                            setSelectedInModal(isSelected ? [] : [video.id]);
-                          } else {
-                            setSelectedInModal((prev) =>
-                              prev.includes(video.id)
-                                ? prev.filter((id) => id !== video.id)
-                                : [...prev, video.id]
-                            );
-                          }
+                          setSelectedInModal((prev) =>
+                            prev.includes(video.id)
+                              ? prev.filter((id) => id !== video.id)
+                              : [...prev, video.id]
+                          );
                         }}
                         className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition ${
                           isDisabled
@@ -1297,18 +1188,10 @@ export function ProductDetailsStep({
                             </h5>
                             <span
                               className={`text-[10px] font-semibold ${
-                                isAssignedToDelivery
-                                  ? "text-[#f87171]"
-                                  : isReady
-                                  ? "text-[#4ade80]"
-                                  : "text-[#fbbf24]"
+                                isReady ? "text-[#4ade80]" : "text-[#fbbf24]"
                               }`}
                             >
-                              {isAssignedToDelivery
-                                ? "Já usado na entrega"
-                                : isReady
-                                ? "✓ Pronto para entrega"
-                                : "Processando..."}
+                              {isReady ? "✓ Pronto para entrega" : "Processando..."}
                             </span>
                           </div>
                         </div>

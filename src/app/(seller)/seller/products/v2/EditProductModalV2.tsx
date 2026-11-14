@@ -60,8 +60,6 @@ export function EditProductModalV2({
   const [deliveryType, setDeliveryType] = useState<DeliveryTypeV2>(initialDeliveryType);
   const [deliveryValue, setDeliveryValue] = useState<string>(product?.deliveryValue || "");
   const [selectedVideos, setSelectedVideos] = useState<VideoItemV2[]>([]);
-  const [trailerVideoId, setTrailerVideoId] = useState<string | null>(product?.trailerVideoId || null);
-  const [trailerVideo, setTrailerVideo] = useState<VideoItemV2 | null>(null);
 
   const [title, setTitle] = useState<string>(product?.title || "");
   const [description, setDescription] = useState<string>(product?.description || "");
@@ -99,7 +97,6 @@ export function EditProductModalV2({
 
   // Video Library Picker Modal
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
-  const [pickerMode, setPickerMode] = useState<"delivery" | "trailer">("delivery");
   const [libraryVideos, setLibraryVideos] = useState<any[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [librarySearch, setLibrarySearch] = useState("");
@@ -131,7 +128,7 @@ export function EditProductModalV2({
     setMounted(true);
   }, []);
 
-  // Fetch initial videos for product_video and trailer
+  // Fetch initial videos for product_video
   useEffect(() => {
     if (!isOpen) return;
 
@@ -140,7 +137,6 @@ export function EditProductModalV2({
         .then((res) => res.json())
         .then((data) => {
           if (data.success && Array.isArray(data.videos)) {
-            const allVids: any[] = data.videos;
             // Fetch assigned videos for this product
             fetch(`/api/seller/products/${product.id}/videos`)
               .then((r) => r.json())
@@ -159,26 +155,11 @@ export function EditProductModalV2({
                 }
               })
               .catch(() => {});
-
-            // If trailerVideoId is present, resolve its info
-            if (product?.trailerVideoId) {
-              const foundTrailer = allVids.find((v) => v.id === product.trailerVideoId);
-              if (foundTrailer) {
-                setTrailerVideo({
-                  id: foundTrailer.id,
-                  title: foundTrailer.title,
-                  thumbnailUrl: foundTrailer.thumbnailUrl,
-                  durationSeconds: foundTrailer.durationSeconds,
-                  fileSizeBytes: foundTrailer.fileSizeBytes,
-                  status: foundTrailer.status,
-                });
-              }
-            }
           }
         })
         .catch((err) => console.error("Error loading videos:", err));
     }
-  }, [isOpen, product.id, initialDeliveryType, product?.trailerVideoId]);
+  }, [isOpen, product.id, initialDeliveryType]);
 
   // Reset when opening
   const handleOpen = () => {
@@ -243,7 +224,6 @@ export function EditProductModalV2({
     if (viewsCount !== Number(product?.viewsCount || 0)) count++;
     if (showFire !== Boolean(product?.showFire)) count++;
     if (fireCount !== Number(product?.fireCount || 0)) count++;
-    if (trailerVideoId !== (product?.trailerVideoId || null)) count++;
 
     return count;
   }, [
@@ -266,7 +246,6 @@ export function EditProductModalV2({
     viewsCount,
     showFire,
     fireCount,
-    trailerVideoId,
     initialDeliveryType,
     initialScope,
     product,
@@ -294,14 +273,11 @@ export function EditProductModalV2({
     setDeliveryType(pendingType);
     setDeliveryValue("");
     setSelectedVideos([]);
-    setTrailerVideoId(null);
-    setTrailerVideo(null);
     setIsSwitcherOpen(false);
   };
 
   // Video Library Modal handlers
   const handleOpenLibraryForDelivery = async () => {
-    setPickerMode("delivery");
     setIsLibraryPickerOpen(true);
     setSelectedInModal(selectedVideos.map((v) => v.id));
     setLoadingLibrary(true);
@@ -318,64 +294,19 @@ export function EditProductModalV2({
     }
   };
 
-  const handleOpenLibraryForTrailer = async () => {
-    setPickerMode("trailer");
-    setIsLibraryPickerOpen(true);
-    setSelectedInModal(trailerVideoId ? [trailerVideoId] : []);
-    setLoadingLibrary(true);
-    try {
-      const res = await fetch("/api/seller/videos");
-      const data = await res.json();
-      if (data.success && Array.isArray(data.videos)) {
-        setLibraryVideos(data.videos);
-      }
-    } catch (err) {
-      console.error("Error loading library videos:", err);
-    } finally {
-      setLoadingLibrary(false);
-    }
-  };
-
   const handleConfirmLibraryModal = () => {
-    if (pickerMode === "delivery") {
-      const selected = libraryVideos
-        .filter((v) => selectedInModal.includes(v.id) && v.status === "READY")
-        .map((v) => ({
-          id: v.id,
-          title: v.title,
-          thumbnailUrl: v.thumbnailUrl,
-          durationSeconds: v.durationSeconds,
-          fileSizeBytes: v.fileSizeBytes,
-          status: v.status,
-        }));
+    const selected = libraryVideos
+      .filter((v) => selectedInModal.includes(v.id) && v.status === "READY")
+      .map((v) => ({
+        id: v.id,
+        title: v.title,
+        thumbnailUrl: v.thumbnailUrl,
+        durationSeconds: v.durationSeconds,
+        fileSizeBytes: v.fileSizeBytes,
+        status: v.status,
+      }));
 
-      setSelectedVideos(selected);
-      // If current trailer was picked in delivery, remove trailer
-      if (trailerVideoId && selectedInModal.includes(trailerVideoId)) {
-        setTrailerVideoId(null);
-        setTrailerVideo(null);
-      }
-    } else {
-      const selectedVid = libraryVideos.find((v) => selectedInModal[0] === v.id && v.status === "READY");
-      if (selectedVid) {
-        if (selectedVideos.some((v) => v.id === selectedVid.id)) {
-          alert("O trailer precisa ser um arquivo separado do vídeo do produto.");
-          return;
-        }
-        setTrailerVideoId(selectedVid.id);
-        setTrailerVideo({
-          id: selectedVid.id,
-          title: selectedVid.title,
-          thumbnailUrl: selectedVid.thumbnailUrl,
-          durationSeconds: selectedVid.durationSeconds,
-          fileSizeBytes: selectedVid.fileSizeBytes,
-          status: selectedVid.status,
-        });
-      } else {
-        setTrailerVideoId(null);
-        setTrailerVideo(null);
-      }
-    }
+    setSelectedVideos(selected);
     setIsLibraryPickerOpen(false);
   };
 
@@ -459,9 +390,6 @@ export function EditProductModalV2({
       if (selectedVideos.length === 0) {
         newErrors.videos = "Vincule pelo menos um vídeo pronto para entrega.";
       }
-      if (trailerVideoId && selectedVideos.some((v) => v.id === trailerVideoId)) {
-        newErrors.trailer = "O trailer precisa ser um arquivo separado do vídeo do produto.";
-      }
     }
 
     if (catalogScope === "BOT_SPECIFIC" && !selectedBotId) {
@@ -477,7 +405,7 @@ export function EditProductModalV2({
       // Switch to first erroneous tab
       if (newErrors.title || newErrors.price || newErrors.imageUrl) {
         setActiveTab("geral");
-      } else if (newErrors.deliveryValue || newErrors.videos || newErrors.trailer) {
+      } else if (newErrors.deliveryValue || newErrors.videos) {
         setActiveTab("entrega");
       } else if (newErrors.selectedBotId) {
         setActiveTab("catalogo");
@@ -514,14 +442,8 @@ export function EditProductModalV2({
       if (deliveryType === "product_video") {
         formData.set("deliveryValue", selectedVideos[0]?.id || "");
         formData.set("videoIds", JSON.stringify(selectedVideos.map((v) => v.id)));
-        if (trailerVideoId) {
-          formData.set("trailerVideoId", trailerVideoId);
-        } else {
-          formData.set("trailerVideoId", "");
-        }
       } else {
         formData.set("deliveryValue", deliveryValue.trim());
-        formData.set("trailerVideoId", "");
       }
 
       formData.set("catalogScope", catalogScope);
@@ -1087,59 +1009,6 @@ export function EditProductModalV2({
                       </div>
                     )}
                   </div>
-
-                  {/* Trailer Block (Part B) */}
-                  <div className="pt-3 border-t border-[#232326]">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[14px] font-medium text-[#f4f4f5]">Trailer</span>
-                      <span className="text-[12px] text-[#71717a]">· opcional</span>
-                    </div>
-                    <p className="text-[12px] text-[#71717a] mt-0.5 leading-[1.45]">
-                      Use um arquivo separado do vídeo do produto, de 15 a 45 segundos.
-                    </p>
-
-                    {trailerVideo ? (
-                      <div className="mt-2.5 flex items-center justify-between p-2.5 rounded-[10px] bg-[#111113] border border-[#26262a]">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <Film className="w-4 h-4 shrink-0" style={{ color: config.cc }} />
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-[#f4f4f5] truncate">{trailerVideo.title}</p>
-                            {trailerVideo.durationSeconds ? (
-                              <p className="text-[11px] text-[#71717a]">
-                                {Math.floor(trailerVideo.durationSeconds / 60)}:
-                                {String(trailerVideo.durationSeconds % 60).padStart(2, "0")}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTrailerVideoId(null);
-                            setTrailerVideo(null);
-                          }}
-                          aria-label="Remover trailer"
-                          className="p-1.5 text-zinc-500 hover:text-red-400 rounded transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="mt-2.5">
-                        <button
-                          type="button"
-                          onClick={handleOpenLibraryForTrailer}
-                          className="h-[36px] px-3 rounded-[8px] border border-[#2a2a2f] bg-[#111113] hover:border-[#3a3a40] text-[12px] font-medium text-[#f4f4f5] inline-flex items-center gap-1.5 transition-all cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-[#71717a]" />
-                          <span>Escolher da biblioteca</span>
-                        </button>
-                      </div>
-                    )}
-                    {errors.trailer && (
-                      <p className="text-[12px] text-[#f87171] mt-1.5">{errors.trailer}</p>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
@@ -1516,12 +1385,10 @@ export function EditProductModalV2({
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Film className="w-4 h-4" style={{ color: config.cc }} />
-                  {pickerMode === "trailer" ? "Selecionar trailer da biblioteca" : "Selecionar vídeos da biblioteca"}
+                  Selecionar vídeos da biblioteca
                 </h3>
                 <p className="text-xs text-[#9a9aa2] mt-0.5">
-                  {pickerMode === "trailer"
-                    ? "Escolha um vídeo PRONTO de 15 a 45s separado dos vídeos de entrega."
-                    : "Apenas vídeos com status PRONTO podem ser vinculados."}
+                  Apenas vídeos com status PRONTO podem ser vinculados.
                 </p>
               </div>
               <button
@@ -1563,23 +1430,18 @@ export function EditProductModalV2({
                   .map((video) => {
                     const isSelected = selectedInModal.includes(video.id);
                     const isReady = video.status === "READY";
-                    const isAssignedToDelivery = pickerMode === "trailer" && selectedVideos.some((v) => v.id === video.id);
-                    const isDisabled = !isReady || isAssignedToDelivery;
+                    const isDisabled = !isReady;
 
                     return (
                       <div
                         key={video.id}
                         onClick={() => {
                           if (isDisabled) return;
-                          if (pickerMode === "trailer") {
-                            setSelectedInModal(isSelected ? [] : [video.id]);
-                          } else {
-                            setSelectedInModal((prev) =>
-                              prev.includes(video.id)
-                                ? prev.filter((id) => id !== video.id)
-                                : [...prev, video.id]
-                            );
-                          }
+                          setSelectedInModal((prev) =>
+                            prev.includes(video.id)
+                              ? prev.filter((id) => id !== video.id)
+                              : [...prev, video.id]
+                          );
                         }}
                         className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition ${
                           isDisabled
@@ -1603,18 +1465,10 @@ export function EditProductModalV2({
                             </h5>
                             <span
                               className={`text-[10px] font-semibold ${
-                                isAssignedToDelivery
-                                  ? "text-[#f87171]"
-                                  : isReady
-                                  ? "text-[#4ade80]"
-                                  : "text-[#fbbf24]"
+                                isReady ? "text-[#4ade80]" : "text-[#fbbf24]"
                               }`}
                             >
-                              {isAssignedToDelivery
-                                ? "Já usado na entrega"
-                                : isReady
-                                ? "✓ Pronto para entrega"
-                                : "Processando..."}
+                              {isReady ? "✓ Pronto para entrega" : "Processando..."}
                             </span>
                           </div>
                         </div>

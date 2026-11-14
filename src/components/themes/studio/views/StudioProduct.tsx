@@ -10,12 +10,12 @@ import { getMiniAppSession } from "@/lib/telegram/session";
 import { CatalogResolverService } from "@/lib/products/catalog-resolver";
 import { inArray } from "drizzle-orm";
 
-export async function StudioProduct({ 
-  storeSlug, 
+export async function StudioProduct({
+  storeSlug,
   productSlug,
   originBotId: propOriginBotId
-}: { 
-  storeSlug: string; 
+}: {
+  storeSlug: string;
   productSlug: string;
   originBotId?: string | null;
 }) {
@@ -96,42 +96,42 @@ export async function StudioProduct({
   const [firstBot, sameCategoryProducts, storeProducts, accessRecord] = await Promise.all([
     effectiveBotId
       ? db.query.telegramBots.findFirst({
-          where: and(eq(telegramBots.id, effectiveBotId), eq(telegramBots.storeId, store.id))
-        })
+        where: and(eq(telegramBots.id, effectiveBotId), eq(telegramBots.storeId, store.id))
+      })
       : db.query.telegramBots.findFirst({
-          where: eq(telegramBots.storeId, store.id)
-        }),
+        where: eq(telegramBots.storeId, store.id)
+      }),
     product.categoryId && candidateIds.length > 0
       ? db.query.products.findMany({
-          where: and(
-            eq(products.storeId, store.id),
-            eq(products.categoryId, product.categoryId),
-            eq(products.status, 'active'),
-            inArray(products.id, candidateIds)
-          ),
-          limit: 10
-        })
+        where: and(
+          eq(products.storeId, store.id),
+          eq(products.categoryId, product.categoryId),
+          eq(products.status, 'active'),
+          inArray(products.id, candidateIds)
+        ),
+        limit: 10
+      })
       : Promise.resolve([]),
     candidateIds.length > 0
       ? db.query.products.findMany({
-          where: and(
-            eq(products.storeId, store.id),
-            eq(products.status, 'active'),
-            inArray(products.id, candidateIds)
-          ),
-          orderBy: [desc(products.createdAt)],
-          limit: 12
-        })
+        where: and(
+          eq(products.storeId, store.id),
+          eq(products.status, 'active'),
+          inArray(products.id, candidateIds)
+        ),
+        orderBy: [desc(products.createdAt)],
+        limit: 12
+      })
       : Promise.resolve([]),
     session?.customerId
       ? db.query.accesses.findFirst({
-          where: and(
-            eq(accesses.storeId, store.id),
-            eq(accesses.customerId, session.customerId),
-            eq(accesses.productId, product.id),
-            eq(accesses.status, 'ACTIVE')
-          )
-        })
+        where: and(
+          eq(accesses.storeId, store.id),
+          eq(accesses.customerId, session.customerId),
+          eq(accesses.productId, product.id),
+          eq(accesses.status, 'ACTIVE')
+        )
+      })
       : Promise.resolve(null),
   ]);
 
@@ -157,24 +157,6 @@ export async function StudioProduct({
   const now = new Date();
   const hasAccess = Boolean(accessRecord && (!accessRecord.expiresAt || new Date(accessRecord.expiresAt) > now));
 
-  let trailerVideo: { id: string; durationSeconds: number | null } | null = null;
-  if (product.trailerVideoId) {
-    try {
-      const tVid = await db.query.productVideos.findFirst({
-        where: and(eq(productVideos.id, product.trailerVideoId), eq(productVideos.status, "READY")),
-        columns: { id: true, durationSeconds: true },
-      });
-      if (tVid) {
-        trailerVideo = {
-          id: tVid.id,
-          durationSeconds: tVid.durationSeconds,
-        };
-      }
-    } catch (tErr) {
-      console.error("[StudioProduct] Error fetching trailerVideo:", tErr);
-    }
-  }
-
   return (
     <StudioProductClient
       storeSlug={storeSlug}
@@ -186,7 +168,6 @@ export async function StudioProduct({
       hasAccess={hasAccess}
       accessId={accessRecord?.id || null}
       botUsername={botUsername}
-      trailerVideo={trailerVideo}
       recommendedProducts={recommendedProducts.map(p => ({
         ...p,
         price: Number(p.price)

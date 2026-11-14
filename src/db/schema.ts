@@ -190,7 +190,6 @@ export const products = pgTable('products', {
   position: integer('position').notNull().default(0),
   deliveryType: text('delivery_type').default('telegram'), // 'telegram' | 'external'
   deliveryValue: text('delivery_value'),
-  trailerVideoId: uuid('trailer_video_id'),
   catalogScope: text('catalog_scope').notNull().default('STORE_GENERAL'), // 'STORE_GENERAL' | 'BOT_GENERAL' | 'BOT_SPECIFIC'
   sharingMode: text('sharing_mode').notNull().default('EXCLUSIVE'), // 'EXCLUSIVE' | 'ALL_EXISTING' | 'CUSTOM'
   showViews: boolean('show_views').default(false),
@@ -203,7 +202,6 @@ export const products = pgTable('products', {
   storeSlugUnique: unique().on(t.storeId, t.slug),
   storeStatusIdx: index('products_store_status_idx').on(t.storeId, t.status),
   storeCategoryIdx: index('products_store_category_idx').on(t.storeId, t.categoryId),
-  trailerVideoIdx: index('products_trailer_video_id_idx').on(t.trailerVideoId),
   productIdStoreUnique: unique('products_id_store_id_unique').on(t.id, t.storeId),
 }));
 
