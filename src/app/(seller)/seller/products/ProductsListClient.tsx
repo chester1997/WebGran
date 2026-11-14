@@ -21,6 +21,7 @@ import { NewProductModal } from "./NewProductModal";
 import { DeliveryChoiceModal } from "./DeliveryChoiceModal";
 import { NewProductFlowV2 } from "./v2/NewProductFlowV2";
 import { EditProductModal } from "./EditProductModal";
+import { EditProductModalV2 } from "./v2/EditProductModalV2";
 import { deleteProductAction } from "./actions";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
@@ -459,7 +460,11 @@ export default function ProductsListClient({
 
               {/* Action Buttons Footer */}
               <div className="p-2.5 border-t border-white/5 flex gap-2 bg-[#141418] shrink-0">
-                <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
+                {isSuperAdmin ? (
+                  <EditProductModalV2 product={prod} categories={categories} bots={bots} carousels={carousels} />
+                ) : (
+                  <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
+                )}
                 <Button 
                   onClick={() => handleDelete(prod.id, prod.title)}
                   disabled={deletingId === prod.id}
@@ -520,7 +525,11 @@ export default function ProductsListClient({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
+                    {isSuperAdmin ? (
+                      <EditProductModalV2 product={prod} categories={categories} bots={bots} carousels={carousels} />
+                    ) : (
+                      <EditProductModal product={prod} categories={categories} bots={bots} carousels={carousels} />
+                    )}
                     <Button 
                       onClick={() => handleDelete(prod.id, prod.title)}
                       disabled={deletingId === prod.id}

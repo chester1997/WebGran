@@ -10,6 +10,7 @@ import { checkLimit } from "@/lib/entitlements/entitlement-service";
 import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
 import { ProductVideoService } from "@/lib/videos/product-video-service";
+import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
 
 async function processImageUrl(
   rawUrl: string | null,
@@ -137,34 +138,32 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
     } catch {}
   }
 
-  if (deliveryType === "product_video") {
-    if (!Array.isArray(videoIds) || videoIds.length === 0) {
-      return {
-        success: false,
-        error: "Produtos do tipo Vídeo exigem pelo menos um vídeo com status PRONTO associado.",
-      };
-    }
+  // Trailer Video Handling (Admin Only)
+  const isSuperAdmin = ProductManualDeepLinkService.isAuthorized(seller?.role, seller);
+  const rawTrailerVideoId = (formData.get("trailerVideoId") as string)?.trim() || null;
+  let trailerVideoId: string | null = null;
 
-    try {
-      for (const vid of videoIds) {
-        const v = await db.query.productVideos.findFirst({
-          where: and(eq(productVideos.id, vid), eq(productVideos.storeId, store.id)),
-        });
-        if (!v) {
-          return { success: false, error: "Vídeo não encontrado ou não pertence a esta loja." };
-        }
-        if (v.status !== "READY") {
-          return {
-            success: false,
-            error: `O vídeo "${v.title}" ainda não está pronto para entrega (status: ${v.status}).`,
-          };
-        }
+  if (rawTrailerVideoId) {
+    if (!isSuperAdmin) {
+      return { success: false, error: "Apenas administradores podem configurar trailer de produto." };
+    }
+    if (deliveryType === "product_video") {
+      if (Array.isArray(videoIds) && videoIds.includes(rawTrailerVideoId)) {
+        return { success: false, error: "O trailer precisa ser um arquivo separado do vídeo do produto." };
       }
-    } catch (vidErr: any) {
-      console.error("[createProductAction] Erro ao validar vídeos:", vidErr);
-      return { success: false, error: "Erro ao consultar vídeos da biblioteca. Tente novamente." };
+      const trailerVid = await db.query.productVideos.findFirst({
+        where: and(eq(productVideos.id, rawTrailerVideoId), eq(productVideos.storeId, store.id)),
+      });
+      if (!trailerVid) {
+        return { success: false, error: "Vídeo de trailer não encontrado ou não pertence a esta loja." };
+      }
+      if (trailerVid.status !== "READY") {
+        return { success: false, error: `O vídeo de trailer "${trailerVid.title}" ainda não está pronto para uso.` };
+      }
+      trailerVideoId = rawTrailerVideoId;
     }
   }
+
 
   const rawScope = formData.get("catalogScope") as string | null;
   let botId = (formData.get("botId") as string) || null;
@@ -325,6 +324,7 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
         bannerUrl,
         deliveryType,
         deliveryValue,
+        trailerVideoId,
         showViews,
         viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
         showFire,
@@ -433,6 +433,16 @@ export async function updateProductAction(productId: string, formData: FormData)
     };
   }
 
+  // Trailer Video Handling (Admin Only) - Pre-check permissions
+  const isSuperAdminUpdate = ProductManualDeepLinkService.isAuthorized(seller?.role, seller);
+  const rawTrailerVideoId = (formData.get("trailerVideoId") as string)?.trim() || null;
+  const hasTrailerField = formData.has("trailerVideoId");
+  let trailerVideoIdToSet: string | null | undefined = undefined;
+
+  if (rawTrailerVideoId && !isSuperAdminUpdate) {
+    return { success: false, error: "Apenas administradores podem configurar trailer de produto." };
+  }
+
   if (deliveryType === "product_video") {
     const videoIdsRaw = (formData.get("videoIds") as string) || (formData.get("selectedVideoIds") as string);
     if (videoIdsRaw) {
@@ -466,6 +476,33 @@ export async function updateProductAction(productId: string, formData: FormData)
       return { success: false, error: "Erro ao consultar vídeos vinculados ao produto." };
     }
   }
+
+  if (rawTrailerVideoId) {
+    if (deliveryType === "product_video") {
+      const assignedVideos = await ProductVideoService.listProductVideos(store.id, productId);
+      const assignedIds = assignedVideos.map((v) => v.id);
+      if (assignedIds.includes(rawTrailerVideoId)) {
+        return { success: false, error: "O trailer precisa ser um arquivo separado do vídeo do produto." };
+      }
+      const trailerVid = await db.query.productVideos.findFirst({
+        where: and(eq(productVideos.id, rawTrailerVideoId), eq(productVideos.storeId, store.id)),
+      });
+      if (!trailerVid) {
+        return { success: false, error: "Vídeo de trailer não encontrado ou não pertence a esta loja." };
+      }
+      if (trailerVid.status !== "READY") {
+        return { success: false, error: `O vídeo de trailer "${trailerVid.title}" ainda não está pronto para uso.` };
+      }
+      trailerVideoIdToSet = rawTrailerVideoId;
+    } else {
+      trailerVideoIdToSet = null;
+    }
+  } else if (hasTrailerField && isSuperAdminUpdate) {
+    trailerVideoIdToSet = null;
+  } else if (deliveryType !== "product_video") {
+    trailerVideoIdToSet = null;
+  }
+
 
   const rawScope = formData.get("catalogScope") as string | null;
   let botId = (formData.get("botId") as string) || null;
@@ -618,6 +655,7 @@ export async function updateProductAction(productId: string, formData: FormData)
       bannerUrl,
       deliveryType,
       deliveryValue,
+      ...(trailerVideoIdToSet !== undefined ? { trailerVideoId: trailerVideoIdToSet } : {}),
       showViews,
       viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
       showFire,
