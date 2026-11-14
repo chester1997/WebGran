@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NewProductModal } from "./NewProductModal";
 import { DeliveryChoiceModal } from "./DeliveryChoiceModal";
+import { NewProductFlowV2 } from "./v2/NewProductFlowV2";
 import { EditProductModal } from "./EditProductModal";
 import { deleteProductAction } from "./actions";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
@@ -536,13 +537,17 @@ export default function ProductsListClient({
           </div>
         </div>
       )}
-      {/* Modal de Escolha da Modalidade de Entrega (Exclusivo para SUPER_ADMIN) */}
+      {/* Novo Fluxo de 2 Passos: Escolha de Entrega + Cadastro do Produto (Exclusivo para ADMIN / Proprietário) */}
       {isSuperAdmin && (
-        <DeliveryChoiceModal 
+        <NewProductFlowV2
           isOpen={deliveryModalOpen}
           onClose={() => setDeliveryModalOpen(false)}
+          categories={categories}
+          bots={bots}
+          carousels={carousels}
         />
       )}
+
     </div>
   );
 }

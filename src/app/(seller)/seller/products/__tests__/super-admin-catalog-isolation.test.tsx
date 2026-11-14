@@ -52,14 +52,15 @@ vi.mock("@/components/layout/SellerPageHeader", () => ({
   ),
 }));
 
-// Mock do DeliveryChoiceModal para validação de montagem no DOM
-vi.mock("../DeliveryChoiceModal", () => ({
-  DeliveryChoiceModal: ({ isOpen }: any) => (
-    <div data-testid="mock-delivery-choice-modal" data-is-open={String(isOpen)}>
-      COMO DESEJA ENTREGAR (Grupo / Canal Telegram, Link externo, Vídeo do Produto)
+// Mock do NewProductFlowV2 para validação de montagem no DOM
+vi.mock("../v2/NewProductFlowV2", () => ({
+  NewProductFlowV2: ({ isOpen }: any) => (
+    <div data-testid="mock-new-product-flow-v2" data-is-open={String(isOpen)}>
+      NOVO PRODUTO · PASSO 1 DE 2 (Como deseja entregar?, Grupo ou canal, Link externo, Vídeo do produto)
     </div>
   ),
 }));
+
 
 // Mock do EditProductModal
 vi.mock("../EditProductModal", () => ({
@@ -262,14 +263,15 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       // Botão reto experimental
       expect(html).toContain("h-10 px-4 sm:px-5 rounded-lg bg-blue-600");
 
-      // Modal de escolha de entrega presente no DOM
-      expect(html).toContain("COMO DESEJA ENTREGAR");
-      expect(html).toContain("Grupo / Canal Telegram");
+      // Modal de escolha de entrega presente no DOM (Novo Fluxo V2)
+      expect(html).toContain("NOVO PRODUTO · PASSO 1 DE 2");
+      expect(html).toContain("Como deseja entregar?");
+      expect(html).toContain("Grupo ou canal");
       expect(html).toContain("Link externo");
-      expect(html).toContain("Vídeo do Produto");
+      expect(html).toContain("Vídeo do produto");
     });
 
-    it("3.2 Conta proprietária com catálogo vazio: botão do estado vazio abre DeliveryChoiceModal", () => {
+    it("3.2 Conta proprietária com catálogo vazio: botão do estado vazio abre NewProductFlowV2", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
           storeName="Loja Teste"
@@ -283,7 +285,8 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       );
 
       expect(html).toContain("Nenhum produto encontrado");
-      expect(html).toContain("COMO DESEJA ENTREGAR");
+      expect(html).toContain("NOVO PRODUTO · PASSO 1 DE 2");
+      expect(html).toContain("Como deseja entregar?");
     });
 
     it("3.3 Cards de produtos não exibem botão Deep Link, mantendo exclusivamente Editar e Excluir", () => {
@@ -349,7 +352,7 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       );
 
       expect(html).toContain("Produtos");
-      expect(html).not.toContain("COMO DESEJA ENTREGAR");
+      expect(html).not.toContain("NOVO PRODUTO · PASSO 1 DE 2");
     });
 
     it("4.3 Lojista com catálogo vazio: abre formulário clássico NewProductModal", () => {
@@ -366,7 +369,7 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       );
 
       expect(html).toContain("Nenhum produto encontrado");
-      expect(html).not.toContain("COMO DESEJA ENTREGAR");
+      expect(html).not.toContain("NOVO PRODUTO · PASSO 1 DE 2");
     });
   });
 
@@ -374,7 +377,7 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
   // 5. ABA PRODUTOS DO MÓDULO BOTS (/seller/bots/[botId]?tab=produtos)
   // =========================================================================
   describe("5. Aba Produtos no Módulo Bots (/seller/bots/[botId]?tab=produtos)", () => {
-    it("5.1 Proprietário na aba Produtos do bot: exibe botão experimental e monta DeliveryChoiceModal", () => {
+    it("5.1 Proprietário na aba Produtos do bot: exibe botão experimental e monta NewProductFlowV2", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
           storeName="Loja Teste"
@@ -395,14 +398,15 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       // 2. Botão experimental com cantos retos (rounded-lg) que abre o modal de entrega
       expect(html).toContain("Novo Produto");
 
-      // 3. DeliveryChoiceModal DEVE EXISTIR no DOM
-      expect(html).toContain("COMO DESEJA ENTREGAR");
-      expect(html).toContain("Grupo / Canal Telegram");
+      // 3. NewProductFlowV2 DEVE EXISTIR no DOM
+      expect(html).toContain("NOVO PRODUTO · PASSO 1 DE 2");
+      expect(html).toContain("Como deseja entregar?");
+      expect(html).toContain("Grupo ou canal");
       expect(html).toContain("Link externo");
-      expect(html).toContain("Vídeo do Produto");
+      expect(html).toContain("Vídeo do produto");
     });
 
-    it("5.2 Proprietário na aba Produtos do bot com catálogo vazio: botão do estado vazio abre DeliveryChoiceModal", () => {
+    it("5.2 Proprietário na aba Produtos do bot com catálogo vazio: botão do estado vazio abre NewProductFlowV2", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
           storeName="Loja Teste"
@@ -419,9 +423,9 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       expect(html).toContain("Nenhum produto encontrado");
       expect(html).toContain("Cadastre seu primeiro produto");
 
-      // DeliveryChoiceModal DEVE estar no DOM para o proprietário mesmo com 0 produtos
-      expect(html).toContain("COMO DESEJA ENTREGAR");
-      expect(html).toContain("Grupo / Canal Telegram");
+      // NewProductFlowV2 DEVE estar no DOM para o proprietário mesmo com 0 produtos
+      expect(html).toContain("NOVO PRODUTO · PASSO 1 DE 2");
+      expect(html).toContain("Como deseja entregar?");
     });
 
     it("5.3 Outro ADMIN na aba Produtos do bot: recebe sub-cabeçalho clássico e abre NewProductModal", () => {
@@ -443,12 +447,12 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       expect(html).toContain("bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25");
       expect(html).toContain("Novo Produto");
 
-      // DeliveryChoiceModal NÃO pode estar no DOM
-      expect(html).not.toContain("COMO DESEJA ENTREGAR");
-      expect(html).not.toContain("Grupo / Canal Telegram");
+      // NewProductFlowV2 NÃO pode estar no DOM
+      expect(html).not.toContain("NOVO PRODUTO · PASSO 1 DE 2");
+      expect(html).not.toContain("Como deseja entregar?");
     });
 
-    it("5.4 Lojista comum (SELLER) na aba Produtos do bot: recebe versão clássica sem DeliveryChoiceModal", () => {
+    it("5.4 Lojista comum (SELLER) na aba Produtos do bot: recebe versão clássica sem NewProductFlowV2", () => {
       const html = renderToStaticMarkup(
         <ProductsListClient
           storeName="Loja Teste"
@@ -464,7 +468,7 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
 
       expect(html).toContain("Catálogo de Produtos");
       expect(html).toContain("bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25");
-      expect(html).not.toContain("COMO DESEJA ENTREGAR");
+      expect(html).not.toContain("NOVO PRODUTO · PASSO 1 DE 2");
     });
 
     it("5.5 Lojista comum com catálogo vazio na aba Produtos: botão vazio abre NewProductModal clássico", () => {
@@ -482,7 +486,7 @@ describe("WEBGRAN — Autorização da Conta Proprietária por ID ou E-mail + Ad
       );
 
       expect(html).toContain("Nenhum produto encontrado");
-      expect(html).not.toContain("COMO DESEJA ENTREGAR");
+      expect(html).not.toContain("NOVO PRODUTO · PASSO 1 DE 2");
     });
   });
 });
