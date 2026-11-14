@@ -65,6 +65,17 @@ export function NewProductFlowV2({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Lock body scroll while modal is open, without affecting modal's internal scroll
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+
   // When step 1 delivery type changes, we record it
   const handleSelectType = (type: DeliveryTypeV2) => {
     setFormState((prev) => {
@@ -181,7 +192,7 @@ export function NewProductFlowV2({
   const content = (
     <div
       data-testid="new-product-flow-v2-modal"
-      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget && !saving) {
           onClose();
@@ -194,7 +205,7 @@ export function NewProductFlowV2({
            ===================================================================== */
         <div
           data-testid="step-1-delivery-type"
-          className="relative w-full sm:max-w-[760px] bg-[#111113] border-t sm:border border-[#26262a] rounded-t-[24px] sm:rounded-2xl p-4 sm:p-7 shadow-2xl overflow-hidden transition-all"
+          className="relative w-full sm:max-w-[760px] max-h-[92dvh] sm:max-h-[90dvh] bg-[#111113] border-t sm:border border-[#26262a] rounded-t-[24px] sm:rounded-2xl p-4 sm:p-7 shadow-2xl overflow-hidden flex flex-col transition-all"
           onClick={(e) => e.stopPropagation()}
         >
           <DeliveryTypeStep
@@ -210,7 +221,7 @@ export function NewProductFlowV2({
            ===================================================================== */
         <div
           data-testid="step-2-product-details"
-          className="relative w-full sm:max-w-[780px] max-h-[92vh] sm:max-h-[88vh] bg-[#111113] border-t sm:border border-[#26262a] rounded-t-[24px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all"
+          className="relative w-full sm:max-w-[780px] h-[92dvh] sm:h-auto max-h-[92dvh] sm:max-h-[90dvh] bg-[#111113] border-t sm:border border-[#26262a] rounded-t-[24px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all"
           onClick={(e) => e.stopPropagation()}
         >
           <ProductDetailsStep

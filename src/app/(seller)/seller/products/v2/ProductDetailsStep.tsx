@@ -248,11 +248,14 @@ export function ProductDetailsStep({
       const count = Object.keys(newErrors).length;
       setFooterError(count === 1 ? "1 campo precisa de ajuste" : `${count} campos precisam de ajuste`);
 
-      // Scroll to first error smoothly
+      // Scroll to first error smoothly inside modal body container
       if (bodyRef.current) {
-        const firstErrorEl = bodyRef.current.querySelector("[data-error='true']");
+        const firstErrorEl = bodyRef.current.querySelector("[data-error='true']") as HTMLElement | null;
         if (firstErrorEl) {
-          firstErrorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          const parentTop = bodyRef.current.getBoundingClientRect().top;
+          const elemTop = firstErrorEl.getBoundingClientRect().top;
+          const offset = elemTop - parentTop + bodyRef.current.scrollTop - 20;
+          bodyRef.current.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
         }
       }
       return;
@@ -266,7 +269,7 @@ export function ProductDetailsStep({
   return (
     <div
       style={{ ["--cc" as any]: config.cc }}
-      className="w-full flex flex-col h-full select-none text-[#f4f4f5]"
+      className="w-full flex-1 min-h-0 flex flex-col select-none text-[#f4f4f5] overflow-hidden"
     >
       {/* =========================================================================
           CABEÇALHO FIXO
@@ -322,8 +325,13 @@ export function ProductDetailsStep({
          ========================================================================= */}
       <div
         ref={bodyRef}
-        className="flex-1 overflow-y-auto px-3.5 py-3 sm:px-[22px] sm:py-3 space-y-3 custom-scrollbar"
+        style={{
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "touch",
+        }}
+        className="flex-[1_1_auto] min-h-0 overflow-y-auto px-3.5 py-3 sm:px-[22px] sm:py-3 space-y-3 custom-scrollbar"
       >
+
         {serverError && (
           <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-[#f87171] text-xs flex items-center gap-2.5">
             <AlertTriangle className="w-4 h-4 shrink-0 text-[#f87171]" />
@@ -1095,7 +1103,7 @@ export function ProductDetailsStep({
          ========================================================================= */}
       {isLibraryPickerOpen && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-[#111113] border border-[#26262a] rounded-[18px] max-w-xl w-full p-4 sm:p-5 flex flex-col max-h-[88vh] shadow-2xl animate-in zoom-in-95">
+          <div className="bg-[#111113] border border-[#26262a] rounded-[18px] max-w-xl w-full p-4 sm:p-5 flex flex-col max-h-[88dvh] shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-[#232326]">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">

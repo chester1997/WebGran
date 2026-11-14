@@ -231,9 +231,44 @@ describe("WEBGRAN — Novo Fluxo 'Novo Produto' (Admin / Proprietário)", () => 
       expect(html).toContain("ONDE APARECE");
       // Seção 4: Mini App Showcase
       expect(html).toContain("Vitrine do mini app");
+    });
 
+    it("2.5 Garante a estrutura correta de layout e rolagem (header fixo, corpo com min-h-0 e rodapé fixo)", () => {
+      const state: NewProductFormStateV2 = {
+        ...INITIAL_FORM_STATE,
+        deliveryType: "telegram",
+      };
+
+      const html = renderToStaticMarkup(
+        <ProductDetailsStep
+          state={state}
+          setState={vi.fn()}
+          onBack={vi.fn()}
+          onSave={vi.fn()}
+          onClose={vi.fn()}
+          categories={mockCategories}
+          bots={mockBots}
+          carousels={mockCarousels}
+          saving={false}
+          saveSuccess={false}
+          serverError={null}
+        />
+      );
+
+      // Cabeçalho deve ser shrink-0
+      expect(html).toContain("shrink-0 p-5");
+
+      // Corpo rolável deve ter min-h-0 e overflow-y-auto para permitir scroll flex
+      expect(html).toContain("min-h-0 overflow-y-auto");
+      expect(html).toContain("overscroll-behavior:contain");
+
+      // Rodapés devem ser shrink-0
+      expect(html).toContain("hidden sm:flex shrink-0");
+      expect(html).toContain("flex sm:hidden shrink-0");
+      expect(html).toContain("safe-area-inset-bottom");
     });
   });
+
 
 
   // =========================================================================

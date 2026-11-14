@@ -24,7 +24,7 @@ export function DeliveryTypeStep({
       {/* =========================================================================
           DESKTOP VIEW (>= 640px)
          ========================================================================= */}
-      <div className="hidden sm:flex flex-col w-full">
+      <div className="hidden sm:flex flex-col w-full flex-1 min-h-0">
         {/* Cabeçalho Desktop */}
         <div className="flex items-start justify-between mb-[18px]">
           <div>
@@ -163,7 +163,7 @@ export function DeliveryTypeStep({
       {/* =========================================================================
           MOBILE VIEW (< 640px) - Bottom Sheet
          ========================================================================= */}
-      <div className="flex sm:hidden flex-col w-full pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="flex sm:hidden flex-col w-full flex-1 min-h-0 pb-[env(safe-area-inset-bottom,0px)]">
         {/* Alça no topo */}
         <div className="w-9 h-1 rounded-[2px] bg-[#3a3a40] mx-auto mt-0.5 mb-3 shrink-0" />
 
@@ -194,7 +194,11 @@ export function DeliveryTypeStep({
         <div
           role="radiogroup"
           aria-label="Escolha a forma de entrega"
-          className="flex flex-col gap-2.5 overflow-y-auto max-h-[58dvh] custom-scrollbar pr-0.5"
+          style={{
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
+          }}
+          className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-y-auto max-h-[58dvh] custom-scrollbar pr-0.5"
         >
           {/* ITEM MOBILE 1 */}
           <DeliveryCardMobile
