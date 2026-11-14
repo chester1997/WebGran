@@ -1,6 +1,6 @@
 import React from "react";
 import { db } from "@/db";
-import { products, telegramBots, accesses } from "@/db/schema";
+import { products, telegramBots, accesses, productVideos } from "@/db/schema";
 import { eq, and, ne, desc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, PackageX } from "lucide-react";
@@ -157,6 +157,23 @@ export async function StudioProduct({
   const now = new Date();
   const hasAccess = Boolean(accessRecord && (!accessRecord.expiresAt || new Date(accessRecord.expiresAt) > now));
 
+  let trailerVideo: { id: string; durationSeconds: number | null } | null = null;
+  if (product.trailerVideoId) {
+    try {
+      const tVid = await db.query.productVideos.findFirst({
+        where: and(eq(productVideos.id, product.trailerVideoId), eq(productVideos.status, "READY")),
+        columns: { id: true, durationSeconds: true },
+      });
+      if (tVid) {
+        trailerVideo = {
+          id: tVid.id,
+          durationSeconds: tVid.durationSeconds,
+        };
+      }
+    } catch (tErr) {
+      console.error("[StudioProduct] Error fetching trailerVideo:", tErr);
+    }
+  }
 
   return (
     <StudioProductClient
@@ -169,6 +186,7 @@ export async function StudioProduct({
       hasAccess={hasAccess}
       accessId={accessRecord?.id || null}
       botUsername={botUsername}
+      trailerVideo={trailerVideo}
       recommendedProducts={recommendedProducts.map(p => ({
         ...p,
         price: Number(p.price)

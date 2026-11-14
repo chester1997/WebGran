@@ -16,6 +16,8 @@ export interface NewProductFormStateV2 {
   // Step 2 - Section 1: Delivery
   deliveryValue: string; // Telegram ID or External Link
   selectedVideos: VideoItemV2[]; // For product_video
+  trailerVideoId: string | null;
+  trailerVideo: VideoItemV2 | null;
 
   // Step 2 - Section 2: Product
   title: string;
@@ -110,6 +112,8 @@ export const INITIAL_FORM_STATE: NewProductFormStateV2 = {
   deliveryType: "telegram",
   deliveryValue: "",
   selectedVideos: [],
+  trailerVideoId: null,
+  trailerVideo: null,
   title: "",
   description: "",
   price: "",
