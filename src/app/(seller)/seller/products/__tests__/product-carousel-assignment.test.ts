@@ -29,6 +29,7 @@ const { mockDb } = vi.hoisted(() => {
       insert: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      transaction: vi.fn(async (cb: any) => cb(mockDb)),
     },
   };
 });

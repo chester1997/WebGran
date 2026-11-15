@@ -29,7 +29,8 @@ export interface NewProductFormStateV2 {
   // Step 2 - Section 3: Where it appears
   catalogScope: "STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC";
   selectedBotId: string;
-  sharingMode: "EXCLUSIVE" | "ALL_EXISTING";
+  targetBotIds: string[];
+  sharingMode: "EXCLUSIVE" | "ALL_EXISTING" | "CUSTOM";
   categoryId: string;
   status: "active" | "draft";
   badge: string;
@@ -119,6 +120,7 @@ export const INITIAL_FORM_STATE: NewProductFormStateV2 = {
   bannerUrl: "",
   catalogScope: "STORE_GENERAL",
   selectedBotId: "",
+  targetBotIds: [],
   sharingMode: "EXCLUSIVE",
   categoryId: "",
   status: "active",

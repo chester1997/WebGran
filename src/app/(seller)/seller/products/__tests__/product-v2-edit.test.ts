@@ -44,6 +44,7 @@ vi.mock("@/db", () => {
         findMany: vi.fn(() => Promise.resolve([])),
       },
     },
+    transaction: vi.fn(async (cb: any) => cb(mockDb)),
   };
   return { db: mockDb };
 });

@@ -29,6 +29,7 @@ import {
   NewProductFormStateV2,
   VideoItemV2,
 } from "./types";
+import { BotPicker } from "./BotPicker";
 import { CarouselOption } from "../ProductCarouselsPicker";
 
 interface ProductDetailsStepProps {
@@ -82,6 +83,20 @@ export function ProductDetailsStep({
 
   // Image upload loading
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Auto-inicializar targetBotIds se catalogScope for BOT_SPECIFIC e houver selectedBotId
+  useEffect(() => {
+    if (
+      state.catalogScope === "BOT_SPECIFIC" &&
+      state.selectedBotId &&
+      (!state.targetBotIds || state.targetBotIds.length === 0)
+    ) {
+      setState((prev) => ({
+        ...prev,
+        targetBotIds: prev.selectedBotId ? [prev.selectedBotId] : [],
+      }));
+    }
+  }, [state.catalogScope, state.selectedBotId, state.targetBotIds, setState]);
 
   // Clear specific error on change helper
   const clearError = (field: string) => {
@@ -238,8 +253,13 @@ export function ProductDetailsStep({
     }
 
     // 4. Specific Bot Validation
-    if (state.catalogScope === "BOT_SPECIFIC" && !state.selectedBotId) {
-      newErrors.selectedBotId = "Selecione o bot proprietário.";
+    if (state.catalogScope === "BOT_SPECIFIC") {
+      if (!state.selectedBotId) {
+        newErrors.selectedBotId = "Selecione o bot proprietário.";
+      }
+      if (!state.targetBotIds || state.targetBotIds.length === 0) {
+        newErrors.selectedBots = "Selecione pelo menos um bot para disponibilizar o produto.";
+      }
     }
 
     setErrors(newErrors);
@@ -763,70 +783,41 @@ export function ProductDetailsStep({
               </div>
             )}
 
-            {/* Se Bot específico: Bot proprietário + Compartilhamento */}
+            {/* Se Bot específico: Bot proprietário + Seleção Múltipla de Bots */}
             {state.catalogScope === "BOT_SPECIFIC" && (
-              <div className="mt-3 pt-3 border-t border-[#26262a] space-y-3">
-                <div data-error={Boolean(errors.selectedBotId)}>
-                  <label className="block text-[12px] font-medium text-[#a1a1aa] mb-1.5">
-                    Bot proprietário
-                  </label>
-                  <select
-                    value={state.selectedBotId}
-                    onChange={(e) => {
-                      setState((prev) => ({ ...prev, selectedBotId: e.target.value }));
-                      clearError("selectedBotId");
-                    }}
-                    className={`w-full h-[44px] sm:h-[40px] bg-[#111113] rounded-[10px] px-3 text-[15px] sm:text-[14px] text-[#f4f4f5] focus:outline-none appearance-none cursor-pointer border ${
-                      errors.selectedBotId ? "border-[#f87171]" : "border-[#2a2a2f] focus:border-[var(--cc)]"
-                    }`}
-                  >
-                    <option value="">Selecione um bot...</option>
-                    {bots.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.displayName || `@${b.username}`}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.selectedBotId && (
-                    <p className="text-[12px] text-[#f87171] mt-1.5">{errors.selectedBotId}</p>
-                  )}
-                </div>
-
-                {/* Compartilhamento */}
-                <div>
-                  <label className="block text-[12px] font-medium text-[#a1a1aa] mb-1.5">
-                    Compartilhamento
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setState((prev) => ({ ...prev, sharingMode: "EXCLUSIVE" }))}
-                      className={`p-2.5 rounded-[10px] border text-xs text-left cursor-pointer transition-colors ${
-                        state.sharingMode === "EXCLUSIVE"
-                          ? "border-[#4ade80] bg-[#4ade80]/10 text-[#4ade80] font-medium"
-                          : "border-[#2a2a2f] bg-[#111113] text-[#9a9aa2]"
-                      }`}
-                    >
-                      ✓ Somente este bot
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setState((prev) => ({ ...prev, sharingMode: "ALL_EXISTING" }))}
-                      className={`p-2.5 rounded-[10px] border text-xs text-left cursor-pointer transition-colors ${
-                        state.sharingMode === "ALL_EXISTING"
-                          ? "border-[var(--cc)] bg-[var(--cc)]/10 text-[#f4f4f5] font-medium"
-                          : "border-[#2a2a2f] bg-[#111113] text-[#9a9aa2]"
-                      }`}
-                    >
-                      🌐 Todos os bots existentes hoje
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-[#71717a] mt-1.5 leading-snug">
-                    {state.sharingMode === "ALL_EXISTING"
-                      ? "O produto será visível nos bots atuais da loja. Novos bots criados posteriormente não receberão automaticamente."
-                      : "Visível exclusivamente no Mini App do bot proprietário."}
-                  </p>
-                </div>
+              <div
+                className="mt-3 pt-3 border-t border-[#26262a] space-y-3"
+                data-error={Boolean(errors.selectedBotId || errors.selectedBots)}
+              >
+                <BotPicker
+                  bots={bots}
+                  selectedBotId={state.selectedBotId}
+                  onChangeSelectedBotId={(id) => {
+                    setState((prev) => ({
+                      ...prev,
+                      selectedBotId: id,
+                      targetBotIds:
+                        id && (!prev.targetBotIds || !prev.targetBotIds.includes(id))
+                          ? [...(prev.targetBotIds || []), id]
+                          : prev.targetBotIds || [],
+                    }));
+                    clearError("selectedBotId");
+                  }}
+                  selectedBotIds={state.targetBotIds || []}
+                  onChangeSelectedBotIds={(updater) => {
+                    setState((prev) => {
+                      const current = prev.targetBotIds || [];
+                      const next = typeof updater === "function" ? updater(current) : updater;
+                      return {
+                        ...prev,
+                        targetBotIds: next,
+                      };
+                    });
+                    clearError("selectedBots");
+                  }}
+                  errors={errors}
+                  onClearError={clearError}
+                />
               </div>
             )}
           </div>

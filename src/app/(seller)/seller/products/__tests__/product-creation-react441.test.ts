@@ -21,20 +21,23 @@ vi.mock("@/db", () => {
   const selectFrom = vi.fn(() => ({ where: selectWhere }));
   const select = vi.fn(() => ({ from: selectFrom }));
 
-  return {
-    db: {
-      select,
-      insert,
-      update,
-      delete: deleteFn,
-      query: {
-        products: { findFirst: vi.fn(), findMany: vi.fn() },
-        productVideos: { findFirst: vi.fn(), findMany: vi.fn() },
-        productCarousels: { findFirst: vi.fn(), findMany: vi.fn() },
-        carouselProducts: { findMany: vi.fn() },
-        telegramBots: { findFirst: vi.fn(), findMany: vi.fn() },
-      },
+  const mockDbObj: any = {
+    select,
+    insert,
+    update,
+    delete: deleteFn,
+    query: {
+      products: { findFirst: vi.fn(), findMany: vi.fn() },
+      productVideos: { findFirst: vi.fn(), findMany: vi.fn() },
+      productCarousels: { findFirst: vi.fn(), findMany: vi.fn() },
+      carouselProducts: { findMany: vi.fn() },
+      telegramBots: { findFirst: vi.fn(), findMany: vi.fn() },
     },
+  };
+  mockDbObj.transaction = vi.fn(async (cb: any) => cb(mockDbObj));
+
+  return {
+    db: mockDbObj,
   };
 });
 

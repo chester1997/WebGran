@@ -146,8 +146,44 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
     rawScope ? (rawScope as any) : botId ? "BOT_SPECIFIC" : "STORE_GENERAL";
   const sharingMode = ((formData.get("sharingMode") as string) || "EXCLUSIVE") as "EXCLUSIVE" | "ALL_EXISTING" | "CUSTOM";
 
+  const rawTargetBotIds = formData.get("targetBotIds") as string | null;
+  let targetBotIds: string[] = [];
+  if (rawTargetBotIds) {
+    try {
+      const parsed = JSON.parse(rawTargetBotIds);
+      if (Array.isArray(parsed)) targetBotIds = parsed;
+    } catch {
+      targetBotIds = formData.getAll("targetBotIds").map(String);
+    }
+  } else {
+    targetBotIds = formData.getAll("targetBotIds").map(String);
+  }
+
+  // Normalizar targetBotIds sem duplicatas ou valores vazios
+  targetBotIds = Array.from(
+    new Set(
+      targetBotIds
+        .map((id) => (typeof id === "string" ? id.trim() : String(id || "").trim()))
+        .filter((id) => id.length > 0)
+    )
+  );
+
+  // Validação de segurança no servidor: seleção múltipla / customizada é exclusiva do proprietário
+  const hasCustomBotTargeting =
+    sharingMode === "CUSTOM" ||
+    targetBotIds.length > 1 ||
+    (targetBotIds.length === 1 && Boolean(botId) && targetBotIds[0] !== botId);
+
+  if (hasCustomBotTargeting) {
+    const isOwner = ProductManualDeepLinkService.isAuthorized(seller.role, seller);
+    if (!isOwner) {
+      return { success: false, error: "A seleção múltipla de bots é exclusiva da conta proprietária." };
+    }
+  }
+
   if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
     botId = null;
+    targetBotIds = [];
   } else if (catalogScope === "BOT_SPECIFIC") {
     if (!botId) {
       return { success: false, error: "Para cadastrar no modo Bot Específico, selecione o bot proprietário." };
@@ -157,6 +193,19 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
     });
     if (!botRecord) {
       return { success: false, error: "O bot selecionado não pertence a esta loja." };
+    }
+
+    if (targetBotIds.length > 0) {
+      const validStoreBots = await db.query.telegramBots.findMany({
+        where: and(
+          eq(telegramBots.storeId, store.id),
+          inArray(telegramBots.id, targetBotIds)
+        ),
+        columns: { id: true },
+      });
+      if (validStoreBots.length !== targetBotIds.length) {
+        return { success: false, error: "Um ou mais bots selecionados não pertencem a esta loja." };
+      }
     }
   }
 
@@ -275,61 +324,69 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
   const fireCountStr = formData.get("fireCount") as string;
   const fireCount = fireCountStr ? parseInt(fireCountStr, 10) : 0;
 
+  if (typeof db.transaction !== "function") {
+    console.error("[createProductAction] db.transaction não disponível para persistência atômica.");
+    return {
+      success: false,
+      error: "O serviço de banco de dados não suporta transações atômicas no momento. Tente novamente.",
+    };
+  }
+
   let createdProduct: any;
   try {
-    const [inserted] = await db
-      .insert(products)
-      .values({
+    const { ProductVisibilityService } = await import("@/lib/products/catalog-resolver");
+
+    createdProduct = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(products)
+        .values({
+          storeId: store.id,
+          botId: botId || null,
+          catalogScope,
+          sharingMode,
+          title,
+          slug,
+          shortDescription,
+          description,
+          price: price.toString(),
+          compareAtPrice,
+          categoryId: categoryId || null,
+          status,
+          duration,
+          badge,
+          coverUrl,
+          bannerUrl,
+          deliveryType,
+          deliveryValue,
+          showViews,
+          viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
+          showFire,
+          fireCount: isNaN(fireCount) ? 0 : fireCount,
+          position: 0,
+        })
+        .returning();
+
+      await ProductVisibilityService.syncProductVisibility(tx, {
         storeId: store.id,
-        botId: botId || null,
+        productId: inserted.id,
+        botId,
         catalogScope,
         sharingMode,
-        title,
-        slug,
-        shortDescription,
-        description,
-        price: price.toString(),
-        compareAtPrice,
-        categoryId: categoryId || null,
-        status,
-        duration,
-        badge,
-        coverUrl,
-        bannerUrl,
+        targetBotIds,
         deliveryType,
         deliveryValue,
-        showViews,
-        viewsCount: isNaN(viewsCount) ? 0 : viewsCount,
-        showFire,
-        fireCount: isNaN(fireCount) ? 0 : fireCount,
-        position: 0,
-      })
-      .returning();
-    createdProduct = inserted;
+      });
 
-    const rawTargetBotIds = formData.get("targetBotIds") as string | null;
-    let targetBotIds: string[] = [];
-    if (rawTargetBotIds) {
-      try {
-        const parsed = JSON.parse(rawTargetBotIds);
-        if (Array.isArray(parsed)) targetBotIds = parsed;
-      } catch {
-        targetBotIds = formData.getAll("targetBotIds").map(String);
+      if (selectedCarouselIds.length > 0) {
+        const recordsToInsert = selectedCarouselIds.map((cId, idx) => ({
+          carouselId: cId,
+          productId: inserted.id,
+          position: idx,
+        }));
+        await tx.insert(carouselProducts).values(recordsToInsert);
       }
-    } else {
-      targetBotIds = formData.getAll("targetBotIds").map(String);
-    }
 
-    const { ProductVisibilityService } = await import("@/lib/products/catalog-resolver");
-    await ProductVisibilityService.syncProductVisibility(db, {
-      storeId: store.id,
-      productId: createdProduct.id,
-      botId,
-      catalogScope,
-      sharingMode,
-      targetBotIds,
-      deliveryType,
-      deliveryValue,
+      return inserted;
     });
   } catch (dbErr: any) {
     console.error("[createProductAction] Erro ao gravar produto no Neon:", dbErr);
@@ -344,19 +401,6 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
       await ProductVideoService.assignVideosToProduct(store.id, createdProduct.id, videoIds, seller.id);
     } catch (err: any) {
       console.warn("[createProductAction] Video assignment warning:", err.message);
-    }
-  }
-
-  if (selectedCarouselIds.length > 0) {
-    try {
-      const recordsToInsert = selectedCarouselIds.map((cId, idx) => ({
-        carouselId: cId,
-        productId: createdProduct.id,
-        position: idx,
-      }));
-      await db.insert(carouselProducts).values(recordsToInsert);
-    } catch (carouselErr: any) {
-      console.error("[createProductAction] Erro ao associar carrosséis:", carouselErr);
     }
   }
 
@@ -461,8 +505,22 @@ export async function updateProductAction(productId: string, formData: FormData)
     targetBotIds = formData.getAll("targetBotIds").map(String);
   }
 
-  // Validação de segurança no servidor: seleção múltipla é exclusiva do proprietário
-  if (sharingMode === "CUSTOM" || targetBotIds.length > 1) {
+  // Normalizar targetBotIds sem duplicatas ou valores vazios
+  targetBotIds = Array.from(
+    new Set(
+      targetBotIds
+        .map((id) => (typeof id === "string" ? id.trim() : String(id || "").trim()))
+        .filter((id) => id.length > 0)
+    )
+  );
+
+  // Validação de segurança no servidor: seleção múltipla / customizada é exclusiva do proprietário
+  const hasCustomBotTargeting =
+    sharingMode === "CUSTOM" ||
+    targetBotIds.length > 1 ||
+    (targetBotIds.length === 1 && Boolean(botId) && targetBotIds[0] !== botId);
+
+  if (hasCustomBotTargeting) {
     const isOwner = ProductManualDeepLinkService.isAuthorized(seller.role, seller);
     if (!isOwner) {
       return { success: false, error: "A seleção múltipla de bots é exclusiva da conta proprietária." };
@@ -471,6 +529,7 @@ export async function updateProductAction(productId: string, formData: FormData)
 
   if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
     botId = null;
+    targetBotIds = [];
   } else if (catalogScope === "BOT_SPECIFIC") {
     if (!botId) {
       return { success: false, error: "Para salvar no modo Bot Específico, selecione o bot proprietário." };

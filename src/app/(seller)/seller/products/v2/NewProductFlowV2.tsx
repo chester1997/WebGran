@@ -17,7 +17,7 @@ export interface NewProductFlowV2Props {
   isOpen: boolean;
   onClose: () => void;
   categories?: { id: string; name: string }[];
-  bots?: { id: string; username: string; displayName?: string | null }[];
+  bots?: { id: string; username: string; displayName?: string | null; photoUrl?: string | null }[];
   carousels?: CarouselOption[];
 }
 
@@ -140,10 +140,20 @@ export function NewProductFlowV2({
 
       // Placement & Visibility
       formData.append("catalogScope", formState.catalogScope);
-      if (formState.catalogScope === "BOT_SPECIFIC" && formState.selectedBotId) {
-        formData.append("botId", formState.selectedBotId);
+      if (formState.catalogScope === "BOT_SPECIFIC") {
+        if (formState.selectedBotId) {
+          formData.append("botId", formState.selectedBotId);
+        }
+        const targetBotIds = formState.targetBotIds || [];
+        const computedSharingMode =
+          targetBotIds.length === 1 && targetBotIds[0] === formState.selectedBotId
+            ? "EXCLUSIVE"
+            : "CUSTOM";
+        formData.append("sharingMode", computedSharingMode);
+        formData.append("targetBotIds", JSON.stringify(targetBotIds));
+      } else {
+        formData.append("sharingMode", formState.sharingMode);
       }
-      formData.append("sharingMode", formState.sharingMode);
       if (formState.categoryId) {
         formData.append("categoryId", formState.categoryId);
       }

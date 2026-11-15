@@ -57,7 +57,7 @@ interface Props {
   storeName: string;
   products: ProductItem[];
   categories: { id: string; name: string }[];
-  bots: { id: string; username: string; displayName?: string | null }[];
+  bots: { id: string; username: string; displayName?: string | null; photoUrl?: string | null }[];
   userRole?: string | null;
   isOwnerAccount?: boolean;
   carousels?: any[];
