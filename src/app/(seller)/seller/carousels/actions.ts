@@ -199,7 +199,8 @@ export async function updateCarouselAction(
   productIds?: string[],
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
-  iconColor?: string
+  iconColor?: string,
+  status?: string
 ) {
   await requireSeller();
   const store = await getCurrentStore();
@@ -213,13 +214,19 @@ export async function updateCarouselAction(
 
   const validated = validateIndicator(indicatorType, iconName, iconColor, "BAR", "#8B5CF6");
 
-  await db.update(productCarousels).set({
+  const updatePayload: Record<string, any> = {
     name: name.trim(),
     indicatorType: validated.indicatorType,
     iconName: validated.iconName,
     iconColor: validated.iconColor,
     updatedAt: new Date()
-  }).where(eq(productCarousels.id, carouselId));
+  };
+
+  if (status) {
+    updatePayload.status = status === "active" ? "active" : "inactive";
+  }
+
+  await db.update(productCarousels).set(updatePayload).where(eq(productCarousels.id, carouselId));
 
   // Only synchronize products if an array was explicitly provided
   if (Array.isArray(productIds)) {
@@ -240,6 +247,28 @@ export async function updateCarouselAction(
   revalidatePath("/seller/products");
   revalidatePath(`/miniapp/${store.slug}`);
   return { success: true };
+}
+
+export async function toggleCarouselStatusAction(carouselId: string) {
+  await requireSeller();
+  const store = await getCurrentStore();
+  if (!store) throw new Error("Loja não encontrada");
+
+  const existing = await db.query.productCarousels.findFirst({
+    where: and(eq(productCarousels.id, carouselId), eq(productCarousels.storeId, store.id))
+  });
+  if (!existing) throw new Error("Carrossel não encontrado");
+
+  const newStatus = existing.status === "active" ? "inactive" : "active";
+  await db.update(productCarousels).set({
+    status: newStatus,
+    updatedAt: new Date()
+  }).where(eq(productCarousels.id, carouselId));
+
+  revalidatePath("/seller/carousels");
+  revalidatePath("/seller/products");
+  revalidatePath(`/miniapp/${store.slug}`);
+  return { success: true, status: newStatus };
 }
 
 export async function deleteCarouselAction(carouselId: string) {

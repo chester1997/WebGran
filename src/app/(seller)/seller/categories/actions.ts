@@ -243,3 +243,35 @@ export async function deleteCategoryAction(categoryId: string) {
   revalidatePath("/seller/categories");
   revalidatePath("/miniapp/[slug]", "layout");
 }
+
+export async function toggleCategoryStatusAction(categoryId: string) {
+  const seller = await requireSeller();
+  assertAdminRole(seller);
+
+  const store = await getCurrentStore();
+  if (!store) {
+    throw new Error("Loja não encontrada");
+  }
+
+  const existing = await db.query.categories.findFirst({
+    where: and(eq(categories.id, categoryId), eq(categories.storeId, store.id)),
+  });
+
+  if (!existing) {
+    throw new Error("Categoria não encontrada");
+  }
+
+  const nextStatus = existing.status === "active" ? "inactive" : "active";
+
+  await db
+    .update(categories)
+    .set({
+      status: nextStatus,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(categories.id, categoryId), eq(categories.storeId, store.id)));
+
+  revalidatePath("/seller/categories");
+  revalidatePath("/miniapp/[slug]", "layout");
+  return { success: true, status: nextStatus };
+}

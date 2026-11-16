@@ -36,6 +36,22 @@ export async function updateWelcomeSettingsAction(data: {
     throw new Error("A mensagem de boas-vindas do bot não está disponível no seu plano. Faça upgrade.");
   }
 
+  // Validação de limites de caracteres (Telegram: 1024 com mídia / 4096 texto puro)
+  const effectiveBanners =
+    data.welcomeBanners !== undefined
+      ? data.welcomeBanners
+      : (store.welcomeBanners as string[] | null) || [];
+  const hasBanner = effectiveBanners.some((b) => Boolean(b && b.trim()));
+  const maxChars = hasBanner ? 1024 : 4096;
+
+  if (data.welcomeMessage && data.welcomeMessage.length > maxChars) {
+    throw new Error(
+      `A mensagem de boas-vindas excede o limite de ${maxChars} caracteres ${
+        hasBanner ? "para mensagens com banner" : "para mensagens de texto"
+      }.`
+    );
+  }
+
   const finalSupportType = data.supportType ?? store.supportType ?? "telegram";
   let finalSupportValue =
     data.supportValue !== undefined

@@ -1,10 +1,11 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
-import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { db } from "@/db";
 import { products, categories, telegramBots, productCarousels, carouselProducts } from "@/db/schema";
 import { eq, desc, and, asc, inArray } from "drizzle-orm";
 import ProductsListClient from "./ProductsListClient";
+import ProductsListClientV2 from "./ProductsListClientV2";
 
 import SetupStoreClient from "../SetupStoreClient";
 
@@ -81,6 +82,22 @@ export default async function SellerProductsPage() {
     carouselIds: productCarouselMap[p.id] || [],
   }));
 
+  const isOwner = isOwnerAccount(user);
+
+  if (isOwner) {
+    return (
+      <ProductsListClientV2
+        storeName={store.name}
+        products={enrichedProducts}
+        categories={allCategories}
+        bots={storeBots}
+        userRole={user?.role}
+        isOwnerAccount={true}
+        carousels={allCarousels}
+      />
+    );
+  }
+
   return (
     <ProductsListClient 
       storeName={store.name}
@@ -88,7 +105,7 @@ export default async function SellerProductsPage() {
       categories={allCategories}
       bots={storeBots}
       userRole={user?.role}
-      isOwnerAccount={ProductManualDeepLinkService.isAuthorized(user?.role, user)}
+      isOwnerAccount={false}
       carousels={allCarousels}
     />
   );

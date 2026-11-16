@@ -1,9 +1,11 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { ProductVideoService } from "@/lib/videos/product-video-service";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
 import SetupStoreClient from "../SetupStoreClient";
 import VideosClient from "./VideosClient";
+import VideoLibraryClientV2 from "./VideoLibraryClientV2";
 import { ShieldAlert } from "lucide-react";
 
 export default async function SellerVideosPage() {
@@ -83,6 +85,21 @@ export default async function SellerVideosPage() {
     planPriceCents: rawUsage.planPriceCents || null,
     isUnlimited: Boolean(rawUsage.isUnlimited),
   };
+
+  const isOwner = isOwnerAccount(seller);
+
+  if (isOwner) {
+    return (
+      <VideoLibraryClientV2
+        initialVideos={videos.map((v) => ({
+          ...v,
+          createdAt: v.createdAt ? new Date(v.createdAt).toISOString() : new Date().toISOString(),
+          updatedAt: v.updatedAt ? new Date(v.updatedAt).toISOString() : new Date().toISOString(),
+        }))}
+        initialUsage={usage}
+      />
+    );
+  }
 
   return (
     <VideosClient

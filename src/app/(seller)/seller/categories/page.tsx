@@ -1,11 +1,13 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { db } from "@/db";
 import { categories, products } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import SetupStoreClient from "../SetupStoreClient";
 import CategoriesClient from "./CategoriesClient";
+import CategoriesClientV2 from "./CategoriesClientV2";
 
 export default async function SellerCategoriesPage() {
   await connection();
@@ -39,6 +41,19 @@ export default async function SellerCategoriesPage() {
     coverUrl: p.coverUrl,
     categoryId: p.categoryId,
   }));
+
+  const isOwner = isOwnerAccount(user);
+
+  // Ponto de integração V2 (Etapa 4 - exclusivo conta proprietária):
+  if (isOwner) {
+    return (
+      <CategoriesClientV2
+        allCategories={allCategories}
+        serializedProducts={serializedProducts}
+        initialStyle={(store.categoryDisplayStyle as "IMAGE" | "ICON") || "IMAGE"}
+      />
+    );
+  }
 
   return (
     <CategoriesClient

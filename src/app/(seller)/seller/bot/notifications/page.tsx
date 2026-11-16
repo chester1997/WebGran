@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { db } from "@/db";
 import { storeFloatingNotifications, products } from "@/db/schema";
 import { eq, asc, desc } from "drizzle-orm";
@@ -8,7 +9,7 @@ import SetupStoreClient from "../../SetupStoreClient";
 
 export default async function SellerBotNotificationsPage() {
   await connection();
-  await requireSeller();
+  const user = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -51,6 +52,11 @@ export default async function SellerBotNotificationsPage() {
     floatingNotificationsIntervalMin: store.floatingNotificationsIntervalMin ?? 15,
     floatingNotificationsIntervalMax: store.floatingNotificationsIntervalMax ?? 30,
   };
+
+  const isOwner = isOwnerAccount(user);
+
+  // Ponto de integração V2 (Etapa 4 - exclusivo conta proprietária):
+  // if (isOwner) return <NotificationsClientV2 initialSettings={initialSettings} notifications={storeNotifications} products={storeProducts} />;
 
   return (
     <NotificationsClient

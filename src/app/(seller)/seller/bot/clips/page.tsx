@@ -1,15 +1,17 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { ClipService } from "@/lib/clips/service";
 import { db } from "@/db";
 import { products } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import SetupStoreClient from "../../SetupStoreClient";
 import ClipsClient from "./ClipsClient";
+import ClipsClientV2 from "./ClipsClientV2";
 
 export default async function SellerClipsPage() {
   await connection();
-  await requireSeller();
+  const user = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -36,32 +38,48 @@ export default async function SellerClipsPage() {
     else processing++; // UPLOADING or PROCESSING
   });
 
+  const isOwner = isOwnerAccount(user);
+
+  const formattedClips = clipsList.map((c) => ({
+    ...c,
+    createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+    updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(),
+    product: c.product
+      ? {
+          id: c.product.id,
+          title: c.product.title,
+          price: c.product.price,
+          coverUrl: c.product.coverUrl,
+          slug: c.product.slug,
+          status: c.product.status,
+        }
+      : null,
+  }));
+
+  const formattedProducts = storeProducts.map((p) => ({
+    id: p.id,
+    title: p.title,
+    price: p.price,
+    coverUrl: p.coverUrl,
+    slug: p.slug,
+    status: p.status,
+  }));
+
+  if (isOwner) {
+    return (
+      <ClipsClientV2
+        initialClips={formattedClips}
+        initialStats={{ total, published, processing, failed }}
+        availableProducts={formattedProducts}
+      />
+    );
+  }
+
   return (
     <ClipsClient
-      initialClips={clipsList.map((c) => ({
-        ...c,
-        createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
-        updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(),
-        product: c.product
-          ? {
-              id: c.product.id,
-              title: c.product.title,
-              price: c.product.price,
-              coverUrl: c.product.coverUrl,
-              slug: c.product.slug,
-              status: c.product.status,
-            }
-          : null,
-      }))}
+      initialClips={formattedClips}
       initialStats={{ total, published, processing, failed }}
-      availableProducts={storeProducts.map((p) => ({
-        id: p.id,
-        title: p.title,
-        price: p.price,
-        coverUrl: p.coverUrl,
-        slug: p.slug,
-        status: p.status,
-      }))}
+      availableProducts={formattedProducts}
     />
   );
 }

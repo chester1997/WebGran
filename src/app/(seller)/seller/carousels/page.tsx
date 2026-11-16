@@ -1,15 +1,17 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { db } from "@/db";
 import { productCarousels, products } from "@/db/schema";
 import { eq, desc, asc, and } from "drizzle-orm";
 import { getOrCreateRankingCarouselAction } from "./actions";
 import SetupStoreClient from "../SetupStoreClient";
 import CarouselsClient from "./CarouselsClient";
+import CarouselsClientV2 from "./CarouselsClientV2";
 
 export default async function SellerCarouselsPage() {
   await connection();
-  await requireSeller();
+  const user = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -42,6 +44,19 @@ export default async function SellerCarouselsPage() {
     orderBy: [desc(products.createdAt)],
     columns: { id: true, title: true, price: true, badge: true }
   });
+
+  const isOwner = isOwnerAccount(user);
+
+  // Ponto de integração V2 (Etapa 4 - exclusivo conta proprietária):
+  if (isOwner) {
+    return (
+      <CarouselsClientV2
+        rankingCarousel={rankingCarousel}
+        standardCarousels={standardCarousels}
+        storeProducts={storeProducts}
+      />
+    );
+  }
 
   return (
     <CarouselsClient
