@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Boxes, Check, ShoppingCart, Sparkles, Package } from "lucide-react";
 import { useCart, CartItem } from "@/components/miniapp/CartProvider";
 import { ActiveComboDTO } from "@/lib/combos/combo-service";
+import { ProductCoverImage } from "./ProductCoverImage";
 
 interface ComboCardProps {
   combo: ActiveComboDTO;
@@ -45,18 +46,12 @@ export function ComboCard({ combo, storeSlug }: ComboCardProps) {
     <div className="w-[260px] sm:w-[280px] shrink-0 bg-[#14141B] border border-white/10 hover:border-emerald-500/30 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 shadow-xl group">
       {/* Cover / Media Area */}
       <div className="relative h-36 bg-[#1A1A24] overflow-hidden flex items-center justify-center border-b border-white/5">
-        {combo.coverUrl ? (
-          <img
-            src={combo.coverUrl}
-            alt={combo.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="flex flex-col items-center gap-1.5 text-zinc-600">
-            <Boxes className="w-10 h-10 text-emerald-500/70" />
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Combo VIP</span>
-          </div>
-        )}
+        <ProductCoverImage
+          src={combo.coverUrl}
+          alt={combo.title}
+          aspectRatioClass="h-36 w-full"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
 
         {/* Badge de Itens Inclusos */}
         <div className="absolute top-2.5 left-2.5">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Eye, Flame } from "lucide-react";
 import { AddToCartButton } from "./AddToCartButton";
 import { getProductBadge } from "@/lib/product-badge";
+import { ProductCoverImage } from "./ProductCoverImage";
 
 function formatViewsCount(count: number | string | null | undefined): string {
   if (count === null || count === undefined) return "0";
@@ -75,22 +76,15 @@ function ProductCardBase({
           </div>
         )}
 
-        {product.coverUrl ? (
-          <img 
-            src={product.coverUrl} 
-            alt={product.title} 
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center p-2 text-center text-xs text-zinc-500 bg-zinc-800">
-            Sem capa
-          </div>
-        )}
+        <ProductCoverImage
+          src={product.coverUrl}
+          alt={product.title}
+          aspectRatioClass="aspect-[2/3]"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
         
         {/* Title overlay at the bottom of the image */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-2 sm:p-2.5">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-2 sm:p-2.5 pointer-events-none">
           <span className="text-white text-[11px] sm:text-xs font-semibold leading-tight drop-shadow-md line-clamp-2 uppercase tracking-tight">
             {product.title}
           </span>

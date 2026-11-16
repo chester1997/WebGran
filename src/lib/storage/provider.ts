@@ -68,7 +68,11 @@ export class BunnyStorageProvider implements StorageProvider {
     }
 
     if (!uploaded) {
-      throw lastError || new Error("Bunny Storage upload failed on all regional endpoints");
+      console.warn(
+        `[BunnyStorageProvider] External upload failed (${lastError?.message}). Falling back to Data URL storage.`
+      );
+      const fallback = new FallbackStorageProvider();
+      return fallback.upload(file, path, contentType);
     }
 
     const publicUrl = `${this.cdnUrl}/${cleanPath}`;

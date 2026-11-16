@@ -5,6 +5,7 @@ import { RefreshCw, ShoppingCart, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatAccessExpirationBR } from "@/lib/orders/expiration-utils";
+import { ProductCoverImage } from "../components/ProductCoverImage";
 
 export interface AccessCardData {
   id: string;
@@ -199,19 +200,12 @@ export function StudioAccessCard({
       <div className="flex gap-3 px-4 py-3">
         {/* Poster thumbnail — aspect 2/3 */}
         <div className="relative flex-shrink-0 w-[62px] rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800" style={{ aspectRatio: "2/3" }}>
-          {access.product.coverUrl ? (
-            <img
-              src={access.product.coverUrl}
-              alt={access.product.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
-              <span className="text-zinc-500 text-xs">?</span>
-            </div>
-          )}
+          <ProductCoverImage
+            src={access.product.coverUrl}
+            alt={access.product.title}
+            aspectRatioClass="w-[62px]"
+            className="w-full h-full object-cover"
+          />
         </div>
 
         {/* Product info */}

@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Check, Share2, Sparkles, Zap, Clock, PlayCircle, Play,
 import { AddToCartButton } from "../components/AddToCartButton";
 import { HorizontalCarousel } from "../components/HorizontalCarousel";
 import { ProductCard } from "../components/ProductCard";
+import { ProductCoverImage } from "../components/ProductCoverImage";
 import { getProductBadge } from "@/lib/product-badge";
 import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
 import { PixPaymentModal } from "@/components/payments/PixPaymentModal";
@@ -335,6 +336,12 @@ export function StudioProductClient({
           loading="eager"
           decoding="async"
           className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLElement).setAttribute(
+              "src",
+              "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop"
+            );
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#f4f5f7] via-[#f4f5f7]/40 to-black/30 dark:from-[#141416] dark:via-[#141416]/40 dark:to-black/50 pointer-events-none" />
 
@@ -353,10 +360,12 @@ export function StudioProductClient({
         {/* POSTER THUMB & TITLE / METADATA HEADER */}
         <div className="-mt-14 sm:-mt-16 flex gap-4 items-end">
           <div className="w-24 sm:w-28 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-300/50 dark:border-white/15 shadow-2xl">
-            <img
+            <ProductCoverImage
               src={posterImage}
               alt={product.title}
+              aspectRatioClass="aspect-[2/3]"
               className="w-full h-full object-cover"
+              priority
             />
           </div>
 

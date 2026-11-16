@@ -4,6 +4,7 @@ import { HorizontalCarousel } from "./HorizontalCarousel";
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
 import { AddToCartButton } from "./AddToCartButton";
 import { getProductBadge } from "@/lib/product-badge";
+import { ProductCoverImage } from "./ProductCoverImage";
 
 interface Product {
   id: string;
@@ -119,20 +120,12 @@ export function TopTenCarousel({
                     </div>
                   )}
 
-                  {product.coverUrl || product.bannerUrl ? (
-                    <img
-                      src={product.coverUrl || product.bannerUrl!}
-                      alt={product.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover pointer-events-none"
-                      draggable={false}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center p-2 text-center text-xs text-zinc-500 bg-zinc-800">
-                      {product.title}
-                    </div>
-                  )}
+                  <ProductCoverImage
+                    src={product.coverUrl || product.bannerUrl}
+                    alt={product.title}
+                    aspectRatioClass="aspect-[2/3]"
+                    className="w-full h-full object-cover pointer-events-none"
+                  />
                 </Link>
 
                 {/* Red Cart Button OVER BOTTOM-RIGHT of image */}

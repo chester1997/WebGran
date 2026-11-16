@@ -25,6 +25,7 @@ import { useCart } from "@/components/miniapp/CartProvider";
 import { createCheckoutSession } from "@/app/miniapp/[slug]/cart/actions";
 import { useRouter } from "next/navigation";
 import { PixPaymentModal } from "@/components/payments/PixPaymentModal";
+import { ProductCoverImage } from "../components/ProductCoverImage";
 
 export function StudioCart({ storeSlug }: { storeSlug: string }) {
   const {
@@ -428,19 +429,12 @@ export function StudioCart({ storeSlug }: { storeSlug: string }) {
           >
             {/* Poster */}
             <div className="relative w-[60px] h-[84px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-              {item.coverUrl ? (
-                <img
-                  src={item.coverUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <ShoppingCart className="w-5 h-5 text-zinc-400 dark:text-zinc-600" />
-                </div>
-              )}
+              <ProductCoverImage
+                src={item.coverUrl}
+                alt={item.title}
+                aspectRatioClass="w-[60px] h-[84px]"
+                className="w-full h-full object-cover"
+              />
             </div>
 
             {/* Info + controls */}
