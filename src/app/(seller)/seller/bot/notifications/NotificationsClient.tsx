@@ -196,7 +196,7 @@ export function NotificationsClient({ initialSettings, notifications, products, 
       ) : (
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-white">Notificações Flutuantes</h3>
+            <h3 className="text-sm font-bold text-white tracking-tight">Notificações Flutuantes</h3>
             <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
               {notifications.length} {notifications.length === 1 ? "aviso" : "avisos"}
             </span>

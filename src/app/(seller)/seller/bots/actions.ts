@@ -422,7 +422,7 @@ export async function updateBotTokenAction(botId: string, newToken: string): Pro
     }).where(eq(telegramBots.id, botId));
 
     try {
-      const { invalidateBotAvatarCache } = await import("@/app/api/telegram/bot-avatar/route");
+      const { invalidateBotAvatarCache } = await import("@/lib/telegram/bot-avatar-cache");
       invalidateBotAvatarCache(bot.id);
       invalidateBotAvatarCache(bot.botId);
     } catch {}
@@ -879,7 +879,7 @@ export async function syncBotAvatarAction(botId: string): Promise<ActionResponse
     }).where(eq(telegramBots.id, bot.id));
 
     try {
-      const { invalidateBotAvatarCache } = await import("@/app/api/telegram/bot-avatar/route");
+      const { invalidateBotAvatarCache } = await import("@/lib/telegram/bot-avatar-cache");
       invalidateBotAvatarCache(bot.id);
       invalidateBotAvatarCache(bot.botId);
     } catch {}

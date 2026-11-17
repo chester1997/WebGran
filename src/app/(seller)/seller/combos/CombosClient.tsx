@@ -168,7 +168,7 @@ export default function CombosClient({
       ) : (
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-white">Combos e Ofertas</h3>
+            <h3 className="text-sm font-bold text-white tracking-tight">Combos e Ofertas</h3>
             <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
               {totalCombos} {totalCombos === 1 ? "oferta" : "ofertas"}
             </span>
