@@ -737,7 +737,7 @@ export default function VideosClient({ initialVideos, initialUsage, hideHeader }
       ) : (
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-white tracking-tight">Biblioteca de Vídeos</h3>
+            <h3 className="text-sm font-semibold text-white">Biblioteca de Vídeos</h3>
             {usage.hasVideoSubscription && (
               <span className="px-2 py-0.5 rounded-full text-xs font-sans font-medium tabular-nums bg-violet-500/10 text-violet-400 border border-violet-500/25">
                 {videosList.length} {videosList.length === 1 ? "vídeo" : "vídeos"}

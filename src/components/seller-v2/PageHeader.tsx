@@ -27,7 +27,7 @@ export function PageHeader({
           {backAction && <div className="shrink-0">{backAction}</div>}
           <div className="flex flex-col min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f4f4f5] truncate">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
                 {title}
               </h1>
               {badge && <div className="shrink-0">{badge}</div>}

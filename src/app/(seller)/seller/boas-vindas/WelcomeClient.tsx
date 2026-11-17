@@ -110,7 +110,7 @@ export default function WelcomeClient({ initialSettings, hideHeader }: WelcomeCl
       ) : (
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div>
-            <h3 className="text-sm font-bold text-white tracking-tight">Mensagem de Boas-vindas</h3>
+            <h3 className="text-sm font-bold text-white">Mensagem de Boas-vindas</h3>
             <p className="text-xs text-zinc-400">Configure o texto e banner automáticos enviados pelo seu bot.</p>
           </div>
           <div className="flex flex-col items-end gap-1">
