@@ -370,8 +370,6 @@ function getValidCPF(doc?: string): string {
   throw new Error('Credenciais do SyncPay da Plataforma não foram encontradas no sistema.');
 }
 
-// Alias for backwards compatibility
-export const createCoraBillingInvoice = createPlatformBillingInvoice;
 
 /**
  * Confirm / verify subscription invoice payment with SyncPay or Mercado Pago

@@ -892,7 +892,7 @@ export const invoices = pgTable('invoices', {
   id: uuid('id').primaryKey().defaultRandom(),
   sellerId: uuid('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   subscriptionId: uuid('subscription_id').references(() => subscriptions.id, { onDelete: 'cascade' }),
-  provider: text('provider').notNull().default('cora'), // 'cora'
+  provider: text('provider').notNull().default('cora'), // legado: default do banco; providers ativos: 'syncpay' | 'mercado_pago'
   externalId: text('external_id'),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
   status: text('status').notNull().default('PENDING'), // PENDING, PAID, EXPIRED, CANCELLED, FAILED

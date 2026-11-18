@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireSeller } from '@/lib/auth';
-import { getSellerSubscription, createCoraBillingInvoice } from '@/lib/billing/subscription-service';
+import { getSellerSubscription, createPlatformBillingInvoice } from '@/lib/billing/subscription-service';
 
 
 export async function GET() {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       if (body?.planId) planId = String(body.planId);
     } catch {}
 
-    const invoice = await createCoraBillingInvoice(seller.id, forceNew, planId);
+    const invoice = await createPlatformBillingInvoice(seller.id, forceNew, planId);
 
     return NextResponse.json({
       success: true,
