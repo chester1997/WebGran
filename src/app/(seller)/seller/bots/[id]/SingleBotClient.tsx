@@ -36,6 +36,7 @@ import CarouselsClientV2 from "@/app/(seller)/seller/carousels/CarouselsClientV2
 import CategoriesClientV2 from "@/app/(seller)/seller/categories/CategoriesClientV2";
 import ClipsClientV2 from "@/app/(seller)/seller/bot/clips/ClipsClientV2";
 import CouponsClientV2 from "@/app/(seller)/seller/coupons/CouponsClientV2";
+import NotificationsClientV2 from "@/app/(seller)/seller/bot/notifications/NotificationsClientV2";
 import { BotTabData } from "../bot-tab-loaders";
 
 export interface BotActivityEvent {
@@ -128,7 +129,7 @@ export default function SingleBotClient({
   useRedesignV2 = false,
 }: SingleBotClientProps) {
   // Redesign V2 (apenas conta proprietária): as versões V2 recebem os mesmos dados das clássicas.
-  // Notificações ainda não tem versão V2 e segue a clássica.
+  const NotificationsTab = (useRedesignV2 ? NotificationsClientV2 : NotificationsClient) as typeof NotificationsClient;
   const WelcomeTab = (useRedesignV2 ? WelcomeClientV2 : WelcomeClient) as typeof WelcomeClient;
   const BannersTab = (useRedesignV2 ? BannersClientV2 : BannersClient) as typeof BannersClient;
   const ProductsListTab = (useRedesignV2 ? ProductsListClientV2 : ProductsListClient) as typeof ProductsListClient;
@@ -589,7 +590,7 @@ export default function SingleBotClient({
 
       {activeTab === "notificacoes" && (
         tabCache.notificationsData ? (
-          <NotificationsClient
+          <NotificationsTab
             initialSettings={tabCache.notificationsData.settings}
             notifications={tabCache.notificationsData.notifications}
             products={tabCache.notificationsData.products}

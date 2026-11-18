@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { storeFloatingNotifications, products } from "@/db/schema";
 import { eq, asc, desc } from "drizzle-orm";
 import { NotificationsClient } from "./NotificationsClient";
+import NotificationsClientV2 from "./NotificationsClientV2";
 import SetupStoreClient from "../../SetupStoreClient";
 
 export default async function SellerBotNotificationsPage() {
@@ -55,8 +56,16 @@ export default async function SellerBotNotificationsPage() {
 
   const isOwner = isOwnerAccount(user);
 
-  // Ponto de integração V2 (Etapa 4 - exclusivo conta proprietária):
-  // if (isOwner) return <NotificationsClientV2 initialSettings={initialSettings} notifications={storeNotifications} products={storeProducts} />;
+  // Redesign V2 — exclusivo da conta proprietária
+  if (isOwner) {
+    return (
+      <NotificationsClientV2
+        initialSettings={initialSettings}
+        notifications={storeNotifications}
+        products={storeProducts}
+      />
+    );
+  }
 
   return (
     <NotificationsClient
