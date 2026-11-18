@@ -27,6 +27,15 @@ import CategoriesClient from "@/app/(seller)/seller/categories/CategoriesClient"
 import ClipsClient from "@/app/(seller)/seller/bot/clips/ClipsClient";
 import { NotificationsClient } from "@/app/(seller)/seller/bot/notifications/NotificationsClient";
 import CouponsClient from "@/app/(seller)/seller/coupons/CouponsClient";
+import WelcomeClientV2 from "@/app/(seller)/seller/boas-vindas/WelcomeClientV2";
+import BannersClientV2 from "@/app/(seller)/seller/banners/BannersClientV2";
+import ProductsListClientV2 from "@/app/(seller)/seller/products/ProductsListClientV2";
+import CombosClientV2 from "@/app/(seller)/seller/combos/CombosClientV2";
+import VideoLibraryClientV2 from "@/app/(seller)/seller/videos/VideoLibraryClientV2";
+import CarouselsClientV2 from "@/app/(seller)/seller/carousels/CarouselsClientV2";
+import CategoriesClientV2 from "@/app/(seller)/seller/categories/CategoriesClientV2";
+import ClipsClientV2 from "@/app/(seller)/seller/bot/clips/ClipsClientV2";
+import CouponsClientV2 from "@/app/(seller)/seller/coupons/CouponsClientV2";
 import { BotTabData } from "../bot-tab-loaders";
 
 export interface BotActivityEvent {
@@ -98,6 +107,8 @@ interface SingleBotClientProps {
   userRole?: string;
   isAdmin: boolean;
   isOwnerAccount?: boolean;
+  /** Redesign V2: decidido no servidor, true apenas para a conta proprietária. */
+  useRedesignV2?: boolean;
 }
 
 export default function SingleBotClient({
@@ -114,7 +125,20 @@ export default function SingleBotClient({
   userRole,
   isAdmin,
   isOwnerAccount = false,
+  useRedesignV2 = false,
 }: SingleBotClientProps) {
+  // Redesign V2 (apenas conta proprietária): as versões V2 recebem os mesmos dados das clássicas.
+  // Notificações ainda não tem versão V2 e segue a clássica.
+  const WelcomeTab = (useRedesignV2 ? WelcomeClientV2 : WelcomeClient) as typeof WelcomeClient;
+  const BannersTab = (useRedesignV2 ? BannersClientV2 : BannersClient) as typeof BannersClient;
+  const ProductsListTab = (useRedesignV2 ? ProductsListClientV2 : ProductsListClient) as typeof ProductsListClient;
+  const CombosTab = (useRedesignV2 ? CombosClientV2 : CombosClient) as typeof CombosClient;
+  const VideosTab = (useRedesignV2 ? VideoLibraryClientV2 : VideosClient) as typeof VideosClient;
+  const CarouselsTab = (useRedesignV2 ? CarouselsClientV2 : CarouselsClient) as typeof CarouselsClient;
+  const CategoriesTab = (useRedesignV2 ? CategoriesClientV2 : CategoriesClient) as typeof CategoriesClient;
+  const ClipsTab = (useRedesignV2 ? ClipsClientV2 : ClipsClient) as typeof ClipsClient;
+  const CouponsTab = (useRedesignV2 ? CouponsClientV2 : CouponsClient) as typeof CouponsClient;
+
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [bot, setBot] = useState(initialBot);
@@ -376,6 +400,7 @@ export default function SingleBotClient({
         selectedPeriod={selectedPeriod}
         onSelectPeriod={setSelectedPeriod}
         onOpenConversasModal={() => setIsConversasModalOpen(true)}
+        useRedesignV2={useRedesignV2}
       />
 
       {/* MODAL IMERSIVO DE CONVERSAS (CENTRAL DE ATENDIMENTO) */}
@@ -437,7 +462,7 @@ export default function SingleBotClient({
 
       {activeTab === "boas-vindas" && (
         tabCache.welcomeSettings ? (
-          <WelcomeClient initialSettings={tabCache.welcomeSettings} hideHeader={true} />
+          <WelcomeTab initialSettings={tabCache.welcomeSettings} hideHeader={true} />
         ) : (
           <div className="flex items-center justify-center p-12 text-zinc-400">
             <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#3984FF]" />
@@ -449,7 +474,7 @@ export default function SingleBotClient({
       {/* 3.2 RECURSOS DO MINI APP */}
       {activeTab === "banners" && (
         tabCache.bannersData ? (
-          <BannersClient
+          <BannersTab
             initialBanners={tabCache.bannersData.banners}
             initialInterval={tabCache.bannersData.bannerInterval}
             maxLimit={tabCache.bannersData.maxLimit}
@@ -465,7 +490,7 @@ export default function SingleBotClient({
 
       {activeTab === "produtos" && (
         tabCache.productsData ? (
-          <ProductsListClient
+          <ProductsListTab
             storeName={bot.storeName}
             products={tabCache.productsData.products}
             categories={tabCache.productsData.categories}
@@ -485,7 +510,7 @@ export default function SingleBotClient({
 
       {activeTab === "combos" && (
         tabCache.combosData ? (
-          <CombosClient
+          <CombosTab
             initialCombos={tabCache.combosData.combos}
             activeProducts={tabCache.combosData.activeProducts}
             storeSlug={storeSlug}
@@ -501,7 +526,7 @@ export default function SingleBotClient({
 
       {activeTab === "videos" && (
         tabCache.videosData ? (
-          <VideosClient
+          <VideosTab
             initialVideos={tabCache.videosData.videos}
             initialUsage={tabCache.videosData.usage}
             hideHeader={true}
@@ -516,7 +541,7 @@ export default function SingleBotClient({
 
       {activeTab === "carrosseis" && (
         tabCache.carouselsData ? (
-          <CarouselsClient
+          <CarouselsTab
             rankingCarousel={tabCache.carouselsData.rankingCarousel}
             standardCarousels={tabCache.carouselsData.standardCarousels}
             storeProducts={tabCache.carouselsData.storeProducts}
@@ -532,7 +557,7 @@ export default function SingleBotClient({
 
       {activeTab === "categorias" && (
         tabCache.categoriesData ? (
-          <CategoriesClient
+          <CategoriesTab
             allCategories={tabCache.categoriesData.allCategories}
             serializedProducts={tabCache.categoriesData.serializedProducts}
             initialStyle={tabCache.categoriesData.initialStyle}
@@ -548,7 +573,7 @@ export default function SingleBotClient({
 
       {activeTab === "clips" && (
         tabCache.clipsData ? (
-          <ClipsClient
+          <ClipsTab
             initialClips={tabCache.clipsData.clips}
             initialStats={tabCache.clipsData.stats}
             availableProducts={tabCache.clipsData.products}
@@ -580,7 +605,7 @@ export default function SingleBotClient({
 
       {activeTab === "cupons" && (
         tabCache.couponsData ? (
-          <CouponsClient
+          <CouponsTab
             initialCoupons={tabCache.couponsData}
             hideHeader={true}
           />

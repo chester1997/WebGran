@@ -43,6 +43,7 @@ import {
   ConfirmDialog,
   Toast,
 } from "@/components/seller-v2";
+import { getVideoAssignedCount } from "./video-assignment";
 import { ProductVideoPlayer } from "@/components/miniapp/ProductVideoPlayer";
 import { VideoPlanUpgradeModal } from "@/components/billing/VideoPlanUpgradeModal";
 import { InlineVideoLibraryOnboarding } from "./InlineVideoLibraryOnboarding";
@@ -144,6 +145,7 @@ export default function VideoLibraryClientV2({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [linkFilter, setLinkFilter] = useState<"ALL" | "UNLINKED" | "LINKED">("ALL");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Feedback Toasts
@@ -299,7 +301,11 @@ export default function VideoLibraryClientV2({
     const failed = videosList.filter((v) => v.status === "FAILED").length;
     const active = videosList.filter((v) => v.active !== false).length;
     const inactive = videosList.filter((v) => v.active === false).length;
-    return { total, ready, processing, failed, active, inactive };
+    // Vídeos prontos que ainda não estão ligados a nenhum produto (quem compra não recebe)
+    const unlinkedReady = videosList.filter(
+      (v) => v.status === "READY" && getVideoAssignedCount(v) === 0
+    ).length;
+    return { total, ready, processing, failed, active, inactive, unlinkedReady };
   }, [videosList]);
 
   // Filtragem
@@ -322,9 +328,13 @@ export default function VideoLibraryClientV2({
           ? video.active !== false
           : video.active === false;
 
-      return matchesSearch && matchesStatus && matchesActive;
+      const assigned = getVideoAssignedCount(video);
+      const matchesLink =
+        linkFilter === "ALL" ? true : linkFilter === "UNLINKED" ? assigned === 0 : assigned > 0;
+
+      return matchesSearch && matchesStatus && matchesActive && matchesLink;
     });
-  }, [videosList, searchQuery, statusFilter, activeFilter]);
+  }, [videosList, searchQuery, statusFilter, activeFilter, linkFilter]);
 
   // Contagem de filtros ativos
   const activeFiltersCount = useMemo(() => {
@@ -332,13 +342,15 @@ export default function VideoLibraryClientV2({
     if (searchQuery.trim()) count++;
     if (statusFilter !== "ALL") count++;
     if (activeFilter !== "ALL") count++;
+    if (linkFilter !== "ALL") count++;
     return count;
-  }, [searchQuery, statusFilter, activeFilter]);
+  }, [searchQuery, statusFilter, activeFilter, linkFilter]);
 
   const handleClearFilters = () => {
     setSearchQuery("");
     setStatusFilter("ALL");
     setActiveFilter("ALL");
+    setLinkFilter("ALL");
   };
 
   // Handlers de Upload em Lote
@@ -741,6 +753,27 @@ export default function VideoLibraryClientV2({
         </div>
       </Card>
 
+      {/* 2.1 Aviso: vídeos prontos sem produto (não são entregues a quem compra) */}
+      {stats.unlinkedReady > 0 && linkFilter !== "UNLINKED" && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/[0.08] px-4 py-3"
+        >
+          <span className="flex-1 min-w-[240px] text-sm text-[#fcd34d]">
+            {stats.unlinkedReady === 1
+              ? "1 vídeo pronto ainda não está ligado a nenhum produto. Quem compra não recebe esse vídeo."
+              : `${stats.unlinkedReady} vídeos prontos ainda não estão ligados a nenhum produto. Quem compra não recebe esses vídeos.`}
+          </span>
+          <button
+            type="button"
+            onClick={() => setLinkFilter("UNLINKED")}
+            className="text-xs font-semibold text-[#1c1405] bg-[#fbbf24] hover:bg-[#fcd34d] rounded-lg px-3 py-2 cursor-pointer transition-colors"
+          >
+            Ver não vinculados
+          </button>
+        </div>
+      )}
+
       {/* 3. Métricas / StatCards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
@@ -809,6 +842,18 @@ export default function VideoLibraryClientV2({
               <option value="ALL">Todas visibilidades</option>
               <option value="ACTIVE">Ativos</option>
               <option value="INACTIVE">Inativos</option>
+            </select>
+
+            {/* Filtro por vínculo com produto */}
+            <select
+              value={linkFilter}
+              onChange={(e) => setLinkFilter(e.target.value as "ALL" | "UNLINKED" | "LINKED")}
+              aria-label="Filtrar por vínculo com produto"
+              className="h-10 bg-[#16161a] border border-[#26262a] hover:border-[#3a3a40] focus:border-[#3b82f6] text-xs text-[#f4f4f5] rounded-xl px-3 transition-colors outline-none cursor-pointer"
+            >
+              <option value="ALL">Com e sem produto</option>
+              <option value="UNLINKED">Não vinculados</option>
+              <option value="LINKED">Vinculados a produto</option>
             </select>
 
             {/* Botão Selecionar Todos Exibidos */}

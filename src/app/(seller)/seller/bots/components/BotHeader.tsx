@@ -25,6 +25,7 @@ import {
 import BotAvatar from "./BotAvatar";
 import BotStatusBadge from "./BotStatusBadge";
 import BotTabsNav from "./BotTabsNav";
+import BotTabsNavV2 from "./BotTabsNavV2";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 interface BotHeaderProps {
@@ -49,6 +50,8 @@ interface BotHeaderProps {
   selectedPeriod?: "today" | "week" | "month" | "year";
   onSelectPeriod?: (period: "today" | "week" | "month" | "year") => void;
   onOpenConversasModal?: () => void;
+  /** Redesign V2: true apenas para a conta proprietária (decidido no servidor). */
+  useRedesignV2?: boolean;
 }
 
 export default function BotHeader({
@@ -63,6 +66,7 @@ export default function BotHeader({
   selectedPeriod = "month",
   onSelectPeriod,
   onOpenConversasModal,
+  useRedesignV2 = false,
 }: BotHeaderProps) {
   const router = useRouter();
   const [copiedLink, setCopiedLink] = useState(false);
@@ -544,12 +548,21 @@ export default function BotHeader({
         <div className="w-full h-px bg-white/[0.06] mt-1.5 sm:mt-2" />
 
         {/* SEGUNDA LINHA — Navegação horizontal integrada das 13 abas */}
-        <BotTabsNav
-          activeTab={activeTab}
-          onSelectTab={onSelectTab}
-          isAdmin={isAdmin}
-          mode={bot.mode || "MINI_APP"}
-        />
+        {useRedesignV2 ? (
+          <BotTabsNavV2
+            activeTab={activeTab}
+            onSelectTab={onSelectTab}
+            isAdmin={isAdmin}
+            mode={bot.mode || "MINI_APP"}
+          />
+        ) : (
+          <BotTabsNav
+            activeTab={activeTab}
+            onSelectTab={onSelectTab}
+            isAdmin={isAdmin}
+            mode={bot.mode || "MINI_APP"}
+          />
+        )}
       </div>
     </SellerPageHeader>
   );

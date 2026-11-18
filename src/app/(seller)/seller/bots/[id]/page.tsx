@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { telegramBots, stores, telegramCustomers, orders, telegramMessages, botStartEvents, products } from "@/db/schema";
 import { eq, and, desc, asc, or, isNull } from "drizzle-orm";
 import { getCurrentStore } from "@/lib/auth";
-import { requireOwnerAccount } from "@/lib/bots/owner-guard";
+import { requireOwnerAccount, isOwnerUser } from "@/lib/bots/owner-guard";
 import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
 import SingleBotClient from "./SingleBotClient";
 import { loadBotTabData } from "../bot-tab-loaders";
@@ -313,6 +313,7 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
         userRole={user.role}
         isAdmin={user.role === "admin" || user.role === "super_admin"}
         isOwnerAccount={ProductManualDeepLinkService.isAuthorized(user.role, user)}
+        useRedesignV2={isOwnerUser(user)}
       />
     </Suspense>
   );

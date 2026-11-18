@@ -395,10 +395,11 @@ describe("ETAPA 4.5 — REDESIGN V2 DA PÁGINA DE COMBOS E OFERTAS (/seller/comb
       );
 
       expect(html).toContain("Oferta Progressiva");
-      expect(html).toContain("3 un:");
-      expect(html).toContain("R$ 12.00");
-      expect(html).toContain("5 un:");
-      expect(html).toContain("R$ 18.00");
+      // Faixas explicadas em total e preço por unidade (ex.: "3 por R$ 12,00 · R$ 4,00 cada")
+      expect(html).toMatch(/3 por <b[^>]*>R\$\s12,00<\/b>/);
+      expect(html).toMatch(/R\$\s4,00 cada/);
+      expect(html).toMatch(/5 por <b[^>]*>R\$\s18,00<\/b>/);
+      expect(html).toMatch(/R\$\s3,60 cada/);
       expect(html).toContain("Toda a loja");
     });
 

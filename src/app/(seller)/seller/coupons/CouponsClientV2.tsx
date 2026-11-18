@@ -38,6 +38,7 @@ import {
   RowMenu,
   SegmentedControl,
 } from "@/components/seller-v2";
+import { isCouponEffectivelyActive } from "./coupon-status";
 
 import {
   createCouponAction,
@@ -123,7 +124,8 @@ export default function CouponsClientV2({ initialCoupons, hideHeader = false }: 
     let totalUses = 0;
 
     couponsList.forEach((c) => {
-      if (c.status === "active") {
+      // Ativo de verdade = ligado, dentro da validade e com usos disponíveis (mesma regra da tabela)
+      if (isCouponEffectivelyActive(c)) {
         active++;
       } else {
         inactive++;
@@ -146,8 +148,11 @@ export default function CouponsClientV2({ initialCoupons, hideHeader = false }: 
       }
 
       // 2. Filtro por status
-      if (statusFilter !== "all" && coupon.status !== statusFilter) {
-        return false;
+      if (statusFilter !== "all") {
+        const effective = isCouponEffectivelyActive(coupon) ? "active" : "inactive";
+        if (effective !== statusFilter) {
+          return false;
+        }
       }
 
       // 3. Filtro por tipo de desconto
@@ -361,7 +366,7 @@ export default function CouponsClientV2({ initialCoupons, hideHeader = false }: 
           value={stats.inactive}
           accent="zinc"
           icon={<AlertCircle className="w-5 h-5" />}
-          subtext="Pausados ou expirados"
+          subtext="Pausados, vencidos ou esgotados"
         />
         <StatCard
           label="Total de Resgates"

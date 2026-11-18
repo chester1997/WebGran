@@ -563,41 +563,38 @@ export default function WelcomeClientV2({ initialSettings, hideHeader = false }:
             </div>
           </Card>
 
-          {/* Card D: Resumo da Configuração */}
+          {/* Card D: Prévia ao vivo de como a mensagem chega no Telegram */}
           <Card padding="md" className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a]">
-              Status da Configuração
+              Prévia no Telegram
             </h3>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between py-1.5 border-b border-[#26262a]">
-                <span className="text-[#9a9aa2]">Mensagem automática:</span>
-                <span className="font-semibold text-[#f4f4f5]">
-                  {welcomeMessage.trim() ? "Preenchida" : "Em branco"}
-                </span>
+            <div className="rounded-2xl bg-[#17212b] border border-[#22303c] p-3 space-y-1.5">
+              <div className="rounded-xl bg-[#182533] overflow-hidden">
+                {hasBanner && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={bannerUrl}
+                    alt="Banner de boas-vindas"
+                    className="w-full aspect-video object-cover bg-[#1f2e3d]"
+                  />
+                )}
+                <p className="px-3 py-2.5 text-[13px] leading-relaxed text-[#e9eef2] whitespace-pre-line break-words">
+                  {welcomeMessage.trim()
+                    ? welcomeMessage.replace(/\{nome\}/gi, "Ana").replace(/\{name\}/gi, "Ana")
+                    : "Olá Ana! Bem-vindo(a) à loja.\n\nClique no botão abaixo para abrir nossa loja e conferir os produtos!"}
+                </p>
               </div>
-
-              <div className="flex items-center justify-between py-1.5 border-b border-[#26262a]">
-                <span className="text-[#9a9aa2]">Banner em anexo:</span>
-                <span className="font-semibold text-[#f4f4f5]">
-                  {hasBanner ? "Ativo (16:9)" : "Nenhum"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-1.5 border-b border-[#26262a]">
-                <span className="text-[#9a9aa2]">Canal de suporte:</span>
-                <span className="font-semibold text-[#f4f4f5] capitalize">
-                  {supportType} {supportValue.trim() ? "(Configurado)" : "(Vazio)"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-[#9a9aa2]">Limite de caracteres:</span>
-                <span className="font-semibold text-[#60a5fa] tabular-nums">
-                  {maxChars} caracteres
-                </span>
+              <div className="grid grid-cols-2 gap-1.5 text-[12px] text-center">
+                <span className="col-span-2 rounded-lg bg-[#2b5278] text-white py-2">🛍️ ABRIR LOJA</span>
+                <span className="rounded-lg bg-[#22303c] text-[#e9eef2] py-2">🛒 Carrinho</span>
+                <span className="rounded-lg bg-[#22303c] text-[#e9eef2] py-2">📺 Meus Acessos</span>
+                <span className="col-span-2 rounded-lg bg-[#22303c] text-[#e9eef2] py-2">📚 Catálogo</span>
+                <span className="col-span-2 rounded-lg bg-[#22303c] text-[#e9eef2] py-2">💬 Suporte</span>
               </div>
             </div>
+            <p className="text-[11px] text-[#71717a]">
+              {"{nome}"} aparece como “Ana” só nesta prévia. Sem texto salvo, o bot usa a mensagem padrão da loja.
+            </p>
           </Card>
         </div>
       </div>

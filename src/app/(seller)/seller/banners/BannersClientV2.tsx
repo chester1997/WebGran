@@ -483,7 +483,9 @@ export default function BannersClientV2({
           subtitle="Gerencie os banners exibidos em destaque no topo do seu Mini App. Suporta imagens de até 20MB."
           badge={
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[#3b82f6]/15 text-[#60a5fa] border border-[#3b82f6]/30">
-              {bannersList.length} de {maxLimit} banners
+              {maxLimit >= 1000
+                ? `${bannersList.length} ${bannersList.length === 1 ? "banner" : "banners"}`
+                : `${bannersList.length} de ${maxLimit} banners`}
             </span>
           }
           actions={
@@ -528,7 +530,7 @@ export default function BannersClientV2({
           value={stats.total}
           accent="blue"
           icon={<ImageIcon className="w-5 h-5" />}
-          subtext={`Limite: ${maxLimit} banners`}
+          subtext={maxLimit >= 1000 ? "Sem limite no seu plano" : `Limite: ${maxLimit} banners`}
         />
         <StatCard
           label="Banners Ativos"

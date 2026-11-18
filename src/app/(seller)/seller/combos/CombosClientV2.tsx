@@ -810,14 +810,23 @@ export default function CombosClientV2({
                           </div>
                           {combo.tiers && combo.tiers.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
-                              {combo.tiers.map((t, i) => (
-                                <span
-                                  key={i}
-                                  className="px-2 py-0.5 rounded-lg bg-[#222228] border border-[#2e2e34] text-[11px] text-[#f4f4f5] font-medium tabular-nums"
-                                >
-                                  {t.minQuantity} un: <b className="text-purple-300">R$ {parseFloat(String(t.price)).toFixed(2)}</b>
-                                </span>
-                              ))}
+                              {combo.tiers.map((t, i) => {
+                                const total = parseFloat(String(t.price)) || 0;
+                                const qty = t.minQuantity || 1;
+                                const brl = (v: number) =>
+                                  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                                return (
+                                  <span
+                                    key={i}
+                                    className="flex flex-col px-2.5 py-1.5 rounded-lg bg-[#222228] border border-[#2e2e34] text-[11px] text-[#a1a1aa] tabular-nums"
+                                  >
+                                    <span>
+                                      {qty} por <b className="text-[#f4f4f5]">{brl(total)}</b>
+                                    </span>
+                                    <span className="text-purple-300">{brl(total / qty)} cada</span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-xs text-[#71717a]">Faixas não configuradas</span>
