@@ -41,32 +41,35 @@ export default async function SellerVideosPage() {
     );
   }
 
-  let videos: any[] = [];
-  try {
-    console.log("[SELLER_VIDEOS] STEP 6 - loading library");
-    videos = await ProductVideoService.listSellerLibraryVideos(store.id);
-    console.log("[SELLER_VIDEOS] STEP 7 - library loaded successfully, count:", videos.length);
-  } catch (error) {
-    console.error("[SELLER_VIDEOS] LIBRARY ERROR in listSellerLibraryVideos:", error);
-    videos = [];
-  }
-
-  let rawUsage;
-  try {
-    console.log("[SELLER_VIDEOS] STEP 8 - loading storage usage");
-    rawUsage = await ProductVideoService.getSellerVideoStorageUsage(seller.id, store.id);
-    console.log("[SELLER_VIDEOS] STEP 9 - storage usage loaded successfully");
-  } catch (error) {
-    console.error("[SELLER_VIDEOS] STORAGE ERROR in getSellerVideoStorageUsage:", error);
-    rawUsage = {
-      usedBytes: 0,
-      quotaGb: 50,
-      quotaBytes: 50 * 1024 * 1024 * 1024,
-      reservedBytes: 0,
-      remainingBytes: 50 * 1024 * 1024 * 1024,
-      percentUsed: 0,
-    };
-  }
+  // Biblioteca e uso de armazenamento são independentes: carregam em paralelo,
+  // cada um com o seu próprio tratamento de erro (igual ao comportamento anterior).
+  const [videos, rawUsage] = await Promise.all([
+    ProductVideoService.listSellerLibraryVideos(store.id)
+      .then((list): any[] => {
+        console.log("[SELLER_VIDEOS] STEP 7 - library loaded successfully, count:", list.length);
+        return list;
+      })
+      .catch((error): any[] => {
+        console.error("[SELLER_VIDEOS] LIBRARY ERROR in listSellerLibraryVideos:", error);
+        return [];
+      }),
+    ProductVideoService.getSellerVideoStorageUsage(seller.id, store.id)
+      .then((usage): any => {
+        console.log("[SELLER_VIDEOS] STEP 9 - storage usage loaded successfully");
+        return usage;
+      })
+      .catch((error): any => {
+        console.error("[SELLER_VIDEOS] STORAGE ERROR in getSellerVideoStorageUsage:", error);
+        return {
+          usedBytes: 0,
+          quotaGb: 50,
+          quotaBytes: 50 * 1024 * 1024 * 1024,
+          reservedBytes: 0,
+          remainingBytes: 50 * 1024 * 1024 * 1024,
+          percentUsed: 0,
+        };
+      }),
+  ]);
 
   const usedGB = rawUsage.usedBytes / (1024 * 1024 * 1024);
   const quotaGB = rawUsage.quotaGb ?? 0;

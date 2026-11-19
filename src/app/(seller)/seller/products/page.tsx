@@ -18,43 +18,43 @@ export default async function SellerProductsPage() {
     return <SetupStoreClient />;
   }
 
-  // Load products with their categories and bot visibilities
-  const allProducts = await db.query.products.findMany({
-    where: eq(products.storeId, store.id),
-    orderBy: [desc(products.createdAt)],
-    with: {
-      category: true,
-      botVisibilities: true,
-    }
-  });
-
-  const allCategories = await db.query.categories.findMany({
-    where: eq(categories.storeId, store.id),
-    columns: { id: true, name: true }
-  });
-
-  const storeBots = await db.query.telegramBots.findMany({
-    where: eq(telegramBots.storeId, store.id),
-    columns: { id: true, username: true, displayName: true, photoUrl: true }
-  });
-
-  // Load custom non-ranking carousels of this store
-  const allCarousels = await db.query.productCarousels.findMany({
-    where: and(
-      eq(productCarousels.storeId, store.id),
-      eq(productCarousels.isRanking, false)
-    ),
-    orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
-    columns: {
-      id: true,
-      name: true,
-      indicatorType: true,
-      iconName: true,
-      iconColor: true,
-      status: true,
-      position: true,
-    }
-  });
+  // Consultas independentes em paralelo (antes rodavam uma depois da outra)
+  const [allProducts, allCategories, storeBots, allCarousels] = await Promise.all([
+    // Products with their categories and bot visibilities
+    db.query.products.findMany({
+      where: eq(products.storeId, store.id),
+      orderBy: [desc(products.createdAt)],
+      with: {
+        category: true,
+        botVisibilities: true,
+      }
+    }),
+    db.query.categories.findMany({
+      where: eq(categories.storeId, store.id),
+      columns: { id: true, name: true }
+    }),
+    db.query.telegramBots.findMany({
+      where: eq(telegramBots.storeId, store.id),
+      columns: { id: true, username: true, displayName: true, photoUrl: true }
+    }),
+    // Custom non-ranking carousels of this store
+    db.query.productCarousels.findMany({
+      where: and(
+        eq(productCarousels.storeId, store.id),
+        eq(productCarousels.isRanking, false)
+      ),
+      orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
+      columns: {
+        id: true,
+        name: true,
+        indicatorType: true,
+        iconName: true,
+        iconColor: true,
+        status: true,
+        position: true,
+      }
+    }),
+  ]);
 
   // Map product carousels
   const customCarouselIds = allCarousels.map((c) => c.id);

@@ -37,6 +37,8 @@ export interface EditProductModalV2Props {
   carousels?: CarouselOption[];
   /** "redesign": botão do card V2 (conta proprietária). Padrão: botão clássico usado pelos lojistas. */
   triggerVariant?: "classic" | "redesign";
+  /** Abre o modal assim que monta (usado pela lista V2, que só monta o modal no primeiro clique). */
+  autoOpen?: boolean;
 }
 
 type TabType = "geral" | "entrega" | "catalogo" | "vitrine";
@@ -47,6 +49,7 @@ export function EditProductModalV2({
   bots = [],
   carousels = [],
   triggerVariant = "classic",
+  autoOpen = false,
 }: EditProductModalV2Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -221,6 +224,12 @@ export function EditProductModalV2({
     setShowDiscardConfirm(false);
     setIsOpen(true);
   };
+
+  // Lista V2: o modal só é montado no primeiro clique em "Editar" e já abre.
+  useEffect(() => {
+    if (autoOpen) handleOpen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Change Tracker (diffCount)
   const diffCount = useMemo(() => {

@@ -37,6 +37,29 @@ import {
 
 import { NewProductFlowV2 } from "./v2/NewProductFlowV2";
 import { EditProductModalV2 } from "./v2/EditProductModalV2";
+import { Edit3 } from "lucide-react";
+
+/**
+ * Botão "Editar" leve: o formulário completo (EditProductModalV2) só é montado no primeiro clique,
+ * em vez de existir escondido em cada card. Isso deixa a lista bem mais rápida com muitos produtos.
+ */
+function LazyEditProductButton(props: { product: any; categories: any[]; bots: any[]; carousels?: any[] }) {
+  const [active, setActive] = useState(false);
+  if (active) {
+    return <EditProductModalV2 {...props} triggerVariant="redesign" autoOpen />;
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setActive(true)}
+      aria-label={`Editar ${props.product?.title || "produto"}`}
+      className="flex-1 w-full min-w-0 h-9 px-3 rounded-lg bg-white/[0.04] border border-white/10 text-[13px] font-semibold text-zinc-200 hover:text-white hover:bg-[#3b82f6]/15 hover:border-[#3b82f6]/40 inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
+    >
+      <Edit3 className="w-4 h-4 shrink-0" />
+      <span>Editar</span>
+    </button>
+  );
+}
 import { deleteProductAction } from "./actions";
 import { getProductBadge } from "@/lib/product-badge";
 
@@ -534,6 +557,8 @@ export default function ProductsListClientV2({
                     <img
                       src={prod.coverUrl}
                       alt={prod.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
@@ -606,12 +631,11 @@ export default function ProductsListClientV2({
                 {/* Rodapé de Ações */}
                 <div className="p-3 border-t border-[#26262a] flex items-center gap-2 bg-[#121215] shrink-0">
                   <div className="flex-1 min-w-0 flex">
-                    <EditProductModalV2
+                    <LazyEditProductButton
                       product={prod}
                       categories={categories}
                       bots={bots}
                       carousels={carousels}
-                      triggerVariant="redesign"
                     />
                   </div>
                   <RowMenu items={menuItems} ariaLabel={`Ações para ${prod.title}`} />
@@ -643,7 +667,7 @@ export default function ProductsListClientV2({
                   {/* Thumbnail 64x64 */}
                   <div className="w-16 h-16 rounded-xl bg-[#16161a] border border-[#26262a] overflow-hidden shrink-0 relative">
                     {prod.coverUrl ? (
-                      <img src={prod.coverUrl} alt={prod.title} className="w-full h-full object-cover" />
+                      <img src={prod.coverUrl} alt={prod.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[#71717a]">
                         <Package className="w-6 h-6 text-[#52525b]" />
@@ -694,12 +718,11 @@ export default function ProductsListClientV2({
                   </div>
 
                   <div className="flex items-center gap-2 w-[150px]">
-                    <EditProductModalV2
+                    <LazyEditProductButton
                       product={prod}
                       categories={categories}
                       bots={bots}
                       carousels={carousels}
-                      triggerVariant="redesign"
                     />
                     <RowMenu items={menuItems} ariaLabel={`Ações para ${prod.title}`} />
                   </div>

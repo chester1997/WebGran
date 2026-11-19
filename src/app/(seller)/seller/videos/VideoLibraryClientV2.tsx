@@ -1032,6 +1032,8 @@ export default function VideoLibraryClientV2({
                     <img
                       src={video.thumbnailUrl}
                       alt={video.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = "none";
@@ -1240,7 +1242,7 @@ export default function VideoLibraryClientV2({
                             onClick={() => isReady && handleOpenPreview(video)}
                           >
                             {video.thumbnailUrl ? (
-                              <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
+                              <img src={video.thumbnailUrl} alt={video.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             ) : (
                               <Film className="w-5 h-5 text-[#71717a]" />
                             )}

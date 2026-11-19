@@ -1000,13 +1000,14 @@ export class ProductVideoService {
     const videos = await db.query.productVideos.findMany({
       where: and(...conditions),
       orderBy: [desc(productVideos.createdAt)],
+      // Só os campos do produto que a listagem usa (id, título, slug): evita trazer descrição e demais colunas pesadas.
       with: {
         assignments: {
           with: {
-            product: true,
+            product: { columns: { id: true, title: true, slug: true } },
           },
         },
-        product: true,
+        product: { columns: { id: true, title: true, slug: true } },
       },
     });
 

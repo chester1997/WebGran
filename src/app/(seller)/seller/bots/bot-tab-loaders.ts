@@ -98,27 +98,22 @@ export async function loadBotTabData(
 
       case "produtos": {
         // Se currentBotId for informado (visão dentro do bot), filtra produtos visíveis para este bot
-        let visibleProductIds: string[] | null = null;
-        let visibilityMap: Record<string, { isOwner: boolean; canDeliver: boolean }> = {};
-
-        if (currentBotId) {
-          const visibilities = await db.query.productBotVisibility.findMany({
-            where: and(
-              eq(productBotVisibility.storeId, store.id),
-              eq(productBotVisibility.botId, currentBotId)
-            ),
-          });
-
-          visibleProductIds = visibilities.map((v) => v.productId);
-          for (const v of visibilities) {
-            visibilityMap[v.productId] = { isOwner: v.isOwner, canDeliver: v.canDeliver };
-          }
-        }
-
-        let allProducts: any[] = [];
-        if (currentBotId) {
-          if (visibleProductIds && visibleProductIds.length > 0) {
-            allProducts = await db.query.products.findMany({
+        // Produtos (com o filtro de visibilidade do bot) + categorias, bots e carrosséis em paralelo
+        const loadProducts = async () => {
+          const visibilityMap: Record<string, { isOwner: boolean; canDeliver: boolean }> = {};
+          if (currentBotId) {
+            const visibilities = await db.query.productBotVisibility.findMany({
+              where: and(
+                eq(productBotVisibility.storeId, store.id),
+                eq(productBotVisibility.botId, currentBotId)
+              ),
+            });
+            const visibleProductIds = visibilities.map((v) => v.productId);
+            for (const v of visibilities) {
+              visibilityMap[v.productId] = { isOwner: v.isOwner, canDeliver: v.canDeliver };
+            }
+            if (visibleProductIds.length === 0) return { allProducts: [] as any[], visibilityMap };
+            const list = await db.query.products.findMany({
               where: and(eq(products.storeId, store.id), inArray(products.id, visibleProductIds)),
               orderBy: [desc(products.createdAt)],
               with: {
@@ -126,9 +121,9 @@ export async function loadBotTabData(
                 botVisibilities: true,
               },
             });
+            return { allProducts: list as any[], visibilityMap };
           }
-        } else {
-          allProducts = await db.query.products.findMany({
+          const list = await db.query.products.findMany({
             where: eq(products.storeId, store.id),
             orderBy: [desc(products.createdAt)],
             with: {
@@ -136,34 +131,36 @@ export async function loadBotTabData(
               botVisibilities: true,
             },
           });
-        }
+          return { allProducts: list as any[], visibilityMap };
+        };
 
-        const allCategories = await db.query.categories.findMany({
-          where: eq(categories.storeId, store.id),
-          columns: { id: true, name: true },
-        });
-
-        const storeBots = await db.query.telegramBots.findMany({
-          where: eq(telegramBots.storeId, store.id),
-          columns: { id: true, username: true, displayName: true, photoUrl: true },
-        });
-
-        const allCarousels = await db.query.productCarousels.findMany({
-          where: and(
-            eq(productCarousels.storeId, store.id),
-            eq(productCarousels.isRanking, false)
-          ),
-          orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
-          columns: {
-            id: true,
-            name: true,
-            indicatorType: true,
-            iconName: true,
-            iconColor: true,
-            status: true,
-            position: true,
-          },
-        });
+        const [{ allProducts, visibilityMap }, allCategories, storeBots, allCarousels] = await Promise.all([
+          loadProducts(),
+          db.query.categories.findMany({
+            where: eq(categories.storeId, store.id),
+            columns: { id: true, name: true },
+          }),
+          db.query.telegramBots.findMany({
+            where: eq(telegramBots.storeId, store.id),
+            columns: { id: true, username: true, displayName: true, photoUrl: true },
+          }),
+          db.query.productCarousels.findMany({
+            where: and(
+              eq(productCarousels.storeId, store.id),
+              eq(productCarousels.isRanking, false)
+            ),
+            orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
+            columns: {
+              id: true,
+              name: true,
+              indicatorType: true,
+              iconName: true,
+              iconColor: true,
+              status: true,
+              position: true,
+            },
+          }),
+        ]);
 
         const customCarouselIds = allCarousels.map((c) => c.id);
         const productCarouselMap: Record<string, string[]> = {};
@@ -214,26 +211,21 @@ export async function loadBotTabData(
       }
 
       case "videos": {
-        let videos: any[] = [];
-        try {
-          videos = await ProductVideoService.listSellerLibraryVideos(store.id);
-        } catch (e) {
-          console.error("Error loading videos in bot tab:", e);
-        }
-
-        let rawUsage: any;
-        try {
-          rawUsage = await ProductVideoService.getSellerVideoStorageUsage(userId, store.id);
-        } catch (e) {
-          rawUsage = {
+        // Biblioteca e uso de armazenamento em paralelo (antes em sequência), mesmos fallbacks de erro
+        const [videos, rawUsage] = await Promise.all([
+          ProductVideoService.listSellerLibraryVideos(store.id).catch((e): any[] => {
+            console.error("Error loading videos in bot tab:", e);
+            return [];
+          }),
+          ProductVideoService.getSellerVideoStorageUsage(userId, store.id).catch((): any => ({
             usedBytes: 0,
             quotaGb: 50,
             quotaBytes: 50 * 1024 * 1024 * 1024,
             reservedBytes: 0,
             remainingBytes: 50 * 1024 * 1024 * 1024,
             percentUsed: 0,
-          };
-        }
+          })),
+        ]);
 
         const usedGB = rawUsage.usedBytes / (1024 * 1024 * 1024);
         const quotaGB = rawUsage.quotaGb ?? 0;
