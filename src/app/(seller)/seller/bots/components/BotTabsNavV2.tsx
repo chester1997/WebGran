@@ -167,9 +167,9 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
                   <X className="w-4 h-4" strokeWidth={1.8} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto min-h-0 py-2">
-                {groups.map((g, gi) => (
-                  <div key={g.id} className={gi > 0 ? "mt-2 pt-2 border-t border-white/[0.06]" : ""}>
+              <div className="flex-1 overflow-y-auto min-h-0 py-2 space-y-1">
+                {groups.map((g) => (
+                  <div key={g.id} className="space-y-1">
                     {g.tabs.map((t) => {
                       const Icon = t.icon;
                       const isActive = t.id === current.id;
