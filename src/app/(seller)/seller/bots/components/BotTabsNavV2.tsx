@@ -21,8 +21,8 @@ import {
 /**
  * Navegação do Redesign V2 das abas do bot.
  * Renderizada SOMENTE para a conta proprietária (ver `useRedesignV2` em SingleBotClient).
- * Visual igual ao clássico (ícone + nome, sublinhado na aba ativa); muda a ordem das abas,
- * agrupadas por assunto e separadas por um traço discreto, sem títulos de grupo.
+ * Visual igual ao clássico (ícone + nome, sublinhado na aba ativa); muda só a ordem das abas,
+ * que ficam agrupadas por assunto, sem títulos nem separadores.
  * Os ids das abas são os mesmos da navegação clássica (BotTabsNav), então a URL `?tab=` continua compatível.
  */
 
@@ -202,12 +202,11 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
         )}
       </div>
 
-      {/* Computador: ícone + nome, sublinhado na aba ativa, traço discreto entre grupos */}
+      {/* Computador: ícone + nome, sublinhado na aba ativa */}
       <nav aria-label="Seções do bot" className="hidden lg:block w-full overflow-x-auto no-scrollbar scroll-smooth">
         <div className="flex items-center gap-1 min-w-max">
-          {groups.map((g, gi) => (
+          {groups.map((g) => (
             <React.Fragment key={g.id}>
-              {gi > 0 && <span aria-hidden="true" className="w-px h-5 bg-white/10 mx-1.5 shrink-0" />}
               {g.tabs.map((t) => {
                 const Icon = t.icon;
                 const isActive = t.id === current.id;
