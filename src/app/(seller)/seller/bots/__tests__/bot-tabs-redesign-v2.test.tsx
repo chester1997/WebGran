@@ -31,12 +31,14 @@ describe("Redesign V2 das abas do bot", () => {
       expect(groups[0].label).toBe("Bot");
     });
 
-    it("marca a aba ativa com aria-current", () => {
+    it("marca a aba ativa e mostra ícone + nome, sem títulos de grupo na barra", () => {
       const html = renderToStaticMarkup(
         <BotTabsNavV2 activeTab="cupons" onSelectTab={() => {}} isAdmin={true} />
       );
-      expect(html).toMatch(/aria-current="page"[^>]*>Cupons</);
-      expect(html).toContain("Vitrine do Mini App");
+      expect(html).toMatch(/aria-current="page"[^>]*>.*?<svg[\s\S]*?<span>Cupons<\/span>/);
+      expect(html).not.toContain("Vitrine do Mini App");
+      expect(html).not.toContain(">Catálogo<");
+      expect(html).not.toContain(">Mídia<");
     });
   });
 

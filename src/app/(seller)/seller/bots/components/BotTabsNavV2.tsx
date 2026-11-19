@@ -2,20 +2,39 @@
 
 import React, { useEffect, useState } from "react";
 import { ChevronDown, X, Check } from "lucide-react";
+import {
+  SolarSellerOverviewIcon,
+  SolarSellerBotIcon,
+  SolarSellerWelcomeIcon,
+  SolarSellerBannersIcon,
+  SolarSellerProductsIcon,
+  SolarSellerCombosIcon,
+  SolarSellerVideosIcon,
+  SolarSellerCarouselsIcon,
+  SolarSellerCategoriesIcon,
+  SolarSellerClipsIcon,
+  SolarSellerNotificationsIcon,
+  SolarSellerCouponsIcon,
+  type SolarIconProps,
+} from "@/components/icons/solar/seller-icons";
 
 /**
- * Navegação agrupada do Redesign V2 das abas do bot.
+ * Navegação do Redesign V2 das abas do bot.
  * Renderizada SOMENTE para a conta proprietária (ver `useRedesignV2` em SingleBotClient).
+ * Visual igual ao clássico (ícone + nome, sublinhado na aba ativa); muda a ordem das abas,
+ * agrupadas por assunto e separadas por um traço discreto, sem títulos de grupo.
  * Os ids das abas são os mesmos da navegação clássica (BotTabsNav), então a URL `?tab=` continua compatível.
  */
 
 export interface BotTabV2 {
   id: string;
   label: string;
+  icon: React.ComponentType<SolarIconProps>;
 }
 
 export interface BotTabGroupV2 {
   id: string;
+  /** Nome do grupo: usado só na folha do celular, não aparece na barra do computador. */
   label: string;
   tabs: BotTabV2[];
 }
@@ -28,9 +47,9 @@ export function buildBotTabGroupsV2(opts: { isAdmin: boolean; mode?: string }): 
       id: "bot",
       label: "Bot",
       tabs: [
-        { id: "visao-geral", label: "Visão geral" },
-        { id: "configuracao", label: "Configuração" },
-        { id: "boas-vindas", label: "Boas-vindas" },
+        { id: "visao-geral", label: "Visão geral", icon: SolarSellerOverviewIcon },
+        { id: "configuracao", label: "Configuração", icon: SolarSellerBotIcon },
+        { id: "boas-vindas", label: "Boas-vindas", icon: SolarSellerWelcomeIcon },
       ],
     },
   ];
@@ -41,27 +60,27 @@ export function buildBotTabGroupsV2(opts: { isAdmin: boolean; mode?: string }): 
         id: "catalogo",
         label: "Catálogo",
         tabs: [
-          { id: "produtos", label: "Produtos" },
-          ...(opts.isAdmin ? [{ id: "categorias", label: "Categorias" }] : []),
-          { id: "combos", label: "Combos" },
-          { id: "cupons", label: "Cupons" },
+          { id: "produtos", label: "Produtos", icon: SolarSellerProductsIcon },
+          ...(opts.isAdmin ? [{ id: "categorias", label: "Categorias", icon: SolarSellerCategoriesIcon }] : []),
+          { id: "combos", label: "Combos", icon: SolarSellerCombosIcon },
+          { id: "cupons", label: "Cupons", icon: SolarSellerCouponsIcon },
         ],
       },
       {
         id: "vitrine",
         label: "Vitrine do Mini App",
         tabs: [
-          { id: "banners", label: "Banners" },
-          { id: "carrosseis", label: "Carrosséis" },
-          { id: "notificacoes", label: "Notificações" },
+          { id: "banners", label: "Banners", icon: SolarSellerBannersIcon },
+          { id: "carrosseis", label: "Carrosséis", icon: SolarSellerCarouselsIcon },
+          { id: "notificacoes", label: "Notificações", icon: SolarSellerNotificationsIcon },
         ],
       },
       {
         id: "midia",
         label: "Mídia",
         tabs: [
-          { id: "videos", label: "Biblioteca de vídeos" },
-          { id: "clips", label: "Clipes" },
+          { id: "videos", label: "Biblioteca de Vídeos", icon: SolarSellerVideosIcon },
+          { id: "clips", label: "Clipes", icon: SolarSellerClipsIcon },
         ],
       }
     );
@@ -81,8 +100,9 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
   const [sheetOpen, setSheetOpen] = useState(false);
   const groups = buildBotTabGroupsV2({ isAdmin, mode });
 
-  const flat = groups.flatMap((g) => g.tabs.map((t) => ({ ...t, groupLabel: g.label })));
+  const flat = groups.flatMap((g) => g.tabs);
   const current = flat.find((t) => t.id === activeTab) || flat[0];
+  const CurrentIcon = current.icon;
 
   useEffect(() => {
     if (!sheetOpen) return;
@@ -105,60 +125,53 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
 
   return (
     <>
-      {/* Celular / tablet: seletor único + folha inferior agrupada */}
+      {/* Celular / tablet: seletor único + folha inferior */}
       <div className="block lg:hidden w-full pt-1">
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
-          className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#131316] border border-[#2e2e34] hover:border-white/20 transition-colors text-left cursor-pointer"
+          aria-label="Abrir seções do bot"
+          className="w-full flex items-center justify-between px-4 py-3 rounded-[10px] bg-[#141416] hover:bg-[#18181D] border border-white/[0.08] hover:border-white/20 transition-colors text-left cursor-pointer"
         >
-          <span className="flex flex-col min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b8b94]">
-              {current.groupLabel}
-            </span>
-            <span className="text-[15px] font-semibold text-white truncate">{current.label}</span>
+          <span className="flex items-center gap-3 min-w-0">
+            <CurrentIcon className="w-5 h-5 text-[#3984FF] shrink-0" size={20} />
+            <span className="text-sm font-semibold text-white truncate">{current.label}</span>
           </span>
-          <span className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
-            Trocar <ChevronDown className="w-4 h-4" strokeWidth={1.8} />
-          </span>
+          <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.8} />
         </button>
 
         {sheetOpen && (
           <div className="fixed inset-0 z-[200] lg:hidden">
             <div
               onClick={() => setSheetOpen(false)}
-              className="fixed inset-0 bg-black/70 animate-in fade-in duration-200"
+              className="fixed inset-0 bg-black/75 animate-in fade-in duration-200"
               aria-hidden="true"
             />
             <div
               role="dialog"
               aria-modal="true"
               aria-label="Seções do bot"
-              className="fixed inset-x-0 bottom-0 z-[201] bg-[#131316] border-t border-[#2e2e34] rounded-t-[22px] px-4 pt-3 pb-8 max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300 overscroll-contain"
+              className="fixed inset-x-0 bottom-0 z-[201] bg-[#141417] border-t border-white/10 rounded-t-[28px] px-5 pt-3 pb-8 max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300 overscroll-contain"
             >
-              <div className="flex items-center justify-between pb-2 shrink-0">
-                <div className="w-10 h-1 rounded-full bg-zinc-600/70 mx-auto" />
-              </div>
-              <div className="flex items-center justify-between pb-3 shrink-0">
+              <div className="w-12 h-1.5 rounded-full bg-zinc-600/70 mx-auto mb-3 shrink-0" />
+              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] shrink-0">
                 <h3 className="text-base font-bold text-white">Seções do bot</h3>
                 <button
                   type="button"
                   onClick={() => setSheetOpen(false)}
                   aria-label="Fechar"
-                  className="w-8 h-8 rounded-full bg-white/[0.05] hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-white/[0.05] hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
                 >
                   <X className="w-4 h-4" strokeWidth={1.8} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
-                {groups.map((g) => (
-                  <div key={g.id} className="flex flex-col gap-1">
-                    <span className="px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b8b94]">
-                      {g.label}
-                    </span>
+              <div className="flex-1 overflow-y-auto min-h-0 py-2">
+                {groups.map((g, gi) => (
+                  <div key={g.id} className={gi > 0 ? "mt-2 pt-2 border-t border-white/[0.06]" : ""}>
                     {g.tabs.map((t) => {
+                      const Icon = t.icon;
                       const isActive = t.id === current.id;
                       return (
                         <button
@@ -166,14 +179,18 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
                           type="button"
                           onClick={() => select(t.id)}
                           aria-current={isActive ? "page" : undefined}
-                          className={`w-full flex items-center justify-between min-h-[46px] px-3 rounded-[10px] text-left text-[15px] cursor-pointer transition-colors ${
-                            isActive
-                              ? "bg-[#2563eb]/25 text-white font-semibold"
-                              : "text-zinc-200 hover:bg-white/[0.05]"
-                          }`}
+                          className="group w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-left cursor-pointer hover:bg-white/[0.04] active:bg-white/[0.08]"
                         >
-                          <span>{t.label}</span>
-                          {isActive && <Check className="w-4 h-4 text-[#60a5fa]" strokeWidth={2.5} />}
+                          <span className="flex items-center gap-3.5 min-w-0">
+                            <Icon
+                              size={20}
+                              className={`w-5 h-5 shrink-0 ${isActive ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"}`}
+                            />
+                            <span className={`text-sm truncate ${isActive ? "font-semibold text-white" : "font-medium text-zinc-300 group-hover:text-white"}`}>
+                              {t.label}
+                            </span>
+                          </span>
+                          {isActive && <Check className="w-4 h-4 text-[#3984FF] stroke-[2.5] shrink-0" />}
                         </button>
                       );
                     })}
@@ -185,15 +202,14 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
         )}
       </div>
 
-      {/* Computador: grupos lado a lado */}
-      <nav aria-label="Seções do bot" className="hidden lg:flex flex-wrap items-end gap-3 w-full pt-1">
-        {groups.map((g) => (
-          <div key={g.id} className="flex flex-col gap-1.5">
-            <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b8b94]">
-              {g.label}
-            </span>
-            <div className="flex gap-0.5 bg-[#131316] border border-[#232328] rounded-[10px] p-[3px]">
+      {/* Computador: ícone + nome, sublinhado na aba ativa, traço discreto entre grupos */}
+      <nav aria-label="Seções do bot" className="hidden lg:block w-full overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex items-center gap-1 min-w-max">
+          {groups.map((g, gi) => (
+            <React.Fragment key={g.id}>
+              {gi > 0 && <span aria-hidden="true" className="w-px h-5 bg-white/10 mx-1.5 shrink-0" />}
               {g.tabs.map((t) => {
+                const Icon = t.icon;
                 const isActive = t.id === current.id;
                 return (
                   <button
@@ -201,19 +217,26 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
                     type="button"
                     onClick={() => onSelectTab(t.id)}
                     aria-current={isActive ? "page" : undefined}
-                    className={`px-3 py-[7px] rounded-[7px] text-[13px] whitespace-nowrap cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#60a5fa] ${
-                      isActive
-                        ? "bg-[#2563eb] text-white font-semibold"
-                        : "text-[#a1a1aa] hover:text-white hover:bg-[#1f1f24]"
+                    className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm transition-colors cursor-pointer select-none whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#60a5fa] ${
+                      isActive ? "text-white font-semibold" : "text-zinc-400 hover:text-white font-medium"
                     }`}
                   >
-                    {t.label}
+                    <Icon
+                      size={16}
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        isActive ? "text-[#3984FF]" : "text-zinc-400 group-hover:text-zinc-200"
+                      }`}
+                    />
+                    <span>{t.label}</span>
+                    {isActive && (
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#3984FF] rounded-full" />
+                    )}
                   </button>
                 );
               })}
-            </div>
-          </div>
-        ))}
+            </React.Fragment>
+          ))}
+        </div>
       </nav>
     </>
   );
