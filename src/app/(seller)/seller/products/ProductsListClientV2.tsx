@@ -244,7 +244,7 @@ export default function ProductsListClientV2({
         />
       );
     }
-    if (type === "video" || type === "VIDEO") {
+    if (type === "video" || type === "VIDEO" || type === "product_video") {
       return (
         <Chip
           size="sm"
@@ -526,7 +526,7 @@ export default function ProductsListClientV2({
                 key={prod.id}
                 padding="none"
                 interactive
-                className="flex flex-col justify-between overflow-hidden group"
+                className="flex flex-col justify-between overflow-hidden group !rounded-[10px]"
               >
                 {/* Imagem de Capa (144px compacta) */}
                 <div className="w-full h-36 bg-[#16161a] relative overflow-hidden shrink-0 border-b border-[#26262a]">
@@ -605,12 +605,13 @@ export default function ProductsListClientV2({
 
                 {/* Rodapé de Ações */}
                 <div className="p-3 border-t border-[#26262a] flex items-center gap-2 bg-[#121215] shrink-0">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0 flex">
                     <EditProductModalV2
                       product={prod}
                       categories={categories}
                       bots={bots}
                       carousels={carousels}
+                      triggerVariant="redesign"
                     />
                   </div>
                   <RowMenu items={menuItems} ariaLabel={`Ações para ${prod.title}`} />
@@ -692,12 +693,13 @@ export default function ProductsListClientV2({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-[150px]">
                     <EditProductModalV2
                       product={prod}
                       categories={categories}
                       bots={bots}
                       carousels={carousels}
+                      triggerVariant="redesign"
                     />
                     <RowMenu items={menuItems} ariaLabel={`Ações para ${prod.title}`} />
                   </div>

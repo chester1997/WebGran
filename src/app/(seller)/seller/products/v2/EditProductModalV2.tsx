@@ -35,6 +35,8 @@ export interface EditProductModalV2Props {
   categories: any[];
   bots: any[];
   carousels?: CarouselOption[];
+  /** "redesign": botão do card V2 (conta proprietária). Padrão: botão clássico usado pelos lojistas. */
+  triggerVariant?: "classic" | "redesign";
 }
 
 type TabType = "geral" | "entrega" | "catalogo" | "vitrine";
@@ -44,6 +46,7 @@ export function EditProductModalV2({
   categories = [],
   bots = [],
   carousels = [],
+  triggerVariant = "classic",
 }: EditProductModalV2Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -1520,9 +1523,23 @@ export function EditProductModalV2({
       <button
         type="button"
         onClick={handleOpen}
-        className="flex-1 bg-transparent border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-8 text-xs font-medium rounded-lg inline-flex items-center justify-center transition-colors cursor-pointer"
+        aria-label={triggerVariant === "redesign" ? `Editar ${product?.title || "produto"}` : undefined}
+        className={
+          triggerVariant === "redesign"
+            ? "flex-1 w-full min-w-0 h-9 px-3 rounded-lg bg-white/[0.04] border border-white/10 text-[13px] font-semibold text-zinc-200 hover:text-white hover:bg-[#3b82f6]/15 hover:border-[#3b82f6]/40 inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            : "flex-1 bg-transparent border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 h-8 text-xs font-medium rounded-lg inline-flex items-center justify-center transition-colors cursor-pointer"
+        }
       >
-        <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
+        {triggerVariant === "redesign" ? (
+          <>
+            <Edit3 className="w-4 h-4 shrink-0" />
+            <span>Editar</span>
+          </>
+        ) : (
+          <>
+            <Edit3 className="w-3.5 h-3.5 mr-2" /> Editar
+          </>
+        )}
       </button>
 
       {mounted && typeof document !== "undefined" && createPortal(modalContent, document.body)}
