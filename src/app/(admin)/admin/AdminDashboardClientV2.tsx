@@ -209,7 +209,7 @@ export default function AdminDashboardClientV2() {
     : [];
 
   return (
-    <div className="space-y-5 pb-16 text-zinc-100 max-w-[1240px] mx-auto tabular-nums">
+    <div className="space-y-5 pb-16 text-zinc-100 w-full max-w-[1800px] mx-auto tabular-nums">
       <AdminPageHeader
         title="Visão geral"
         subtitle={
