@@ -828,10 +828,25 @@ export default function ConversasCenterV2({
           className="absolute inset-0 pointer-events-none"
           aria-hidden="true"
           style={{
+            // Base escura com leve brilho colorido nos cantos (estilo papel de parede do Telegram)
             backgroundColor: "#0b0d12",
-            backgroundImage: `url('/images/chat-pattern.svg')`,
-            backgroundRepeat: "repeat",
-            backgroundSize: "380px 380px",
+            backgroundImage:
+              "radial-gradient(120% 90% at 0% 0%, rgba(76,29,149,0.35) 0%, transparent 55%), radial-gradient(110% 90% at 100% 100%, rgba(30,64,175,0.30) 0%, transparent 55%)",
+          }}
+        />
+        {/* Desenhos próprios da WebGran recortando um degradê roxo → azul → rosa */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden="true"
+          style={{
+            backgroundImage: "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 35%, #a855f7 65%, #ec4899 100%)",
+            opacity: 0.32,
+            WebkitMaskImage: "url('/images/chat-pattern-webgran.svg')",
+            maskImage: "url('/images/chat-pattern-webgran.svg')",
+            WebkitMaskRepeat: "repeat",
+            maskRepeat: "repeat",
+            WebkitMaskSize: "300px 300px",
+            maskSize: "300px 300px",
           }}
         />
 
