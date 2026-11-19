@@ -225,6 +225,9 @@ export function EditProductModalV2({
     setIsOpen(true);
   };
 
+  // Ajustes de layout do redesign (conta proprietária): no celular o conteúdo não pode alargar o modal.
+  const isRedesign = triggerVariant === "redesign";
+
   // Lista V2: o modal só é montado no primeiro clique em "Editar" e já abre.
   useEffect(() => {
     if (autoOpen) handleOpen();
@@ -558,7 +561,9 @@ export function EditProductModalV2({
     >
       <div
         style={{ ["--cc" as any]: config.cc }}
-        className="bg-[#0e0e10] border border-[#232326] sm:rounded-[18px] rounded-t-[20px] max-w-[620px] w-full flex flex-col max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden shadow-2xl animate-in zoom-in-95 text-[#f4f4f5]"
+        className={`bg-[#0e0e10] border border-[#232326] sm:rounded-[18px] rounded-t-[20px] max-w-[620px] w-full flex flex-col max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden shadow-2xl animate-in zoom-in-95 text-[#f4f4f5] ${
+          isRedesign ? "min-w-0" : ""
+        }`}
       >
         {/* =========================================================================
             CABEÇALHO FIXO
@@ -798,7 +803,10 @@ export function EditProductModalV2({
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://..."
-                    className="flex-1 h-[42px] bg-[#111113] rounded-[10px] px-3 text-[13px] text-[#f4f4f5] placeholder:text-[#71717a] border border-[#2a2a2f] focus:border-[var(--cc)] focus:outline-none truncate"
+                    aria-label="Link da imagem"
+                    className={`flex-1 h-[42px] bg-[#111113] rounded-[10px] px-3 text-[13px] text-[#f4f4f5] placeholder:text-[#71717a] border border-[#2a2a2f] focus:border-[var(--cc)] focus:outline-none truncate ${
+                      isRedesign ? "min-w-0" : ""
+                    }`}
                   />
                 </div>
                 {errors.imageUrl && (
