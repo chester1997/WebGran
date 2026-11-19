@@ -1,13 +1,9 @@
 import React from "react";
-import { db } from "@/db";
-import { products, categories } from "@/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ProductCard } from "../components/ProductCard";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getStoreBySlug } from "@/lib/store-cache";
-import { CatalogResolverService } from "@/lib/products/catalog-resolver";
+import { getCategoryPageData } from "@/lib/miniapp/catalog-page-cache";
 
 export async function StudioCategory({ 
   storeSlug, 
@@ -18,30 +14,12 @@ export async function StudioCategory({
   categorySlug: string;
   originBotId?: string | null;
 }) {
-  const store = await getStoreBySlug(storeSlug);
+  // Dados com cache curto (mesma política da página inicial); notFound fica fora do cache
+  const data = await getCategoryPageData(storeSlug, categorySlug, originBotId || null);
 
-  if (!store) notFound();
+  if (!data) notFound();
 
-  const category = await db.query.categories.findFirst({
-    where: and(eq(categories.storeId, store.id), eq(categories.slug, categorySlug))
-  });
-
-  if (!category) notFound();
-
-  const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, originBotId);
-
-  const categoryProducts = visibleProductIds.length > 0
-    ? await db.query.products.findMany({
-        where: and(
-          eq(products.storeId, store.id),
-          eq(products.categoryId, category.id),
-          eq(products.status, 'active'),
-          inArray(products.id, visibleProductIds)
-        ),
-        orderBy: (products, { desc }) => [desc(products.createdAt)],
-        limit: 100
-      })
-    : [];
+  const { category, products: categoryProducts } = data;
 
   return (
     <div className="w-full bg-transparent text-white p-4">
