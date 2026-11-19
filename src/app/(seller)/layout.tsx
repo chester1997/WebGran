@@ -17,6 +17,10 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
   const router = useRouter();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
+  // Página de um bot (/seller/bots/<id>): sem a barra superior do celular; o "← Bots" do próprio
+  // cabeçalho do bot faz a volta. Essa rota já é exclusiva da conta proprietária.
+  const hideMobileTopBar = /^\/seller\/bots\/(?!new$)[^/]+$/.test(pathname || "");
+
   const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileSidebarRef = useRef<HTMLElement | null>(null);
   const prevMobileOpenRef = useRef(mobileDrawerOpen);
@@ -255,7 +259,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
           <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0A0A0A)] border-b border-white/[0.08] lg:border-b-0 z-30 relative overflow-visible">
             {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): lg:hidden */}
-            <div className="lg:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0A0A0A]">
+            <div className={`${hideMobileTopBar ? "hidden" : "lg:hidden flex"} items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0A0A0A]`}>
               <div className="flex items-center gap-2.5 shrink-0 min-w-0">
                 <button
                   ref={hamburgerButtonRef}

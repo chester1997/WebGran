@@ -100,7 +100,7 @@ export default function BotHeader({
 
   return (
     <SellerPageHeader>
-      <div className="flex flex-col w-full relative z-30 pt-3.5 sm:pt-4 pb-0.5 gap-2">
+      <div className="flex flex-col w-full relative z-30 pt-0 sm:pt-4 pb-0.5 gap-2">
         {/* PRIMEIRA LINHA — Identificação e ações */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full">
           {/* Bloco da Esquerda: Breadcrumb acima + Identificação do bot (Avatar, Nome, Status, Metadados) */}
