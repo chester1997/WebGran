@@ -8,6 +8,7 @@ import { signOut } from "next-auth/react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import SidebarNavItem from "@/components/layout/SidebarNavItem";
 import { isOwnerUser } from "@/lib/bots/owner-guard";
+import SalesVolumeCardV2, { OWNER_SALES_GOAL } from "./SalesVolumeCardV2";
 import {
   SolarSellerDashboardIcon,
   SolarSellerBotIcon,
@@ -350,7 +351,10 @@ export default function SellerSidebar({
       {/* ==================================================== */}
       <div className="px-5 lg:px-[var(--sidebar-pad-x,28px)] py-4 border-t border-white/[0.06] space-y-3 bg-[var(--seller-bg,#0A0A0A)] shrink-0">
         
-        {/* Card de Volume de Vendas */}
+        {/* Card de Volume de Vendas (V2 + meta de R$ 50 mil só para a conta proprietária) */}
+        {isOwner ? (
+          <SalesVolumeCardV2 totalRevenue={totalRevenue} salesGoal={OWNER_SALES_GOAL} />
+        ) : (
         <div className="p-3.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-zinc-300">
@@ -383,6 +387,7 @@ export default function SellerSidebar({
             </div>
           </div>
         </div>
+        )}
 
         {/* Botão "Voltar ao Admin" */}
         {isAdminOrSuperAdmin && (
