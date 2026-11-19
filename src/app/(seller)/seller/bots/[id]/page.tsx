@@ -44,39 +44,58 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     notFound();
   }
 
-  // Buscar todos os bots da loja para validação de vínculo exclusivo
-  const allStoreBots = await db.query.telegramBots.findMany({
-    where: eq(telegramBots.storeId, store.id),
-    columns: { id: true },
-  });
+  const currentTab = tab || "visao-geral";
+
+  // Consultas independentes em paralelo (antes rodavam uma depois da outra)
+  const [allStoreBots, customers, botMessages, startEvents, recentOrders, tabData] = await Promise.all([
+    // Todos os bots da loja para validação de vínculo exclusivo
+    db.query.telegramBots.findMany({
+      where: eq(telegramBots.storeId, store.id),
+      columns: { id: true },
+    }),
+    // Clientes do Telegram da loja para a aba Conversas
+    db.query.telegramCustomers.findMany({
+      where: eq(telegramCustomers.storeId, store.id),
+      orderBy: [desc(telegramCustomers.updatedAt)],
+      limit: 100,
+    }),
+    // Mensagens recentes deste bot para enriquecer a lista de conversas e mapear interações
+    db.query.telegramMessages.findMany({
+      where: and(
+        eq(telegramMessages.storeId, store.id),
+        eq(telegramMessages.botId, botRecord.id)
+      ),
+      orderBy: [desc(telegramMessages.createdAt)],
+      limit: 500,
+    }),
+    // Eventos de /start registrados para este bot
+    db.query.botStartEvents.findMany({
+      where: and(
+        eq(botStartEvents.storeId, store.id),
+        eq(botStartEvents.botId, botRecord.id)
+      ),
+      orderBy: [desc(botStartEvents.createdAt)],
+      limit: 100,
+    }).catch(() => []),
+    // Pedidos recentes vinculados à loja com itens, produtos e entregas de notificações
+    db.query.orders.findMany({
+      where: eq(orders.storeId, store.id),
+      orderBy: [desc(orders.createdAt)],
+      limit: 150,
+      with: {
+        customer: true,
+        items: {
+          with: {
+            product: true,
+          },
+        },
+        botNotificationDeliveries: true,
+      },
+    }),
+    // Dados da aba aberta
+    loadBotTabData(currentTab, store, user.id, botRecord.id),
+  ]);
   const isOnlyBot = allStoreBots.length <= 1;
-
-  // Buscar clientes do Telegram da loja para a aba Conversas
-  const customers = await db.query.telegramCustomers.findMany({
-    where: eq(telegramCustomers.storeId, store.id),
-    orderBy: [desc(telegramCustomers.updatedAt)],
-    limit: 100,
-  });
-
-  // Buscar mensagens recentes deste bot para enriquecer a lista de conversas e mapear interações
-  const botMessages = await db.query.telegramMessages.findMany({
-    where: and(
-      eq(telegramMessages.storeId, store.id),
-      eq(telegramMessages.botId, botRecord.id)
-    ),
-    orderBy: [desc(telegramMessages.createdAt)],
-    limit: 500,
-  });
-
-  // Buscar eventos de /start registrados para este bot
-  const startEvents = await db.query.botStartEvents.findMany({
-    where: and(
-      eq(botStartEvents.storeId, store.id),
-      eq(botStartEvents.botId, botRecord.id)
-    ),
-    orderBy: [desc(botStartEvents.createdAt)],
-    limit: 100,
-  }).catch(() => []);
 
   // Set de IDs de usuários do Telegram que interagiram com este bot
   const botCustomerUserIds = new Set<string>();
@@ -85,22 +104,6 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
   });
   startEvents.forEach((se) => {
     if (se.telegramUserId) botCustomerUserIds.add(se.telegramUserId);
-  });
-
-  // Buscar pedidos recentes vinculados à loja com itens, produtos e entregas de notificações
-  const recentOrders = await db.query.orders.findMany({
-    where: eq(orders.storeId, store.id),
-    orderBy: [desc(orders.createdAt)],
-    limit: 150,
-    with: {
-      customer: true,
-      items: {
-        with: {
-          product: true,
-        },
-      },
-      botNotificationDeliveries: true,
-    },
   });
 
   // Filtrar pedidos rigorosamente atribuídos a este bot
@@ -294,8 +297,6 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
       }))
     : [];
 
-  const currentTab = tab || "visao-geral";
-  const tabData = await loadBotTabData(currentTab, store, user.id, botRecord.id);
 
   return (
     <Suspense fallback={<div className="p-8 text-zinc-400 text-sm">Carregando painel do bot...</div>}>

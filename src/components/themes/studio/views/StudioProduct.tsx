@@ -67,7 +67,11 @@ export async function StudioProduct({
   const session = await getMiniAppSession();
   const effectiveBotId = propOriginBotId || session?.originBotId || null;
 
-  const isVisible = await CatalogResolverService.isProductVisible(product.id, store.id, effectiveBotId);
+  // As duas consultas de visibilidade são independentes: rodam juntas (uma ida ao banco a menos)
+  const [isVisible, visibleProductIds] = await Promise.all([
+    CatalogResolverService.isProductVisible(product.id, store.id, effectiveBotId),
+    CatalogResolverService.getVisibleProductIds(store.id, effectiveBotId),
+  ]);
 
   if (!isVisible) {
     return (
@@ -90,7 +94,6 @@ export async function StudioProduct({
     );
   }
 
-  const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, effectiveBotId);
   const candidateIds = visibleProductIds.filter(id => id !== product.id);
 
   const [firstBot, sameCategoryProducts, storeProducts, accessRecord] = await Promise.all([
