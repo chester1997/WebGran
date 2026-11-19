@@ -2,6 +2,7 @@
 
 import React from "react";
 import ConversasCenter, { CustomerItem, MessageItem } from "./ConversasCenter";
+import ConversasCenterV2 from "./ConversasCenterV2";
 
 export type { CustomerItem, MessageItem };
 
@@ -19,6 +20,8 @@ interface BotConversationsTabProps {
     photoUrl?: string | null;
     status: string;
   };
+  /** Redesign V2: true apenas para a conta proprietária (decidido no servidor). */
+  useRedesignV2?: boolean;
 }
 
 export default function BotConversationsTab({
@@ -28,6 +31,7 @@ export default function BotConversationsTab({
   initialMessages = [],
   showNotification,
   bot,
+  useRedesignV2 = false,
 }: BotConversationsTabProps) {
   const resolvedBot = bot || {
     id: botId,
@@ -38,8 +42,10 @@ export default function BotConversationsTab({
     status: "active",
   };
 
+  const Center = useRedesignV2 ? ConversasCenterV2 : ConversasCenter;
+
   return (
-    <ConversasCenter
+    <Center
       bot={resolvedBot}
       initialCustomers={initialCustomers}
       initialMessages={initialMessages}

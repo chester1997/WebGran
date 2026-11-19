@@ -15,6 +15,7 @@ import BotTabsNav from "../components/BotTabsNav";
 import BotOverviewTab from "../components/BotOverviewTab";
 import BotConversationsTab, { CustomerItem, MessageItem } from "../components/BotConversationsTab";
 import ConversasCenter from "../components/ConversasCenter";
+import ConversasCenterV2 from "../components/ConversasCenterV2";
 import BotSettingsTab from "../components/BotSettingsTab";
 
 import WelcomeClient from "@/app/(seller)/seller/boas-vindas/WelcomeClient";
@@ -129,6 +130,7 @@ export default function SingleBotClient({
   useRedesignV2 = false,
 }: SingleBotClientProps) {
   // Redesign V2 (apenas conta proprietária): as versões V2 recebem os mesmos dados das clássicas.
+  const ConversasCenterTab = useRedesignV2 ? ConversasCenterV2 : ConversasCenter;
   const NotificationsTab = (useRedesignV2 ? NotificationsClientV2 : NotificationsClient) as typeof NotificationsClient;
   const WelcomeTab = (useRedesignV2 ? WelcomeClientV2 : WelcomeClient) as typeof WelcomeClient;
   const BannersTab = (useRedesignV2 ? BannersClientV2 : BannersClient) as typeof BannersClient;
@@ -406,7 +408,7 @@ export default function SingleBotClient({
 
       {/* MODAL IMERSIVO DE CONVERSAS (CENTRAL DE ATENDIMENTO) */}
       {isConversasModalOpen && (
-        <ConversasCenter
+        <ConversasCenterTab
           bot={bot}
           initialCustomers={initialCustomers}
           initialMessages={initialMessages}
@@ -441,6 +443,7 @@ export default function SingleBotClient({
           initialMessages={initialMessages}
           showNotification={showNotification}
           bot={bot}
+          useRedesignV2={useRedesignV2}
         />
       )}
 
