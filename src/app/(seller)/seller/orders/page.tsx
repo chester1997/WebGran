@@ -4,11 +4,13 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { OrdersClient, SerializedOrder } from "./OrdersClient";
+import { OrdersClientV2 } from "./OrdersClientV2";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function OrdersPage() {
   await connection();
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -55,6 +57,11 @@ export default async function OrdersPage() {
         : null,
     })),
   }));
+
+  // Redesign V2: só a conta proprietária vê; lojistas continuam na versão clássica.
+  if (isOwnerAccount(seller)) {
+    return <OrdersClientV2 initialOrders={serializedOrders} />;
+  }
 
   return <OrdersClient initialOrders={serializedOrders} />;
 }

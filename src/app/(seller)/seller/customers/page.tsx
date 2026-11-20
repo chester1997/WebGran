@@ -4,12 +4,14 @@ import { db } from "@/db";
 import { telegramCustomers } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import CustomersClient from "./CustomersClient";
+import CustomersClientV2 from "./CustomersClientV2";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 
 import SetupStoreClient from "../SetupStoreClient";
 
 export default async function CustomersPage() {
   await connection();
-  await requireSeller();
+  const seller = await requireSeller();
   const store = await getCurrentStore();
 
   if (!store) {
@@ -40,6 +42,11 @@ export default async function CustomersPage() {
     languageCode: c.languageCode,
     createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
   }));
+
+  // Redesign V2: só a conta proprietária vê; lojistas continuam na versão clássica.
+  if (isOwnerAccount(seller)) {
+    return <CustomersClientV2 customers={formattedCustomers} stats={stats} />;
+  }
 
   return (
     <CustomersClient 

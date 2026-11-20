@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import FinanceiroClient from "./FinanceiroClient";
+import FinanceiroClientV2 from "./FinanceiroClientV2";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import SetupStoreClient from "../SetupStoreClient";
 import { hasFeature } from "@/lib/entitlements/entitlement-service";
 import { DollarSign, Lock } from "lucide-react";
@@ -86,6 +88,11 @@ export default async function FinanceiroPage() {
       paidAt: o.paidAt ? new Date(o.paidAt).toISOString() : null,
     };
   });
+
+  // Redesign V2: só a conta proprietária vê; lojistas continuam na versão clássica.
+  if (isOwnerAccount(seller)) {
+    return <FinanceiroClientV2 metrics={metrics} transactions={formattedTransactions} />;
+  }
 
   return (
     <FinanceiroClient 

@@ -5,6 +5,8 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { PlatformCommissionService } from "@/lib/commission/platform-commission-service";
 import SettingsClient from "./SettingsClient";
+import SettingsClientV2 from "./SettingsClientV2";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 
 export default async function SettingsPage() {
   await connection();
@@ -46,8 +48,11 @@ export default async function SettingsPage() {
     };
   }
 
+  // Redesign V2: só a conta proprietária vê; lojistas continuam na versão clássica.
+  const Client = isOwnerAccount(seller) ? SettingsClientV2 : SettingsClient;
+
   return (
-    <SettingsClient
+    <Client
       storeName={store?.name || "Minha Loja"}
       storeId={store?.id || null}
       transactionFee={transactionFee}
