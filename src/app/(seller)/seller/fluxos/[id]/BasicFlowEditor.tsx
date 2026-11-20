@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Copy, ImagePlus, Loader2, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp, Copy, ImagePlus, Loader2, Plus, RefreshCw } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import {
   BUTTON_KEYS,
@@ -87,7 +88,7 @@ const V_PIX = ["{codigo_pix}", "{nome_plano}", "{valor_final}", "{duracao}"];
 const V_DELIVERY = ["{nome}", "{plano}", "{valor}", "{link_vip}"];
 
 type Updater = (fn: (draft: BasicFlowConfig) => void) => void;
-type Chat = { chatId: string; title: string };
+type Chat = { chatId: string; title: string; type?: string; canInvite?: boolean };
 const addBtn = `${BTN_SEC} !h-8 !px-3 !text-[12.5px]`;
 
 export default function BasicFlowEditor({
@@ -178,7 +179,7 @@ export default function BasicFlowEditor({
     if (window.innerWidth < 1024) formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
-  const chatList: Chat[] = chats.map((c) => ({ chatId: c.chatId, title: c.title }));
+  const chatList: Chat[] = chats.map((c) => ({ chatId: c.chatId, title: c.title, type: c.type, canInvite: c.canInvite }));
   const plansOk = config.planos.items.length > 0 && config.planos.items.every((p) => p.name.trim() && p.price >= 1);
   const checklist: ChecklistItem[] = [
     { label: "Mensagem de boas-vindas", ok: basicStepStatus("inicio", config)[0] === "ok", required: true, onFix: () => goto("inicio") },
@@ -249,6 +250,86 @@ export default function BasicFlowEditor({
 /* ------------------------------------------------------------------ */
 /* Seções                                                              */
 /* ------------------------------------------------------------------ */
+type DeliveryValue = { useDefault: boolean; type: DeliveryKind; groupId: string; link: string };
+
+const chatKind = (t?: string) => (t === "channel" ? "canal" : t === "supergroup" ? "supergrupo" : "grupo");
+
+/** Nome curto de uma entrega, para resumos ("APOLLO DORAMAS", "Link de convite"...). */
+function deliveryName(v: { deliveryType: DeliveryKind; groupId: string; link: string }, chats: Chat[]): string {
+  if (v.deliveryType === "link") return v.link ? "Link de convite" : "";
+  if (!v.groupId) return "";
+  return chats.find((ch) => ch.chatId === v.groupId)?.title || `ID ${v.groupId}`;
+}
+
+/**
+ * Escolha da entrega numa lista só: os grupos/canais em que o bot está (detectados sozinhos),
+ * "outro grupo (digitar ID)", "link de convite" e, no plano, "usar entrega padrão".
+ */
+function DeliveryPicker({ id, label, chats, value, onChange, defaultName }: {
+  id: string; label: string; chats: Chat[]; value: DeliveryValue; onChange: (v: DeliveryValue) => void;
+  /** Só no plano: mostra "Usar entrega padrão" com o nome do destino padrão. */
+  defaultName?: string;
+}) {
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+  const known = chats.find((ch) => ch.chatId === value.groupId);
+  const [manual, setManual] = useState(value.type === "group" && !!value.groupId && !known);
+  const allowDefault = defaultName !== undefined;
+  const sel = allowDefault && value.useDefault ? "default" : value.type === "link" ? "link" : known && !manual ? `chat:${known.chatId}` : manual || value.groupId ? "manual" : "";
+
+  const pick = (v: string) => {
+    if (v === "default") return onChange({ ...value, useDefault: true });
+    if (v === "link") return onChange({ ...value, useDefault: false, type: "link" });
+    if (v === "manual") { setManual(true); return onChange({ ...value, useDefault: false, type: "group", groupId: known ? "" : value.groupId }); }
+    if (v.startsWith("chat:")) { setManual(false); return onChange({ ...value, useDefault: false, type: "group", groupId: v.slice(5) }); }
+  };
+
+  const chosen = sel === "default" ? "" : deliveryName({ deliveryType: value.type, groupId: value.groupId, link: value.link }, chats);
+  return (
+    <div className="flex flex-col gap-1.5 min-w-0">
+      <Label>{label}</Label>
+      <span className="flex gap-2">
+        <select id={id} value={sel} onChange={(e) => pick(e.target.value)} className={INPUT}>
+          {allowDefault ? <option value="default">📦 Usar entrega padrão{defaultName ? ` (${defaultName})` : " (ainda não definida)"}</option> : <option value="" disabled>Escolha onde entregar…</option>}
+          {chats.length > 0 && (
+            <optgroup label="Grupos e canais do bot">
+              {chats.map((ch) => (
+                <option key={ch.chatId} value={`chat:${ch.chatId}`}>
+                  {ch.type === "channel" ? "📢" : "👥"} {ch.title} ({chatKind(ch.type)}){ch.canInvite === false ? " · ⚠ sem permissão" : " · ✓ admin"}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          <optgroup label="Outros">
+            <option value="manual">🎯 Outro grupo ou canal (digitar ID)</option>
+            <option value="link">🔗 Link de convite (t.me)</option>
+          </optgroup>
+        </select>
+        <button type="button" title="Atualizar a lista de grupos" aria-label="Atualizar a lista de grupos" disabled={refreshing} onClick={() => startRefresh(() => router.refresh())} className="shrink-0 w-11 rounded-[10px] border border-white/[0.13] text-zinc-300 hover:bg-white/[0.05] flex items-center justify-center">
+          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
+      </span>
+      {sel === "manual" && (
+        <input id={`${id}-manual`} aria-label="ID do grupo ou canal" value={value.groupId} placeholder="-1001234567890" maxLength={20} onChange={(e) => onChange({ ...value, useDefault: false, type: "group", groupId: e.target.value.replace(/[^\d-]/g, "") })} className={INPUT} />
+      )}
+      {sel === "link" && (
+        <input id={`${id}-link`} aria-label="Link de convite" value={value.link} placeholder="https://t.me/+AbCdEf123" maxLength={1000} onChange={(e) => onChange({ ...value, useDefault: false, type: "link", link: e.target.value })} className={INPUT} />
+      )}
+      {sel.startsWith("chat:") && known?.canInvite === false ? (
+        <span className="text-[12px] text-amber-400">O bot não tem permissão de convidar usuários em “{known.title}”. Dê admin com “Convidar usuários” e “Banir usuários”.</span>
+      ) : chosen ? (
+        <span className="text-[12px] px-2.5 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400">
+          ✓ {value.type === "link" ? "Envia o link de convite (sem remoção no vencimento)" : `Entrega em: ${chosen} · convite individual e remoção no vencimento`}
+        </span>
+      ) : sel !== "default" ? (
+        <span className="text-[12px] text-zinc-500">
+          {chats.length ? "" : "Nenhum grupo encontrado. "}Coloque o bot como admin no grupo ou canal (com “Convidar usuários” e “Banir usuários”) e toque em atualizar. Se não aparecer, tire e coloque o bot de novo, ou digite o ID.
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function DeliveryFields({ prefix, type, groupId, link, chats, onType, onGroup, onLink, optionalGroup }: {
   prefix: string; type: DeliveryKind; groupId: string; link: string; chats: Chat[];
   onType: (v: DeliveryKind) => void; onGroup: (v: string) => void; onLink: (v: string) => void; optionalGroup?: boolean;
@@ -293,11 +374,17 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
             <AreaField id="f-inicio-msg" label="Mensagem principal" value={c.inicio.msg} onChange={(v) => update((d) => { d.inicio.msg = v; })} vars={V_START} />
             <AreaField id="f-inicio-msg2" label="Mensagem secundária (opcional)" rows={3} value={c.inicio.msg2} onChange={(v) => update((d) => { d.inicio.msg2 = v; })} vars={V_START} hint="Enviada depois da principal." />
           </Card>
-          <Card title="Botão inicial">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3.5 items-end">
-              <TextField id="f-inicio-btn" label="Texto do botão" max={64} placeholder="Ex.: 🔥 Ver Planos" value={c.inicio.btn} onChange={(v) => update((d) => { d.inicio.btn = v; })} />
-              <div className="flex flex-col gap-1.5 pb-1"><Label>Cor</Label><ColorPick value={c.botoes.cta} onChange={(v) => update((d) => { d.botoes.cta = v; })} /></div>
-            </div>
+          <Card
+            title="Planos na boas-vindas"
+            sub="Ligado: os botões dos planos já vêm embaixo da mensagem e o cliente vai direto para o Pix. Desligado: aparece o botão “Ver planos” antes."
+            right={<Switch checked={c.inicio.showPlans} onChange={(v) => update((d) => { d.inicio.showPlans = v; })} label="Planos na boas-vindas" />}
+          >
+            {!c.inicio.showPlans && (
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3.5 items-end">
+                <TextField id="f-inicio-btn" label="Texto do botão" max={64} placeholder="Ex.: 🔥 Ver Planos" value={c.inicio.btn} onChange={(v) => update((d) => { d.inicio.btn = v; })} />
+                <div className="flex flex-col gap-1.5 pb-1"><Label>Cor</Label><ColorPick value={c.botoes.cta} onChange={(v) => update((d) => { d.botoes.cta = v; })} /></div>
+              </div>
+            )}
           </Card>
           <Card title="Redirecionadores" sub="Botões extras com link, embaixo da mensagem principal." right={c.inicio.redirects.length < MAX_REDIRECTS ? <button type="button" className={addBtn} onClick={() => update((d) => { d.inicio.redirects.push({ text: "", url: "" }); })}><Plus className="w-3.5 h-3.5" />Adicionar</button> : undefined}>
             {c.inicio.redirects.length === 0 && <p className="text-[12.5px] text-zinc-500">Nenhum redirecionador.</p>}
@@ -316,6 +403,9 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
     case "planos":
       return (
         <>
+          <Card title="📦 Entrega padrão" sub="Para onde vai quem compra um plano marcado como “Usar entrega padrão”. Cada plano pode ter a sua própria entrega.">
+            <DeliveryPicker id="f-default-deliv" label="Destino da entrega" chats={chats} value={{ useDefault: false, type: c.vip.deliveryType, groupId: c.vip.groupId, link: c.vip.link }} onChange={(v) => update((d) => { d.vip.deliveryType = v.type; d.vip.groupId = v.groupId; d.vip.link = v.link; })} />
+          </Card>
           <Card
             title="Planos"
             sub="Gerencie os planos de assinatura do seu bot."
@@ -332,7 +422,7 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
                   <div className="flex items-center gap-2 px-4 py-3">
                     <button type="button" onClick={() => setOpenPlan(open ? null : p.id)} className="flex-1 min-w-0 text-left">
                       <p className="text-[14px] font-semibold text-white truncate">✨ {p.name || "Plano sem nome"}</p>
-                      <p className="text-[12.5px] text-zinc-500"><span className="text-emerald-400 font-semibold tabular-nums">{brl(p.price)}</span> · {planPeriodLabel(p)} · {p.vipExclusive ? "VIP exclusivo" : "Entregável padrão"}{!deliv && <span className="text-amber-400"> · sem entrega</span>}</p>
+                      <p className="text-[12.5px] text-zinc-500"><span className="text-emerald-400 font-semibold tabular-nums">{brl(p.price)}</span> · {planPeriodLabel(p)} · {p.vipExclusive ? deliveryName(p, chats) || "entrega própria" : "entrega padrão"}{!deliv && <span className="text-amber-400"> · sem entrega</span>}</p>
                     </button>
                     <button type="button" aria-label="Duplicar plano" title="Duplicar" disabled={c.planos.items.length >= MAX_PLANS} onClick={() => update((d) => { d.planos.items.splice(i + 1, 0, { ...structuredClone(p), id: newId(), name: p.name + " (cópia)" }); })} className="w-8 h-8 rounded-lg text-zinc-500 hover:text-white flex items-center justify-center"><Copy className="w-4 h-4" /></button>
                     <button type="button" aria-label={open ? "Fechar" : "Editar"} onClick={() => setOpenPlan(open ? null : p.id)} className="w-8 h-8 rounded-lg text-zinc-400 hover:text-white flex items-center justify-center">{open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</button>
@@ -348,19 +438,14 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
                         <Select id={`f-plan-unit-${p.id}`} label="Período" value={p.unit} onChange={(v) => update((d) => { d.planos.items[i].unit = v as typeof p.unit; })} options={PERIOD_UNITS} />
                         {p.unit !== "vitalicio" && <NumField id={`f-plan-amount-${p.id}`} label="Duração" min={1} max={1000} value={p.amount} onChange={(v) => update((d) => { d.planos.items[i].amount = Math.max(1, Math.round(v) || 1); })} />}
                       </div>
-                      <Toggle title="VIP exclusivo para este plano?" desc="Desligado: entrega no Entregável da seção VIP." checked={p.vipExclusive} onChange={(v) => update((d) => { d.planos.items[i].vipExclusive = v; })} />
-                      {p.vipExclusive && (
-                        <DeliveryFields
-                          prefix={`f-plan-${p.id}`}
-                          type={p.deliveryType}
-                          groupId={p.groupId}
-                          link={p.link}
-                          chats={chats}
-                          onType={(v) => update((d) => { d.planos.items[i].deliveryType = v; })}
-                          onGroup={(v) => update((d) => { d.planos.items[i].groupId = v; })}
-                          onLink={(v) => update((d) => { d.planos.items[i].link = v; })}
-                        />
-                      )}
+                      <DeliveryPicker
+                        id={`f-plan-deliv-${p.id}`}
+                        label="Entrega deste plano"
+                        chats={chats}
+                        defaultName={deliveryName(c.vip, chats)}
+                        value={{ useDefault: !p.vipExclusive, type: p.deliveryType, groupId: p.groupId, link: p.link }}
+                        onChange={(v) => update((d) => { const it = d.planos.items[i]; it.vipExclusive = !v.useDefault; it.deliveryType = v.type; it.groupId = v.groupId; it.link = v.link; })}
+                      />
                       <div className="flex items-center justify-between gap-3"><Label>Cor do botão</Label><ColorPick value={p.color} onChange={(v) => update((d) => { d.planos.items[i].color = v; })} /></div>
                     </div>
                   )}
@@ -644,13 +729,8 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
     case "vip":
       return (
         <>
-          <Card title="⭐ Entregável" sub="Destino padrão dos planos que não são VIP exclusivo." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.groupId = ""; d.vip.link = ""; })}>🗑️ Remover entregável</button>}>
-            <Select id="f-vip-type" label="Tipo de entregável" value={c.vip.deliveryType} onChange={(v) => update((d) => { d.vip.deliveryType = v as DeliveryKind; })} options={[["group", "🎯 Pelo ID (convite individual e remoção automática)"], ["link", "🔗 Pelo link de convite (sem remoção automática)"]]} />
-            {c.vip.deliveryType === "group" ? (
-              <GroupField id="f-vip-group" label="ID do grupo, supergrupo ou canal" value={c.vip.groupId} onChange={(v) => update((d) => { d.vip.groupId = v; })} chats={chats} hint="O bot precisa ser admin com permissão de criar links e banir usuários." />
-            ) : (
-              <TextField id="f-vip-link" label="Link do grupo, supergrupo ou canal" max={1000} placeholder="https://t.me/+AbCdEf123" value={c.vip.link} onChange={(v) => update((d) => { d.vip.link = v; })} hint="Enviado na confirmação de pagamento (sem remoção automática)." />
-            )}
+          <Card title="⭐ Entregável" sub="Destino dos planos marcados como “Usar entrega padrão”. Também dá para escolher em Planos." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.groupId = ""; d.vip.link = ""; })}>🗑️ Remover entregável</button>}>
+            <DeliveryPicker id="f-vip-deliv" label="Destino da entrega padrão" chats={chats} value={{ useDefault: false, type: c.vip.deliveryType, groupId: c.vip.groupId, link: c.vip.link }} onChange={(v) => update((d) => { d.vip.deliveryType = v.type; d.vip.groupId = v.groupId; d.vip.link = v.link; })} />
             {c.planos.items.some((p) => !planDelivery(p, c)) && (
               <Callout tone="warn">Planos sem entrega: {c.planos.items.filter((p) => !planDelivery(p, c)).map((p) => p.name || "sem nome").join(", ")}. <button type="button" className="underline" onClick={() => goto("planos")}>Ver planos</button></Callout>
             )}
@@ -762,14 +842,15 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
         if (c.inicio.sendMode === "album") out.push({ kind: "bot", media: m });
         else m.forEach((x) => out.push({ kind: "bot", media: [x] }));
       }
-      const kb: PreviewButton[][] = [[{ t: c.inicio.btn || "🔥 Ver Planos", c: B.cta }], ...c.inicio.redirects.filter((r) => r.text).map((r) => [{ t: r.text }]), ...(c.mimos.on ? [[{ t: c.mimos.btn, c: B.mimo }]] : [])];
+      const direct = c.inicio.showPlans && c.planos.items.some((p) => p.name.trim() && p.price >= 1);
+      const kb: PreviewButton[][] = [...(direct ? plansKb() : [[{ t: c.inicio.btn || "🔥 Ver Planos", c: B.cta }]]), ...c.inicio.redirects.filter((r) => r.text).map((r) => [{ t: r.text }]), ...(c.mimos.on ? [[{ t: c.mimos.btn, c: B.mimo }]] : [])];
       out.push(bot(c.inicio.msg || "(escreva a mensagem principal)", kb));
       if (c.inicio.msg2.trim()) out.push(bot(c.inicio.msg2));
       if (c.inicio.antiClone) out.push({ kind: "sys", text: "🔒 Encaminhar e salvar está bloqueado" });
       return out;
     }
     case "planos":
-      return [{ kind: "me", text: c.inicio.btn || "Ver Planos" }, bot("Escolha seu plano 👇", plansKb()), ...(c.planos.varOn ? [{ kind: "sys", text: `Preço varia até ${c.planos.varCents} centavos` } as PreviewItem] : [])];
+      return [{ kind: "me", text: c.inicio.showPlans ? "/start" : c.inicio.btn || "Ver Planos" }, bot(c.inicio.showPlans ? c.inicio.msg || "(mensagem de boas-vindas)" : "Escolha seu plano 👇", plansKb()), ...(c.planos.varOn ? [{ kind: "sys", text: `Preço varia até ${c.planos.varCents} centavos` } as PreviewItem] : [])];
     case "upsell": {
       const out: PreviewItem[] = [{ kind: "sys", text: "Pagamento aprovado · acesso entregue" }];
       c.upsell.items.forEach((u, i) => {

@@ -213,7 +213,11 @@ export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMod
   // Áudio de boas-vindas
   if (c.inicio.audioUrl) await sendMedia(ctx, chatId, c.inicio.audioUrl, protect);
 
-  const rows: Kb["inline_keyboard"] = [[{ text: c.inicio.btn || "🔥 Ver Planos", callback_data: `${p}:plans` }]];
+  // Planos direto na boas-vindas (padrão) ou o botão "Ver planos" (CTA).
+  const plans = c.inicio.showPlans ? validPlans(c) : [];
+  const rows: Kb["inline_keyboard"] = plans.length
+    ? plans.map((pl) => [{ text: `${pl.name} - ${brl(pl.price)}`, callback_data: `${p}:buy:${pl.id}` }])
+    : [[{ text: c.inicio.btn || "🔥 Ver Planos", callback_data: `${p}:plans` }]];
   for (const r of c.inicio.redirects) if (r.text.trim() && /^https:\/\//i.test(r.url)) rows.push([{ text: r.text.trim(), url: r.url }]);
   const text = renderFlowText(c.inicio.msg || "Olá, {nome}! 👋", vars).trim();
   const kb = { inline_keyboard: rows };

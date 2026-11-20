@@ -158,3 +158,14 @@ describe("graphChecklist", () => {
     expect(graphChecklist(g).every((c) => c.ok)).toBe(true);
   });
 });
+
+describe("planos na boas-vindas", () => {
+  it("is on by default and only needs the CTA text when off", () => {
+    expect(normalizeBasicConfig({ version: 2, inicio: { msg: "Oi" } }).inicio.showPlans).toBe(true);
+    const c = normalizeBasicConfig({ version: 2, inicio: { msg: "Oi", btn: "", showPlans: true } });
+    expect(basicStepStatus("inicio", c)[0]).toBe("ok");
+    c.inicio.showPlans = false;
+    c.inicio.btn = "";
+    expect(basicStepStatus("inicio", c)[0]).toBe("pend");
+  });
+});

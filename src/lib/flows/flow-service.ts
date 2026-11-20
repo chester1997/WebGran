@@ -315,12 +315,13 @@ export async function unassignBot(storeId: string, botId: string) {
 export function basicPublishProblems(config: BasicFlowConfig, botCount: number) {
   const problems: string[] = [];
   if (!botCount) problems.push("Ligue o fluxo a um bot.");
-  if (!config.inicio.msg.trim() || !config.inicio.btn.trim()) problems.push("Escreva a mensagem de boas-vindas e o texto do botão.");
+  if (!config.inicio.msg.trim()) problems.push("Escreva a mensagem de boas-vindas.");
+  else if (!config.inicio.showPlans && !config.inicio.btn.trim()) problems.push("Escreva o texto do botão \"Ver planos\".");
   if (!config.planos.items.length) problems.push("Crie pelo menos um plano.");
   const bad = config.planos.items.filter((p) => !p.name.trim() || p.price < 1).map((p) => p.name.trim() || "sem nome");
   if (bad.length) problems.push(`Dê nome e valor (mínimo R$ 1,00) aos planos: ${bad.join(", ")}.`);
   const noDelivery = config.planos.items.filter((p) => !planDelivery(p, config)).map((p) => p.name.trim() || "sem nome");
-  if (noDelivery.length) problems.push(`Defina o grupo ou link de entrega (seção Acesso VIP) para: ${noDelivery.join(", ")}.`);
+  if (noDelivery.length) problems.push(`Defina o grupo ou link de entrega (em Planos) para: ${noDelivery.join(", ")}.`);
   return problems;
 }
 

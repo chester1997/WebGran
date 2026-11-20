@@ -111,6 +111,8 @@ export interface BasicFlowConfig {
     emojiPremium: boolean;
     msg: string;
     msg2: string;
+    /** Botões dos planos direto na boas-vindas (sem o passo "Ver planos"). */
+    showPlans: boolean;
     btn: string;
     redirects: { text: string; url: string }[];
   };
@@ -193,7 +195,7 @@ export function blankOrderBump(): OrderBump {
 export function blankBasicConfig(): BasicFlowConfig {
   return {
     version: 2,
-    inicio: { antiClone: false, audioUrl: "", media: [], sendMode: "album", dynamic: false, dynamicName: "", dynamicAge: 0, emojiPremium: false, msg: "", msg2: "", btn: "🔥 Ver Planos", redirects: [] },
+    inicio: { antiClone: false, audioUrl: "", media: [], sendMode: "album", dynamic: false, dynamicName: "", dynamicAge: 0, emojiPremium: false, msg: "", msg2: "", showPlans: true, btn: "🔥 Ver Planos", redirects: [] },
     planos: { items: [], varOn: false, varCents: 50, varDir: "ambos" },
     upsell: { mode: "padrao", items: [], deliveryMsg: "", deliveryMediaUrl: "" },
     downsell: { items: [] },
@@ -214,7 +216,7 @@ export function blankBasicConfig(): BasicFlowConfig {
 /** Fluxo com textos prontos (opção "Começar com textos prontos"). */
 export function templateBasicConfig(): BasicFlowConfig {
   const c = blankBasicConfig();
-  c.inicio.msg = "{saudacao}, {nome}! 👋\nSeja bem-vindo.\n\nToque no botão abaixo para ver os planos e liberar seu acesso na hora.";
+  c.inicio.msg = "{saudacao}, {nome}! 👋\nSeja bem-vindo.\n\nEscolha seu plano abaixo e libere seu acesso na hora 👇";
   c.planos.items = [{ ...blankPlan(), name: "Acesso Mensal", price: 29.9, unit: "meses", amount: 1 }];
   c.pix.msg = "💳 Pague agora e garanta acesso ao <b>{nome_plano}</b>!\n\nValor: <b>R$ {valor_final}</b>\nDuração: {duracao}\n\nCopie o código Pix abaixo:";
   c.vip.msg = "✅ <b>Pagamento Confirmado!</b>\n\nOlá {nome}! Obrigado pela compra do {plano} no valor de {valor}.\n\n{link_vip}\n\nObrigado pela confiança! 🎉";
@@ -337,6 +339,7 @@ export function normalizeBasicConfig(input: unknown): BasicFlowConfig {
       emojiPremium: bool(ini.emojiPremium, false),
       msg: str(ini.msg, ""),
       msg2: str(ini.msg2, ""),
+      showPlans: bool(ini.showPlans, true),
       btn: str(ini.btn, d.inicio.btn, 64),
       redirects: (Array.isArray(ini.redirects) ? ini.redirects : [])
         .filter(isObj)
@@ -501,7 +504,7 @@ export type StepState = "ok" | "pend" | "off";
 export function basicStepStatus(id: BasicStepId, c: BasicFlowConfig): [StepState, string] {
   switch (id) {
     case "inicio":
-      return c.inicio.msg.trim() && c.inicio.btn.trim() ? ["ok", "Pronto"] : ["pend", "Falta a mensagem"];
+      return c.inicio.msg.trim() && (c.inicio.showPlans || c.inicio.btn.trim()) ? ["ok", "Pronto"] : ["pend", "Falta a mensagem"];
     case "planos": {
       const n = c.planos.items.length;
       if (!n) return ["pend", "Nenhum plano"];
