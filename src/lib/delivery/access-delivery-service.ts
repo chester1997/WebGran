@@ -213,6 +213,18 @@ export class AccessDeliveryService {
       where: eq(orderItems.orderId, order.id)
     });
 
+    // Pedido sem itens = compra de plano de fluxo (Meus Fluxos): entrega própria no grupo/canal.
+    // Pedidos normais do Mini App sempre têm itens e não passam por aqui.
+    if (items.length === 0) {
+      try {
+        const { deliverFlowPurchase } = await import("@/lib/flows/flow-delivery");
+        if (await deliverFlowPurchase(order.id)) return [];
+      } catch (err) {
+        console.error(`[AccessDeliveryService] Entrega do fluxo falhou para o pedido ${orderId}:`, err);
+        return [];
+      }
+    }
+
     const results: DeliveryResult[] = [];
 
     for (const item of items) {
@@ -911,29 +923,7 @@ export class AccessDeliveryService {
             }
           }
 
-          // Fluxo Básico publicado (Meus Fluxos): mensagem de entrega personalizada.
-          // Qualquer falha cai na mensagem padrão abaixo.
-          let flowMessageSent = false;
-          try {
-            const { sendFlowDeliveryMessage } = await import("@/lib/flows/flow-runtime");
-            flowMessageSent = await sendFlowDeliveryMessage({
-              botDbId: bot?.id || null,
-              botToken,
-              chatId: String(customer.telegramUserId),
-              customerName: customer.firstName || null,
-              productTitle: product.title,
-              price: product.price ?? null,
-              accessUrl: redirectUrl,
-              isWebApp: product.deliveryType === 'product_video',
-              alreadyMember: isAlreadyMember,
-            });
-          } catch (flowErr: any) {
-            console.warn(`[AccessDeliveryService] Mensagem de entrega do fluxo falhou, usando a padrão:`, flowErr?.message);
-          }
-
-          if (flowMessageSent) {
-            // mensagem do fluxo já enviada
-          } else if (supportContactUrl) {
+          if (supportContactUrl) {
             await TelegramDeliveryService.sendPaymentConfirmationMessage(
               botToken,
               customer.telegramUserId,

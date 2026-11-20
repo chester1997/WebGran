@@ -40,11 +40,11 @@ describe("normalizeBasicConfig", () => {
   it("drops the old product-based plans and moves v1 sections", () => {
     const c = normalizeBasicConfig({
       planos: { items: [{ productId: "p1", on: true }] },
-      entrega: { tipo: "link", link: "https://mega.nz/x", msg: "Obrigado" },
+      entrega: { tipo: "link", link: "https://t.me/+abc123", msg: "Obrigado" },
       renov: { msg: "Renove" },
     });
     expect(c.planos.items).toEqual([]);
-    expect(c.vip).toMatchObject({ deliveryType: "link", link: "https://mega.nz/x", msg: "Obrigado" });
+    expect(c.vip).toMatchObject({ deliveryType: "link", link: "https://t.me/+abc123", msg: "Obrigado" });
     expect(c.expiracao.msg).toBe("Renove");
   });
 
@@ -78,9 +78,9 @@ describe("plans", () => {
     const c = blankBasicConfig();
     c.vip.groupId = "-1001111111111";
     const shared = { ...blankPlan(), name: "A", price: 10 };
-    const own = { ...blankPlan(), name: "B", price: 10, vipExclusive: true, deliveryType: "link" as const, link: "https://x.com/vip" };
+    const own = { ...blankPlan(), name: "B", price: 10, vipExclusive: true, deliveryType: "link" as const, link: "https://t.me/+vip" };
     expect(planDelivery(shared, c)).toEqual({ type: "group", value: "-1001111111111" });
-    expect(planDelivery(own, c)).toEqual({ type: "link", value: "https://x.com/vip" });
+    expect(planDelivery(own, c)).toEqual({ type: "link", value: "https://t.me/+vip" });
   });
 });
 
@@ -99,7 +99,7 @@ describe("basicStepStatus", () => {
     expect(basicStepStatus("planos", c)).toEqual(["ok", "1 plano"]);
     expect(basicStepStatus("downsell", c)[0]).toBe("ok");
     c.vip.deliveryType = "link";
-    c.vip.link = "https://mega.nz/x";
+    c.vip.link = "https://t.me/+abc123";
     expect(basicStepStatus("vip", c)[0]).toBe("ok");
   });
 });

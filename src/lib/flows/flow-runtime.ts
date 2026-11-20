@@ -7,7 +7,7 @@
  * comportamento antigo do bot (fail-open).
  *
  * Ativo nesta fase: Início (áudio, mídias, mensagens, redirecionamentos, anti-clone),
- * Planos do próprio fluxo (cada plano tem um produto oculto por trás), PIX (mensagem,
+ * Planos do próprio fluxo (valor + tempo, sem produto), PIX (mensagem,
  * mídia, áudio, formato do código, QR, verificar pagamento), Acesso VIP (mensagem de
  * entrega) e Suporte. As outras seções ficam salvas e entram nas próximas etapas.
  */
@@ -16,7 +16,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, salesFlowBots, salesFlows } from "@/db/schema";
 import { telegramFetch } from "@/lib/telegram/client";
-import { normalizeBasicConfig, planPeriodLabel, type BasicFlowConfig, type FlowPlan } from "./basic-config";
+import { normalizeBasicConfig, planDelivery, planPeriodLabel, type BasicFlowConfig, type FlowPlan } from "./basic-config";
 
 export type FlowMode = "live" | "test";
 /** Prefixo dos botões: "fl" (publicado) ou "ft" (teste do rascunho). */
@@ -279,27 +279,27 @@ export async function runFlowCallback(
 
   if (action === "buy" && arg) {
     const plan = validPlans(c).find((pl) => pl.id === arg);
-    const { flowPlanProductId } = await import("./flow-service");
-    const productId = plan ? await flowPlanProductId(ctx.storeId, flow.flowId, plan.id) : null;
-    if (!plan || !productId) {
-      await answer(ctx, cb.id, mode === "test" ? "Plano ainda não sincronizado. Gere o link de teste de novo." : "Esse plano não está mais disponível.", true);
+    const delivery = plan ? planDelivery(plan, c) : null;
+    if (!plan || !delivery) {
+      await answer(ctx, cb.id, plan ? "Esse plano ainda não tem entrega configurada." : "Esse plano não está mais disponível.", true);
       return;
     }
     await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
     const { CartService } = await import("@/lib/cart/cart-service");
-    const { CheckoutService } = await import("@/lib/orders/checkout-service");
+    const { createPlanCheckout } = await import("./flow-checkout");
     const customer = await CartService.getOrCreateCustomerForTelegramUser(ctx.storeId, {
       id: cb.user.id,
       first_name: cb.user.first_name,
       last_name: cb.user.last_name,
       username: cb.user.username,
     });
-    const res = await CheckoutService.createCheckout({
+    const res = await createPlanCheckout({
       storeId: ctx.storeId,
       customerId: customer.id,
-      storeSlug: ctx.storeSlug,
-      items: [{ id: productId, quantity: 1 }],
-      originBotId: ctx.botDbId,
+      botDbId: ctx.botDbId,
+      flowId: flow.flowId,
+      plan,
+      delivery,
     });
     if (!res.success || !res.orderId) {
       await send(ctx, cb.chatId, `⚠️ ${escapeHtml(res.error || "Não foi possível gerar o Pix agora. Tente de novo em instantes.")}`, undefined, false);
@@ -371,50 +371,4 @@ export async function runFlowCallback(
   }
 
   await answer(ctx, cb.id);
-}
-
-/* ------------------------------------------------------------------ */
-/* Mensagem de entrega (chamada pela entrega de acesso)                */
-/* ------------------------------------------------------------------ */
-
-/**
- * Se o bot que entrega tem fluxo básico publicado com mensagem de entrega,
- * envia essa mensagem no lugar da padrão. Devolve false para usar a padrão.
- */
-export async function sendFlowDeliveryMessage(input: {
-  botDbId?: string | null;
-  botToken: string;
-  chatId: string;
-  customerName?: string | null;
-  productTitle: string;
-  price?: number | string | null;
-  accessUrl: string;
-  isWebApp: boolean;
-  alreadyMember: boolean;
-}): Promise<boolean> {
-  if (!input.botDbId) return false;
-  const flow = await getBasicFlowForBot(input.botDbId);
-  if (!flow || !flow.config.vip.msg.trim()) return false;
-  const c = flow.config;
-  const vars = {
-    "{nome}": input.customerName || "",
-    "{saudacao}": greeting(),
-    "{plano}": input.productTitle,
-    "{nome_plano}": input.productTitle,
-    "{valor}": input.price != null ? brl(Number(input.price)) : "",
-    "{valor_final}": input.price != null ? Number(input.price).toFixed(2).replace(".", ",") : "",
-    "{link_vip}": input.isWebApp ? "" : input.accessUrl,
-  };
-  const label = input.alreadyMember ? "🔓 Abrir conteúdo" : "🔓 Acessar agora";
-  const button = input.isWebApp ? { text: label, web_app: { url: input.accessUrl } } : { text: label, url: input.accessUrl };
-  if (c.vip.mediaUrl) await sendMedia({ token: input.botToken, storeId: "", storeSlug: "", botDbId: input.botDbId }, input.chatId, c.vip.mediaUrl, c.inicio.antiClone);
-  await telegramFetch(input.botToken, "sendMessage", {
-    chat_id: input.chatId,
-    text: renderFlowText(c.vip.msg, vars) || "✅ Pagamento confirmado!",
-    parse_mode: "HTML",
-    reply_markup: input.accessUrl ? { inline_keyboard: [[button]] } : undefined,
-    protect_content: c.inicio.antiClone || undefined,
-    link_preview_options: { is_disabled: true },
-  });
-  return true;
 }

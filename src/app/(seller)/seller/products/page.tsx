@@ -1,4 +1,3 @@
-import { notFlowPlanProduct } from "@/lib/flows/plan-product-filter";
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { isOwnerAccount } from "@/lib/auth/owner-access";
@@ -23,7 +22,7 @@ export default async function SellerProductsPage() {
   const [allProducts, allCategories, storeBots, allCarousels] = await Promise.all([
     // Products with their categories and bot visibilities
     db.query.products.findMany({
-      where: and(eq(products.storeId, store.id), notFlowPlanProduct()),
+      where: eq(products.storeId, store.id),
       orderBy: [desc(products.createdAt)],
       with: {
         category: true,

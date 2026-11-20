@@ -238,11 +238,11 @@ function DeliveryFields({ prefix, type, groupId, link, chats, onType, onGroup, o
 }) {
   return (
     <>
-      <Seg label="Tipo de entrega" value={type} onChange={onType} options={[["group", "🎯 Grupo VIP"], ["link", "🔗 Link de Entrega"]]} />
+      <Seg label="Tipo de entrega" value={type} onChange={onType} options={[["group", "🎯 Pelo ID"], ["link", "🔗 Pelo link"]]} />
       {type === "group" ? (
-        <GroupField id={`${prefix}-group`} label={optionalGroup ? "ID do grupo VIP (opcional)" : "ID do grupo VIP"} value={groupId} onChange={onGroup} chats={chats} hint={optionalGroup ? "Deixe vazio para usar o grupo VIP padrão do bot." : "O bot precisa ser admin com permissão de criar links e banir usuários."} />
+        <GroupField id={`${prefix}-group`} label={optionalGroup ? "ID do grupo, supergrupo ou canal (opcional)" : "ID do grupo, supergrupo ou canal"} value={groupId} onChange={onGroup} chats={chats} hint={optionalGroup ? "Deixe vazio para usar o grupo VIP padrão do bot." : "O bot precisa ser admin com permissão de criar links e banir usuários."} />
       ) : (
-        <TextField id={`${prefix}-link`} label="Link de entrega" max={1000} placeholder="https://mega.nz/folder/xxx" value={link} onChange={onLink} hint="Qualquer URL (convite do Telegram, Mega, Google Drive etc.)." />
+        <TextField id={`${prefix}-link`} label="Link do grupo, supergrupo ou canal" max={1000} placeholder="https://t.me/+AbCdEf123" value={link} onChange={onLink} hint="Link de convite do Telegram. O bot só envia o link: não controla quem entra nem remove no vencimento." />
       )}
     </>
   );
@@ -628,19 +628,19 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
       return (
         <>
           <Card title="⭐ Entregável" sub="Destino padrão dos planos que não são VIP exclusivo." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.groupId = ""; d.vip.link = ""; })}>🗑️ Remover entregável</button>}>
-            <Select id="f-vip-type" label="Tipo de entregável" value={c.vip.deliveryType} onChange={(v) => update((d) => { d.vip.deliveryType = v as DeliveryKind; })} options={[["group", "🎯 Grupo VIP (adiciona e remove automático)"], ["link", "🔗 Link de Entrega (Mega, GDrive etc.)"]]} />
+            <Select id="f-vip-type" label="Tipo de entregável" value={c.vip.deliveryType} onChange={(v) => update((d) => { d.vip.deliveryType = v as DeliveryKind; })} options={[["group", "🎯 Pelo ID (convite individual e remoção automática)"], ["link", "🔗 Pelo link de convite (sem remoção automática)"]]} />
             {c.vip.deliveryType === "group" ? (
-              <GroupField id="f-vip-group" label="ID do grupo/canal VIP" value={c.vip.groupId} onChange={(v) => update((d) => { d.vip.groupId = v; })} chats={chats} hint="O bot precisa ser admin com permissão de criar links e banir usuários." />
+              <GroupField id="f-vip-group" label="ID do grupo, supergrupo ou canal" value={c.vip.groupId} onChange={(v) => update((d) => { d.vip.groupId = v; })} chats={chats} hint="O bot precisa ser admin com permissão de criar links e banir usuários." />
             ) : (
-              <TextField id="f-vip-link" label="Link de entrega" max={1000} placeholder="https://mega.nz/folder/xxx" value={c.vip.link} onChange={(v) => update((d) => { d.vip.link = v; })} hint="Enviado na confirmação de pagamento (sem remoção automática)." />
+              <TextField id="f-vip-link" label="Link do grupo, supergrupo ou canal" max={1000} placeholder="https://t.me/+AbCdEf123" value={c.vip.link} onChange={(v) => update((d) => { d.vip.link = v; })} hint="Enviado na confirmação de pagamento (sem remoção automática)." />
             )}
             {c.planos.items.some((p) => !planDelivery(p, c)) && (
               <Callout tone="warn">Planos sem entrega: {c.planos.items.filter((p) => !planDelivery(p, c)).map((p) => p.name || "sem nome").join(", ")}. <button type="button" className="underline" onClick={() => goto("planos")}>Ver planos</button></Callout>
             )}
           </Card>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card title="🎯 Grupo VIP" sub="O cliente recebe o link para entrar depois do pagamento. O bot aprova sozinho e remove quando o plano expira. Precisa ser admin com permissão de criar links de convite e banir usuários." />
-            <Card title="🔗 Link de entrega" sub="O link vai na mensagem de confirmação. Ideal para conteúdo estático como drives e pastas. Sem remoção automática de acesso." />
+            <Card title="🎯 Pelo ID" sub="Depois do pagamento o bot gera um convite só para aquele cliente e, quando o plano vence, tira ele do grupo ou canal. O bot precisa ser admin com permissão de convidar e banir usuários." />
+            <Card title="🔗 Pelo link" sub="O bot envia o link de convite do grupo ou canal depois do pagamento. Como o link é o mesmo para todos, o bot não consegue remover a pessoa quando o plano vence." />
           </div>
           <Card title="✉️ Mensagem de entrega (opcional)" sub="Mensagem depois do pagamento. {link_vip} vira o link de acesso." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.msg = ""; })}>🔄 Restaurar padrão</button>}>
             <AreaField id="f-vip-msg" label="Mensagem de entrega" value={c.vip.msg} onChange={(v) => update((d) => { d.vip.msg = v; })} vars={V_DELIVERY} />

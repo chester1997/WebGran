@@ -248,6 +248,11 @@ const anyUrl = (v: unknown) => {
   const s = str(v, "", 1000).trim();
   return /^https?:\/\/[^\s]+$/i.test(s) ? s : "";
 };
+/** Link de convite de grupo/supergrupo/canal do Telegram (t.me ou telegram.me) ou vazio. */
+const tgLink = (v: unknown) => {
+  const s = str(v, "", 300).trim().replace(/^http:\/\//i, "https://");
+  return /^https:\/\/(t\.me|telegram\.me)\/[^\s]+$/i.test(s) ? s : "";
+};
 /** ID de grupo/canal do Telegram (-100123…) ou vazio. */
 const chatId = (v: unknown) => {
   const s = str(v, "", 32).trim();
@@ -314,7 +319,7 @@ export function normalizeBasicConfig(input: unknown): BasicFlowConfig {
       vipExclusive: bool(p.vipExclusive, false),
       deliveryType: oneOf(p.deliveryType, DELIVERY, "group"),
       groupId: chatId(p.groupId),
-      link: anyUrl(p.link),
+      link: tgLink(p.link),
       color: color(p.color),
     }));
   const planIds = new Set(planItems.map((p) => p.id));
@@ -441,7 +446,7 @@ export function normalizeBasicConfig(input: unknown): BasicFlowConfig {
     vip: {
       deliveryType: v1 ? (vp.tipo === "link" ? "link" : "group") : oneOf(vp.deliveryType, DELIVERY, "group"),
       groupId: chatId(vp.groupId),
-      link: anyUrl(vp.link),
+      link: tgLink(vp.link),
       msg: str(vp.msg, ""),
       mediaUrl: httpsUrl(vp.mediaUrl),
     },

@@ -33,12 +33,22 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await processExpiredAccesses();
+    // Planos dos fluxos (Meus Fluxos). Falha aqui não derruba o job dos acessos normais.
+    let expiredFlowPlans: { processed: number; removed: number; failed: number } | { error: string };
+    try {
+      const { processExpiredFlowPurchases } = await import("@/lib/flows/flow-delivery");
+      expiredFlowPlans = await processExpiredFlowPurchases();
+    } catch (flowErr: any) {
+      console.error("[cron/maintenance] processExpiredFlowPurchases falhou:", flowErr);
+      expiredFlowPlans = { error: flowErr?.message || String(flowErr) };
+    }
     const summary = {
       ok: true,
       expiredAccesses: {
         processed: result.processedCount,
         revocationErrors: result.results.filter((r) => r.error).length,
       },
+      expiredFlowPlans,
       durationMs: Date.now() - startedAt,
     };
     console.log("[cron/maintenance] concluído:", JSON.stringify(summary));

@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, inArray, like } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { products, salesFlowBots, salesFlowFolders, salesFlows, telegramBotChats, telegramBots } from "@/db/schema";
-import { blankBasicConfig, normalizeBasicConfig, planDelivery, planProductDuration, templateBasicConfig, type BasicFlowConfig } from "./basic-config";
+import { blankBasicConfig, normalizeBasicConfig, planDelivery, templateBasicConfig, type BasicFlowConfig } from "./basic-config";
 import { blankGraph, normalizeGraph } from "./advanced-graph";
 
 export const FLOW_LIMIT = 30;
@@ -258,68 +258,6 @@ export async function listFlowChats(storeId: string, botIds: string[]) {
   return rows.filter((r) => (seen.has(r.chatId) ? false : (seen.add(r.chatId), true)));
 }
 
-/* ------------------------------------------------------------------ */
-/* Produtos ocultos dos planos                                         */
-/* ------------------------------------------------------------------ */
-/**
- * Cada plano do fluxo básico vira um produto oculto (slug "fluxo-…"), porque pedidos e
- * acessos precisam de um produto. Ele não aparece no Mini App (BOT_SPECIFIC sem
- * visibilidade), nem no catálogo do bot, nem na aba Produtos.
- */
-export const FLOW_PLAN_SLUG_PREFIX = "fluxo-";
-export function flowPlanSlug(flowId: string, planId: string) {
-  return `${FLOW_PLAN_SLUG_PREFIX}${flowId.replace(/-/g, "").slice(0, 8)}-${planId}`;
-}
-
-export async function syncFlowPlanProducts(storeId: string, flowId: string, config: BasicFlowConfig, botId: string | null) {
-  const prefix = `${FLOW_PLAN_SLUG_PREFIX}${flowId.replace(/-/g, "").slice(0, 8)}-`;
-  const existing = await db
-    .select({ id: products.id, slug: products.slug, status: products.status })
-    .from(products)
-    .where(and(eq(products.storeId, storeId), like(products.slug, `${prefix}%`)));
-  const bySlug = new Map(existing.map((r) => [r.slug, r]));
-  const map: Record<string, string> = {};
-  const keep = new Set<string>();
-  for (const [i, plan] of config.planos.items.entries()) {
-    const delivery = planDelivery(plan, config);
-    const slug = flowPlanSlug(flowId, plan.id);
-    keep.add(slug);
-    const values = {
-      title: plan.name.trim().slice(0, 120) || "Plano",
-      price: Math.max(0, plan.price).toFixed(2),
-      duration: planProductDuration(plan),
-      deliveryType: delivery?.type === "link" ? "external" : "telegram",
-      deliveryValue: delivery?.value || null,
-      botId,
-      catalogScope: "BOT_SPECIFIC",
-      status: "active",
-      position: 1000 + i,
-      updatedAt: new Date(),
-    };
-    const row = bySlug.get(slug);
-    if (row) {
-      await db.update(products).set(values).where(eq(products.id, row.id));
-      map[plan.id] = row.id;
-    } else {
-      const [ins] = await db.insert(products).values({ storeId, slug, ...values }).returning({ id: products.id });
-      map[plan.id] = ins.id;
-    }
-  }
-  // Planos apagados do fluxo: arquiva (pedidos antigos continuam apontando para eles).
-  const gone = existing.filter((r) => !keep.has(r.slug) && r.status !== "archived").map((r) => r.id);
-  if (gone.length) await db.update(products).set({ status: "archived", updatedAt: new Date() }).where(inArray(products.id, gone));
-  return map;
-}
-
-/** Produto oculto de um plano (para a compra no bot). Null se o plano ainda não foi sincronizado. */
-export async function flowPlanProductId(storeId: string, flowId: string, planId: string) {
-  const row = await db.query.products.findFirst({
-    where: and(eq(products.storeId, storeId), eq(products.slug, flowPlanSlug(flowId, planId)), eq(products.status, "active")),
-    columns: { id: true },
-  });
-  return row?.id ?? null;
-}
-
 /** Importa um fluxo exportado (.json). O conteúdo passa pela mesma validação do salvamento. */
 export async function importFlow(storeId: string, input: { name: unknown; type: unknown; config: unknown }) {
   return guard(async () => {
@@ -394,7 +332,6 @@ export async function publishFlow(storeId: string, flowId: string) {
     const config = normalizeBasicConfig(f.config);
     const problems = basicPublishProblems(config, bots.length);
     if (problems.length) throw new Error(problems.join(" "));
-    await syncFlowPlanProducts(storeId, flowId, config, bots[0]?.botId ?? null);
     await db.update(salesFlows).set({ status: "published", updatedAt: new Date() }).where(eq(salesFlows.id, flowId));
   });
 }
@@ -412,13 +349,12 @@ export async function flowTestLink(storeId: string, flowId: string) {
     const f = await ownFlow(storeId, flowId);
     if (f.type !== "basic") throw new Error("O teste do fluxo avançado chega numa próxima etapa.");
     const bot = await db
-      .select({ username: telegramBots.username, id: telegramBots.id })
+      .select({ username: telegramBots.username })
       .from(salesFlowBots)
       .innerJoin(telegramBots, eq(telegramBots.id, salesFlowBots.botId))
       .where(eq(salesFlowBots.flowId, flowId))
       .limit(1);
     if (!bot[0]?.username) throw new Error("Ligue o fluxo a um bot para testar.");
-    await syncFlowPlanProducts(storeId, flowId, normalizeBasicConfig(f.config), bot[0].id);
     const { buildTestStartParam } = await import("./flow-runtime");
     return `https://t.me/${bot[0].username.replace(/^@/, "")}?start=${buildTestStartParam(flowId)}`;
   });

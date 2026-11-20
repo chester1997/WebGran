@@ -1679,3 +1679,36 @@ export const salesFlowFolders = pgTable('sales_flow_folders', {
 }, (t) => ({
   storeNameIdx: uniqueIndex('sales_flow_folders_store_name_idx').on(t.storeId, t.name),
 }));
+
+/**
+ * Compras de planos dos fluxos (Meus Fluxos). Sem produto: o plano é valor + tempo e a
+ * entrega é um grupo/canal do Telegram (ID) ou um link. O pagamento fica em "orders".
+ */
+export const flowPurchases = pgTable('flow_purchases', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  flowId: uuid('flow_id').references(() => salesFlows.id, { onDelete: 'set null' }),
+  botId: uuid('bot_id').references(() => telegramBots.id, { onDelete: 'set null' }),
+  planId: text('plan_id').notNull(),
+  planName: text('plan_name').notNull(),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  periodUnit: text('period_unit').notNull(),
+  periodAmount: integer('period_amount').notNull().default(1),
+  deliveryType: text('delivery_type').notNull(), // 'group' | 'link'
+  deliveryValue: text('delivery_value').notNull(),
+  status: text('status').notNull().default('PENDING'), // 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'FAILED'
+  inviteLink: text('invite_link'),
+  deliveredAt: timestamp('delivered_at'),
+  expiresAt: timestamp('expires_at'),
+  expiredAt: timestamp('expired_at'),
+  removalStatus: text('removal_status'),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  orderUnique: uniqueIndex('flow_purchases_order_unique_idx').on(t.orderId),
+  storeIdx: index('flow_purchases_store_idx').on(t.storeId, t.createdAt),
+  expiryIdx: index('flow_purchases_expiry_idx').on(t.status, t.expiresAt),
+}));

@@ -174,6 +174,20 @@ export class SellerSaleNotificationService {
         }
       }
 
+      // Pedido de plano de fluxo (sem itens): usa o nome do plano.
+      if (productTitles.length === 0) {
+        try {
+          const { getFlowPurchaseByOrder } = await import("@/lib/flows/flow-delivery");
+          const fp = await getFlowPurchaseByOrder(order.id);
+          if (fp) {
+            productTitles.push(fp.planName);
+            if (!targetBotId && fp.botId) targetBotId = fp.botId;
+          }
+        } catch {
+          // sem nome do plano: segue com "Produto"
+        }
+      }
+
       const productNames = productTitles.length > 0 ? productTitles.join(", ") : "Produto";
 
       // 6. Resolve Telegram Bot for Store deterministically
