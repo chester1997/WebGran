@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentStore } from "@/lib/auth";
 import { verifyOwnerActionAccess } from "@/lib/bots/owner-guard";
 import * as Flows from "@/lib/flows/flow-service";
+import { normalizeBasicConfig, stripSecrets } from "@/lib/flows/basic-config";
 
 type Result<T = undefined> = { success: true; data?: T } | { success: false; error: string };
 
@@ -79,7 +80,9 @@ export async function exportFlowAction(flowId: string) {
   return run(async (storeId) => {
     const f = await Flows.getFlow(storeId, need(flowId));
     if (!f) throw new Error("Fluxo não encontrado.");
-    return { webgranFlow: 1, name: f.name, type: f.type, config: f.config };
+    // Tokens de rastreamento nunca saem no arquivo.
+    const config = f.type === "basic" ? stripSecrets(normalizeBasicConfig(f.config)) : f.config;
+    return { webgranFlow: 1, name: f.name, type: f.type, config };
   }, false);
 }
 

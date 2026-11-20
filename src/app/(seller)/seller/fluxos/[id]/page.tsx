@@ -47,7 +47,7 @@ export default async function FluxoEditorPage({ params }: { params: Promise<{ id
     status: flow.status,
     bots: flow.bots,
     products: productsList,
-    chats: chats.map((c) => ({ id: c.id, title: c.title, type: c.type, canInvite: c.canInvite })),
+    chats: chats.map((c) => ({ id: c.id, chatId: c.chatId, title: c.title, type: c.type, canInvite: c.canInvite })),
     botName,
   };
 

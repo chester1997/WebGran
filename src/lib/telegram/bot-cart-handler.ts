@@ -1,3 +1,4 @@
+import { notFlowPlanProduct } from "@/lib/flows/plan-product-filter";
 import { TelegramBotService } from "./bot";
 import { CartService, CartDTO } from "@/lib/cart/cart-service";
 import { ComboService, ActiveComboDTO, ActiveProgressivePromotionDTO } from "@/lib/combos/combo-service";
@@ -236,7 +237,7 @@ export async function formatCatalogMessage(
   telegramUserId?: number | string
 ): Promise<{ text: string; replyMarkup: any; linkPreviewOptions?: any }> {
   const allActiveProducts = await db.query.products.findMany({
-    where: and(eq(products.storeId, storeId), eq(products.status, "active")),
+    where: and(eq(products.storeId, storeId), eq(products.status, "active"), notFlowPlanProduct()),
     orderBy: [desc(products.createdAt)],
   });
 
@@ -803,7 +804,7 @@ export async function formatProgressiveProductsMessage(
     }
   } else {
     eligibleProducts = await db.query.products.findMany({
-      where: and(eq(products.storeId, storeId), eq(products.status, "active")),
+      where: and(eq(products.storeId, storeId), eq(products.status, "active"), notFlowPlanProduct()),
       limit: 10,
       orderBy: [desc(products.createdAt)],
     });

@@ -1,44 +1,86 @@
 import { describe, it, expect } from "vitest";
-import { basicStepStatus, blankBasicConfig, normalizeBasicConfig, templateBasicConfig } from "../basic-config";
+import { basicStepStatus, blankBasicConfig, blankPlan, normalizeBasicConfig, planDelivery, planPeriodLabel, planProductDuration, stripSecrets, templateBasicConfig } from "../basic-config";
 import { blankGraph, graphChecklist, nodeOutputs, normalizeGraph } from "../advanced-graph";
 
 describe("normalizeBasicConfig", () => {
   it("fills defaults for empty or junk input", () => {
     expect(normalizeBasicConfig(null)).toEqual(blankBasicConfig());
     expect(normalizeBasicConfig("x")).toEqual(blankBasicConfig());
-    expect(normalizeBasicConfig({ inicio: 5, planos: [] })).toEqual(blankBasicConfig());
+    expect(normalizeBasicConfig({ version: 2, inicio: 5, planos: [] })).toEqual(blankBasicConfig());
   });
 
-  it("keeps valid values and clamps numbers", () => {
+  it("keeps valid plans defined in the flow and clamps numbers", () => {
     const c = normalizeBasicConfig({
-      inicio: { msg: "Olá", btn: "Ver", antiClone: true, sendMode: "seq" },
-      planos: { varCents: 500, varDir: "cima", items: [{ productId: "p1", on: true, color: "green" }, { productId: "", on: true }] },
-      pix: { proofInterval: 1, fmt: "pre", qr: "nope" },
-      renov: { discount: 99 },
-      recup: { items: [{ name: "x", audience: "start", delay: "Imediato", discount: 200, msg: "m" }] },
+      version: 2,
+      inicio: { msg: "Ola", btn: "Ver", antiClone: true, sendMode: "seq" },
+      planos: {
+        varCents: 500,
+        varDir: "cima",
+        items: [
+          { id: "plan1", name: "Mensal", price: "29,90", unit: "meses", amount: 1, color: "none" },
+          { id: "plan2", name: "Vida", price: 97, unit: "vitalicio", color: "green", vipExclusive: true, deliveryType: "group", groupId: "-1001234567890" },
+          { name: "Hack", price: 10, unit: "decadas", groupId: "abc" },
+        ],
+      },
+      pix: { proofInterval: 1, fmt: "pre", qrMode: "nope" },
+      expiracao: { discount: 99 },
     });
-    expect(c.inicio).toMatchObject({ msg: "Olá", btn: "Ver", antiClone: true, sendMode: "seq" });
+    expect(c.inicio).toMatchObject({ msg: "Ola", btn: "Ver", antiClone: true, sendMode: "seq" });
     expect(c.planos.varCents).toBe(99);
     expect(c.planos.varDir).toBe("cima");
-    expect(c.planos.items).toEqual([{ productId: "p1", on: true, color: "green" }]);
+    expect(c.planos.items[0]).toMatchObject({ id: "plan1", name: "Mensal", price: 29.9, unit: "meses", amount: 1, color: "none" });
+    expect(c.planos.items[1]).toMatchObject({ unit: "vitalicio", color: "green", vipExclusive: true, groupId: "-1001234567890" });
+    expect(c.planos.items[2]).toMatchObject({ unit: "meses", groupId: "" });
     expect(c.pix.proofInterval).toBe(3);
     expect(c.pix.fmt).toBe("pre");
-    expect(c.pix.qr).toBe("botao");
-    expect(c.renov.discount).toBe(75);
-    expect(c.recup.items[0]).toMatchObject({ audience: "start", delay: "5 minutos", discount: 90 });
+    expect(c.pix.qrMode).toBe("botao");
+    expect(c.expiracao.discount).toBe(75);
+  });
+
+  it("drops the old product-based plans and moves v1 sections", () => {
+    const c = normalizeBasicConfig({
+      planos: { items: [{ productId: "p1", on: true }] },
+      entrega: { tipo: "link", link: "https://mega.nz/x", msg: "Obrigado" },
+      renov: { msg: "Renove" },
+    });
+    expect(c.planos.items).toEqual([]);
+    expect(c.vip).toMatchObject({ deliveryType: "link", link: "https://mega.nz/x", msg: "Obrigado" });
+    expect(c.expiracao.msg).toBe("Renove");
   });
 
   it("drops non-https media and caps lists", () => {
     const c = normalizeBasicConfig({
+      version: 2,
       inicio: { media: ["https://cdn/a.webp", "javascript:alert(1)", "http://x", "https://b", "https://c", "https://d", "https://e", "https://f"] },
-      upsell: { items: Array.from({ length: 9 }, () => ({ name: "u", price: 1, delay: "1 hora", msg: "" })) },
+      upsell: { items: Array.from({ length: 30 }, () => ({ name: "u", price: 1 })) },
     });
-    expect(c.inicio.media).toEqual(["https://cdn/a.webp", "https://b", "https://c"]);
-    expect(c.upsell.items).toHaveLength(5);
+    expect(c.inicio.media).toEqual(["https://cdn/a.webp", "https://b", "https://c", "https://d", "https://e"]);
+    expect(c.upsell.items).toHaveLength(25);
   });
 
-  it("keeps only digits in the Facebook pixel id", () => {
-    expect(normalizeBasicConfig({ rastreio: { fb: true, fbPixelId: "12a34-5" } }).rastreio.fbPixelId).toBe("12345");
+  it("keeps only digits in the Facebook pixel id and strips secrets on export", () => {
+    const c = normalizeBasicConfig({ version: 2, rastreio: { fbPixelId: "12a34-5", fbToken: "secret", utmToken: "t" } });
+    expect(c.rastreio.fbPixelId).toBe("12345");
+    expect(stripSecrets(c).rastreio).toMatchObject({ fbPixelId: "12345", fbToken: "", utmToken: "" });
+  });
+});
+
+describe("plans", () => {
+  it("labels periods and maps them to product durations", () => {
+    expect(planPeriodLabel({ unit: "meses", amount: 1 })).toBe("1 mês");
+    expect(planPeriodLabel({ unit: "meses", amount: 3 })).toBe("3 meses");
+    expect(planPeriodLabel({ unit: "vitalicio", amount: 1 })).toBe("Vitalício");
+    expect(planProductDuration({ unit: "dias", amount: 7 })).toBe("custom:7:dias");
+    expect(planProductDuration({ unit: "vitalicio", amount: 1 })).toBe("lifetime");
+  });
+
+  it("uses the VIP default delivery unless the plan has its own", () => {
+    const c = blankBasicConfig();
+    c.vip.groupId = "-1001111111111";
+    const shared = { ...blankPlan(), name: "A", price: 10 };
+    const own = { ...blankPlan(), name: "B", price: 10, vipExclusive: true, deliveryType: "link" as const, link: "https://x.com/vip" };
+    expect(planDelivery(shared, c)).toEqual({ type: "group", value: "-1001111111111" });
+    expect(planDelivery(own, c)).toEqual({ type: "link", value: "https://x.com/vip" });
   });
 });
 
@@ -47,20 +89,18 @@ describe("basicStepStatus", () => {
     const c = blankBasicConfig();
     expect(basicStepStatus("inicio", c)[0]).toBe("pend");
     expect(basicStepStatus("planos", c)[0]).toBe("pend");
-    expect(basicStepStatus("pix", c)[0]).toBe("pend");
-    // destino vem dos produtos; a mensagem de entrega é opcional
-    expect(basicStepStatus("entrega", c)).toEqual(["ok", "Mensagem padrão"]);
+    expect(basicStepStatus("vip", c)[0]).toBe("pend");
     expect(basicStepStatus("bump", c)[0]).toBe("off");
   });
 
-  it("template flow has welcome, pix and a recovery message ready", () => {
+  it("template flow has welcome, a plan and a downsell ready", () => {
     const c = templateBasicConfig();
     expect(basicStepStatus("inicio", c)[0]).toBe("ok");
-    expect(basicStepStatus("pix", c)[0]).toBe("ok");
-    expect(basicStepStatus("recup", c)).toEqual(["ok", "1 mensagem"]);
-    c.entrega.tipo = "link";
-    c.entrega.link = "https://mega.nz/x";
-    expect(basicStepStatus("entrega", c)[0]).toBe("ok");
+    expect(basicStepStatus("planos", c)).toEqual(["ok", "1 plano"]);
+    expect(basicStepStatus("downsell", c)[0]).toBe("ok");
+    c.vip.deliveryType = "link";
+    c.vip.link = "https://mega.nz/x";
+    expect(basicStepStatus("vip", c)[0]).toBe("ok");
   });
 });
 

@@ -26,6 +26,27 @@ export function calculateAccessExpiration(
   const start = paidAt ? new Date(paidAt) : new Date();
   const result = new Date(start);
 
+  // Planos dos fluxos (Meus Fluxos): "custom:<n>:<unidade>"
+  const custom = /^custom:(\d{1,5}):(segundos|minutos|horas|dias|semanas|meses|anos)$/.exec(normalized);
+  if (custom) {
+    const n = Math.max(1, Number(custom[1]));
+    switch (custom[2]) {
+      case 'segundos': result.setSeconds(result.getSeconds() + n); break;
+      case 'minutos': result.setMinutes(result.getMinutes() + n); break;
+      case 'horas': result.setHours(result.getHours() + n); break;
+      case 'dias': result.setDate(result.getDate() + n); break;
+      case 'semanas': result.setDate(result.getDate() + 7 * n); break;
+      case 'meses': {
+        const day = result.getDate();
+        result.setMonth(result.getMonth() + n);
+        if (result.getDate() !== day) result.setDate(0);
+        break;
+      }
+      case 'anos': result.setFullYear(result.getFullYear() + n); break;
+    }
+    return result;
+  }
+
   switch (normalized) {
     case 'daily':
     case 'diario':

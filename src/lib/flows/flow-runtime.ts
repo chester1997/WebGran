@@ -6,15 +6,17 @@
  * Qualquer erro ao carregar o fluxo devolve null e o webhook segue o
  * comportamento antigo do bot (fail-open).
  *
- * Ativo nesta fase: Início, Planos, Pix (mensagem, formato do código, QR,
- * verificar pagamento), mensagem de Entrega, Suporte e Anti-Clone.
+ * Ativo nesta fase: Início (áudio, mídias, mensagens, redirecionamentos, anti-clone),
+ * Planos do próprio fluxo (cada plano tem um produto oculto por trás), PIX (mensagem,
+ * mídia, áudio, formato do código, QR, verificar pagamento), Acesso VIP (mensagem de
+ * entrega) e Suporte. As outras seções ficam salvas e entram nas próximas etapas.
  */
 import crypto from "crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { orders, products, salesFlowBots, salesFlows } from "@/db/schema";
+import { orders, salesFlowBots, salesFlows } from "@/db/schema";
 import { telegramFetch } from "@/lib/telegram/client";
-import { normalizeBasicConfig, type BasicFlowConfig } from "./basic-config";
+import { normalizeBasicConfig, planPeriodLabel, type BasicFlowConfig, type FlowPlan } from "./basic-config";
 
 export type FlowMode = "live" | "test";
 /** Prefixo dos botões: "fl" (publicado) ou "ft" (teste do rascunho). */
@@ -32,10 +34,6 @@ export interface FlowCtx {
   storeSlug: string;
   botDbId: string;
 }
-
-const DURATION: Record<string, string> = {
-  daily: "1 dia", weekly: "7 dias", monthly: "30 dias", quarterly: "90 dias", semiannual: "6 meses", annual: "1 ano", lifetime: "vitalício",
-};
 
 export const brl = (v: number) => "R$ " + (Number(v) || 0).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
@@ -106,7 +104,7 @@ export function renderFlowText(template: string, vars: Record<string, string>): 
   let html = escapeHtml(String(template || "")).replace(/&lt;(\/?)(b|i|u|s|code)&gt;/g, "<$1$2>");
   for (const [k, v] of Object.entries(vars)) html = html.split(k).join(escapeHtml(v));
   // Variáveis sem dado (ex.: {localizacao}) somem em vez de aparecer cruas.
-  return html.replace(/\{(nome|saudacao|localizacao|plano|valor|duracao|link_vip|random)\}/g, "").trim();
+  return html.replace(/\{(nome|saudacao|localizacao|plano|nome_plano|valor|valor_final|duracao|link_vip|codigo_pix|random)\}/g, "").trim();
 }
 
 export function pixCodeHtml(code: string, fmt: BasicFlowConfig["pix"]["fmt"]): string {
@@ -163,15 +161,38 @@ type TgUser = { id: number | string; first_name?: string; last_name?: string; us
 
 const baseVars = (user: TgUser) => ({ "{nome}": user.first_name || "", "{saudacao}": greeting() });
 
-async function activePlans(ctx: FlowCtx, config: BasicFlowConfig) {
-  const ids = config.planos.items.filter((p) => p.on).map((p) => p.productId);
-  if (!ids.length) return [];
-  const rows = await db
-    .select({ id: products.id, title: products.title, price: products.price, duration: products.duration })
-    .from(products)
-    .where(and(eq(products.storeId, ctx.storeId), eq(products.status, "active"), inArray(products.id, ids)));
-  return ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is (typeof rows)[number] => !!r);
+const isVideo = (u: string) => /\.(mp4|mov)(\?|$)/i.test(u);
+const isVoice = (u: string) => /\.(ogg|oga|opus)(\?|$)/i.test(u);
+
+/** Envia uma mídia solta (foto, vídeo ou áudio) sem derrubar o fluxo se falhar. */
+async function sendMedia(ctx: FlowCtx, chatId: number | string, url: string, protect: boolean, caption?: string, kb?: Kb) {
+  if (!url) return;
+  try {
+    const common = { chat_id: chatId, caption, parse_mode: caption ? "HTML" : undefined, reply_markup: kb, protect_content: protect || undefined };
+    if (/\.(ogg|oga|opus|mp3|m4a)(\?|$)/i.test(url)) {
+      await telegramFetch(ctx.token, isVoice(url) ? "sendVoice" : "sendAudio", { ...common, [isVoice(url) ? "voice" : "audio"]: url });
+    } else if (isVideo(url)) {
+      await telegramFetch(ctx.token, "sendVideo", { ...common, video: url });
+    } else {
+      await telegramFetch(ctx.token, "sendPhoto", { ...common, photo: url });
+    }
+  } catch (err) {
+    console.warn("[flow-runtime] Falha ao enviar mídia:", (err as Error)?.message);
+  }
 }
+
+const planVars = (plan: FlowPlan, total?: number) => {
+  const value = total ?? plan.price;
+  return {
+    "{plano}": plan.name,
+    "{nome_plano}": plan.name,
+    "{valor}": brl(value),
+    "{valor_final}": (Number(value) || 0).toFixed(2).replace(".", ","),
+    "{duracao}": planPeriodLabel(plan),
+  };
+};
+
+const validPlans = (c: BasicFlowConfig) => c.planos.items.filter((p) => p.name.trim() && p.price >= 1);
 
 /* ------------------------------------------------------------------ */
 /* /start                                                              */
@@ -184,24 +205,28 @@ export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMod
 
   if (mode === "test") await send(ctx, chatId, "🧪 <b>Modo de teste</b> do fluxo (rascunho). Os clientes ainda não veem isso.", undefined, false);
 
-  // Mídias
+  // Áudio de boas-vindas
+  if (c.inicio.audioUrl) await sendMedia(ctx, chatId, c.inicio.audioUrl, protect);
+
+  // Mídias (foto ou vídeo)
   const media = c.inicio.media;
-  try {
-    if (media.length > 1 && c.inicio.sendMode === "album") {
+  if (media.length > 1 && c.inicio.sendMode === "album") {
+    try {
       await telegramFetch(ctx.token, "sendMediaGroup", {
         chat_id: chatId,
-        media: media.map((url) => ({ type: "photo", media: url })),
+        media: media.map((url) => ({ type: isVideo(url) ? "video" : "photo", media: url })),
         protect_content: protect || undefined,
       });
-    } else {
-      for (const url of media) await sendPhoto(ctx, chatId, url, protect);
+    } catch (err) {
+      console.warn("[flow-runtime] Falha ao enviar álbum:", (err as Error)?.message);
     }
-  } catch (err) {
-    console.warn("[flow-runtime] Falha ao enviar mídia de boas-vindas:", (err as Error)?.message);
+  } else {
+    for (const url of media) await sendMedia(ctx, chatId, url, protect);
   }
 
-  const kb: Kb = { inline_keyboard: [[{ text: c.inicio.btn || "🔥 Ver planos", callback_data: `${p}:plans` }]] };
-  await send(ctx, chatId, renderFlowText(c.inicio.msg || "Olá, {nome}! 👋", vars), kb, protect);
+  const rows: Kb["inline_keyboard"] = [[{ text: c.inicio.btn || "🔥 Ver Planos", callback_data: `${p}:plans` }]];
+  for (const r of c.inicio.redirects) if (r.text.trim() && /^https:\/\//i.test(r.url)) rows.push([{ text: r.text.trim(), url: r.url }]);
+  await send(ctx, chatId, renderFlowText(c.inicio.msg || "Olá, {nome}! 👋", vars), { inline_keyboard: rows }, protect);
   if (c.inicio.msg2.trim()) await send(ctx, chatId, renderFlowText(c.inicio.msg2, vars), undefined, protect);
 }
 
@@ -214,7 +239,7 @@ export async function runFlowSupport(ctx: FlowCtx, flow: LoadedFlow, chatId: num
   await send(
     ctx,
     chatId,
-    renderFlowText(flow.config.suporte.msg || "Precisa de ajuda? Fale com a gente 👇", baseVars(user)),
+    renderFlowText("{saudacao}, {nome}! Precisa de ajuda? Fale com a gente 👇", baseVars(user)),
     { inline_keyboard: [[{ text: `💬 Falar com @${u}`, url: `https://t.me/${u}` }]] },
     flow.config.inicio.antiClone
   );
@@ -237,7 +262,7 @@ export async function runFlowCallback(
 
   if (action === "plans") {
     await answer(ctx, cb.id);
-    const plans = await activePlans(ctx, c);
+    const plans = validPlans(c);
     if (!plans.length) {
       await send(ctx, cb.chatId, "No momento não há planos disponíveis. Volte em breve! 🙏", undefined, protect);
       return;
@@ -245,18 +270,19 @@ export async function runFlowCallback(
     await send(
       ctx,
       cb.chatId,
-      renderFlowText(c.planos.msg || "Escolha seu plano 👇", baseVars(cb.user)),
-      { inline_keyboard: plans.map((pl) => [{ text: `${pl.title} • ${brl(Number(pl.price))}`, callback_data: `${p}:buy:${pl.id}` }]) },
+      "Escolha seu plano 👇",
+      { inline_keyboard: plans.map((pl) => [{ text: `${pl.name} - ${brl(pl.price)}`, callback_data: `${p}:buy:${pl.id}` }]) },
       protect
     );
     return;
   }
 
   if (action === "buy" && arg) {
-    const plans = await activePlans(ctx, c);
-    const plan = plans.find((pl) => pl.id === arg);
-    if (!plan) {
-      await answer(ctx, cb.id, "Esse plano não está mais disponível.", true);
+    const plan = validPlans(c).find((pl) => pl.id === arg);
+    const { flowPlanProductId } = await import("./flow-service");
+    const productId = plan ? await flowPlanProductId(ctx.storeId, flow.flowId, plan.id) : null;
+    if (!plan || !productId) {
+      await answer(ctx, cb.id, mode === "test" ? "Plano ainda não sincronizado. Gere o link de teste de novo." : "Esse plano não está mais disponível.", true);
       return;
     }
     await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
@@ -272,7 +298,7 @@ export async function runFlowCallback(
       storeId: ctx.storeId,
       customerId: customer.id,
       storeSlug: ctx.storeSlug,
-      items: [{ id: plan.id, quantity: 1 }],
+      items: [{ id: productId, quantity: 1 }],
       originBotId: ctx.botDbId,
     });
     if (!res.success || !res.orderId) {
@@ -282,26 +308,29 @@ export async function runFlowCallback(
 
     const orderId = res.orderId;
     const code = res.pix?.qrCode || "";
-    const vars = { ...baseVars(cb.user), "{plano}": plan.title, "{valor}": brl(res.total ?? Number(plan.price)), "{duracao}": DURATION[plan.duration || ""] || plan.duration || "" };
-    const kb: Kb = { inline_keyboard: [[{ text: c.pix.verify || "🔍 Verificar pagamento", callback_data: `${p}:chk:${orderId}` }]] };
-    if (c.pix.qr === "botao" && res.pix?.qrCodeBase64) kb.inline_keyboard.push([{ text: "📱 Mostrar QR Code", callback_data: `${p}:qr:${orderId}` }]);
+    const hasQr = Boolean(res.pix?.qrCodeBase64);
+    const vars = { ...baseVars(cb.user), ...planVars(plan, res.total ?? undefined) };
+    const kb: Kb = { inline_keyboard: [[{ text: c.pix.verifyBtn || "🔍 VERIFICAR PAGAMENTO", callback_data: `${p}:chk:${orderId}` }]] };
+    if (c.pix.qrOn && c.pix.qrMode === "botao" && hasQr) kb.inline_keyboard.push([{ text: c.pix.qrBtn || "📱 Mostrar QR Code", callback_data: `${p}:qr:${orderId}` }]);
 
-    if (c.pix.qr === "direto" && res.pix?.qrCodeBase64) {
-      try {
-        await sendPhoto(ctx, cb.chatId, `${appBaseUrl()}/api/telegram/order-qr/${orderId}`, false);
-      } catch (err) {
-        console.warn("[flow-runtime] QR direto falhou:", (err as Error)?.message);
-      }
-    }
+    if (c.pix.audioUrl) await sendMedia(ctx, cb.chatId, c.pix.audioUrl, false);
+    if (c.pix.mediaUrl) await sendMedia(ctx, cb.chatId, c.pix.mediaUrl, false);
+    if (c.pix.qrOn && c.pix.qrMode === "direto" && hasQr) await sendMedia(ctx, cb.chatId, `${appBaseUrl()}/api/telegram/order-qr/${orderId}`, false);
 
-    const msg = renderFlowText(c.pix.msg || "💳 Plano: <b>{plano}</b>\nValor: <b>{valor}</b>\n\nCopie o código e pague no app do seu banco:", vars);
-    if (!code) {
-      await send(ctx, cb.chatId, msg, kb, false);
+    const template = c.pix.msg || "💳 Pague agora e garanta acesso ao <b>{nome_plano}</b>!\n\nValor: <b>R$ {valor_final}</b>\nDuração: {duracao}\n\nCopie o código Pix abaixo:";
+    const codeHtml = code ? pixCodeHtml(code, c.pix.fmt) : "";
+    if (code && template.includes("{codigo_pix}")) {
+      // O vendedor escolheu onde o código aparece dentro da mensagem.
+      const [before, ...after] = template.split("{codigo_pix}");
+      const html = `${renderFlowText(before, vars)}\n${codeHtml}\n${renderFlowText(after.join(""), vars)}`.trim();
+      await send(ctx, cb.chatId, html, kb, false);
+    } else if (!code) {
+      await send(ctx, cb.chatId, renderFlowText(template, vars), kb, false);
     } else if (c.pix.pos === "junto") {
-      await send(ctx, cb.chatId, `${msg}\n\n${pixCodeHtml(code, c.pix.fmt)}`, kb, false);
+      await send(ctx, cb.chatId, `${renderFlowText(template, vars)}\n\n${codeHtml}`, kb, false);
     } else {
-      await send(ctx, cb.chatId, msg, undefined, false);
-      await send(ctx, cb.chatId, pixCodeHtml(code, c.pix.fmt), kb, false);
+      await send(ctx, cb.chatId, renderFlowText(template, vars), undefined, false);
+      await send(ctx, cb.chatId, codeHtml, kb, false);
     }
     return;
   }
@@ -365,20 +394,23 @@ export async function sendFlowDeliveryMessage(input: {
 }): Promise<boolean> {
   if (!input.botDbId) return false;
   const flow = await getBasicFlowForBot(input.botDbId);
-  if (!flow || !flow.config.entrega.msg.trim()) return false;
+  if (!flow || !flow.config.vip.msg.trim()) return false;
   const c = flow.config;
   const vars = {
     "{nome}": input.customerName || "",
     "{saudacao}": greeting(),
     "{plano}": input.productTitle,
+    "{nome_plano}": input.productTitle,
     "{valor}": input.price != null ? brl(Number(input.price)) : "",
-    "{link_vip}": "",
+    "{valor_final}": input.price != null ? Number(input.price).toFixed(2).replace(".", ",") : "",
+    "{link_vip}": input.isWebApp ? "" : input.accessUrl,
   };
   const label = input.alreadyMember ? "🔓 Abrir conteúdo" : "🔓 Acessar agora";
   const button = input.isWebApp ? { text: label, web_app: { url: input.accessUrl } } : { text: label, url: input.accessUrl };
+  if (c.vip.mediaUrl) await sendMedia({ token: input.botToken, storeId: "", storeSlug: "", botDbId: input.botDbId }, input.chatId, c.vip.mediaUrl, c.inicio.antiClone);
   await telegramFetch(input.botToken, "sendMessage", {
     chat_id: input.chatId,
-    text: renderFlowText(c.entrega.msg, vars) || "✅ Pagamento confirmado!",
+    text: renderFlowText(c.vip.msg, vars) || "✅ Pagamento confirmado!",
     parse_mode: "HTML",
     reply_markup: input.accessUrl ? { inline_keyboard: [[button]] } : undefined,
     protect_content: c.inicio.antiClone || undefined,
