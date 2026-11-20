@@ -935,3 +935,20 @@ export const BOT_HEADER_AND_NAV_ICONS = [
     Component: SolarMenuDotsVerticalBoldDuotone,
   },
 ] as const;
+
+/**
+ * Meus Fluxos (route-bold-duotone, desenho próprio no mesmo estilo duotone)
+ */
+export function SolarFlowsBoldDuotone({ size = 18, className, ...props }: SolarIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className} {...props}>
+      <g fill="currentColor">
+        <path opacity=".5" d="M6.25 8.5v3.2c0 1.8 1.45 3.3 3.25 3.3h5.4c1 0 1.85.85 1.85 1.85v.65h1.5v-.65c0-1.85-1.5-3.35-3.35-3.35H9.5c-.98 0-1.75-.8-1.75-1.8V8.5z" />
+        <path d="M2.5 5.25C2.5 3.84 2.5 3.13 2.94 2.69 3.38 2.25 4.09 2.25 5.5 2.25h2c1.41 0 2.12 0 2.56.44.44.44.44 1.15.44 2.56s0 2.12-.44 2.56c-.44.44-1.15.44-2.56.44h-2c-1.41 0-2.12 0-2.56-.44C2.5 7.37 2.5 6.66 2.5 5.25Z" />
+        <path d="M13.5 18.75c0-1.41 0-2.12.44-2.56.44-.44 1.15-.44 2.56-.44h2c1.41 0 2.12 0 2.56.44.44.44.44 1.15.44 2.56s0 2.12-.44 2.56c-.44.44-1.15.44-2.56.44h-2c-1.41 0-2.12 0-2.56-.44-.44-.44-.44-1.15-.44-2.56Z" />
+      </g>
+    </svg>
+  );
+}
+
+export const SolarSellerFlowsIcon = SolarFlowsBoldDuotone;

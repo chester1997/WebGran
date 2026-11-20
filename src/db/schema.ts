@@ -1642,3 +1642,40 @@ export const authRateLimits = pgTable('auth_rate_limits', {
 }, (t) => ({
   resetAtIdx: index('auth_rate_limits_reset_at_idx').on(t.resetAt),
 }));
+
+// =============================================================================
+// AUTOMAÇÕES → MEUS FLUXOS (migration drizzle/0024_sales_flows.sql)
+// Tabelas novas e isoladas: nenhuma tabela existente depende delas.
+// =============================================================================
+export const salesFlows = pgTable('sales_flows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'basic' | 'advanced'
+  status: text('status').notNull().default('draft'), // 'draft' | 'published'
+  folder: text('folder'),
+  config: jsonb('config').notNull().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeIdx: index('sales_flows_store_idx').on(t.storeId),
+}));
+
+export const salesFlowBots = pgTable('sales_flow_bots', {
+  flowId: uuid('flow_id').notNull().references(() => salesFlows.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  botUnique: uniqueIndex('sales_flow_bots_bot_unique_idx').on(t.botId),
+  flowIdx: index('sales_flow_bots_flow_idx').on(t.flowId),
+}));
+
+export const salesFlowFolders = pgTable('sales_flow_folders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  storeNameIdx: uniqueIndex('sales_flow_folders_store_name_idx').on(t.storeId, t.name),
+}));

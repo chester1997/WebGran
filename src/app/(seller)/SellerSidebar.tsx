@@ -30,6 +30,7 @@ import {
   SolarSellerBackToAdminIcon,
   SolarSellerLogoutIcon,
   SolarSellerSalesVolumeIcon,
+  SolarSellerFlowsIcon,
 } from "@/components/icons/solar/seller-icons";
 
 export interface SellerProfileData {
@@ -286,6 +287,30 @@ export default function SellerSidebar({
             )}
           </div>
         </div>
+
+        {/* ==================================================== */}
+        {/* AUTOMAÇÕES (EXCLUSIVO PROPRIETÁRIO — Redesign V2)     */}
+        {/* ==================================================== */}
+        {isOwner && (
+          <div className="mt-[var(--section-label-margin-top,28px)]">
+            <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
+                AUTOMAÇÕES
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
+            </div>
+            <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
+              <SidebarNavItem
+                href="/seller/fluxos"
+                label="Meus Fluxos"
+                isActive={pathname === "/seller/fluxos" || pathname.startsWith("/seller/fluxos/")}
+                onClick={(e) => handleLinkClick(e, "/seller/fluxos")}
+                icon={SolarSellerFlowsIcon}
+                accent="blue"
+              />
+            </div>
+          </div>
+        )}
 
         {/* ==================================================== */}
         {/* SEÇÃO 3: VENDAS                                      */}
