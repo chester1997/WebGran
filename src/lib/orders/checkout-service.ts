@@ -67,6 +67,12 @@ export class CheckoutService {
         return { success: false, error: "Carrinho vazio" };
       }
 
+      // Cliente bloqueado pelo vendedor não gera pedido (fail-open sem a tabela)
+      const { CustomerBlockService, BLOCKED_CUSTOMER_MESSAGE } = await import("@/lib/customers/customer-block-service");
+      if (await CustomerBlockService.isCustomerIdBlocked(storeId, customerId)) {
+        return { success: false, error: BLOCKED_CUSTOMER_MESSAGE };
+      }
+
       // 1. Validate store existence and owner
       const storeRecord = await db.query.stores.findFirst({
         where: eq(stores.id, storeId),

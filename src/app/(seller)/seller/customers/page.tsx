@@ -2,7 +2,9 @@ import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { telegramCustomers } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
+import { orders } from "@/db/schema";
+import { CustomerBlockService } from "@/lib/customers/customer-block-service";
 import CustomersClient from "./CustomersClient";
 import CustomersClientV2 from "./CustomersClientV2";
 import { isOwnerAccount } from "@/lib/auth/owner-access";
@@ -45,7 +47,45 @@ export default async function CustomersPage() {
 
   // Redesign V2: só a conta proprietária vê; lojistas continuam na versão clássica.
   if (isOwnerAccount(seller)) {
-    return <CustomersClientV2 customers={formattedCustomers} stats={stats} />;
+    // Compras por cliente e bloqueios: consultas extras só da versão V2, com fallback seguro.
+    const [purchaseRows, blockInfo] = await Promise.all([
+      db
+        .select({
+          customerId: orders.customerId,
+          paidCount: sql<number>`count(*) filter (where ${orders.status} = 'paid')`.mapWith(Number),
+          paidTotal: sql<string>`coalesce(sum(${orders.total}) filter (where ${orders.status} = 'paid'), 0)`,
+          lastPaidAt: sql<string | null>`max(coalesce(${orders.paidAt}, ${orders.createdAt})) filter (where ${orders.status} = 'paid')`,
+        })
+        .from(orders)
+        .where(eq(orders.storeId, store.id))
+        .groupBy(orders.customerId)
+        .catch((err) => {
+          console.error("[SELLER_CUSTOMERS] Falha ao carregar compras por cliente:", err?.message);
+          return [] as { customerId: string; paidCount: number; paidTotal: string; lastPaidAt: string | null }[];
+        }),
+      CustomerBlockService.listBlocks(store.id),
+    ]);
+
+    const purchases: Record<string, { paidCount: number; paidTotal: number; lastPaidAt: string | null }> = {};
+    for (const r of purchaseRows) {
+      purchases[r.customerId] = {
+        paidCount: Number(r.paidCount) || 0,
+        paidTotal: Number(r.paidTotal) || 0,
+        lastPaidAt: r.lastPaidAt ? new Date(r.lastPaidAt).toISOString() : null,
+      };
+    }
+    const blocked: Record<string, { reason: string | null; blockedAt: string }> = {};
+    for (const b of blockInfo.blocks) blocked[b.telegramUserId] = { reason: b.reason, blockedAt: b.blockedAt };
+
+    return (
+      <CustomersClientV2
+        customers={formattedCustomers}
+        stats={stats}
+        purchases={purchases}
+        blocked={blocked}
+        blockingAvailable={blockInfo.available}
+      />
+    );
   }
 
   return (

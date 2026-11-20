@@ -96,6 +96,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ID do usuário do Telegram não encontrado" }, { status: 400 });
     }
 
+    // 3.5 Cliente bloqueado pelo vendedor não abre o Mini App (fail-open sem a tabela)
+    const { CustomerBlockService, BLOCKED_CUSTOMER_MESSAGE } = await import("@/lib/customers/customer-block-service");
+    if (await CustomerBlockService.isTelegramUserBlocked(store.id, tgUser.id)) {
+      return NextResponse.json({ error: BLOCKED_CUSTOMER_MESSAGE, blocked: true }, { status: 403 });
+    }
+
     // 4. Upsert TelegramCustomer isolado rigorosamente pela store.id
     const existingCustomer = await db.query.telegramCustomers.findFirst({
       where: (tc, { eq, and }) =>

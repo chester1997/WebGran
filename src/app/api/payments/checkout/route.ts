@@ -59,6 +59,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Produto indisponível para compra.' }, { status: 404 });
     }
 
+    // 3.5 Cliente bloqueado pelo vendedor não gera pedido (fail-open sem a tabela)
+    const { CustomerBlockService, BLOCKED_CUSTOMER_MESSAGE } = await import('@/lib/customers/customer-block-service');
+    if (await CustomerBlockService.isTelegramUserBlocked(storeId, customerTelegramId)) {
+      return NextResponse.json({ error: BLOCKED_CUSTOMER_MESSAGE, blocked: true }, { status: 403 });
+    }
+
     // 4. Create/Get Telegram Customer
     let customer = await db.query.telegramCustomers.findFirst({
       where: and(

@@ -307,6 +307,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // =========================================================================
+    // CLIENTE BLOQUEADO PELO VENDEDOR: não usa nenhuma função do bot.
+    // Fail-open: sem a tabela customer_blocks, ninguém é bloqueado.
+    // =========================================================================
+    {
+      const senderId = update.callback_query?.from?.id ?? update.message?.from?.id;
+      const isPrivateOrCallback = Boolean(update.callback_query) || update.message?.chat?.type === "private";
+      if (senderId && isPrivateOrCallback) {
+        let blockedMessage: string | null = null;
+        try {
+          const { CustomerBlockService, BLOCKED_CUSTOMER_MESSAGE } = await import("@/lib/customers/customer-block-service");
+          if (await CustomerBlockService.isTelegramUserBlocked(store?.id, senderId)) blockedMessage = BLOCKED_CUSTOMER_MESSAGE;
+        } catch (blockCheckErr: any) {
+          console.warn("[TELEGRAM WEBHOOK] Checagem de bloqueio indisponível (liberando):", blockCheckErr?.message);
+        }
+        if (blockedMessage) {
+          const botService = new TelegramBotService(token);
+          try {
+            if (update.callback_query?.id) {
+              await botService.answerCallbackQuery(update.callback_query.id, blockedMessage, true);
+            } else if (typeof update.message?.text === "string" && update.message.text.startsWith("/start")) {
+              await botService.sendMessage(update.message.chat.id, blockedMessage);
+            }
+          } catch (blockedReplyErr: any) {
+            console.warn("[TELEGRAM WEBHOOK] Falha ao avisar cliente bloqueado:", blockedReplyErr?.message);
+          }
+          console.log(`[TELEGRAM WEBHOOK] Update ignorado: cliente bloqueado na loja ${store?.id}.`);
+          return await respondOk();
+        }
+      }
+    }
+
     if (update.callback_query) {
       const cbData = update.callback_query.data || "";
       const cbId = update.callback_query.id;
