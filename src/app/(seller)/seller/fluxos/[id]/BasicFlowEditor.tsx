@@ -76,7 +76,7 @@ const PIX_SAMPLE = "00020126580014BR.GOV.BCB.PIX0136a3f1c9e2-77b4-4d10-9f2b-1c6e
 const STEPS: [BasicStepId, string][] = [
   ["inicio", "Início"], ["planos", "Planos"], ["upsell", "Upsell"], ["downsell", "Downsell"], ["bump", "Order Bump"],
   ["pix", "PIX"], ["mimos", "Mimos"], ["rastreio", "Rastreamento"], ["expiracao", "Expiração"], ["botoes", "Botões"],
-  ["vip", "VIP"], ["disparo", "Disparo"], ["suporte", "Suporte"],
+  ["vip", "Entregável"], ["disparo", "Disparo"], ["suporte", "Suporte"],
 ];
 /** Seções salvas que ainda não rodam no bot. */
 const NOT_LIVE = new Set<BasicStepId>(["upsell", "downsell", "bump", "mimos", "rastreio", "expiracao", "botoes", "disparo"]);
