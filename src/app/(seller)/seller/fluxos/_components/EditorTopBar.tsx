@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Loader2, Pencil, Rocket, Send } from "lucide-react";
-import { renameFlowAction } from "../actions";
+import { flowTestLinkAction, publishFlowAction, renameFlowAction, unpublishFlowAction } from "../actions";
 import { BTN_GHOST, BTN_PRI, BTN_SEC, Callout, INPUT, Modal, StatusPill, TypePill, useToast } from "./flow-ui";
 
 export type SaveState = "saved" | "saving" | "dirty" | "error";
@@ -40,6 +40,8 @@ export default function EditorTopBar({
   const [draft, setDraft] = useState(name);
   const [publishOpen, setPublishOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [pubPending, startPub] = useTransition();
+  const [testPending, startTest] = useTransition();
 
   const rename = () =>
     start(async () => {
@@ -106,11 +108,30 @@ export default function EditorTopBar({
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-[12px] mr-1 ${saveState === "error" ? "text-red-400" : saveState === "dirty" ? "text-amber-400" : "text-zinc-500"}`} aria-live="polite">{saveText}</span>
           {extra}
-          <button type="button" className={BTN_SEC} disabled title="Chega junto com a publicação">
-            <Send className="w-4 h-4" />Enviar teste para mim
+          <button
+            type="button"
+            className={BTN_SEC}
+            disabled={type !== "basic" || !bots.length || testPending}
+            title={type !== "basic" ? "O teste do fluxo avançado chega numa próxima etapa" : !bots.length ? "Ligue o fluxo a um bot para testar" : "Abre o bot no Telegram rodando este rascunho, só para você"}
+            onClick={() => {
+              // Abre a aba já no clique (evita bloqueio de pop-up) e preenche o link depois.
+              const w = window.open("about:blank", "_blank");
+              startTest(async () => {
+                const res = await flowTestLinkAction(flowId);
+                if (!res.success || !res.data) {
+                  w?.close();
+                  toast(res.success ? "Não foi possível gerar o link." : res.error, "err");
+                  return;
+                }
+                if (w) w.location.href = res.data;
+                else window.location.href = res.data;
+              });
+            }}
+          >
+            {testPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}Testar no Telegram
           </button>
           <button type="button" className={BTN_PRI} onClick={() => setPublishOpen(true)}>
-            <Rocket className="w-4 h-4" />Publicar
+            <Rocket className="w-4 h-4" />{status === "published" ? "Publicado" : "Publicar"}
           </button>
         </div>
       </div>
@@ -118,14 +139,53 @@ export default function EditorTopBar({
       {publishOpen && (
         <Modal
           title={`Publicar “${name}”`}
-          subtitle={bots.length ? `${bots.map((b) => "@" + b.username).join(", ")} passaria a usar este fluxo.` : "Ligue um bot antes de publicar."}
+          subtitle={
+            status === "published"
+              ? `${bots.map((b) => "@" + b.username).join(", ") || "O bot"} já está usando este fluxo. As mudanças salvas valem na hora.`
+              : bots.length
+                ? `${bots.map((b) => "@" + b.username).join(", ")} passa a usar este fluxo na hora.`
+                : "Ligue um bot antes de publicar."
+          }
           onClose={() => setPublishOpen(false)}
           footer={
             <>
               <button type="button" className={BTN_GHOST} onClick={() => setPublishOpen(false)}>Voltar</button>
-              <button type="button" className={BTN_PRI} disabled title="O bot começa a usar fluxos na próxima etapa">
-                <Rocket className="w-4 h-4" />Publicar agora
-              </button>
+              {status === "published" ? (
+                <button
+                  type="button"
+                  className={BTN_SEC}
+                  disabled={pubPending}
+                  onClick={() =>
+                    startPub(async () => {
+                      const res = await unpublishFlowAction(flowId);
+                      if (!res.success) return toast(res.error, "err");
+                      setPublishOpen(false);
+                      toast("Fluxo despublicado. O bot voltou para a conversa padrão.");
+                      router.refresh();
+                    })
+                  }
+                >
+                  {pubPending && <Loader2 className="w-4 h-4 animate-spin" />}Despublicar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={BTN_PRI}
+                  disabled={type !== "basic" || !requiredOk || pubPending}
+                  title={type !== "basic" ? "O fluxo avançado começa a rodar numa próxima etapa" : undefined}
+                  onClick={() =>
+                    startPub(async () => {
+                      const res = await publishFlowAction(flowId);
+                      if (!res.success) return toast(res.error, "err");
+                      setPublishOpen(false);
+                      toast(`Publicado! ${bots.map((b) => "@" + b.username).join(", ")} já está usando “${name}”.`);
+                      router.refresh();
+                    })
+                  }
+                >
+                  {pubPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}Publicar agora
+                </button>
+              )}
             </>
           }
         >
@@ -147,8 +207,12 @@ export default function EditorTopBar({
               </div>
             ))}
             <div className="mt-2">
-              <Callout tone={requiredOk ? "info" : "warn"}>
-                {requiredOk ? "Tudo pronto do seu lado." : "Falta algo obrigatório acima."} O bot passa a seguir os fluxos na próxima etapa do projeto. Até lá o fluxo fica salvo como rascunho e o bot continua igual.
+              <Callout tone={type !== "basic" || !requiredOk ? "warn" : "info"}>
+                {type !== "basic"
+                  ? "O fluxo avançado fica salvo como rascunho. Ele começa a rodar no bot numa próxima etapa."
+                  : requiredOk
+                    ? "Antes de publicar, use “Testar no Telegram”: o rascunho roda só para você. Order Bump, Upsell, Recuperação, Renovação, Mimos e Disparos ficam salvos e começam a funcionar nas próximas etapas."
+                    : "Falta algo obrigatório acima."}
               </Callout>
             </div>
           </div>

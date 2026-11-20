@@ -344,6 +344,30 @@ export async function POST(req: NextRequest) {
       const cbId = update.callback_query.id;
       const chatId = update.callback_query.message?.chat?.id;
 
+      // Botões do Fluxo Básico (Meus Fluxos): "fl:" publicado, "ft:" teste do rascunho.
+      if (/^f[lt]:/.test(cbData)) {
+        const flowMode = cbData.startsWith("ft:") ? "test" : "live";
+        try {
+          const FlowRuntime = await import("@/lib/flows/flow-runtime");
+          const flow = await FlowRuntime.getBasicFlowForBot(resolved.bot.id, { includeDraft: flowMode === "test" });
+          if (flow && chatId) {
+            await FlowRuntime.runFlowCallback(
+              { token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id },
+              flow,
+              flowMode,
+              { id: cbId, data: cbData, chatId, user: update.callback_query.from }
+            );
+          } else {
+            await new TelegramBotService(token).answerCallbackQuery(cbId, "Essa opção não está mais disponível. Mande /start de novo.", true);
+          }
+        } catch (flowErr: any) {
+          console.error("[TELEGRAM WEBHOOK] Erro no fluxo (botão):", flowErr?.message || flowErr);
+          try { await new TelegramBotService(token).answerCallbackQuery(cbId, "⚠️ Não consegui concluir agora. Tente de novo.", true); } catch {}
+        }
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
+      }
+
       if (cbData.startsWith("check_pay:") || cbData.startsWith("order_check:")) {
         const orderId = cbData.replace(/^(check_pay:|order_check:)/, "").trim();
         const botService = new TelegramBotService(token);
@@ -653,6 +677,17 @@ export async function POST(req: NextRequest) {
         cleanCmd === "/support" ||
         cleanCmd === "/help"
       ) {
+        // Fluxo Básico publicado com suporte próprio
+        try {
+          const FlowRuntime = await import("@/lib/flows/flow-runtime");
+          const flow = await FlowRuntime.getBasicFlowForBot(resolved.bot.id);
+          if (flow && (await FlowRuntime.runFlowSupport({ token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id }, flow, chatId, update.message.from || { id: chatId }))) {
+            if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+            return respondOk();
+          }
+        } catch (flowErr: any) {
+          console.error("[TELEGRAM WEBHOOK] Erro no fluxo (/suporte):", flowErr?.message || flowErr);
+        }
         const { handleSupportCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleSupportCommand({ store, botService, miniAppUrl }, chatId, store);
         if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
@@ -820,6 +855,43 @@ export async function POST(req: NextRequest) {
             chatId,
             `⚠️ ${triggerErr.message || "Link de vídeo indisponível."}`
           );
+          if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+          return respondOk();
+        }
+      }
+
+      // =====================================================================
+      // FLUXO BÁSICO (Meus Fluxos): bot com fluxo publicado, ou link de teste.
+      // Sem fluxo (ou se o fluxo não carregar), segue a boas-vindas padrão abaixo.
+      // =====================================================================
+      {
+        let flowToRun: { flow: any; mode: "live" | "test" } | null = null;
+        let FlowRuntime: typeof import("@/lib/flows/flow-runtime") | null = null;
+        try {
+          FlowRuntime = await import("@/lib/flows/flow-runtime");
+          const testFlowId = FlowRuntime.parseTestStartParam(startParam);
+          if (testFlowId) {
+            const draft = await FlowRuntime.getBasicFlowForBot(resolved.bot.id, { includeDraft: true });
+            if (draft && draft.flowId === testFlowId) flowToRun = { flow: draft, mode: "test" };
+          } else {
+            const live = await FlowRuntime.getBasicFlowForBot(resolved.bot.id);
+            if (live) flowToRun = { flow: live, mode: "live" };
+          }
+        } catch (flowErr: any) {
+          console.error("[TELEGRAM WEBHOOK] Fluxo indisponível no /start, usando boas-vindas padrão:", flowErr?.message || flowErr);
+        }
+        if (flowToRun && FlowRuntime) {
+          try {
+            await FlowRuntime.runFlowStart(
+              { token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id },
+              flowToRun.flow,
+              flowToRun.mode,
+              chatId,
+              update.message.from || { id: chatId }
+            );
+          } catch (flowErr: any) {
+            console.error("[TELEGRAM WEBHOOK] Erro ao rodar o fluxo no /start:", flowErr?.message || flowErr);
+          }
           if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
           return respondOk();
         }

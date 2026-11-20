@@ -227,11 +227,20 @@ export async function saveFlowConfig(storeId: string, flowId: string, config: un
 /** Produtos ativos da loja (viram planos no fluxo). */
 export async function listFlowProducts(storeId: string) {
   const rows = await db
-    .select({ id: products.id, title: products.title, price: products.price, duration: products.duration, botId: products.botId })
+    .select({ id: products.id, title: products.title, price: products.price, duration: products.duration, botId: products.botId, deliveryType: products.deliveryType, deliveryValue: products.deliveryValue })
     .from(products)
     .where(and(eq(products.storeId, storeId), eq(products.status, "active")))
     .orderBy(asc(products.position), asc(products.title));
-  return rows.map((r) => ({ id: r.id, title: r.title, price: Number(r.price) || 0, duration: r.duration || "lifetime", botId: r.botId }));
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    price: Number(r.price) || 0,
+    duration: r.duration || "lifetime",
+    botId: r.botId,
+    /** Produto tem destino de entrega (grupo, link ou vídeo). */
+    hasDelivery: r.deliveryType === "product_video" || !!(r.deliveryValue && String(r.deliveryValue).trim()),
+    deliveryKind: r.deliveryType === "product_video" ? "Vídeo" : r.deliveryType === "external" ? "Link" : "Grupo do Telegram",
+  }));
 }
 
 /** Grupos e canais onde os bots ligados ao fluxo são administradores. */
@@ -295,4 +304,54 @@ export async function unassignBot(storeId: string, botId: string) {
   } catch (err) {
     if (!isMissingRelation(err)) throw err;
   }
+}
+
+
+/** Problemas que impedem publicar um fluxo básico (lista vazia = pode publicar). */
+export async function basicPublishProblems(storeId: string, config: ReturnType<typeof normalizeBasicConfig>, botCount: number) {
+  const problems: string[] = [];
+  if (!botCount) problems.push("Ligue o fluxo a um bot.");
+  if (!config.inicio.msg.trim() || !config.inicio.btn.trim()) problems.push("Escreva a mensagem de boas-vindas e o texto do botão.");
+  if (!config.pix.msg.trim()) problems.push("Escreva a mensagem do Pix.");
+  const productsList = await listFlowProducts(storeId);
+  const active = config.planos.items.filter((p) => p.on).map((p) => productsList.find((x) => x.id === p.productId)).filter(Boolean) as Awaited<ReturnType<typeof listFlowProducts>>;
+  if (!active.length) problems.push("Marque pelo menos um plano.");
+  const noDelivery = active.filter((p) => !p.hasDelivery).map((p) => p.title);
+  if (noDelivery.length) problems.push(`Configure a entrega em Produtos: ${noDelivery.join(", ")}.`);
+  return problems;
+}
+
+export async function publishFlow(storeId: string, flowId: string) {
+  return guard(async () => {
+    const f = await ownFlow(storeId, flowId);
+    if (f.type !== "basic") throw new Error("O fluxo avançado ainda não pode ser publicado. Ele começa a rodar numa próxima etapa.");
+    const bots = await db.select({ botId: salesFlowBots.botId }).from(salesFlowBots).where(eq(salesFlowBots.flowId, flowId));
+    const problems = await basicPublishProblems(storeId, normalizeBasicConfig(f.config), bots.length);
+    if (problems.length) throw new Error(problems.join(" "));
+    await db.update(salesFlows).set({ status: "published", updatedAt: new Date() }).where(eq(salesFlows.id, flowId));
+  });
+}
+
+export async function unpublishFlow(storeId: string, flowId: string) {
+  return guard(async () => {
+    await ownFlow(storeId, flowId);
+    await db.update(salesFlows).set({ status: "draft", updatedAt: new Date() }).where(eq(salesFlows.id, flowId));
+  });
+}
+
+/** Link "Testar no Telegram": abre o bot ligado já rodando o rascunho. */
+export async function flowTestLink(storeId: string, flowId: string) {
+  return guard(async () => {
+    const f = await ownFlow(storeId, flowId);
+    if (f.type !== "basic") throw new Error("O teste do fluxo avançado chega numa próxima etapa.");
+    const bot = await db
+      .select({ username: telegramBots.username })
+      .from(salesFlowBots)
+      .innerJoin(telegramBots, eq(telegramBots.id, salesFlowBots.botId))
+      .where(eq(salesFlowBots.flowId, flowId))
+      .limit(1);
+    if (!bot[0]?.username) throw new Error("Ligue o fluxo a um bot para testar.");
+    const { buildTestStartParam } = await import("./flow-runtime");
+    return `https://t.me/${bot[0].username.replace(/^@/, "")}?start=${buildTestStartParam(flowId)}`;
+  });
 }

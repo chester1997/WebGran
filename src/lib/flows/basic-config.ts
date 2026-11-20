@@ -124,7 +124,7 @@ export function templateBasicConfig(): BasicFlowConfig {
   c.pix.msg = "💳 Falta pouco, {nome}!\n\nPlano: <b>{plano}</b>\nValor: <b>{valor}</b>\n\nCopie o código e pague no app do seu banco:";
   c.pix.proof = true;
   c.pix.proofMsgs = ["🔥 {random} pessoas de {localizacao} compraram hoje"];
-  c.entrega.msg = "✅ <b>Pagamento confirmado!</b>\n\nObrigado, {nome}. Seu acesso ao <b>{plano}</b> está liberado:\n{link_vip}";
+  c.entrega.msg = "✅ <b>Pagamento confirmado!</b>\n\nObrigado, {nome}. Seu acesso ao <b>{plano}</b> está liberado. Toque no botão abaixo para entrar 👇";
   c.recup.items = [
     { name: "Lembrete do Pix", audience: "pix", delay: "15 minutos", discount: 10, msg: "{nome}, seu Pix ainda está esperando 👀\nPague agora com 10% off." },
   ];
@@ -297,8 +297,8 @@ export function basicStepStatus(id: BasicStepId, c: BasicFlowConfig): [StepState
     case "pix":
       return c.pix.msg.trim() ? ["ok", "Pronto"] : ["pend", "Falta a mensagem"];
     case "entrega": {
-      const ok = c.entrega.tipo === "grupo" ? !!c.entrega.chatId : c.entrega.tipo === "link" ? /^https?:\/\//.test(c.entrega.link) : !!c.entrega.msg.trim();
-      return ok ? ["ok", "Pronto"] : ["pend", "Falta o destino"];
+      // O destino vem de cada produto; aqui só a mensagem (opcional).
+      return c.entrega.msg.trim() ? ["ok", "Mensagem própria"] : ["ok", "Mensagem padrão"];
     }
     case "upsell":
       return c.upsell.items.length ? ["ok", `${c.upsell.items.length} ${c.upsell.items.length === 1 ? "oferta" : "ofertas"}`] : ["off", "Nenhuma oferta"];

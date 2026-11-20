@@ -911,7 +911,29 @@ export class AccessDeliveryService {
             }
           }
 
-          if (supportContactUrl) {
+          // Fluxo Básico publicado (Meus Fluxos): mensagem de entrega personalizada.
+          // Qualquer falha cai na mensagem padrão abaixo.
+          let flowMessageSent = false;
+          try {
+            const { sendFlowDeliveryMessage } = await import("@/lib/flows/flow-runtime");
+            flowMessageSent = await sendFlowDeliveryMessage({
+              botDbId: bot?.id || null,
+              botToken,
+              chatId: String(customer.telegramUserId),
+              customerName: customer.firstName || null,
+              productTitle: product.title,
+              price: product.price ?? null,
+              accessUrl: redirectUrl,
+              isWebApp: product.deliveryType === 'product_video',
+              alreadyMember: isAlreadyMember,
+            });
+          } catch (flowErr: any) {
+            console.warn(`[AccessDeliveryService] Mensagem de entrega do fluxo falhou, usando a padrão:`, flowErr?.message);
+          }
+
+          if (flowMessageSent) {
+            // mensagem do fluxo já enviada
+          } else if (supportContactUrl) {
             await TelegramDeliveryService.sendPaymentConfirmationMessage(
               botToken,
               customer.telegramUserId,

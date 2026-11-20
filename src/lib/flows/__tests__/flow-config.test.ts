@@ -48,7 +48,8 @@ describe("basicStepStatus", () => {
     expect(basicStepStatus("inicio", c)[0]).toBe("pend");
     expect(basicStepStatus("planos", c)[0]).toBe("pend");
     expect(basicStepStatus("pix", c)[0]).toBe("pend");
-    expect(basicStepStatus("entrega", c)[0]).toBe("pend");
+    // destino vem dos produtos; a mensagem de entrega é opcional
+    expect(basicStepStatus("entrega", c)).toEqual(["ok", "Mensagem padrão"]);
     expect(basicStepStatus("bump", c)[0]).toBe("off");
   });
 

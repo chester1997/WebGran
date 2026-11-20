@@ -27,7 +27,15 @@ export interface FlowProduct {
   title: string;
   price: number;
   duration: string;
+  hasDelivery?: boolean;
+  deliveryKind?: string;
 }
+
+/** Etapas que ficam salvas mas ainda não rodam no bot (próximas fases). */
+const NOT_LIVE = new Set<BasicStepId>(["bump", "upsell", "recup", "renov", "mimos", "disparo", "rastreio"]);
+const SoonNote = () => (
+  <Callout tone="warn">Esta etapa fica salva, mas ainda não roda no bot. Ela começa a funcionar numa próxima etapa do projeto.</Callout>
+);
 export interface FlowChat {
   id: string;
   title: string;
@@ -259,11 +267,18 @@ export default function BasicFlowEditor({
     { label: "Mensagem de boas-vindas", ok: basicStepStatus("inicio", config)[0] === "ok", required: true, onFix: () => goto("inicio") },
     { label: "Pelo menos um plano", ok: activePlans.length > 0, required: true, onFix: () => goto("planos") },
     { label: "Mensagem do Pix", ok: basicStepStatus("pix", config)[0] === "ok", required: true, onFix: () => goto("pix") },
-    { label: "Destino da entrega", ok: basicStepStatus("entrega", config)[0] === "ok", required: true, onFix: () => goto("entrega") },
+    { label: "Entrega configurada em todos os planos", ok: activePlans.length > 0 && activePlans.every((p) => p.product.hasDelivery !== false), required: true, onFix: () => goto("entrega") },
     { label: "Recuperação de quem não pagou", ok: config.recup.items.length > 0, required: false, onFix: () => goto("recup") },
   ];
 
-  const statusOf = (id: BasicStepId) => (id === "planos" ? (activePlans.length ? (["ok", `${activePlans.length} ${activePlans.length === 1 ? "plano" : "planos"}`] as const) : (["pend", "Nenhum plano"] as const)) : basicStepStatus(id, config));
+  const statusOf = (id: BasicStepId): readonly [string, string] => {
+    if (id === "planos") return activePlans.length ? (["ok", `${activePlans.length} ${activePlans.length === 1 ? "plano" : "planos"}`] as const) : (["pend", "Nenhum plano"] as const);
+    if (id === "entrega") {
+      if (!activePlans.length) return ["pend", "Sem planos"] as const;
+      return activePlans.every((p) => p.product.hasDelivery !== false) ? (["ok", "Pronto"] as const) : (["pend", "Plano sem entrega"] as const);
+    }
+    return basicStepStatus(id, config);
+  };
   const current = ALL_STEPS.find((s) => s[0] === step)!;
   const [st, stLabel] = statusOf(step);
 
@@ -289,7 +304,7 @@ export default function BasicFlowEditor({
                       <span className={`w-[22px] h-[22px] rounded-[7px] border text-[11px] tabular-nums flex items-center justify-center shrink-0 ${on ? "bg-[#3984FF] border-[#3984FF] text-white" : "border-white/[0.13] text-zinc-400"}`}>{n}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13.5px] font-semibold text-white">{label}</span>
-                        <span className="hidden lg:block text-[11.5px] text-zinc-500 truncate">{sub}</span>
+                        <span className="hidden lg:block text-[11.5px] text-zinc-500 truncate">{NOT_LIVE.has(id) ? "Em breve no bot" : sub}</span>
                       </span>
                       <span className={`w-2 h-2 rounded-full shrink-0 ${s === "ok" ? "bg-emerald-400" : s === "pend" ? "bg-amber-400" : "border border-zinc-600"}`} />
                     </button>
@@ -307,6 +322,7 @@ export default function BasicFlowEditor({
               <span className="w-1.5 h-1.5 rounded-full bg-current" />{stLabel}
             </span>
           </div>
+          {NOT_LIVE.has(step) && <SoonNote />}
           <StepForm step={step} config={config} update={update} products={products} productById={productById} chats={chats} bots={bots} />
         </div>
 
@@ -498,7 +514,7 @@ function StepForm({
               <TextField id="f-pix-verify" label="Botão de verificar pagamento" max={64} value={c.pix.verify} onChange={(v) => update((d) => { d.pix.verify = v; })} />
             </div>
           </Card>
-          <Card title="Provas sociais" sub="Avisos curtos embaixo do Pix para criar urgência.">
+          <Card title="Provas sociais" sub="Avisos curtos embaixo do Pix para criar urgência. Começam a aparecer no bot numa próxima etapa.">
             <Toggle title="Mostrar provas sociais" desc="Trocam sozinhas enquanto o Pix está aberto." checked={c.pix.proof} onChange={(v) => update((d) => { d.pix.proof = v; })} />
             {c.pix.proof && (
               <>
@@ -513,7 +529,7 @@ function StepForm({
               </>
             )}
           </Card>
-          <Card title="Pix reserva" sub="Se o banco do cliente recusar, ele gera o Pix em outro gateway.">
+          <Card title="Pix reserva" sub="Se o banco do cliente recusar, ele gera o Pix em outro gateway. Chega numa próxima etapa.">
             <Toggle title="Botão “Problemas para pagar?”" desc="Usa o segundo gateway conectado em Gateways." checked={c.pix.fallback} onChange={(v) => update((d) => { d.pix.fallback = v; })} />
             {c.pix.fallback && <Callout tone="warn">Funciona só com <b>2 gateways</b> conectados em Gateways.</Callout>}
           </Card>
@@ -524,37 +540,26 @@ function StepForm({
       return (
         <>
           <p className="text-zinc-400 -mt-2">O que o cliente recebe quando o pagamento é aprovado.</p>
-          <Card title="Entrega principal">
-            <Seg label="Tipo de entrega" value={c.entrega.tipo} onChange={(v) => update((d) => { d.entrega.tipo = v; })} options={[["grupo", "Grupo ou canal"], ["link", "Link"], ["texto", "Só mensagem"]]} />
-            {c.entrega.tipo === "grupo" &&
-              (bots.length === 0 ? (
-                <Callout tone="warn">Ligue este fluxo a um bot (em Meus Fluxos) para listar os grupos e canais dele.</Callout>
-              ) : chats.length === 0 ? (
-                <Callout tone="warn">O bot ligado ainda não está como administrador em nenhum grupo ou canal.</Callout>
-              ) : (
-                <Select
-                  id="f-entrega-chat"
-                  label="Grupo ou canal"
-                  value={c.entrega.chatId}
-                  onChange={(v) => update((d) => { d.entrega.chatId = v; })}
-                  options={[["", "Escolha…"], ...chats.map((ch) => [ch.id, `${ch.title}${ch.canInvite ? "" : " (sem permissão de convidar)"}`] as [string, string])]}
-                  hint="Entra e sai sozinho quando o acesso vence. O bot precisa poder convidar usuários."
-                />
-              ))}
-            {c.entrega.tipo === "link" && <TextField id="f-entrega-link" label="Link de entrega" max={1000} placeholder="https://" value={c.entrega.link} onChange={(v) => update((d) => { d.entrega.link = v; })} hint="Drive, Mega etc. Sem remoção automática." />}
-            {c.entrega.tipo === "texto" && <Callout>O cliente recebe só a mensagem abaixo. Bom para códigos, senhas ou instruções.</Callout>}
+          <Card title="Onde o cliente recebe" sub="O acesso é entregue no destino configurado em cada produto. Assim o sistema também sabe de onde tirar o cliente quando o acesso vencer.">
+            {c.planos.items.filter((x) => x.on && productById.has(x.productId)).length === 0 && <Callout tone="warn">Marque pelo menos um plano na etapa Planos.</Callout>}
+            {c.planos.items
+              .filter((x) => x.on && productById.has(x.productId))
+              .map((x) => {
+                const p = productById.get(x.productId)!;
+                return (
+                  <div key={p.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-[#0d0e12]">
+                    <span className="text-[13.5px] font-semibold text-white truncate">{p.title}</span>
+                    {p.hasDelivery === false ? (
+                      <a href="/seller/products" target="_blank" rel="noopener noreferrer" className="shrink-0 text-[12.5px] font-semibold text-amber-400 hover:text-amber-300">Configurar entrega ↗</a>
+                    ) : (
+                      <span className="shrink-0 text-[12.5px] text-emerald-400">{p.deliveryKind || "Configurada"}</span>
+                    )}
+                  </div>
+                );
+              })}
           </Card>
-          <Card title="Mensagem de entrega">
-            <AreaField id="f-entrega-msg" label="Mensagem" value={c.entrega.msg} onChange={(v) => update((d) => { d.entrega.msg = v; })} vars={["{nome}", "{plano}", "{valor}", "{link_vip}"]} />
-          </Card>
-          <Card title="Entregas das ofertas" sub="Order Bump, Upsell e Recuperação podem entregar em outro lugar.">
-            {([["bump", "Order Bump"], ["upsell", "Upsell"], ["recovery", "Recuperação"]] as const).map(([k, l]) => (
-              <div key={k} className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="text-[13.5px] font-semibold text-white">{l}</span>
-                <Seg value={c.entrega[k]} onChange={(v) => update((d) => { d.entrega[k] = v; })} options={[["padrao", "Usa a principal"], ["propria", "Entrega própria"]]} />
-              </div>
-            ))}
-            <p className="text-[12px] text-zinc-500">A entrega própria de cada oferta é configurada quando o envio de ofertas for ligado.</p>
+          <Card title="Mensagem de entrega" sub="Enviada quando o pagamento é aprovado, com o botão de acesso embaixo. Em branco, o bot usa a mensagem padrão.">
+            <AreaField id="f-entrega-msg" label="Mensagem" value={c.entrega.msg} onChange={(v) => update((d) => { d.entrega.msg = v; })} vars={["{nome}", "{plano}", "{valor}"]} />
           </Card>
         </>
       );
@@ -649,7 +654,7 @@ function StepForm({
     case "botoes":
       return (
         <>
-          <p className="text-zinc-400 -mt-2">Cor dos botões no Telegram. A prévia mostra todos juntos.</p>
+          <p className="text-zinc-400 -mt-2">Cor dos botões no Telegram. A prévia mostra todos juntos. As cores passam a valer no bot numa próxima etapa.</p>
           <Card title="Cores" sub="Cores nativas do Telegram para bots.">
             {([["cta", "Ver planos"], ["comprar", "Comprar plano"], ["verificar", "Verificar pagamento"], ["aceitar", "Aceitar oferta"], ["recusar", "Recusar oferta"], ["upsell", "Pagar upsell"], ["desconto", "Comprar com desconto"], ["mimo", "Enviar mimo"]] as const).map(([k, l]) => (
               <div key={k} className="flex items-center justify-between gap-3"><span className="text-[13.5px] font-semibold text-white">{l}</span><ColorPick value={c.botoes[k]} onChange={(v) => update((d) => { d.botoes[k] = v; })} /></div>
@@ -750,10 +755,8 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig, plans: ActivePlan[]
       if (c.pix.proof && c.pix.proofMsgs[0]) out.push({ kind: "proof", text: c.pix.proofMsgs[0] });
       return out;
     }
-    case "entrega": {
-      const link = c.entrega.tipo === "grupo" ? "👇 toque no botão para entrar" : c.entrega.tipo === "link" ? c.entrega.link || "(link)" : "";
-      return [{ kind: "sys", text: "Pagamento aprovado" }, bot(c.entrega.msg || "(escreva a mensagem de entrega)", { "{link_vip}": link }, c.entrega.tipo === "grupo" ? [[{ t: "Entrar no grupo", c: "green" }]] : undefined)];
-    }
+    case "entrega":
+      return [{ kind: "sys", text: "Pagamento aprovado" }, bot(c.entrega.msg || "🎉 PAGAMENTO CONFIRMADO! (mensagem padrão do bot)", { "{link_vip}": "" }, [[{ t: "🔓 Acessar agora", c: "green" }]])];
     case "upsell": {
       const out: PreviewItem[] = [{ kind: "sys", text: "Pagamento aprovado · acesso entregue" }];
       c.upsell.items.forEach((u, i) => {

@@ -87,3 +87,15 @@ export async function exportFlowAction(flowId: string) {
 export async function listFlowOptionsAction() {
   return run((storeId) => Flows.listFlowOptions(storeId), false);
 }
+
+export async function publishFlowAction(flowId: string) {
+  return run((storeId) => Flows.publishFlow(storeId, need(flowId)));
+}
+
+export async function unpublishFlowAction(flowId: string) {
+  return run((storeId) => Flows.unpublishFlow(storeId, need(flowId)));
+}
+
+export async function flowTestLinkAction(flowId: string) {
+  return run((storeId) => Flows.flowTestLink(storeId, need(flowId)), false);
+}
