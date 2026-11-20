@@ -353,7 +353,7 @@ export default function SellerSidebar({
         
         {/* Card de Volume de Vendas (V2 + meta de R$ 50 mil só para a conta proprietária) */}
         {isOwner ? (
-          <SalesVolumeCardV2 totalRevenue={totalRevenue} salesGoal={OWNER_SALES_GOAL} onNavigate={handleLinkClick} />
+          <SalesVolumeCardV2 totalRevenue={totalRevenue} salesGoal={OWNER_SALES_GOAL} />
         ) : (
         <div className="p-3.5 rounded-[12px] bg-[#0F1014] border border-white/[0.06] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { SolarSellerSalesVolumeIcon } from "@/components/icons/solar/seller-icons";
 
 /** Meta de vendas do card V2 (conta proprietária). */
@@ -34,11 +33,9 @@ export function formatCompactBRL(value: number): string {
 export default function SalesVolumeCardV2({
   totalRevenue,
   salesGoal,
-  onNavigate,
 }: {
   totalRevenue: number;
   salesGoal: number;
-  onNavigate?: (e: React.MouseEvent, href: string) => void;
 }) {
   const goal = salesGoal > 0 ? salesGoal : OWNER_SALES_GOAL;
   const revenue = Math.max(0, totalRevenue || 0);
@@ -68,10 +65,10 @@ export default function SalesVolumeCardV2({
 
       <div className="relative flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <SolarSellerSalesVolumeIcon size={18} className={reached ? "text-emerald-400 shrink-0" : "text-[#3984FF] shrink-0"} />
+          <SolarSellerSalesVolumeIcon size={20} className="w-5 h-5 shrink-0 text-zinc-400" />
           <span className="text-[13px] font-semibold text-zinc-100 truncate">Volume de vendas</span>
         </div>
-        <span className="shrink-0 text-[10.5px] font-medium text-zinc-400 px-2 py-0.5 rounded-full border border-white/[0.1] bg-white/[0.03] tabular-nums">
+        <span className="shrink-0 text-[10.5px] font-medium text-zinc-400 px-1.5 py-0.5 rounded-full border border-white/[0.1] bg-white/[0.03] tabular-nums">
           Meta {formatCompactBRL(goal).replace("R$ ", "")}
         </span>
       </div>
@@ -105,17 +102,6 @@ export default function SalesVolumeCardV2({
         <span className="absolute inset-y-0 right-3 flex items-center text-[11px] font-medium text-zinc-200 tabular-nums whitespace-nowrap">
           {reached ? "Meta atingida" : `Faltam ${formatCompactBRL(remaining)}`}
         </span>
-      </div>
-
-      <div className="relative flex justify-end">
-        <Link
-          href="/seller/orders"
-          onClick={onNavigate ? (e) => onNavigate(e, "/seller/orders") : undefined}
-          className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-zinc-200 px-3 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] hover:text-white transition-colors"
-        >
-          Ver vendas
-          <span aria-hidden="true">→</span>
-        </Link>
       </div>
     </div>
   );
