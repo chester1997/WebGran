@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { StoreResolver } from "@/lib/telegram/resolver";
 import { TelegramBotService } from "@/lib/telegram/bot";
 
@@ -19,6 +19,25 @@ function safeCompare(a: string, b: string): boolean {
 
 export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, status: "Telegram Webhook Active" });
+}
+
+/**
+ * Depois de responder ao Telegram, processa a fila do Fluxo Básico (downsell, upsell, disparo).
+ * Assim as ofertas agendadas saem mesmo sem um agendador externo. Nunca afeta a resposta.
+ */
+function scheduleFlowTick() {
+  try {
+    after(async () => {
+      try {
+        const { processFlowJobs } = await import("@/lib/flows/flow-jobs");
+        await processFlowJobs({ budgetMs: 15_000, limit: 100 });
+      } catch (err: any) {
+        console.warn("[TELEGRAM WEBHOOK] Fila do fluxo falhou:", err?.message || err);
+      }
+    });
+  } catch {
+    // fora de um contexto de requisição: ignora
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -347,6 +366,7 @@ export async function POST(req: NextRequest) {
       // Botões do Fluxo Básico (Meus Fluxos): "fl:" publicado, "ft:" teste do rascunho.
       if (/^f[lt]:/.test(cbData)) {
         const flowMode = cbData.startsWith("ft:") ? "test" : "live";
+        scheduleFlowTick();
         try {
           const FlowRuntime = await import("@/lib/flows/flow-runtime");
           const flow = await FlowRuntime.getBasicFlowForBot(resolved.bot.id, { includeDraft: flowMode === "test" });
@@ -881,6 +901,7 @@ export async function POST(req: NextRequest) {
           console.error("[TELEGRAM WEBHOOK] Fluxo indisponível no /start, usando boas-vindas padrão:", flowErr?.message || flowErr);
         }
         if (flowToRun && FlowRuntime) {
+          scheduleFlowTick();
           try {
             await FlowRuntime.runFlowStart(
               { token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id },

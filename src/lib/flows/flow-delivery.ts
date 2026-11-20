@@ -9,7 +9,7 @@
  * Tudo aqui é "fail-open": sem a tabela (migration 0025) ou sem compra de fluxo no pedido,
  * as funções devolvem false/zero e o sistema segue o caminho normal do Mini App.
  */
-import { and, eq, inArray, isNull, lte } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import { flowPurchases, orders, salesFlows, telegramBots, telegramCustomers } from "@/db/schema";
 import { decrypt } from "@/lib/encryption";
@@ -23,7 +23,8 @@ function isMissingTable(err: unknown) {
   const e = err as { code?: string; message?: string; cause?: { code?: string; message?: string } };
   const code = e?.code || e?.cause?.code;
   const msg = `${e?.message || ""} ${e?.cause?.message || ""}`;
-  return code === "42P01" || /relation .*flow_purchases.* does not exist/i.test(msg);
+  // 42703: coluna nova (migration 0026) ainda não existe.
+  return code === "42P01" || code === "42703" || /(relation|column) .*(flow_purchases|kind|extras).* does not exist/i.test(msg);
 }
 
 /** Data de vencimento do plano a partir do pagamento. Vitalício = null. */
@@ -75,9 +76,34 @@ async function flowConfig(flowId: string | null) {
 
 const isChatId = (v: string) => /^-?\d{5,20}$/.test(v.trim());
 
+type Tg = NonNullable<Awaited<ReturnType<typeof botFor>>>;
+
+/** Libera um destino (grupo por ID ou link) e devolve o link de acesso. */
+async function grantAccess(tg: Tg, telegramUserId: string, type: string, value: string, name: string, orderId: string, expiresAt: Date | null): Promise<string> {
+  if (type === "group" && isChatId(value)) {
+    const chatId = value.trim();
+    const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
+    const perm = await TelegramDeliveryService.validateBotAndChatPermission(tg.token, chatId, tg.bot.botId);
+    if (!perm.success) throw new Error(`O bot não tem permissão no grupo/canal ${chatId}: ${perm.error}`);
+    const member = await TelegramDeliveryService.checkBuyerMembership(tg.token, chatId, telegramUserId);
+    if (member) return `https://t.me/c/${chatId.replace(/^-100/, "")}/1`;
+    // Convite de uso único, válido por 7 dias (ou até o plano vencer, o que vier antes).
+    const weekAhead = Date.now() + 7 * 24 * 3600 * 1000;
+    const until = Math.floor(Math.min(weekAhead, expiresAt ? expiresAt.getTime() : weekAhead) / 1000);
+    const invite = await TelegramDeliveryService.createTelegramInvite(tg.token, chatId, name, orderId, until);
+    return invite.inviteLink;
+  }
+  const url = value.trim();
+  if (!/^https?:\/\//i.test(url)) throw new Error("Destino de entrega inválido.");
+  return url;
+}
+
+type Extra = { id: string; name: string; price: number; deliveryType: string; deliveryValue: string; inviteLink?: string };
+
 /**
- * Entrega o plano de um pedido pago. Devolve true se o pedido é de fluxo (entregue ou não),
- * para quem chamou NÃO seguir a entrega de produtos. False = pedido normal do Mini App.
+ * Entrega a compra de um pedido pago (plano, upsell, bônus do Order Bump ou mimo).
+ * Devolve true se o pedido é de fluxo (entregue ou não), para quem chamou NÃO seguir a entrega
+ * de produtos. False = pedido normal do Mini App.
  */
 export async function deliverFlowPurchase(orderId: string): Promise<boolean> {
   const purchase = await getFlowPurchaseByOrder(orderId);
@@ -94,71 +120,81 @@ export async function deliverFlowPurchase(orderId: string): Promise<boolean> {
     .returning({ id: flowPurchases.id });
   if (!claimed.length) return true;
 
+  const kind = (purchase as Purchase & { kind?: string }).kind || "plan";
+  let delivered = false;
+  let customerTgId = "";
+  let firstName = "";
+  let lastName = "";
+  const c = await flowConfig(purchase.flowId);
+
   try {
     const customer = await db.query.telegramCustomers.findFirst({ where: eq(telegramCustomers.id, purchase.customerId) });
     const tg = await botFor(purchase);
     if (!tg) throw new Error("O bot do fluxo não foi encontrado ou está sem token.");
     if (!customer?.telegramUserId) throw new Error("Cliente sem Telegram vinculado.");
-
-    const paidAt = order.paidAt || new Date();
-    const expiresAt = planExpiresAt(purchase.periodUnit, purchase.periodAmount, paidAt);
-    let accessUrl = "";
-
-    if (purchase.deliveryType === "group" && isChatId(purchase.deliveryValue)) {
-      const chatId = purchase.deliveryValue.trim();
-      const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
-      const perm = await TelegramDeliveryService.validateBotAndChatPermission(tg.token, chatId, tg.bot.botId);
-      if (!perm.success) throw new Error(`O bot não tem permissão no grupo/canal ${chatId}: ${perm.error}`);
-      const member = await TelegramDeliveryService.checkBuyerMembership(tg.token, chatId, customer.telegramUserId);
-      if (member) {
-        accessUrl = `https://t.me/c/${chatId.replace(/^-100/, "")}/1`;
-      } else {
-        // Convite de uso único, válido por 7 dias (ou até o plano vencer, o que vier antes).
-        const weekAhead = Date.now() + 7 * 24 * 3600 * 1000;
-        const until = Math.floor(Math.min(weekAhead, expiresAt ? expiresAt.getTime() : weekAhead) / 1000);
-        const invite = await TelegramDeliveryService.createTelegramInvite(tg.token, chatId, purchase.planName, orderId, until);
-        accessUrl = invite.inviteLink;
+    customerTgId = customer.telegramUserId;
+    firstName = customer.firstName || "";
+    lastName = customer.lastName || "";
+    const protect = Boolean(c?.inicio.antiClone);
+    const sendText = (text: string, kb?: unknown) =>
+      telegramFetch(tg.token, "sendMessage", { chat_id: customerTgId, text, parse_mode: "HTML", reply_markup: kb, protect_content: protect || undefined, link_preview_options: { is_disabled: true } });
+    const sendPic = async (url: string) => {
+      try {
+        const isVideo = /\.(mp4|mov)(\?|$)/i.test(url);
+        await telegramFetch(tg.token, isVideo ? "sendVideo" : "sendPhoto", { chat_id: customerTgId, [isVideo ? "video" : "photo"]: url, protect_content: protect || undefined });
+      } catch (err) {
+        console.warn("[flow-delivery] Mídia da entrega falhou:", (err as Error)?.message);
       }
-    } else {
-      accessUrl = purchase.deliveryValue.trim();
-    }
-    if (!/^https?:\/\//i.test(accessUrl)) throw new Error("Destino de entrega inválido.");
-
-    await db
-      .update(flowPurchases)
-      .set({ status: "ACTIVE", inviteLink: accessUrl, expiresAt, error: null, updatedAt: new Date() })
-      .where(eq(flowPurchases.id, purchase.id));
-
-    // Mensagem do Acesso VIP (ou a padrão).
-    const c = await flowConfig(purchase.flowId);
-    const vars = {
-      "{nome}": customer.firstName || "",
+    };
+    const baseVars = {
+      "{nome}": firstName,
       "{saudacao}": greeting(),
       "{plano}": purchase.planName,
       "{nome_plano}": purchase.planName,
-      "{valor}": brl(Number(purchase.price)),
-      "{valor_final}": Number(purchase.price).toFixed(2).replace(".", ","),
+      "{valor}": brl(Number(order.total)),
+      "{valor_final}": Number(order.total).toFixed(2).replace(".", ","),
       "{duracao}": planPeriodLabel({ unit: purchase.periodUnit as PeriodUnit, amount: purchase.periodAmount }),
-      "{link_vip}": accessUrl,
     };
-    const protect = Boolean(c?.inicio.antiClone);
-    const template = c?.vip.msg.trim() || "✅ <b>Pagamento confirmado!</b>\n\nOlá {nome}! Seu acesso ao <b>{nome_plano}</b> ({duracao}) foi liberado. Toque no botão abaixo para entrar 👇";
-    if (c?.vip.mediaUrl) {
-      try {
-        const isVideo = /\.(mp4|mov)(\?|$)/i.test(c.vip.mediaUrl);
-        await telegramFetch(tg.token, isVideo ? "sendVideo" : "sendPhoto", { chat_id: customer.telegramUserId, [isVideo ? "video" : "photo"]: c.vip.mediaUrl, protect_content: protect || undefined });
-      } catch (err) {
-        console.warn("[flow-delivery] Mídia do VIP falhou:", (err as Error)?.message);
+
+    if (kind === "mimo") {
+      // Mimo: nada a entregar, só o agradecimento.
+      await db.update(flowPurchases).set({ status: "ACTIVE", error: null, updatedAt: new Date() }).where(eq(flowPurchases.id, purchase.id));
+      if (c?.mimos.mediaUrl) await sendPic(c.mimos.mediaUrl);
+      await sendText(renderFlowText(c?.mimos.thanks.trim() || "💖 Recebemos seu mimo, {nome}! Muito obrigado pelo carinho.", baseVars) || "💖 Obrigado!");
+    } else {
+      const paidAt = order.paidAt || new Date();
+      const expiresAt = planExpiresAt(purchase.periodUnit, purchase.periodAmount, paidAt);
+      const accessUrl = await grantAccess(tg, customerTgId, purchase.deliveryType, purchase.deliveryValue, purchase.planName, orderId, expiresAt);
+
+      // Bônus do Order Bump (acesso permanente ao destino do bônus).
+      const extras = (((purchase as Purchase & { extras?: unknown }).extras as Extra[]) || []).filter((x) => x && x.deliveryValue);
+      const extrasOut: Extra[] = [];
+      for (const x of extras) {
+        try {
+          extrasOut.push({ ...x, inviteLink: await grantAccess(tg, customerTgId, x.deliveryType, x.deliveryValue, x.name, orderId, null) });
+        } catch (err) {
+          console.error(`[flow-delivery] Bônus ${x.name} do pedido ${orderId} falhou:`, (err as Error)?.message);
+          extrasOut.push(x);
+        }
+      }
+
+      await db
+        .update(flowPurchases)
+        .set({ status: "ACTIVE", inviteLink: accessUrl, expiresAt, error: null, updatedAt: new Date(), ...(extras.length ? { extras: extrasOut } : {}) })
+        .where(eq(flowPurchases.id, purchase.id));
+
+      // Mensagem de entrega: a do Upsell (se houver) ou a do Entregável (ou a padrão).
+      const vars = { ...baseVars, "{link_vip}": accessUrl };
+      const isUpsell = kind === "upsell";
+      const template = (isUpsell && c?.upsell.deliveryMsg.trim()) || c?.vip.msg.trim() || "✅ <b>Pagamento confirmado!</b>\n\nOlá {nome}! Seu acesso ao <b>{nome_plano}</b> ({duracao}) foi liberado. Toque no botão abaixo para entrar 👇";
+      const mediaUrl = (isUpsell && c?.upsell.deliveryMediaUrl) || c?.vip.mediaUrl || "";
+      if (mediaUrl) await sendPic(mediaUrl);
+      await sendText(renderFlowText(template, vars) || "✅ Pagamento confirmado!", { inline_keyboard: [[{ text: "🔓 Acessar agora", url: accessUrl }]] });
+      for (const x of extrasOut) {
+        if (x.inviteLink) await sendText(`🎁 Seu bônus <b>${x.name.replace(/[<>&]/g, "")}</b> foi liberado!`, { inline_keyboard: [[{ text: "🔓 Acessar bônus", url: x.inviteLink }]] });
       }
     }
-    await telegramFetch(tg.token, "sendMessage", {
-      chat_id: customer.telegramUserId,
-      text: renderFlowText(template, vars) || "✅ Pagamento confirmado!",
-      parse_mode: "HTML",
-      reply_markup: { inline_keyboard: [[{ text: "🔓 Acessar agora", url: accessUrl }]] },
-      protect_content: protect || undefined,
-      link_preview_options: { is_disabled: true },
-    });
+    delivered = true;
   } catch (err) {
     const message = (err as Error)?.message || "Falha na entrega.";
     console.error(`[flow-delivery] Entrega do pedido ${orderId} falhou:`, message);
@@ -166,6 +202,26 @@ export async function deliverFlowPurchase(orderId: string): Promise<boolean> {
       .update(flowPurchases)
       .set({ status: "FAILED", deliveredAt: null, error: message.slice(0, 500), updatedAt: new Date() })
       .where(eq(flowPurchases.id, purchase.id));
+  }
+
+  // Depois da compra: para o downsell, agenda os upsells e manda o evento de compra.
+  if (delivered && purchase.botId && customerTgId) {
+    try {
+      const { cancelFlowJobs } = await import("./flow-jobs");
+      await cancelFlowJobs(purchase.botId, customerTgId, ["downsell"]);
+      const { getBasicFlowForBot, scheduleUpsells } = await import("./flow-runtime");
+      const flow = await getBasicFlowForBot(purchase.botId, { includeDraft: true });
+      if (flow && flow.flowId === purchase.flowId) {
+        if (kind === "plan") await scheduleUpsells(flow, purchase.storeId, purchase.botId, customerTgId);
+        else if (kind === "upsell") await scheduleUpsells(flow, purchase.storeId, purchase.botId, customerTgId, purchase.planId);
+        if (flow.status === "published") {
+          const { trackFlowEvent } = await import("./flow-tracking");
+          await trackFlowEvent({ rastreio: flow.config.rastreio, event: "purchase", storeId: purchase.storeId, botDbId: purchase.botId, telegramUserId: customerTgId, firstName, lastName, orderId, value: Number(order.total), itemId: purchase.planId, itemName: purchase.planName, createdAt: order.createdAt, paidAt: order.paidAt });
+        }
+      }
+    } catch (err) {
+      console.error("[flow-delivery] Pós-compra falhou:", (err as Error)?.message);
+    }
   }
 
   // Avisos de venda ao lojista (os mesmos do Mini App). Não bloqueiam.
@@ -209,7 +265,15 @@ export async function processExpiredFlowPurchases(limit = 200): Promise<{ proces
     try {
       const customer = await db.query.telegramCustomers.findFirst({ where: eq(telegramCustomers.id, p.customerId) });
       const tg = await botFor(p);
-      if (tg && customer?.telegramUserId) {
+      // Renovou antes de vencer (outra compra ativa no mesmo destino): não remove nem avisa.
+      const renewed = await db
+        .select({ id: flowPurchases.id })
+        .from(flowPurchases)
+        .where(and(eq(flowPurchases.customerId, p.customerId), eq(flowPurchases.deliveryValue, p.deliveryValue), eq(flowPurchases.status, "ACTIVE"), ne(flowPurchases.id, p.id), or(isNull(flowPurchases.expiresAt), gt(flowPurchases.expiresAt, new Date()))))
+        .limit(1);
+      if (renewed.length) {
+        removal = "SKIPPED_RENEWED";
+      } else if (tg && customer?.telegramUserId) {
         if (p.deliveryType === "group" && isChatId(p.deliveryValue)) {
           const chatId = p.deliveryValue.trim();
           const { TelegramDeliveryService } = await import("@/lib/delivery/telegram-delivery-service");
@@ -225,6 +289,11 @@ export async function processExpiredFlowPurchases(limit = 200): Promise<{ proces
           }
         }
         const c = await flowConfig(p.flowId);
+        const f = p.flowId ? await db.query.salesFlows.findFirst({ where: eq(salesFlows.id, p.flowId), columns: { status: true } }) : null;
+        const prefix = f?.status === "published" ? "fl" : "ft";
+        // Renovação: os planos direto na mensagem, com o desconto da seção Expiração.
+        const { planRows } = await import("./flow-runtime");
+        const renewRows = c ? planRows(c, prefix, c.expiracao.discount > 0 ? "r" : undefined) : [];
         const msg = c?.expiracao.msg.trim() || "⏰ Seu plano <b>{nome_plano}</b> expirou. Para voltar ao grupo, é só assinar de novo 👇";
         const vars = { "{nome}": customer.firstName || "", "{saudacao}": greeting(), "{plano}": p.planName, "{nome_plano}": p.planName };
         try {
@@ -233,7 +302,7 @@ export async function processExpiredFlowPurchases(limit = 200): Promise<{ proces
             chat_id: customer.telegramUserId,
             text: renderFlowText(msg, vars),
             parse_mode: "HTML",
-            reply_markup: { inline_keyboard: [[{ text: c?.inicio.btn || "🔥 Ver Planos", callback_data: "fl:plans" }]] },
+            reply_markup: { inline_keyboard: renewRows.length ? renewRows : [[{ text: "🔄 Renovar acesso", callback_data: `${prefix}:plans` }]] },
           });
         } catch (err) {
           console.warn("[flow-delivery] Aviso de expiração falhou:", (err as Error)?.message);

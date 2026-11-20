@@ -6,17 +6,16 @@
  * Qualquer erro ao carregar o fluxo devolve null e o webhook segue o
  * comportamento antigo do bot (fail-open).
  *
- * Ativo nesta fase: Início (áudio, mídias, mensagens, redirecionamentos, anti-clone),
- * Planos do próprio fluxo (valor + tempo, sem produto), PIX (mensagem,
- * mídia, áudio, formato do código, QR, verificar pagamento), Acesso VIP (mensagem de
- * entrega) e Suporte. As outras seções ficam salvas e entram nas próximas etapas.
+ * Seções ativas: Início, Planos (valor + tempo, sem produto), Order Bump, PIX, Upsell,
+ * Downsell, Mimos, Rastreamento, Expiração (com desconto de renovação), Botões (cores),
+ * Entregável, Disparo e Suporte. As tarefas agendadas ficam em flow-jobs.ts.
  */
 import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, salesFlowBots, salesFlows } from "@/db/schema";
 import { telegramFetch } from "@/lib/telegram/client";
-import { normalizeBasicConfig, planDelivery, planPeriodLabel, type BasicFlowConfig, type FlowPlan } from "./basic-config";
+import { normalizeBasicConfig, planDelivery, planPeriodLabel, type BasicFlowConfig, type ButtonColor, type FlowPlan } from "./basic-config";
 
 export type FlowMode = "live" | "test";
 /** Prefixo dos botões: "fl" (publicado) ou "ft" (teste do rascunho). */
@@ -200,6 +199,41 @@ const planVars = (plan: FlowPlan, total?: number) => {
 const validPlans = (c: BasicFlowConfig) => c.planos.items.filter((p) => p.name.trim() && p.price >= 1);
 
 /* ------------------------------------------------------------------ */
+/* Botões (cores da seção Botões: Bot API 9.4 "style")                 */
+/* ------------------------------------------------------------------ */
+const STYLE: Record<Exclude<ButtonColor, "none">, string> = { blue: "primary", green: "success", red: "danger" };
+type Btn = Record<string, unknown>;
+const styled = (b: Btn, color?: ButtonColor): Btn => (color && color !== "none" ? { ...b, style: STYLE[color] } : b);
+const cbBtn = (text: string, data: string, color?: ButtonColor) => styled({ text, callback_data: data }, color);
+
+/** Preço com desconto (downsell "d<id>" ou renovação "r"). Nunca abaixo de R$ 1,00. */
+export function discountedPrice(c: BasicFlowConfig, plan: FlowPlan, tag?: string): number {
+  let price = plan.price;
+  if (tag === "r" && c.expiracao.discount > 0) price = plan.price * (1 - c.expiracao.discount / 100);
+  else if (tag?.startsWith("d")) {
+    const ds = c.downsell.items.find((x) => x.id === tag.slice(1));
+    if (ds && ds.discount > 0 && (!ds.planIds.length || ds.planIds.includes(plan.id))) {
+      price = ds.discountType === "fixed" ? plan.price - ds.discount : plan.price * (1 - ds.discount / 100);
+    }
+  }
+  return Math.max(1, Math.round(price * 100) / 100);
+}
+
+/** Botões dos planos. `tag` aplica desconto (e muda a cor para a do botão de desconto). */
+export function planRows(c: BasicFlowConfig, p: string, tag?: string, onlyIds?: string[]): Kb["inline_keyboard"] {
+  return validPlans(c)
+    .filter((pl) => !onlyIds?.length || onlyIds.includes(pl.id))
+    .map((pl) => {
+      const price = discountedPrice(c, pl, tag);
+      const label = price < pl.price ? `${pl.name} - ${brl(price)} (de ${brl(pl.price)})` : `${pl.name} - ${brl(pl.price)}`;
+      const color = tag ? c.botoes.desconto : pl.color !== "none" ? pl.color : c.botoes.comprar;
+      return [cbBtn(label, `${p}:buy:${pl.id}${tag ? ":" + tag : ""}`, color)];
+    });
+}
+
+const mimoOn = (c: BasicFlowConfig) => c.mimos.on && c.mimos.values.some((v) => v.value >= 1);
+
+/* ------------------------------------------------------------------ */
 /* /start                                                              */
 /* ------------------------------------------------------------------ */
 export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMode, chatId: number | string, user: TgUser) {
@@ -214,11 +248,10 @@ export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMod
   if (c.inicio.audioUrl) await sendMedia(ctx, chatId, c.inicio.audioUrl, protect);
 
   // Planos direto na boas-vindas (padrão) ou o botão "Ver planos" (CTA).
-  const plans = c.inicio.showPlans ? validPlans(c) : [];
-  const rows: Kb["inline_keyboard"] = plans.length
-    ? plans.map((pl) => [{ text: `${pl.name} - ${brl(pl.price)}`, callback_data: `${p}:buy:${pl.id}` }])
-    : [[{ text: c.inicio.btn || "🔥 Ver Planos", callback_data: `${p}:plans` }]];
+  const plans = c.inicio.showPlans ? planRows(c, p) : [];
+  const rows: Kb["inline_keyboard"] = plans.length ? plans : [[cbBtn(c.inicio.btn || "🔥 Ver Planos", `${p}:plans`, c.botoes.cta)]];
   for (const r of c.inicio.redirects) if (r.text.trim() && /^https:\/\//i.test(r.url)) rows.push([{ text: r.text.trim(), url: r.url }]);
+  if (mimoOn(c)) rows.push([cbBtn(c.mimos.btn || "🎁 Enviar Mimo", `${p}:mimo`, c.botoes.mimo)]);
   const text = renderFlowText(c.inicio.msg || "Olá, {nome}! 👋", vars).trim();
   const kb = { inline_keyboard: rows };
 
@@ -250,6 +283,24 @@ export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMod
 
   if (!textSent) await send(ctx, chatId, text, kb, protect);
   if (c.inicio.msg2.trim()) await send(ctx, chatId, renderFlowText(c.inicio.msg2, vars), undefined, protect);
+
+  // Downsell para quem deu /start e não comprou + evento Lead. Não bloqueiam a resposta.
+  const uid = String(user.id);
+  const startOffers = c.downsell.items.filter((d) => d.audience === "start");
+  if (startOffers.length) {
+    const { scheduleFlowJobs, delayMs } = await import("./flow-jobs");
+    await scheduleFlowJobs(
+      startOffers.map((d) => ({
+        storeId: ctx.storeId, botId: ctx.botDbId, flowId: flow.flowId, telegramUserId: uid, kind: "downsell" as const, ref: d.id,
+        runAt: new Date(Date.now() + Math.max(delayMs(d.delayUnit, d.delayValue), 60_000)),
+        payload: { firstName: user.first_name || "" },
+      }))
+    );
+  }
+  if (mode === "live") {
+    const { trackFlowEvent } = await import("./flow-tracking");
+    await trackFlowEvent({ rastreio: c.rastreio, event: "lead", storeId: ctx.storeId, botDbId: ctx.botDbId, telegramUserId: uid, firstName: user.first_name, lastName: user.last_name });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -269,7 +320,186 @@ export async function runFlowSupport(ctx: FlowCtx, flow: LoadedFlow, chatId: num
 }
 
 /* ------------------------------------------------------------------ */
-/* Botões do fluxo                                                     */
+/* Pix                                                                 */
+/* ------------------------------------------------------------------ */
+type Delivery = { type: "group" | "link" | "none"; value: string };
+
+const deliveryOf = (x: { deliveryType: "group" | "link"; groupId: string; link: string }): { type: "group" | "link"; value: string } | null => {
+  const value = x.deliveryType === "group" ? x.groupId : x.link;
+  return value ? { type: x.deliveryType, value } : null;
+};
+
+/** Gera o Pix (plano, upsell ou mimo) e manda a mensagem do PIX. */
+async function startPix(
+  ctx: FlowCtx,
+  flow: LoadedFlow,
+  mode: FlowMode,
+  cb: { id: string; chatId: number | string; user: TgUser },
+  item: { plan: FlowPlan; delivery: Delivery; kind: "plan" | "upsell" | "mimo"; extras?: { id: string; name: string; price: number; deliveryType: "group" | "link"; deliveryValue: string }[] }
+) {
+  const c = flow.config;
+  const p = CB_PREFIX[mode];
+  const { CartService } = await import("@/lib/cart/cart-service");
+  const { createPlanCheckout } = await import("./flow-checkout");
+  const customer = await CartService.getOrCreateCustomerForTelegramUser(ctx.storeId, {
+    id: cb.user.id,
+    first_name: cb.user.first_name,
+    last_name: cb.user.last_name,
+    username: cb.user.username,
+  });
+  const res = await createPlanCheckout({ storeId: ctx.storeId, customerId: customer.id, botDbId: ctx.botDbId, flowId: flow.flowId, plan: item.plan, delivery: item.delivery, kind: item.kind, extras: item.extras });
+  if (!res.success || !res.orderId) {
+    await send(ctx, cb.chatId, `⚠️ ${escapeHtml(res.error || "Não foi possível gerar o Pix agora. Tente de novo em instantes.")}`, undefined, false);
+    return;
+  }
+
+  const orderId = res.orderId;
+  const code = res.pix?.qrCode || "";
+  const hasQr = Boolean(res.pix?.qrCodeBase64);
+  const vars = { ...baseVars(cb.user), ...planVars(item.plan, res.total ?? undefined) };
+  const kb: Kb = { inline_keyboard: [[cbBtn(c.pix.verifyBtn || "🔍 VERIFICAR PAGAMENTO", `${p}:chk:${orderId}`, c.botoes.verificar)]] };
+  if (c.pix.qrOn && c.pix.qrMode === "botao" && hasQr) kb.inline_keyboard.push([cbBtn(c.pix.qrBtn || "📱 Mostrar QR Code", `${p}:qr:${orderId}`, c.botoes.qr)]);
+
+  if (c.pix.audioUrl) await sendMedia(ctx, cb.chatId, c.pix.audioUrl, false);
+  if (c.pix.mediaUrl) await sendMedia(ctx, cb.chatId, c.pix.mediaUrl, false);
+  if (c.pix.qrOn && c.pix.qrMode === "direto" && hasQr) await sendMedia(ctx, cb.chatId, `${appBaseUrl()}/api/telegram/order-qr/${orderId}`, false);
+
+  const template = item.kind === "mimo"
+    ? "🎁 Obrigado pelo carinho! Valor: <b>R$ {valor_final}</b>\n\nCopie o código Pix abaixo:"
+    : c.pix.msg || "💳 Pague agora e garanta acesso ao <b>{nome_plano}</b>!\n\nValor: <b>R$ {valor_final}</b>\nDuração: {duracao}\n\nCopie o código Pix abaixo:";
+  const codeHtml = code ? pixCodeHtml(code, c.pix.fmt) : "";
+  if (code && template.includes("{codigo_pix}")) {
+    // O vendedor escolheu onde o código aparece dentro da mensagem.
+    const [before, ...after] = template.split("{codigo_pix}");
+    const html = `${renderFlowText(before, vars)}\n${codeHtml}\n${renderFlowText(after.join(""), vars)}`.trim();
+    await send(ctx, cb.chatId, html, kb, false);
+  } else if (!code) {
+    await send(ctx, cb.chatId, renderFlowText(template, vars), kb, false);
+  } else if (c.pix.pos === "junto") {
+    await send(ctx, cb.chatId, `${renderFlowText(template, vars)}\n\n${codeHtml}`, kb, false);
+  } else {
+    await send(ctx, cb.chatId, renderFlowText(template, vars), undefined, false);
+    await send(ctx, cb.chatId, codeHtml, kb, false);
+  }
+
+  // Downsell de "gerou Pix e não pagou" + evento InitiateCheckout.
+  const uid = String(cb.user.id);
+  if (item.kind === "plan") {
+    const pixOffers = c.downsell.items.filter((d) => d.audience === "pix");
+    if (pixOffers.length) {
+      const { scheduleFlowJobs, delayMs } = await import("./flow-jobs");
+      await scheduleFlowJobs(
+        pixOffers.map((d) => ({
+          storeId: ctx.storeId, botId: ctx.botDbId, flowId: flow.flowId, telegramUserId: uid, kind: "downsell" as const, ref: d.id,
+          runAt: new Date(Date.now() + Math.max(delayMs(d.delayUnit, d.delayValue), 60_000)),
+          payload: { orderId, firstName: cb.user.first_name || "" },
+        }))
+      );
+    }
+  }
+  if (mode === "live") {
+    const { trackFlowEvent } = await import("./flow-tracking");
+    await trackFlowEvent({ rastreio: c.rastreio, event: "checkout", storeId: ctx.storeId, botDbId: ctx.botDbId, telegramUserId: uid, firstName: cb.user.first_name, lastName: cb.user.last_name, orderId, value: res.total, itemId: item.plan.id, itemName: item.plan.name });
+  }
+}
+
+/** Order Bump do plano (o primeiro configurado para ele, ou para todos). */
+const bumpFor = (c: BasicFlowConfig, planId: string) =>
+  c.bumps.items.find((b) => (b.planId === planId || !b.planId) && b.name.trim() && b.price >= 1 && deliveryOf(b));
+
+async function sendFollowUp(ctx: FlowCtx, chatId: number | string, f: { on: boolean; msg: string; mediaUrl: string }, vars: Record<string, string>) {
+  if (!f.on) return;
+  const text = renderFlowText(f.msg, vars);
+  if (f.mediaUrl && text.length <= CAPTION_MAX && (await sendMedia(ctx, chatId, f.mediaUrl, false, text || undefined))) return;
+  if (f.mediaUrl) await sendMedia(ctx, chatId, f.mediaUrl, false);
+  if (text) await send(ctx, chatId, text, undefined, false);
+}
+
+/* ------------------------------------------------------------------ */
+/* Ofertas agendadas (chamadas pela fila flow-jobs)                    */
+/* ------------------------------------------------------------------ */
+/** Downsell: mensagem + planos com desconto. False = oferta não existe mais. */
+export async function sendDownsellOffer(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMode, telegramUserId: string, downsellId: string, firstName = ""): Promise<boolean> {
+  const c = flow.config;
+  const ds = c.downsell.items.find((d) => d.id === downsellId);
+  if (!ds) return false;
+  const rows = planRows(c, CB_PREFIX[mode], `d${ds.id}`, ds.planIds);
+  if (!rows.length) return false;
+  const vars = { "{nome}": firstName, "{saudacao}": greeting() };
+  const text = renderFlowText(ds.msg || "{nome}, ainda dá tempo! Seu acesso com desconto especial 👇", vars);
+  if (ds.audioUrl) await sendMedia(ctx, telegramUserId, ds.audioUrl, c.inicio.antiClone);
+  if (ds.mediaUrl && text.length <= CAPTION_MAX && (await sendMedia(ctx, telegramUserId, ds.mediaUrl, c.inicio.antiClone, text, { inline_keyboard: rows }))) return true;
+  await send(ctx, telegramUserId, text, { inline_keyboard: rows }, c.inicio.antiClone);
+  return true;
+}
+
+/** Upsell: mensagem + "Pagar" / "Não tenho interesse". False = oferta não existe mais. */
+export async function sendUpsellOffer(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMode, telegramUserId: string, upsellId: string): Promise<boolean> {
+  const c = flow.config;
+  const u = c.upsell.items.find((x) => x.id === upsellId);
+  if (!u || !(u.price >= 1) || !(deliveryOf(u) || planDeliveryDefault(c))) return false;
+  const p = CB_PREFIX[mode];
+  const kb: Kb = { inline_keyboard: [[cbBtn(`Pagar ${brl(u.price)}`, `${p}:up:${u.id}`, c.botoes.upsell)], [{ text: "❌ Não tenho interesse", callback_data: `${p}:upno:${u.id}` }]] };
+  const text = renderFlowText(u.msg || `🔥 Oferta especial: <b>{plano}</b> por {valor}`, { "{saudacao}": greeting(), "{plano}": u.name, "{nome_plano}": u.name, "{valor}": brl(u.price) });
+  if (u.mediaUrl && text.length <= CAPTION_MAX && (await sendMedia(ctx, telegramUserId, u.mediaUrl, c.inicio.antiClone, text, kb))) return true;
+  await send(ctx, telegramUserId, text, kb, c.inicio.antiClone);
+  return true;
+}
+
+const planDeliveryDefault = (c: BasicFlowConfig) => deliveryOf(c.vip);
+
+/** Agenda os upsells depois de uma entrega. Padrão: todos; sequencial: só o próximo. */
+export async function scheduleUpsells(flow: LoadedFlow, storeId: string, botId: string, telegramUserId: string, afterUpsellId?: string) {
+  const items = flow.config.upsell.items.filter((u) => u.price >= 1);
+  if (!items.length) return;
+  let list = items;
+  if (flow.config.upsell.mode === "sequencial") {
+    const idx = afterUpsellId ? items.findIndex((u) => u.id === afterUpsellId) : -1;
+    if (afterUpsellId && idx < 0) return;
+    list = items.slice(idx + 1, idx + 2);
+  } else if (afterUpsellId) {
+    return; // modo padrão: tudo já foi agendado na compra do plano
+  }
+  const { scheduleFlowJobs, delayMs, processFlowJobs } = await import("./flow-jobs");
+  await scheduleFlowJobs(list.map((u) => ({ storeId, botId, flowId: flow.flowId, telegramUserId, kind: "upsell" as const, ref: u.id, runAt: new Date(Date.now() + delayMs(u.delayUnit, u.delayValue)) })));
+  if (list.some((u) => u.delayUnit === "imediato")) await processFlowJobs({ budgetMs: 8000, limit: 5 });
+}
+
+/** Mensagem do Disparo para uma pessoa. */
+export async function sendBroadcastMessage(
+  ctx: FlowCtx,
+  flow: LoadedFlow,
+  mode: FlowMode,
+  telegramUserId: string,
+  b: { message: string; mediaUrl: string; button: { type: "none" | "plans" | "link"; text?: string; url?: string }; firstName: string }
+): Promise<boolean> {
+  const c = flow.config;
+  try {
+    const { CustomerBlockService } = await import("@/lib/customers/customer-block-service");
+    if (await CustomerBlockService.isTelegramUserBlocked(ctx.storeId, telegramUserId)) return false;
+  } catch {
+    // sem a tabela de bloqueio: segue
+  }
+  let kb: Kb | undefined;
+  if (b.button.type === "plans") kb = { inline_keyboard: planRows(c, CB_PREFIX[mode]) };
+  else if (b.button.type === "link" && b.button.url && /^https:\/\//i.test(b.button.url)) kb = { inline_keyboard: [[{ text: b.button.text || "Acessar", url: b.button.url }]] };
+  const text = renderFlowText(b.message, { "{nome}": b.firstName, "{saudacao}": greeting() });
+  try {
+    if (b.mediaUrl && text.length <= CAPTION_MAX) {
+      const common = { chat_id: telegramUserId, caption: text || undefined, parse_mode: "HTML", reply_markup: kb, protect_content: c.inicio.antiClone || undefined };
+      await telegramFetch(ctx.token, isVideo(b.mediaUrl) ? "sendVideo" : "sendPhoto", { ...common, [isVideo(b.mediaUrl) ? "video" : "photo"]: b.mediaUrl });
+      return true;
+    }
+    if (b.mediaUrl) await telegramFetch(ctx.token, isVideo(b.mediaUrl) ? "sendVideo" : "sendPhoto", { chat_id: telegramUserId, [isVideo(b.mediaUrl) ? "video" : "photo"]: b.mediaUrl });
+    await telegramFetch(ctx.token, "sendMessage", { chat_id: telegramUserId, text: text || "👋", parse_mode: "HTML", reply_markup: kb, protect_content: c.inicio.antiClone || undefined, link_preview_options: { is_disabled: true } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Botões                                                              */
 /* ------------------------------------------------------------------ */
 export async function runFlowCallback(
   ctx: FlowCtx,
@@ -280,25 +510,21 @@ export async function runFlowCallback(
   const c = flow.config;
   const p = CB_PREFIX[mode];
   const protect = c.inicio.antiClone;
-  const [, action, arg] = cb.data.split(":");
+  const [, action, arg, arg2, arg3] = cb.data.split(":");
+  const uid = String(cb.user.id);
 
   if (action === "plans") {
     await answer(ctx, cb.id);
-    const plans = validPlans(c);
-    if (!plans.length) {
+    const rows = planRows(c, p, arg === "r" ? "r" : undefined);
+    if (!rows.length) {
       await send(ctx, cb.chatId, "No momento não há planos disponíveis. Volte em breve! 🙏", undefined, protect);
       return;
     }
-    await send(
-      ctx,
-      cb.chatId,
-      "Escolha seu plano 👇",
-      { inline_keyboard: plans.map((pl) => [{ text: `${pl.name} - ${brl(pl.price)}`, callback_data: `${p}:buy:${pl.id}` }]) },
-      protect
-    );
+    await send(ctx, cb.chatId, "Escolha seu plano 👇", { inline_keyboard: rows }, protect);
     return;
   }
 
+  // buy:<planId>[:<tag>]  tag = "r" (renovação) ou "d<downsellId>"
   if (action === "buy" && arg) {
     const plan = validPlans(c).find((pl) => pl.id === arg);
     const delivery = plan ? planDelivery(plan, c) : null;
@@ -306,54 +532,103 @@ export async function runFlowCallback(
       await answer(ctx, cb.id, plan ? "Esse plano ainda não tem entrega configurada." : "Esse plano não está mais disponível.", true);
       return;
     }
-    await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
-    const { CartService } = await import("@/lib/cart/cart-service");
-    const { createPlanCheckout } = await import("./flow-checkout");
-    const customer = await CartService.getOrCreateCustomerForTelegramUser(ctx.storeId, {
-      id: cb.user.id,
-      first_name: cb.user.first_name,
-      last_name: cb.user.last_name,
-      username: cb.user.username,
-    });
-    const res = await createPlanCheckout({
-      storeId: ctx.storeId,
-      customerId: customer.id,
-      botDbId: ctx.botDbId,
-      flowId: flow.flowId,
-      plan,
-      delivery,
-    });
-    if (!res.success || !res.orderId) {
-      await send(ctx, cb.chatId, `⚠️ ${escapeHtml(res.error || "Não foi possível gerar o Pix agora. Tente de novo em instantes.")}`, undefined, false);
+    const tag = arg2 && /^(r|d[a-z0-9]{1,24})$/.test(arg2) ? arg2 : undefined;
+    const bump = bumpFor(c, plan.id);
+    if (bump) {
+      // Order Bump: pergunta antes de gerar o Pix.
+      await answer(ctx, cb.id);
+      const kb: Kb = { inline_keyboard: [[cbBtn(bump.yes || "✅ Quero aproveitar!", `${p}:bmp:${plan.id}:1${tag ? ":" + tag : ""}`, c.botoes.aceitar)], [cbBtn(bump.no || "❌ Não, obrigado", `${p}:bmp:${plan.id}:0${tag ? ":" + tag : ""}`, c.botoes.recusar)]] };
+      const text = renderFlowText(bump.msg || "🎁 Aproveite e leve também <b>{plano}</b> por apenas {valor}!", { ...baseVars(cb.user), "{plano}": bump.name, "{nome_plano}": bump.name, "{valor}": brl(bump.price) });
+      if (bump.audioUrl) await sendMedia(ctx, cb.chatId, bump.audioUrl, protect);
+      if (!(bump.mediaUrl && text.length <= CAPTION_MAX && (await sendMedia(ctx, cb.chatId, bump.mediaUrl, protect, text, kb)))) await send(ctx, cb.chatId, text, kb, protect);
       return;
     }
+    await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
+    await startPix(ctx, flow, mode, cb, { plan: { ...plan, price: discountedPrice(c, plan, tag) }, delivery, kind: "plan" });
+    return;
+  }
 
-    const orderId = res.orderId;
-    const code = res.pix?.qrCode || "";
-    const hasQr = Boolean(res.pix?.qrCodeBase64);
-    const vars = { ...baseVars(cb.user), ...planVars(plan, res.total ?? undefined) };
-    const kb: Kb = { inline_keyboard: [[{ text: c.pix.verifyBtn || "🔍 VERIFICAR PAGAMENTO", callback_data: `${p}:chk:${orderId}` }]] };
-    if (c.pix.qrOn && c.pix.qrMode === "botao" && hasQr) kb.inline_keyboard.push([{ text: c.pix.qrBtn || "📱 Mostrar QR Code", callback_data: `${p}:qr:${orderId}` }]);
-
-    if (c.pix.audioUrl) await sendMedia(ctx, cb.chatId, c.pix.audioUrl, false);
-    if (c.pix.mediaUrl) await sendMedia(ctx, cb.chatId, c.pix.mediaUrl, false);
-    if (c.pix.qrOn && c.pix.qrMode === "direto" && hasQr) await sendMedia(ctx, cb.chatId, `${appBaseUrl()}/api/telegram/order-qr/${orderId}`, false);
-
-    const template = c.pix.msg || "💳 Pague agora e garanta acesso ao <b>{nome_plano}</b>!\n\nValor: <b>R$ {valor_final}</b>\nDuração: {duracao}\n\nCopie o código Pix abaixo:";
-    const codeHtml = code ? pixCodeHtml(code, c.pix.fmt) : "";
-    if (code && template.includes("{codigo_pix}")) {
-      // O vendedor escolheu onde o código aparece dentro da mensagem.
-      const [before, ...after] = template.split("{codigo_pix}");
-      const html = `${renderFlowText(before, vars)}\n${codeHtml}\n${renderFlowText(after.join(""), vars)}`.trim();
-      await send(ctx, cb.chatId, html, kb, false);
-    } else if (!code) {
-      await send(ctx, cb.chatId, renderFlowText(template, vars), kb, false);
-    } else if (c.pix.pos === "junto") {
-      await send(ctx, cb.chatId, `${renderFlowText(template, vars)}\n\n${codeHtml}`, kb, false);
-    } else {
-      await send(ctx, cb.chatId, renderFlowText(template, vars), undefined, false);
-      await send(ctx, cb.chatId, codeHtml, kb, false);
+  // bmp:<planId>:<1|0>[:<tag>]  resposta do Order Bump
+  if (action === "bmp" && arg) {
+    const plan = validPlans(c).find((pl) => pl.id === arg);
+    const delivery = plan ? planDelivery(plan, c) : null;
+    if (!plan || !delivery) {
+      await answer(ctx, cb.id, "Esse plano não está mais disponível.", true);
+      return;
     }
+    const tag = arg3 && /^(r|d[a-z0-9]{1,24})$/.test(arg3) ? arg3 : undefined;
+    const bump = bumpFor(c, plan.id);
+    const yes = arg2 === "1" && bump;
+    await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
+    const vars = { ...baseVars(cb.user), "{plano}": bump?.name || "", "{nome_plano}": bump?.name || "", "{valor}": brl(bump?.price || 0) };
+    if (bump) await sendFollowUp(ctx, cb.chatId, yes ? bump.ifAccept : bump.ifDecline, vars);
+    const bd = bump ? deliveryOf(bump) : null;
+    await startPix(ctx, flow, mode, cb, {
+      plan: { ...plan, price: discountedPrice(c, plan, tag) },
+      delivery,
+      kind: "plan",
+      extras: yes && bump && bd ? [{ id: bump.id, name: bump.name, price: bump.price, deliveryType: bd.type, deliveryValue: bd.value }] : undefined,
+    });
+    return;
+  }
+
+  // up:<upsellId>  /  upb:<upsellId>:<1|0>  /  upno:<upsellId>
+  if ((action === "up" || action === "upb") && arg) {
+    const u = c.upsell.items.find((x) => x.id === arg);
+    const delivery = u ? deliveryOf(u) || planDeliveryDefault(c) : null;
+    if (!u || !delivery || !(u.price >= 1)) {
+      await answer(ctx, cb.id, "Essa oferta não está mais disponível.", true);
+      return;
+    }
+    const bd = u.bump.on && u.bump.name.trim() && u.bump.price >= 1 ? deliveryOf(u.bump) : null;
+    if (action === "up" && bd) {
+      await answer(ctx, cb.id);
+      const kb: Kb = { inline_keyboard: [[cbBtn(u.bump.yes || "✅ Quero aproveitar!", `${p}:upb:${u.id}:1`, c.botoes.aceitar)], [cbBtn(u.bump.no || "❌ Não, obrigado", `${p}:upb:${u.id}:0`, c.botoes.recusar)]] };
+      const text = renderFlowText(u.bump.msg || "🎁 Leve também <b>{plano}</b> por {valor}!", { ...baseVars(cb.user), "{plano}": u.bump.name, "{nome_plano}": u.bump.name, "{valor}": brl(u.bump.price) });
+      if (!(u.bump.mediaUrl && text.length <= CAPTION_MAX && (await sendMedia(ctx, cb.chatId, u.bump.mediaUrl, protect, text, kb)))) await send(ctx, cb.chatId, text, kb, protect);
+      return;
+    }
+    await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
+    const plan: FlowPlan = { id: u.id, name: u.name || "Oferta especial", price: u.price, unit: "vitalicio", amount: 1, vipExclusive: true, deliveryType: delivery.type, groupId: delivery.type === "group" ? delivery.value : "", link: delivery.type === "link" ? delivery.value : "", color: "none" };
+    const withBump = action === "upb" && arg2 === "1" && bd;
+    await startPix(ctx, flow, mode, cb, {
+      plan,
+      delivery,
+      kind: "upsell",
+      extras: withBump && bd ? [{ id: `${u.id}-bump`, name: u.bump.name, price: u.bump.price, deliveryType: bd.type, deliveryValue: bd.value }] : undefined,
+    });
+    return;
+  }
+
+  if (action === "upno" && arg) {
+    await answer(ctx, cb.id, "Tudo bem! 👍");
+    await scheduleUpsells(flow, ctx.storeId, ctx.botDbId, uid, arg);
+    return;
+  }
+
+  // mimo  /  mimov:<index>
+  if (action === "mimo") {
+    await answer(ctx, cb.id);
+    if (!mimoOn(c)) return;
+    const rows = c.mimos.values
+      .map((v, i) => ({ v, i }))
+      .filter(({ v }) => v.value >= 1)
+      .map(({ v, i }) => [cbBtn(`${v.label || "Mimo"} - ${brl(v.value)}`, `${p}:mimov:${i}`, c.botoes.mimoFixo)]);
+    const text = renderFlowText(c.mimos.msg || "🎁 Quer mandar um mimo? Escolha o valor 👇", baseVars(cb.user));
+    if (c.mimos.audioUrl) await sendMedia(ctx, cb.chatId, c.mimos.audioUrl, protect);
+    if (!(c.mimos.mediaUrl && text.length <= CAPTION_MAX && (await sendMedia(ctx, cb.chatId, c.mimos.mediaUrl, protect, text, { inline_keyboard: rows })))) await send(ctx, cb.chatId, text, { inline_keyboard: rows }, protect);
+    return;
+  }
+
+  if (action === "mimov" && arg && /^\d{1,2}$/.test(arg)) {
+    const v = c.mimos.values[Number(arg)];
+    if (!mimoOn(c) || !v || !(v.value >= 1)) {
+      await answer(ctx, cb.id, "Esse valor não está mais disponível.", true);
+      return;
+    }
+    await answer(ctx, cb.id, "⏳ Gerando seu Pix...");
+    const plan: FlowPlan = { id: `mimo-${arg}`, name: `Mimo${v.label ? " " + v.label : ""}`, price: v.value, unit: "vitalicio", amount: 1, vipExclusive: true, deliveryType: "link", groupId: "", link: "", color: "none" };
+    await startPix(ctx, flow, mode, cb, { plan, delivery: { type: "none", value: "" }, kind: "mimo" });
     return;
   }
 

@@ -18,7 +18,21 @@ export interface PlanCheckoutInput {
   botDbId: string;
   flowId: string;
   plan: FlowPlan;
-  delivery: { type: "group" | "link"; value: string };
+  /** "none" só para mimo (não entrega nada). */
+  delivery: { type: "group" | "link" | "none"; value: string };
+  /** Tipo da compra (padrão "plan"). */
+  kind?: "plan" | "upsell" | "mimo";
+  /** Order Bump aceito: somado no mesmo Pix e entregue junto. */
+  extras?: FlowExtra[];
+}
+
+export interface FlowExtra {
+  id: string;
+  name: string;
+  price: number;
+  deliveryType: "group" | "link";
+  deliveryValue: string;
+  inviteLink?: string;
 }
 
 export interface PlanCheckoutResult {
@@ -34,16 +48,19 @@ function isMissingTable(err: unknown) {
   const e = err as { code?: string; message?: string; cause?: { code?: string; message?: string } };
   const code = e?.code || e?.cause?.code;
   const msg = `${e?.message || ""} ${e?.cause?.message || ""}`;
-  return code === "42P01" || /relation .*flow_purchases.* does not exist/i.test(msg);
+  // 42703: coluna nova (migration 0026) ainda não existe.
+  return code === "42P01" || code === "42703" || /(relation|column) .*(flow_purchases|kind|extras).* does not exist/i.test(msg);
 }
 
 export async function createPlanCheckout(input: PlanCheckoutInput): Promise<PlanCheckoutResult> {
   const { storeId, customerId, botDbId, flowId, plan, delivery } = input;
+  const kind = input.kind || "plan";
+  const extras = (input.extras || []).filter((x) => x.price >= 1 && x.deliveryValue);
   try {
     if (!storeId || !customerId) return { success: false, error: "Cliente não identificado." };
-    const total = Math.round(Number(plan.price) * 100) / 100;
-    if (!plan.name.trim() || !(total >= 1)) return { success: false, error: "Esse plano não está disponível." };
-    if (!delivery.value) return { success: false, error: "Esse plano ainda não tem entrega configurada." };
+    const total = Math.round((Number(plan.price) + extras.reduce((sum, x) => sum + Number(x.price), 0)) * 100) / 100;
+    if (!plan.name.trim() || !(Number(plan.price) >= 1)) return { success: false, error: "Esse plano não está disponível." };
+    if (delivery.type !== "none" && !delivery.value) return { success: false, error: "Esse plano ainda não tem entrega configurada." };
 
     const { CustomerBlockService, BLOCKED_CUSTOMER_MESSAGE } = await import("@/lib/customers/customer-block-service");
     if (await CustomerBlockService.isCustomerIdBlocked(storeId, customerId)) return { success: false, error: BLOCKED_CUSTOMER_MESSAGE };
@@ -116,7 +133,7 @@ export async function createPlanCheckout(input: PlanCheckoutInput): Promise<Plan
         currency: "BRL",
         originBotId: botDbId,
         ownerBotId: botDbId,
-        deliveryMode: delivery.type === "group" ? "BOT_PERMISSION" : "LINK",
+        deliveryMode: delivery.type === "group" || extras.some((x) => x.deliveryType === "group") ? "BOT_PERMISSION" : "LINK",
         splitAmountCents,
         splitStatus,
         splitError,
@@ -137,6 +154,8 @@ export async function createPlanCheckout(input: PlanCheckoutInput): Promise<Plan
         periodAmount: Math.max(1, Math.round(plan.amount)),
         deliveryType: delivery.type,
         deliveryValue: delivery.value,
+        kind,
+        extras: extras.map((x) => ({ id: x.id, name: x.name.slice(0, 120), price: Math.round(x.price * 100) / 100, deliveryType: x.deliveryType, deliveryValue: x.deliveryValue })),
       });
     } catch (err) {
       await db.update(orders).set({ status: "failed" }).where(eq(orders.id, order.id));

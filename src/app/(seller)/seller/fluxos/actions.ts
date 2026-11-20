@@ -102,3 +102,35 @@ export async function unpublishFlowAction(flowId: string) {
 export async function flowTestLinkAction(flowId: string) {
   return run((storeId) => Flows.flowTestLink(storeId, need(flowId)), false);
 }
+
+/* Disparo */
+export async function broadcastCountAction(flowId: string, audience: string) {
+  const a = audience === "nobuy" || audience === "buyers" ? audience : "all";
+  return run((storeId) => Flows.countBroadcastAudience(storeId, need(flowId), a), false);
+}
+
+export async function createBroadcastAction(flowId: string, input: Flows.BroadcastInput) {
+  return run(async (storeId) => {
+    const r = await Flows.createBroadcast(storeId, need(flowId), input);
+    // Começa a enviar já, sem esperar o próximo ciclo da fila.
+    const { after } = await import("next/server");
+    after(async () => {
+      try {
+        const { processFlowJobs } = await import("@/lib/flows/flow-jobs");
+        await processFlowJobs({ budgetMs: 50_000 });
+      } catch (err) {
+        console.warn("[fluxos] Envio do disparo:", (err as Error)?.message);
+      }
+    });
+    return r;
+  }, false);
+}
+
+export async function listBroadcastsAction(flowId: string) {
+  return run((storeId) => Flows.listBroadcasts(storeId, need(flowId)), false);
+}
+
+export async function cancelBroadcastAction(flowId: string, broadcastId: string) {
+  if (!isId(broadcastId)) return { success: false as const, error: "Disparo inválido." };
+  return run((storeId) => Flows.cancelBroadcast(storeId, need(flowId), broadcastId), false);
+}

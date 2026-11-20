@@ -1696,8 +1696,12 @@ export const flowPurchases = pgTable('flow_purchases', {
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
   periodUnit: text('period_unit').notNull(),
   periodAmount: integer('period_amount').notNull().default(1),
-  deliveryType: text('delivery_type').notNull(), // 'group' | 'link'
+  deliveryType: text('delivery_type').notNull(), // 'group' | 'link' | 'none' (mimo)
   deliveryValue: text('delivery_value').notNull(),
+  /** 'plan' | 'upsell' | 'mimo' (migration 0026). */
+  kind: text('kind').notNull().default('plan'),
+  /** Order Bump pago no mesmo Pix: [{ id, name, price, deliveryType, deliveryValue, inviteLink? }] (migration 0026). */
+  extras: jsonb('extras').notNull().default([]),
   status: text('status').notNull().default('PENDING'), // 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'FAILED'
   inviteLink: text('invite_link'),
   deliveredAt: timestamp('delivered_at'),
@@ -1711,4 +1715,45 @@ export const flowPurchases = pgTable('flow_purchases', {
   orderUnique: uniqueIndex('flow_purchases_order_unique_idx').on(t.orderId),
   storeIdx: index('flow_purchases_store_idx').on(t.storeId, t.createdAt),
   expiryIdx: index('flow_purchases_expiry_idx').on(t.status, t.expiresAt),
+}));
+
+/** Fila de tarefas agendadas do Fluxo Básico: downsell, upsell e disparo (migration 0026). */
+export const flowJobs = pgTable('flow_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  flowId: uuid('flow_id').references(() => salesFlows.id, { onDelete: 'cascade' }),
+  telegramUserId: text('telegram_user_id').notNull(),
+  kind: text('kind').notNull(), // 'downsell' | 'upsell' | 'broadcast'
+  ref: text('ref').notNull().default(''),
+  payload: jsonb('payload').notNull().default({}),
+  runAt: timestamp('run_at').defaultNow().notNull(),
+  status: text('status').notNull().default('pending'), // 'pending' | 'running' | 'done' | 'failed' | 'canceled'
+  attempts: integer('attempts').notNull().default(0),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  dueIdx: index('flow_jobs_due_idx').on(t.status, t.runAt),
+  userIdx: index('flow_jobs_user_idx').on(t.botId, t.telegramUserId, t.status),
+}));
+
+/** Disparos em massa do Fluxo Básico (migration 0026). */
+export const flowBroadcasts = pgTable('flow_broadcasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  flowId: uuid('flow_id').references(() => salesFlows.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').notNull().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  audience: text('audience').notNull().default('all'), // 'all' | 'nobuy' | 'buyers'
+  message: text('message').notNull(),
+  mediaUrl: text('media_url'),
+  button: jsonb('button').notNull().default({}),
+  status: text('status').notNull().default('running'), // 'running' | 'done' | 'canceled'
+  total: integer('total').notNull().default(0),
+  sent: integer('sent').notNull().default(0),
+  failed: integer('failed').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  flowIdx: index('flow_broadcasts_flow_idx').on(t.flowId, t.createdAt),
 }));

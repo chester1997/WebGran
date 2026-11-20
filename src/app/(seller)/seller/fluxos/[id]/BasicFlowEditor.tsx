@@ -33,6 +33,7 @@ import { BTN_GHOST, BTN_SEC, CARD, Callout, INPUT, useToast } from "../_componen
 import EditorTopBar, { type ChecklistItem, type SaveState } from "../_components/EditorTopBar";
 import TelegramPreview, { previewHtml, type PreviewButton, type PreviewItem } from "../_components/TelegramPreview";
 import Toaster from "../_components/Toaster";
+import BroadcastPanel from "./BroadcastPanel";
 import { FlowStepIcon } from "../_components/FlowStepIcons";
 import {
   AreaField,
@@ -79,8 +80,6 @@ const STEPS: [BasicStepId, string][] = [
   ["pix", "PIX"], ["mimos", "Mimos"], ["rastreio", "Rastreamento"], ["expiracao", "Expiração"], ["botoes", "Botões"],
   ["vip", "Entregável"], ["disparo", "Disparo"], ["suporte", "Suporte"],
 ];
-/** Seções salvas que ainda não rodam no bot. */
-const NOT_LIVE = new Set<BasicStepId>(["upsell", "downsell", "bump", "mimos", "rastreio", "expiracao", "botoes", "disparo"]);
 
 const V_START = ["{nome}", "{saudacao}", "{localizacao}"];
 const V_OFFER = ["{nome}", "{localizacao}"];
@@ -217,11 +216,7 @@ export default function BasicFlowEditor({
                 {on && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-[#3984FF]" />}
                 <span className={on ? "text-[#3984FF]" : ""}><FlowStepIcon step={id} /></span>
                 <span className="flex-1 text-[14px]">{l}</span>
-                {NOT_LIVE.has(id) ? (
-                  <span className="hidden lg:inline text-[10px] text-zinc-600">em breve</span>
-                ) : (
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${s === "ok" ? "bg-emerald-400" : s === "pend" ? "bg-amber-400" : "border border-zinc-600"}`} />
-                )}
+                <span className={`w-2 h-2 rounded-full shrink-0 ${s === "ok" ? "bg-emerald-400" : s === "pend" ? "bg-amber-400" : "border border-zinc-600"}`} />
               </button>
             );
           })}
@@ -234,8 +229,7 @@ export default function BasicFlowEditor({
               <span className="w-1.5 h-1.5 rounded-full bg-current" />{stLabel}
             </span>
           </div>
-          {NOT_LIVE.has(step) && <Callout tone="warn">Esta seção fica salva, mas ainda não roda no bot. Ela começa a funcionar numa próxima etapa do projeto.</Callout>}
-          <Section step={step} c={config} update={update} chats={chatList} goto={goto} />
+          <Section step={step} c={config} update={update} chats={chatList} goto={goto} flowId={flowId} published={status === "published"} />
         </div>
 
         <aside className="lg:col-start-2 xl:col-start-auto xl:sticky xl:top-4 flex flex-col gap-2.5" aria-label="Prévia no Telegram">
@@ -346,7 +340,7 @@ function DeliveryFields({ prefix, type, groupId, link, chats, onType, onGroup, o
   );
 }
 
-function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: BasicFlowConfig; update: Updater; chats: Chat[]; goto: (s: BasicStepId) => void }) {
+function Section({ step, c, update, chats, goto, flowId, published }: { step: BasicStepId; c: BasicFlowConfig; update: Updater; chats: Chat[]; goto: (s: BasicStepId) => void; flowId: string; published: boolean }) {
   const [openPlan, setOpenPlan] = useState<string | null>(null);
   const [bumpTab, setBumpTab] = useState<Record<string, "principal" | "aceitar" | "recusar">>({});
 
@@ -748,9 +742,7 @@ function Section({ step, c, update, chats, goto }: { step: BasicStepId; c: Basic
 
     case "disparo":
       return (
-        <Card title="📢 Central de disparo" sub="Mensagens em massa para os usuários do bot: livre, por plano (com desconto) ou programado, para todos, só compradores ou só não compradores. Clientes bloqueados nunca recebem.">
-          <Callout>Os disparos chegam numa próxima etapa, junto com a fila de envios agendados.</Callout>
-        </Card>
+        <BroadcastPanel flowId={flowId} published={published} />
       );
 
     case "suporte":
@@ -913,7 +905,7 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
     case "vip":
       return [{ kind: "sys", text: "Pagamento aprovado" }, bot(c.vip.msg || "🎉 PAGAMENTO CONFIRMADO! (mensagem padrão)", [[{ t: "🔓 Acessar agora", c: "green" }]], c.vip.mediaUrl)];
     case "disparo":
-      return [{ kind: "sys", text: "Disparos chegam numa próxima etapa" }];
+      return [{ kind: "sys", text: "Disparo para os leads do bot" }, bot("{saudacao}, {nome}! 🔥 Novidade no grupo VIP…", plansKb())];
     case "suporte":
       return [{ kind: "me", text: "/suporte" }, bot("Precisa de ajuda? Fale com a gente 👇", [[{ t: `💬 Falar com ${c.suporte.user || "o suporte"}` }]])];
   }

@@ -236,7 +236,7 @@ export default function EditorTopBar({
                 {type !== "basic"
                   ? "O fluxo avançado fica salvo como rascunho. Ele começa a rodar no bot numa próxima etapa."
                   : requiredOk
-                    ? "Antes de publicar, use “Testar no Telegram”: o rascunho roda só para você. Order Bump, Upsell, Recuperação, Renovação, Mimos e Disparos ficam salvos e começam a funcionar nas próximas etapas."
+                    ? "Antes de publicar, use “Testar no Telegram”: o rascunho roda só para você, com Order Bump, Upsell, Downsell, Mimos e Expiração."
                     : "Falta algo obrigatório acima."}
               </Callout>
             </div>

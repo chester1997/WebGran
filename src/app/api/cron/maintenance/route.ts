@@ -42,6 +42,13 @@ export async function GET(req: NextRequest) {
       console.error("[cron/maintenance] processExpiredFlowPurchases falhou:", flowErr);
       expiredFlowPlans = { error: flowErr?.message || String(flowErr) };
     }
+    // Fila do fluxo (downsell, upsell, disparo) também roda aqui, como rede de segurança.
+    try {
+      const { processFlowJobs } = await import("@/lib/flows/flow-jobs");
+      await processFlowJobs({ budgetMs: 25_000 });
+    } catch (jobsErr) {
+      console.error("[cron/maintenance] processFlowJobs falhou:", (jobsErr as Error)?.message || jobsErr);
+    }
     const summary = {
       ok: true,
       expiredAccesses: {

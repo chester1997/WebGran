@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { products, salesFlowBots, salesFlowFolders, salesFlows, telegramBotChats, telegramBots } from "@/db/schema";
+import { flowBroadcasts, flowJobs, products, salesFlowBots, salesFlowFolders, salesFlows, telegramBotChats, telegramBots } from "@/db/schema";
 import { blankBasicConfig, normalizeBasicConfig, planDelivery, templateBasicConfig, type BasicFlowConfig } from "./basic-config";
 import { blankGraph, normalizeGraph } from "./advanced-graph";
 
@@ -359,4 +359,89 @@ export async function flowTestLink(storeId: string, flowId: string) {
     const { buildTestStartParam } = await import("./flow-runtime");
     return `https://t.me/${bot[0].username.replace(/^@/, "")}?start=${buildTestStartParam(flowId)}`;
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Disparo (migration 0026)                                            */
+/* ------------------------------------------------------------------ */
+export interface BroadcastInput {
+  audience: "all" | "nobuy" | "buyers";
+  message: string;
+  mediaUrl: string;
+  button: { type: "none" | "plans" | "link"; text?: string; url?: string };
+}
+
+export interface BroadcastRow {
+  id: string;
+  audience: string;
+  message: string;
+  status: string;
+  total: number;
+  sent: number;
+  failed: number;
+  createdAt: string;
+}
+
+const BROADCAST_MISSING = "Os disparos ainda não foram ativados. Rode a migration 0026_flow_engine.sql no Neon.";
+const isMissingCol = (err: unknown) => {
+  const e = err as { code?: string; cause?: { code?: string } };
+  const code = e?.code || e?.cause?.code;
+  return code === "42P01" || code === "42703";
+};
+
+async function flowBot(storeId: string, flowId: string) {
+  await ownFlow(storeId, flowId);
+  const bot = await db.select({ botId: salesFlowBots.botId }).from(salesFlowBots).where(eq(salesFlowBots.flowId, flowId)).limit(1);
+  if (!bot[0]) throw new Error("Ligue o fluxo a um bot antes de disparar.");
+  return bot[0].botId;
+}
+
+/** Conta quantas pessoas recebem, sem enviar nada. */
+export async function countBroadcastAudience(storeId: string, flowId: string, audience: BroadcastInput["audience"]) {
+  const botId = await flowBot(storeId, flowId);
+  const { broadcastAudience } = await import("./flow-jobs");
+  return (await broadcastAudience(storeId, botId, audience)).length;
+}
+
+/** Cria o disparo e coloca uma mensagem por pessoa na fila. */
+export async function createBroadcast(storeId: string, flowId: string, input: BroadcastInput) {
+  const botId = await flowBot(storeId, flowId);
+  const message = String(input.message || "").trim().slice(0, 4000);
+  const mediaUrl = /^https:\/\/[^\s]+$/i.test(input.mediaUrl || "") ? input.mediaUrl.slice(0, 1000) : "";
+  if (!message && !mediaUrl) throw new Error("Escreva a mensagem do disparo.");
+  const audience = (["all", "nobuy", "buyers"] as const).includes(input.audience) ? input.audience : "all";
+  const button =
+    input.button?.type === "plans" ? { type: "plans" as const }
+    : input.button?.type === "link" && /^https:\/\//i.test(input.button.url || "") ? { type: "link" as const, text: String(input.button.text || "Acessar").slice(0, 64), url: String(input.button.url).slice(0, 1000) }
+    : { type: "none" as const };
+
+  const { broadcastAudience, scheduleFlowJobs } = await import("./flow-jobs");
+  const people = await broadcastAudience(storeId, botId, audience);
+  if (!people.length) throw new Error("Ninguém nesse público ainda. Os leads aparecem quando dão /start no bot.");
+  try {
+    const [row] = await db.insert(flowBroadcasts).values({ storeId, flowId, botId, audience, message, mediaUrl: mediaUrl || null, button, status: "running", total: people.length }).returning({ id: flowBroadcasts.id });
+    const now = new Date();
+    await scheduleFlowJobs(people.map((pp) => ({ storeId, botId, flowId, telegramUserId: pp.telegramUserId, kind: "broadcast" as const, ref: row.id, runAt: now, payload: { firstName: pp.firstName } })));
+    return { id: row.id, total: people.length };
+  } catch (err) {
+    if (isMissingCol(err)) throw new Error(BROADCAST_MISSING);
+    throw err;
+  }
+}
+
+export async function listBroadcasts(storeId: string, flowId: string): Promise<BroadcastRow[]> {
+  await ownFlow(storeId, flowId);
+  try {
+    const rows = await db.select().from(flowBroadcasts).where(and(eq(flowBroadcasts.storeId, storeId), eq(flowBroadcasts.flowId, flowId))).orderBy(desc(flowBroadcasts.createdAt)).limit(10);
+    return rows.map((r) => ({ id: r.id, audience: r.audience, message: r.message.slice(0, 140), status: r.status, total: r.total, sent: r.sent, failed: r.failed, createdAt: r.createdAt.toISOString() }));
+  } catch (err) {
+    if (isMissingCol(err)) return [];
+    throw err;
+  }
+}
+
+export async function cancelBroadcast(storeId: string, flowId: string, broadcastId: string) {
+  await ownFlow(storeId, flowId);
+  await db.update(flowBroadcasts).set({ status: "canceled", updatedAt: new Date() }).where(and(eq(flowBroadcasts.id, broadcastId), eq(flowBroadcasts.storeId, storeId)));
+  await db.update(flowJobs).set({ status: "canceled", updatedAt: new Date() }).where(and(eq(flowJobs.kind, "broadcast"), eq(flowJobs.ref, broadcastId), eq(flowJobs.status, "pending")));
 }
