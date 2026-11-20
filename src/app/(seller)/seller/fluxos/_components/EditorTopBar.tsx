@@ -3,7 +3,7 @@
 import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Loader2, Pencil, Rocket, Send } from "lucide-react";
+import { Check, ChevronLeft, Loader2, Pencil, Rocket, Save, Send } from "lucide-react";
 import { flowTestLinkAction, publishFlowAction, renameFlowAction, unpublishFlowAction } from "../actions";
 import { BTN_GHOST, BTN_PRI, BTN_SEC, Callout, INPUT, Modal, StatusPill, TypePill, useToast } from "./flow-ui";
 
@@ -24,6 +24,7 @@ export default function EditorTopBar({
   saveState,
   checklist,
   extra,
+  onSaveNow,
 }: {
   flowId: string;
   name: string;
@@ -33,6 +34,8 @@ export default function EditorTopBar({
   saveState: SaveState;
   checklist: ChecklistItem[];
   extra?: ReactNode;
+  /** Salva na hora (botão "Salvar"). Retorna se deu certo. */
+  onSaveNow?: () => Promise<boolean>;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -42,6 +45,7 @@ export default function EditorTopBar({
   const [pending, start] = useTransition();
   const [pubPending, startPub] = useTransition();
   const [testPending, startTest] = useTransition();
+  const [savePending, startSave] = useTransition();
 
   const rename = () =>
     start(async () => {
@@ -60,7 +64,7 @@ export default function EditorTopBar({
     });
 
   const saveText =
-    saveState === "saving" ? "Salvando…" : saveState === "dirty" ? "Alterações não salvas" : saveState === "error" ? "Erro ao salvar" : "Rascunho salvo";
+    saveState === "saving" ? "Salvando…" : saveState === "dirty" ? "Alterações não salvas" : saveState === "error" ? "Erro ao salvar" : status === "published" ? "Salvo · já vale no bot" : "Rascunho salvo";
   const requiredOk = checklist.filter((c) => c.required).every((c) => c.ok) && bots.length > 0;
 
   return (
@@ -108,6 +112,27 @@ export default function EditorTopBar({
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-[12px] mr-1 ${saveState === "error" ? "text-red-400" : saveState === "dirty" ? "text-amber-400" : "text-zinc-500"}`} aria-live="polite">{saveText}</span>
           {extra}
+          {onSaveNow && (
+            <button
+              type="button"
+              className={BTN_SEC}
+              disabled={savePending || saveState === "saving"}
+              title={status === "published" ? "Salva agora. Como o fluxo está publicado, o bot já usa as mudanças." : "Salva o rascunho agora."}
+              onClick={() =>
+                startSave(async () => {
+                  const ok = await onSaveNow();
+                  if (!ok) return;
+                  toast(
+                    status === "published"
+                      ? `Salvo! ${bots.map((b) => "@" + b.username).join(", ") || "O bot"} já está usando as mudanças. Mande /start de novo para ver.`
+                      : "Rascunho salvo. Publique para o bot começar a usar."
+                  );
+                })
+              }
+            >
+              {savePending || saveState === "saving" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Salvar
+            </button>
+          )}
           <button
             type="button"
             className={BTN_SEC}

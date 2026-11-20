@@ -156,6 +156,23 @@ export default function BasicFlowEditor({
     return () => window.removeEventListener("beforeunload", warn);
   }, [saveState]);
 
+  /** Botão "Salvar": grava já, sem esperar o salvamento automático. */
+  const saveNow = async () => {
+    const snapshot = JSON.stringify(config);
+    const id = ++seq.current; // descarta o salvamento automático pendente
+    setSaveState("saving");
+    const res = await saveFlowConfigAction(flowId, config);
+    if (id !== seq.current) return res.success;
+    if (!res.success) {
+      setSaveState("error");
+      toast(res.error, "err");
+      return false;
+    }
+    lastSaved.current = snapshot;
+    setSaveState("saved");
+    return true;
+  };
+
   const goto = (s: BasicStepId) => {
     setStep(s);
     if (window.innerWidth < 1024) formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -177,7 +194,7 @@ export default function BasicFlowEditor({
     <div className="w-full max-w-full pb-10 space-y-5">
       <Toaster />
       <SellerPageHeader title={name} subtitle="Fluxo básico · venda na conversa" />
-      <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} />
+      <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} onSaveNow={saveNow} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)_360px] gap-4 items-start">
         <nav aria-label="Seções do fluxo" className={`${CARD} p-2 lg:sticky lg:top-4 flex lg:flex-col gap-0.5 overflow-x-auto`}>
