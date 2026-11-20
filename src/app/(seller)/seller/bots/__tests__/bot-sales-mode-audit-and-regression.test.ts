@@ -106,14 +106,15 @@ describe("WebGran Bots — Auditoria do Modelo de Modos de Venda e Testes de Reg
       expect(res.data?.bot?.mode).toBe("MINI_APP");
     });
 
-    it("valida rigorosamente no backend e bloqueia tentativa de selecionar Padrão (Venda na conversa - Em breve)", async () => {
+    it("aceita o modo Padrão (Venda na conversa) no backend", async () => {
       const res = await createNewBotAction({
         token: "777888999:valid_token_secret",
         mode: "PADRAO",
       });
 
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("Venda na conversa (Padrão) estará disponível em breve");
+      expect(res.success).toBe(true);
+
+      expect(res.data?.bot?.mode).toBe("PADRAO");
     });
   });
 

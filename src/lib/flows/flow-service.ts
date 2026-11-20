@@ -258,3 +258,41 @@ export async function importFlow(storeId: string, input: { name: unknown; type: 
     return row.id;
   });
 }
+
+/** Opções para escolher o fluxo ao conectar um bot. Vazio se as tabelas ainda não existem. */
+export async function listFlowOptions(storeId: string) {
+  try {
+    const rows = await db
+      .select({ id: salesFlows.id, name: salesFlows.name, type: salesFlows.type })
+      .from(salesFlows)
+      .where(eq(salesFlows.storeId, storeId))
+      .orderBy(desc(salesFlows.updatedAt));
+    return rows.map((r) => ({ id: r.id, name: r.name, type: (r.type === "advanced" ? "advanced" : "basic") as FlowType }));
+  } catch (err) {
+    if (isMissingRelation(err)) return [];
+    throw err;
+  }
+}
+
+/** Liga UM bot a um fluxo (sem mexer nos outros bots do fluxo). O bot sai do fluxo anterior, se tinha. */
+export async function assignBotToFlow(storeId: string, flowId: string, botId: string) {
+  return guard(async () => {
+    await ownFlow(storeId, flowId);
+    const bot = await db.query.telegramBots.findFirst({ where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, storeId)) });
+    if (!bot || bot.salesMode !== "PADRAO") throw new Error("Só bots de “Venda na conversa” desta loja podem usar fluxos.");
+    await db.transaction(async (tx) => {
+      await tx.delete(salesFlowBots).where(eq(salesFlowBots.botId, botId));
+      await tx.insert(salesFlowBots).values({ flowId, botId, storeId });
+      await tx.update(salesFlows).set({ updatedAt: new Date() }).where(eq(salesFlows.id, flowId));
+    });
+  });
+}
+
+/** Tira o bot de qualquer fluxo (ex.: bot voltou para o modo Mini App). Não falha se as tabelas não existirem. */
+export async function unassignBot(storeId: string, botId: string) {
+  try {
+    await db.delete(salesFlowBots).where(and(eq(salesFlowBots.botId, botId), eq(salesFlowBots.storeId, storeId)));
+  } catch (err) {
+    if (!isMissingRelation(err)) throw err;
+  }
+}

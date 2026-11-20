@@ -184,7 +184,7 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
       expect(res.error).toContain("Modo de venda inválido");
     });
 
-    it("deve rejeitar modo PADRAO enquanto estiver com selo 'Em breve'", async () => {
+    it("aceita o modo PADRAO (Venda na conversa) e grava o bot nesse modo", async () => {
       (getCurrentUser as any).mockResolvedValue({ id: OWNER_USER_ID, email: OWNER_EMAIL });
       (getCurrentStore as any).mockResolvedValue({ id: "store-owner-1", slug: "minha-loja" });
 
@@ -193,8 +193,9 @@ describe("WebGran Bots — Novo Fluxo de Onboarding e Criação (Dois Fluxos Ind
         mode: "PADRAO",
       });
 
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("Venda na conversa (Padrão) estará disponível em breve");
+      expect(res.success).toBe(true);
+
+      expect(res.data?.bot?.mode).toBe("PADRAO");
     });
   });
 

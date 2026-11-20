@@ -197,13 +197,13 @@ describe("WebGran — Sistema de Gerenciamento de Bots (Fases B & C)", () => {
       expect(res.error).toContain("Modo de venda inválido");
     });
 
-    it("rejeita modo PADRAO indicando que estará disponível em breve", async () => {
+    it("conclui o cadastro no modo PADRAO (Venda na conversa)", async () => {
       const res = await createNewBotAction({
         token: "123456:VALID_TOKEN",
         mode: "PADRAO",
       });
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("Venda na conversa (Padrão) estará disponível em breve");
+      expect(res.success).toBe(true);
+      expect(res.data?.bot?.mode).toBe("PADRAO");
     });
 
     it("conclui o cadastro com sucesso no modo MINI_APP (Loja dentro do Telegram)", async () => {

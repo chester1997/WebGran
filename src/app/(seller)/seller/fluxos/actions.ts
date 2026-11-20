@@ -82,3 +82,8 @@ export async function exportFlowAction(flowId: string) {
     return { webgranFlow: 1, name: f.name, type: f.type, config: f.config };
   }, false);
 }
+
+/** Lista curta de fluxos para o passo "Como você quer vender?" ao conectar um bot. */
+export async function listFlowOptionsAction() {
+  return run((storeId) => Flows.listFlowOptions(storeId), false);
+}

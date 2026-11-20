@@ -118,23 +118,18 @@ export async function createNewBotAction(params: {
   mode?: "PADRAO" | "MINI_APP";
   buttonText?: string;
   displayName?: string;
+  /** Só no modo PADRAO: fluxo de Meus Fluxos que o bot vai usar (opcional). */
+  flowId?: string | null;
 }): Promise<ActionResponse<{ botId: string; slug: string; bot?: BotItemData }>> {
   const auth = await verifyOwnerActionAccess();
   if (!auth.authorized) {
     return { success: false, error: auth.error };
   }
 
-  // Validação estrita do modo no backend: MINI_APP é o modo ativo; PADRAO está em breve
+  // Validação estrita do modo no backend: MINI_APP (loja no Telegram) ou PADRAO (venda na conversa, usa Meus Fluxos)
   const selectedMode = params.mode || "MINI_APP";
 
-  if (selectedMode === "PADRAO") {
-    return {
-      success: false,
-      error: "O modo Venda na conversa (Padrão) estará disponível em breve. Selecione o modo Loja dentro do Telegram (Mini App)."
-    };
-  }
-
-  if (selectedMode !== "MINI_APP") {
+  if (selectedMode !== "MINI_APP" && selectedMode !== "PADRAO") {
     return {
       success: false,
       error: "Modo de venda inválido. Selecione uma modalidade disponível."
@@ -231,16 +226,36 @@ export async function createNewBotAction(params: {
       savedBotId = inserted.id;
     }
 
-    // No modo MINI_APP, configura o botão de menu do Telegram para abrir o Mini App da loja com contexto do bot (?b=botId)
+    // MINI_APP: botão de menu abre o Mini App da loja com contexto do bot (?b=botId).
+    // PADRAO: menu padrão do Telegram (a venda acontece na conversa).
     try {
-      const miniappUrl = `${appUrl}/miniapp/${store.slug}?b=${savedBotId}`;
-      await botService.setChatMenuButton({
-        type: "web_app",
-        text: buttonName || "Abrir App",
-        web_app: { url: miniappUrl }
-      });
+      if (selectedMode === "MINI_APP") {
+        const miniappUrl = `${appUrl}/miniapp/${store.slug}?b=${savedBotId}`;
+        await botService.setChatMenuButton({
+          type: "web_app",
+          text: buttonName || "Abrir App",
+          web_app: { url: miniappUrl }
+        });
+      } else {
+        await botService.setChatMenuButton({ type: "default" });
+      }
     } catch (err: any) {
       console.warn("[createNewBotAction] Aviso no MenuButton:", err?.message || err);
+    }
+
+    // Fluxo do bot (Meus Fluxos). Falhas aqui não desfazem a conexão do bot.
+    let flowLinked = false;
+    try {
+      const FlowService = await import("@/lib/flows/flow-service");
+      if (selectedMode === "PADRAO" && params.flowId && /^[0-9a-f-]{36}$/i.test(params.flowId)) {
+        await FlowService.assignBotToFlow(store.id, params.flowId, savedBotId);
+        flowLinked = true;
+        revalidatePath("/seller/fluxos");
+      } else if (selectedMode === "MINI_APP") {
+        await FlowService.unassignBot(store.id, savedBotId);
+      }
+    } catch (err: any) {
+      console.warn("[createNewBotAction] Não foi possível ligar o fluxo:", err?.message || err);
     }
 
     revalidatePath("/seller/bots");
@@ -267,7 +282,10 @@ export async function createNewBotAction(params: {
 
     return {
       success: true,
-      message: `Bot @${botInfo.username} conectado com sucesso no modo Mini App!`,
+      message:
+        selectedMode === "MINI_APP"
+          ? `Bot @${botInfo.username} conectado com sucesso no modo Mini App!`
+          : `Bot @${botInfo.username} conectado no modo Venda na conversa${flowLinked ? " e ligado ao fluxo escolhido" : ""}.`,
       data: {
         botId: savedBotId,
         slug: store.slug,

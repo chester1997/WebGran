@@ -21,6 +21,7 @@ import {
   Bot as BotIcon
 } from "lucide-react";
 import { validateBotTokenAction, createNewBotAction } from "../actions";
+import { listFlowOptionsAction } from "../../fluxos/actions";
 
 export type NewBotFlow = "telegram" | "token";
 
@@ -316,6 +317,22 @@ export default function NewBotModal({
   const [showToken, setShowToken] = useState(false);
   const [displayName, setDisplayName] = useState(initialValidatedBot?.firstName || "");
   const [salesMode, setSalesMode] = useState<"PADRAO" | "MINI_APP">("MINI_APP");
+  // Venda na conversa: fluxo de Meus Fluxos que o bot vai usar ("" = escolher depois)
+  const [flowOptions, setFlowOptions] = useState<{ id: string; name: string; type: "basic" | "advanced" }[] | null>(null);
+  const [selectedFlowId, setSelectedFlowId] = useState("");
+
+  useEffect(() => {
+    if (salesMode !== "PADRAO" || flowOptions !== null) return;
+    let alive = true;
+    listFlowOptionsAction()
+      .then((res) => {
+        if (alive) setFlowOptions(res.success && res.data ? res.data : []);
+      })
+      .catch(() => alive && setFlowOptions([]));
+    return () => {
+      alive = false;
+    };
+  }, [salesMode, flowOptions]);
 
   // Estados de comunicação e feedback
   const [validating, setValidating] = useState(false);
@@ -416,6 +433,7 @@ export default function NewBotModal({
       const res = await createNewBotAction({
         token: token.trim(),
         mode: salesMode,
+        flowId: salesMode === "PADRAO" ? selectedFlowId || null : null,
         displayName: displayName.trim() || validatedBot?.firstName || validatedBot?.username,
       });
 
@@ -545,7 +563,9 @@ export default function NewBotModal({
                     </h3>
                     <p className="text-xs text-zinc-400 leading-relaxed">
                       {salesMode === "PADRAO"
-                        ? "Seu bot já está configurado no modo Venda na conversa e pronto para vender com entrega automática no Telegram."
+                        ? selectedFlowId
+                          ? "Seu bot está no modo Venda na conversa e ligado ao fluxo escolhido. Ele passa a seguir o fluxo quando você publicar em Meus Fluxos."
+                          : "Seu bot está no modo Venda na conversa. Escolha o fluxo dele em Meus Fluxos (Ligar bots)."
                         : "Seu bot já está configurado no modo Mini App e pronto para vender com entrega automática no Telegram."}
                     </p>
                   </div>
@@ -1101,36 +1121,79 @@ export default function NewBotModal({
                         </div>
                       </div>
 
-                      {/* CARD 2 — PADRÃO (Venda na conversa - EM BREVE) */}
+                      {/* CARD 2 — PADRÃO (Venda na conversa: usa Meus Fluxos) */}
                       <div
-                        aria-disabled="true"
-                        className="relative rounded-2xl p-5 bg-[#101218]/70 border border-white/[0.06] opacity-60 cursor-not-allowed flex flex-col justify-between text-left select-none pointer-events-none"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSalesMode("PADRAO")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSalesMode("PADRAO");
+                          }
+                        }}
+                        className={`relative rounded-2xl p-5 transition-all cursor-pointer flex flex-col justify-between text-left group ${
+                          salesMode === "PADRAO"
+                            ? "bg-[#131B2E] border-2 border-[#3984FF] shadow-[0_0_25px_rgba(57,132,255,0.18)]"
+                            : "bg-[#12151F] border border-white/10 hover:border-white/20"
+                        }`}
                         data-testid="card-mode-padrao"
+                        aria-pressed={salesMode === "PADRAO"}
                       >
-                        {/* Header do Card com Tag PADRÃO e Selo Em breve */}
                         <div className="flex items-center justify-between gap-2 mb-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 text-zinc-400 border border-white/10">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                             PADRÃO
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-white/10">
-                            Em breve
-                          </span>
+                          {salesMode === "PADRAO" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#3984FF] text-white shadow-sm shadow-[#3984FF]/40">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              Selecionado
+                            </span>
+                          )}
                         </div>
 
-                        {/* Ilustração vetorial do smartphone com conversa e venda */}
-                        <PhoneChatSalesIllustration isSelected={false} />
+                        <PhoneChatSalesIllustration isSelected={salesMode === "PADRAO"} />
 
-                        {/* Textos descritivos */}
                         <div className="space-y-1.5 mt-3">
-                          <h4 className="text-base font-bold text-zinc-300">
+                          <h4 className="text-base font-bold text-white group-hover:text-[#3984FF] transition-colors">
                             Venda na conversa
                           </h4>
-                          <p className="text-xs text-zinc-500 leading-relaxed">
-                            O bot mostra os produtos em mensagens e manda o Pix ali mesmo. O cartão abre uma tela de pagamento.
+                          <p className="text-xs text-zinc-400 leading-relaxed">
+                            O bot conversa com o cliente, mostra os planos e manda o Pix ali mesmo, seguindo um fluxo de Meus Fluxos.
                           </p>
                         </div>
                       </div>
                     </div>
+
+                    {salesMode === "PADRAO" && (
+                      <div className="rounded-2xl border border-white/10 bg-[#12151F] p-4 space-y-2.5" data-testid="flow-picker">
+                        <div className="flex items-center justify-between gap-2">
+                          <label htmlFor="new-bot-flow" className="text-xs font-bold text-white">Qual fluxo esse bot vai usar?</label>
+                          <a href="/seller/fluxos/novo" target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-[#60a5fa] hover:text-[#93c5fd]">
+                            Criar fluxo novo ↗
+                          </a>
+                        </div>
+                        <select
+                          id="new-bot-flow"
+                          value={selectedFlowId}
+                          onChange={(e) => setSelectedFlowId(e.target.value)}
+                          disabled={flowOptions === null}
+                          className="w-full bg-[#0d0e12] border border-white/[0.13] focus:border-[#3984FF] rounded-xl px-3 py-2.5 text-sm text-white outline-none"
+                        >
+                          <option value="">{flowOptions === null ? "Carregando fluxos…" : "Escolher depois em Meus Fluxos"}</option>
+                          {(flowOptions || []).map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name} · {f.type === "advanced" ? "Avançado (blocos)" : "Básico"}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">
+                          {flowOptions && flowOptions.length === 0
+                            ? "Você ainda não tem fluxos. Pode conectar agora e escolher depois."
+                            : "O bot só passa a seguir o fluxo depois que você publicar em Meus Fluxos."}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* 5. Botões de Finalização */}
