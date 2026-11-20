@@ -164,9 +164,9 @@ const baseVars = (user: TgUser) => ({ "{nome}": user.first_name || "", "{saudaca
 const isVideo = (u: string) => /\.(mp4|mov)(\?|$)/i.test(u);
 const isVoice = (u: string) => /\.(ogg|oga|opus)(\?|$)/i.test(u);
 
-/** Envia uma mídia solta (foto, vídeo ou áudio) sem derrubar o fluxo se falhar. */
-async function sendMedia(ctx: FlowCtx, chatId: number | string, url: string, protect: boolean, caption?: string, kb?: Kb) {
-  if (!url) return;
+/** Envia uma mídia solta (foto, vídeo ou áudio) sem derrubar o fluxo se falhar. Retorna se enviou. */
+async function sendMedia(ctx: FlowCtx, chatId: number | string, url: string, protect: boolean, caption?: string, kb?: Kb): Promise<boolean> {
+  if (!url) return false;
   try {
     const common = { chat_id: chatId, caption, parse_mode: caption ? "HTML" : undefined, reply_markup: kb, protect_content: protect || undefined };
     if (/\.(ogg|oga|opus|mp3|m4a)(\?|$)/i.test(url)) {
@@ -176,10 +176,15 @@ async function sendMedia(ctx: FlowCtx, chatId: number | string, url: string, pro
     } else {
       await telegramFetch(ctx.token, "sendPhoto", { ...common, photo: url });
     }
+    return true;
   } catch (err) {
     console.warn("[flow-runtime] Falha ao enviar mídia:", (err as Error)?.message);
+    return false;
   }
 }
+
+/** Limite de legenda do Telegram (foto/vídeo). */
+const CAPTION_MAX = 1024;
 
 const planVars = (plan: FlowPlan, total?: number) => {
   const value = total ?? plan.price;
@@ -208,8 +213,15 @@ export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMod
   // Áudio de boas-vindas
   if (c.inicio.audioUrl) await sendMedia(ctx, chatId, c.inicio.audioUrl, protect);
 
-  // Mídias (foto ou vídeo)
+  const rows: Kb["inline_keyboard"] = [[{ text: c.inicio.btn || "🔥 Ver Planos", callback_data: `${p}:plans` }]];
+  for (const r of c.inicio.redirects) if (r.text.trim() && /^https:\/\//i.test(r.url)) rows.push([{ text: r.text.trim(), url: r.url }]);
+  const text = renderFlowText(c.inicio.msg || "Olá, {nome}! 👋", vars).trim();
+  const kb = { inline_keyboard: rows };
+
+  // Mídias (foto ou vídeo). Com uma mídia só (ou envio em sequência), a mensagem e os botões
+  // vão como legenda da última mídia, num balão só. Álbum não aceita botões: texto vai separado.
   const media = c.inicio.media;
+  let textSent = false;
   if (media.length > 1 && c.inicio.sendMode === "album") {
     try {
       await telegramFetch(ctx.token, "sendMediaGroup", {
@@ -221,12 +233,18 @@ export async function runFlowStart(ctx: FlowCtx, flow: LoadedFlow, mode: FlowMod
       console.warn("[flow-runtime] Falha ao enviar álbum:", (err as Error)?.message);
     }
   } else {
-    for (const url of media) await sendMedia(ctx, chatId, url, protect);
+    for (let i = 0; i < media.length; i++) {
+      const last = i === media.length - 1;
+      if (last && text && text.length <= CAPTION_MAX) {
+        textSent = await sendMedia(ctx, chatId, media[i], protect, text, kb);
+        if (!textSent) await sendMedia(ctx, chatId, media[i], protect); // legenda inválida: manda a mídia sozinha
+      } else {
+        await sendMedia(ctx, chatId, media[i], protect);
+      }
+    }
   }
 
-  const rows: Kb["inline_keyboard"] = [[{ text: c.inicio.btn || "🔥 Ver Planos", callback_data: `${p}:plans` }]];
-  for (const r of c.inicio.redirects) if (r.text.trim() && /^https:\/\//i.test(r.url)) rows.push([{ text: r.text.trim(), url: r.url }]);
-  await send(ctx, chatId, renderFlowText(c.inicio.msg || "Olá, {nome}! 👋", vars), { inline_keyboard: rows }, protect);
+  if (!textSent) await send(ctx, chatId, text, kb, protect);
   if (c.inicio.msg2.trim()) await send(ctx, chatId, renderFlowText(c.inicio.msg2, vars), undefined, protect);
 }
 
