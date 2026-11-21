@@ -19,7 +19,8 @@ import {
   Unlink,
   X,
 } from "lucide-react";
-import { ConfirmDialog, PageHeader } from "@/components/seller-v2";
+import { ConfirmDialog } from "@/components/seller-v2";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 type GatewayId = "pushinpay" | "syncpay" | "mercado_pago" | "misticpay";
 type Method = "pix" | "card" | "boleto";
@@ -382,12 +383,13 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto pb-16 flex flex-col gap-6">
-      <PageHeader
-        title="Gateways de recebimento"
+    <div className="w-full min-w-0 pb-16 flex flex-col gap-6">
+      {/* Título na barra do topo, como nas outras abas */}
+      <SellerPageHeader
+        title="Gateways de Recebimento"
         badge={
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[11px] font-semibold flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3" />
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-semibold flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" />
             Criptografado
           </span>
         }
@@ -397,7 +399,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
       {successParam && <Notice tone="ok" icon={<CheckCircle2 className="w-4 h-4" />}>Sua conta foi conectada e ativada.</Notice>}
       {errorParam && <Notice tone="err" icon={<AlertCircle className="w-4 h-4" />}>{errorParam}</Notice>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{GATEWAYS.map(renderCard)}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">{GATEWAYS.map(renderCard)}</div>
 
       {/* Configurar Pushin Pay */}
       {ppOpen && (
