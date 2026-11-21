@@ -271,7 +271,7 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
   // 4. SEGURANÇA E EXECUÇÃO DO createProductAction NO SERVIDOR
   // =========================================================================
   describe("4. createProductAction — Proteção de Acesso e Multi-Bot no Servidor", () => {
-    it("4.1 Bloqueia outro admin ao tentar criar produto com sharingMode CUSTOM", async () => {
+    it("4.1 Não bloqueia outro admin ao criar produto com sharingMode CUSTOM", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       vi.mocked(requireSeller).mockResolvedValue(otherAdmin as any);
       vi.mocked(getCurrentStore).mockResolvedValue(mockStore as any);
@@ -287,11 +287,11 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
       formData.set("targetBotIds", JSON.stringify(["bot-1", "bot-2"]));
 
       const result = await createProductAction(formData);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("A seleção múltipla de bots é exclusiva da conta proprietária.");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
-    it("4.2 Bloqueia vendedor comum (seller) ao tentar passar múltiplos targetBotIds", async () => {
+    it("4.2 Não bloqueia vendedor comum (seller) ao passar vários targetBotIds", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       vi.mocked(requireSeller).mockResolvedValue(sellerUser as any);
       vi.mocked(getCurrentStore).mockResolvedValue(mockStore as any);
@@ -307,8 +307,8 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
       formData.set("targetBotIds", JSON.stringify(["bot-1", "bot-2"]));
 
       const result = await createProductAction(formData);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("A seleção múltipla de bots é exclusiva da conta proprietária.");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
     it("4.3 Rejeita bots que não pertencem à loja do lojista (Multi-tenant check)", async () => {
@@ -377,7 +377,7 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
       );
     });
 
-    it("4.5 Bloqueia tentativa de bot spoofing onde vendedor tenta associar bot diferente do botId fingindo sharingMode EXCLUSIVE", async () => {
+    it("4.5 Vendedor pode associar outro bot além do proprietário (validado pela loja)", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       vi.mocked(requireSeller).mockResolvedValue(sellerUser as any);
       vi.mocked(getCurrentStore).mockResolvedValue(mockStore as any);
@@ -394,11 +394,11 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
       formData.set("targetBotIds", JSON.stringify(["bot-2"]));
 
       const result = await createProductAction(formData);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("A seleção múltipla de bots é exclusiva da conta proprietária.");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
-    it("4.6 Bloqueia tentativa de injeção direta de targetBotIds quando catalogScope for STORE_GENERAL por usuário não autorizado", async () => {
+    it("4.6 targetBotIds com STORE_GENERAL não esbarra mais na trava de proprietário", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       vi.mocked(requireSeller).mockResolvedValue(sellerUser as any);
       vi.mocked(getCurrentStore).mockResolvedValue(mockStore as any);
@@ -412,8 +412,8 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
       formData.set("targetBotIds", JSON.stringify(["bot-1", "bot-2"]));
 
       const result = await createProductAction(formData);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("A seleção múltipla de bots é exclusiva da conta proprietária.");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
     it("4.7 Rejeita imediatamente sem tocar no banco caso db.transaction não esteja disponível", async () => {
@@ -443,7 +443,7 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
       (db as any).transaction = origTransaction;
     });
 
-    it("4.8 Bloqueia chamada direta da Server Action com credenciais manipuladas no corpo da requisição", async () => {
+    it("4.8 Identidade forjada no formulário não muda nada: vários bots já são liberados", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       // Sessão real do servidor é sellerUser
       vi.mocked(requireSeller).mockResolvedValue(sellerUser as any);
@@ -465,8 +465,8 @@ describe("NewProductFlowV2 — Multi-Bot BotPicker Integration & Server Security
 
       const result = await createProductAction(formData);
       // O servidor deve ignorar os campos do formulário e consultar estritamente a sessão autenticada (sellerUser)
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("A seleção múltipla de bots é exclusiva da conta proprietária.");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
     it("4.9 Garante atomicidade: executa produto, visibilidade e carrosséis na mesma transação PostgreSQL", async () => {

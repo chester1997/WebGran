@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { StoreAnalyticsData } from "@/lib/analytics/analytics-service";
 import { SellerMetricsOverview } from "@/components/analytics/SellerMetricsOverview";
-import { SellerSetupChecklist, SellerSetupChecklistData } from "@/components/analytics/SellerSetupChecklist";
+import type { SellerSetupChecklistData } from "@/components/analytics/SellerSetupChecklist";
 import { SellerActivityAndChannels } from "@/components/analytics/SellerActivityAndChannels";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import {
@@ -100,7 +100,7 @@ function getPeriodDisplayLabel(periodKey: string): string {
   return "Últimos 30 dias";
 }
 
-export function DashboardClient({ initialData, bots = [], setupChecklist }: DashboardClientProps) {
+export function DashboardClient({ initialData, bots = [] }: DashboardClientProps) {
   const [data, setData] = useState<StoreAnalyticsData>(initialData);
   const [period, setPeriod] = useState<string>(initialData.period || "30D");
   const [selectedBot, setSelectedBot] = useState<string>("all");
@@ -372,9 +372,6 @@ export function DashboardClient({ initialData, bots = [], setupChecklist }: Dash
             </button>
           </div>
         )}
-
-        {/* 1. Checklist de primeiros passos (contextual, desaparece quando 100% concluído) */}
-        <SellerSetupChecklist checklist={setupChecklist} isPending={isPending} />
 
         {/* 2. Destaque Principal (Hero), 4 Indicadores Compactos, Gráfico de Receita (65%) e Funil de Conversão (35%) */}
         <SellerMetricsOverview

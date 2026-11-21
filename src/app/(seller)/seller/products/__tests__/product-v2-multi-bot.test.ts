@@ -122,7 +122,7 @@ describe("EditProductModalV2 — Multi-Bot Selection & Owner Security Suite", ()
   });
 
   describe("2. Server Action Security: Multi-Bot Blocking for Non-Owners", () => {
-    it("bloqueia outro admin de atualizar produto com sharingMode CUSTOM", async () => {
+    it("não bloqueia outro admin de atualizar produto com sharingMode CUSTOM", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       vi.mocked(requireSeller).mockResolvedValue(otherAdmin as any);
       vi.mocked(getCurrentStore).mockResolvedValue(mockStore as any);
@@ -138,11 +138,11 @@ describe("EditProductModalV2 — Multi-Bot Selection & Owner Security Suite", ()
       formData.set("targetBotIds", JSON.stringify(["bot-1", "bot-2"]));
 
       const result = await updateProductAction("prod-1", formData);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("exclusiva da conta proprietária");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
-    it("bloqueia vendedor comum de tentar salvar múltiplos targetBotIds", async () => {
+    it("não bloqueia vendedor comum de salvar vários targetBotIds", async () => {
       const { requireSeller, getCurrentStore } = await import("@/lib/auth");
       vi.mocked(requireSeller).mockResolvedValue(sellerUser as any);
       vi.mocked(getCurrentStore).mockResolvedValue(mockStore as any);
@@ -157,8 +157,8 @@ describe("EditProductModalV2 — Multi-Bot Selection & Owner Security Suite", ()
       formData.set("targetBotIds", JSON.stringify(["bot-1", "bot-2", "bot-3"]));
 
       const result = await updateProductAction("prod-1", formData);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("exclusiva da conta proprietária");
+      // Vários bots agora são liberados para todos (só exige que os bots sejam da loja).
+      expect(result.error ?? "").not.toContain("exclusiva da conta proprietária");
     });
 
     it("bloqueia não-proprietário em getProductVisibilitiesAction", async () => {

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Upload, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { createProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
+import { BotSharingPicker, type LegacySharingMode } from "./BotSharingPicker";
 import { ProductVideosManager, PendingVideo } from "./ProductVideosManager";
 import { ProductCarouselsPicker, CarouselOption } from "./ProductCarouselsPicker";
 
@@ -37,7 +38,8 @@ export function NewProductModal({
   const [bannerUrl, setBannerUrl] = useState("");
   const [catalogScope, setCatalogScope] = useState<"STORE_GENERAL" | "BOT_GENERAL" | "BOT_SPECIFIC">("STORE_GENERAL");
   const [selectedBotId, setSelectedBotId] = useState("");
-  const [sharingMode, setSharingMode] = useState<"EXCLUSIVE" | "ALL_EXISTING">("EXCLUSIVE");
+  const [sharingMode, setSharingMode] = useState<LegacySharingMode>("EXCLUSIVE");
+  const [extraBotIds, setExtraBotIds] = useState<string[]>([]);
   const [testingAccess, setTestingAccess] = useState(false);
   const [testResult, setTestResult] = useState<DeliveryTestResult | null>(null);
   const [pendingVideos, setPendingVideos] = useState<PendingVideo[]>([]);
@@ -56,6 +58,8 @@ export function NewProductModal({
       setImageUrl("");
       setBannerUrl("");
       setSelectedBotId("");
+      setSharingMode("EXCLUSIVE");
+      setExtraBotIds([]);
       setSelectedCarouselIds([]);
 
       // Cleanup pending Bunny videos if modal closed without saving
@@ -526,40 +530,14 @@ export function NewProductModal({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                      Compartilhamento
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSharingMode("EXCLUSIVE")}
-                        className={`p-2 rounded-lg border text-xs text-left ${
-                          sharingMode === "EXCLUSIVE"
-                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 font-medium"
-                            : "border-white/[0.08] bg-[#15171D] text-zinc-400"
-                        }`}
-                      >
-                        ✓ Somente este bot
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSharingMode("ALL_EXISTING")}
-                        className={`p-2 rounded-lg border text-xs text-left ${
-                          sharingMode === "ALL_EXISTING"
-                            ? "border-[#3984FF] bg-[#3984FF]/10 text-white font-medium"
-                            : "border-white/[0.08] bg-[#15171D] text-zinc-400"
-                        }`}
-                      >
-                        🌐 Todos os bots existentes hoje
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 mt-1">
-                      {sharingMode === "ALL_EXISTING"
-                        ? "O produto será visível nos bots atuais da loja. Novos bots criados posteriormente não receberão automaticamente."
-                        : "Visível exclusivamente no Mini App do bot proprietário."}
-                    </p>
-                  </div>
+                  <BotSharingPicker
+                    bots={bots || []}
+                    ownerBotId={selectedBotId}
+                    mode={sharingMode}
+                    onModeChange={setSharingMode}
+                    extraBotIds={extraBotIds}
+                    onExtraBotIdsChange={setExtraBotIds}
+                  />
                 </div>
               )}
 

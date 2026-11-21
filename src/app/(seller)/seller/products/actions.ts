@@ -168,18 +168,7 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
     )
   );
 
-  // Validação de segurança no servidor: seleção múltipla / customizada é exclusiva do proprietário
-  const hasCustomBotTargeting =
-    sharingMode === "CUSTOM" ||
-    targetBotIds.length > 1 ||
-    (targetBotIds.length === 1 && Boolean(botId) && targetBotIds[0] !== botId);
-
-  if (hasCustomBotTargeting) {
-    const isOwner = ProductManualDeepLinkService.isAuthorized(seller.role, seller);
-    if (!isOwner) {
-      return { success: false, error: "A seleção múltipla de bots é exclusiva da conta proprietária." };
-    }
-  }
+  // Vários bots: liberado para todos os vendedores; cada bot é validado abaixo como sendo da loja.
 
   if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
     botId = null;
@@ -514,18 +503,7 @@ export async function updateProductAction(productId: string, formData: FormData)
     )
   );
 
-  // Validação de segurança no servidor: seleção múltipla / customizada é exclusiva do proprietário
-  const hasCustomBotTargeting =
-    sharingMode === "CUSTOM" ||
-    targetBotIds.length > 1 ||
-    (targetBotIds.length === 1 && Boolean(botId) && targetBotIds[0] !== botId);
-
-  if (hasCustomBotTargeting) {
-    const isOwner = ProductManualDeepLinkService.isAuthorized(seller.role, seller);
-    if (!isOwner) {
-      return { success: false, error: "A seleção múltipla de bots é exclusiva da conta proprietária." };
-    }
-  }
+  // Vários bots: liberado para todos os vendedores; cada bot é validado abaixo como sendo da loja.
 
   if (catalogScope === "STORE_GENERAL" || catalogScope === "BOT_GENERAL") {
     botId = null;
