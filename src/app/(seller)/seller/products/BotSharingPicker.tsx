@@ -13,6 +13,8 @@ interface Props {
   onModeChange: (mode: LegacySharingMode) => void;
   extraBotIds: string[];
   onExtraBotIdsChange: (ids: string[]) => void;
+  /** Sem bot proprietário escolhido, o primeiro bot marcado vira o proprietário. */
+  onOwnerChange?: (id: string) => void;
 }
 
 const OPTIONS: [LegacySharingMode, string][] = [
@@ -25,13 +27,19 @@ const OPTIONS: [LegacySharingMode, string][] = [
  * Compartilhamento do produto no modo "Bot Específico" (cadastro e edição do painel dos vendedores).
  * Em "Escolher bots" o produto aparece no bot proprietário e nos bots marcados.
  */
-export function BotSharingPicker({ bots, ownerBotId, mode, onModeChange, extraBotIds, onExtraBotIdsChange }: Props) {
+export function BotSharingPicker({ bots, ownerBotId, mode, onModeChange, extraBotIds, onExtraBotIdsChange, onOwnerChange }: Props) {
   const others = bots.filter((b) => b.id !== ownerBotId);
   const extras = extraBotIds.filter((id) => others.some((b) => b.id === id));
-  const total = 1 + extras.length;
+  const total = (ownerBotId ? 1 : 0) + extras.length;
 
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
+    if (!ownerBotId && onOwnerChange) {
+      onOwnerChange(id);
+      onExtraBotIdsChange(extras.filter((x) => x !== id));
+      return;
+    }
     onExtraBotIdsChange(extras.includes(id) ? extras.filter((x) => x !== id) : [...extras, id]);
+  };
 
   return (
     <div>

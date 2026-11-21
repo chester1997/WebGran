@@ -160,6 +160,11 @@ export function NewProductModal({
 
     setLoading(true);
     const formData = new FormData(e.currentTarget);
+    // Bots marcados sem bot proprietário escolhido: o primeiro marcado vira o proprietário.
+    if (catalogScope === "BOT_SPECIFIC" && !selectedBotId && sharingMode === "CUSTOM" && extraBotIds.length > 0) {
+      formData.set("botId", extraBotIds[0]);
+      formData.set("targetBotIds", JSON.stringify(extraBotIds));
+    }
     formData.set("deliveryType", deliveryType);
     formData.set("deliveryValue", deliveryType === "product_video" ? "" : deliveryValue.trim());
     formData.set("coverUrl", imageUrl);
@@ -537,6 +542,7 @@ export function NewProductModal({
                     onModeChange={setSharingMode}
                     extraBotIds={extraBotIds}
                     onExtraBotIdsChange={setExtraBotIds}
+                    onOwnerChange={setSelectedBotId}
                   />
                 </div>
               )}
