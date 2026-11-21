@@ -59,11 +59,12 @@ interface Props {
 
 /* ---------------- Marcas ---------------- */
 
-/** Logos oficiais (public/gateways). A MisticPay ainda não tem logo e usa a marca desenhada. */
+/** Logos oficiais (public/gateways). */
 const LOGOS: Partial<Record<GatewayId, { src: string; pad: boolean }>> = {
   pushinpay: { src: "/gateways/pushinpay.png", pad: false },
   syncpay: { src: "/gateways/syncpay.png", pad: true },
   mercado_pago: { src: "/gateways/mercadopago.png", pad: true },
+  misticpay: { src: "/gateways/misticpay.png", pad: false },
 };
 
 function BrandMark({ id }: { id: GatewayId }) {
