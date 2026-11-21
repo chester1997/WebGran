@@ -62,6 +62,8 @@ interface Props {
   isOwnerAccount?: boolean;
   carousels?: any[];
   hideHeader?: boolean;
+  /** Bot aberto (aba Produtos do bot): o novo produto já nasce com ele como proprietário. */
+  currentBotId?: string;
 }
 
 function renderCatalogBadge(prod: ProductItem, bots: { id: string; username: string; displayName?: string | null }[]) {
@@ -128,7 +130,8 @@ export default function ProductsListClient({
   userRole, 
   isOwnerAccount = false, 
   carousels = [], 
-  hideHeader = false 
+  hideHeader = false,
+  currentBotId,
 }: Props) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -554,6 +557,7 @@ export default function ProductsListClient({
           categories={categories}
           bots={bots}
           carousels={carousels}
+          currentBotId={currentBotId}
         />
       )}
 

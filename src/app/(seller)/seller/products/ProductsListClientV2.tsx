@@ -97,6 +97,9 @@ export interface ProductsListClientV2Props {
   userRole?: string | null;
   isOwnerAccount?: boolean;
   carousels?: any[];
+  hideHeader?: boolean;
+  /** Bot aberto (aba Produtos do bot): o novo produto já nasce com ele como proprietário. */
+  currentBotId?: string;
 }
 
 const DURATION_LABELS: Record<string, string> = {
@@ -117,6 +120,7 @@ export default function ProductsListClientV2({
   userRole,
   isOwnerAccount = true,
   carousels = [],
+  currentBotId,
 }: ProductsListClientV2Props) {
   const router = useRouter();
 
@@ -740,6 +744,7 @@ export default function ProductsListClientV2({
         categories={categories}
         bots={bots}
         carousels={carousels}
+        currentBotId={currentBotId}
       />
 
       {/* 6. Modal de Confirmação de Exclusão V2 */}

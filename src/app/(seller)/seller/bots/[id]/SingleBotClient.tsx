@@ -503,6 +503,7 @@ export default function SingleBotClient({
             isOwnerAccount={isOwnerAccount}
             carousels={tabCache.productsData.carousels}
             hideHeader={true}
+            currentBotId={bot.id}
           />
         ) : (
           <div className="flex items-center justify-center p-12 text-zinc-400">

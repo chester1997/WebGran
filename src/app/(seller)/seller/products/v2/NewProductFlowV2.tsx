@@ -19,6 +19,8 @@ export interface NewProductFlowV2Props {
   categories?: { id: string; name: string }[];
   bots?: { id: string; username: string; displayName?: string | null; photoUrl?: string | null }[];
   carousels?: CarouselOption[];
+  /** Bot aberto: vira o proprietário e já fica marcado na disponibilidade. */
+  currentBotId?: string;
 }
 
 export function NewProductFlowV2({
@@ -27,6 +29,7 @@ export function NewProductFlowV2({
   categories = [],
   bots = [],
   carousels = [],
+  currentBotId,
 }: NewProductFlowV2Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -36,6 +39,8 @@ export function NewProductFlowV2({
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // O bot aberto aparece primeiro (e é o padrão ao escolher "Bot específico").
+  const orderedBots = currentBotId ? [...bots].sort((a, b) => (a.id === currentBotId ? -1 : b.id === currentBotId ? 1 : 0)) : bots;
 
   useEffect(() => {
     setMounted(true);
@@ -45,7 +50,11 @@ export function NewProductFlowV2({
   useEffect(() => {
     if (isOpen) {
       setStep(1);
-      setFormState(INITIAL_FORM_STATE);
+      setFormState(
+        currentBotId && bots.some((b) => b.id === currentBotId)
+          ? { ...INITIAL_FORM_STATE, catalogScope: "BOT_SPECIFIC", selectedBotId: currentBotId, targetBotIds: [currentBotId] }
+          : INITIAL_FORM_STATE
+      );
       setPreviousDeliveryType("telegram");
       setSaving(false);
       setSaveSuccess(false);
@@ -241,7 +250,7 @@ export function NewProductFlowV2({
             onSave={handleSaveProduct}
             onClose={onClose}
             categories={categories}
-            bots={bots}
+            bots={orderedBots}
             carousels={carousels}
             saving={saving}
             saveSuccess={saveSuccess}
