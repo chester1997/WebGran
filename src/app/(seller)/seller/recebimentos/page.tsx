@@ -3,6 +3,8 @@ import { db } from '@/db';
 import { sellerPaymentConnections } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import RecebimentosClient from './RecebimentosClient';
+import RecebimentosClientV2 from './RecebimentosClientV2';
+import { isOwnerAccount } from '@/lib/auth/owner-access';
 import SetupStoreClient from "../SetupStoreClient";
 import { ensurePaymentTables } from '@/db/ensure-payment-tables';
 import { SellerGatewayControlService } from '@/lib/payments/seller-gateway-control-service';
@@ -77,8 +79,11 @@ export default async function RecebimentosPage() {
     console.error('[RecebimentosPage] Error fetching PushinPay connection:', err);
   }
 
+  // Redesign: por enquanto só a conta do dono vê a versão nova.
+  const Client = isOwnerAccount(seller) ? RecebimentosClientV2 : RecebimentosClient;
+
   return (
-    <RecebimentosClient 
+    <Client
       connection={connection ? {
         id: connection.id,
         status: connection.status,
