@@ -69,15 +69,17 @@ export function BotSharingPicker({ bots, ownerBotId, mode, onModeChange, extraBo
           {others.length === 0 ? (
             <p className="text-[11px] text-zinc-500">Sua loja só tem este bot. Crie outro bot para compartilhar o produto.</p>
           ) : (
-            others.map((b) => {
-              const on = extras.includes(b.id);
+            bots.map((b) => {
+              const isOwner = b.id === ownerBotId;
+              const on = isOwner || extras.includes(b.id);
               return (
                 <button
                   key={b.id}
                   type="button"
-                  onClick={() => toggle(b.id)}
+                  onClick={() => !isOwner && toggle(b.id)}
+                  disabled={isOwner}
                   aria-pressed={on}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-xs text-left transition-all ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-xs text-left transition-all disabled:cursor-default ${
                     on ? "border-[#3984FF]/60 bg-[#3984FF]/10 text-white" : "border-white/[0.08] bg-[#15171D] text-zinc-300 hover:border-white/20"
                   }`}
                 >
@@ -89,6 +91,7 @@ export function BotSharingPicker({ bots, ownerBotId, mode, onModeChange, extraBo
                     {on && <Check className="w-3 h-3 text-white" />}
                   </span>
                   <span className="truncate">{b.displayName || `@${b.username}`}</span>
+                  {isOwner && <span className="ml-auto text-[10.5px] font-semibold text-[#60a5fa] shrink-0">Proprietário</span>}
                 </button>
               );
             })
