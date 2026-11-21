@@ -13,12 +13,12 @@ const html = (props: Partial<React.ComponentProps<typeof RecebimentosClientV2>> 
   renderToStaticMarkup(<RecebimentosClientV2 connection={null} {...props} />);
 
 describe("RecebimentosClientV2", () => {
-  it("lists the four gateways with what each accepts", () => {
+  it("lists the four gateways, all accepting only Pix", () => {
     const out = html();
     for (const name of ["Pushin Pay", "SyncPay", "Mercado Pago", "MisticPay"]) expect(out).toContain(name);
-    expect(out).toContain("ACEITA");
-    expect(out).toContain("Cartão de crédito");
-    expect(out).toContain("Boleto");
+    expect(out.match(/ACEITA/g)).toHaveLength(4);
+    expect(out).not.toContain("Cartão de crédito");
+    expect(out).not.toContain("Boleto");
   });
 
   it("shows SyncPay and MisticPay as em breve, the others connectable", () => {

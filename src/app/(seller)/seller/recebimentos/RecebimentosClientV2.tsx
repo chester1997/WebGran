@@ -23,7 +23,8 @@ import { ConfirmDialog } from "@/components/seller-v2";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 
 type GatewayId = "pushinpay" | "syncpay" | "mercado_pago" | "misticpay";
-type Method = "pix" | "card" | "boleto";
+/** Por enquanto a plataforma só recebe por Pix, em qualquer gateway. */
+type Method = "pix";
 type Feedback = { provider: GatewayId; type: "success" | "error" | "info"; text: string };
 
 interface ConnectionInfo {
@@ -89,33 +90,24 @@ function BrandMark({ id }: { id: GatewayId }) {
 }
 
 function MethodIcon({ m }: { m: Method }) {
-  if (m === "pix")
-    return (
-      <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="#32bcad">
-        <rect x="5.6" y="0.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 8 3)" />
-        <rect x="5.6" y="10.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 8 13)" />
-        <rect x="0.6" y="5.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 3 8)" />
-        <rect x="10.6" y="5.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 13 8)" />
-      </svg>
-    );
-  if (m === "card")
-    return <span className="w-5 h-3.5 rounded-[3px] bg-gradient-to-br from-[#f4d27a] to-[#c99a3b] inline-block" />;
+  void m;
   return (
-    <svg viewBox="0 0 20 14" className="w-5 h-3.5" fill="#e4e4e7">
-      {[0, 2, 3.5, 6, 7.5, 9, 11.5, 13, 15.5, 17, 18.5].map((x, i) => (
-        <rect key={i} x={x} y="0" width={i % 3 === 0 ? 1.4 : 0.8} height="14" />
-      ))}
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="#32bcad">
+      <rect x="5.6" y="0.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 8 3)" />
+      <rect x="5.6" y="10.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 8 13)" />
+      <rect x="0.6" y="5.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 3 8)" />
+      <rect x="10.6" y="5.6" width="4.8" height="4.8" rx="1.2" transform="rotate(45 13 8)" />
     </svg>
   );
 }
 
-const METHOD_LABEL: Record<Method, string> = { pix: "Pix", card: "Cartão de crédito", boleto: "Boleto" };
+const METHOD_LABEL: Record<Method, string> = { pix: "Pix" };
 
 const GATEWAYS: { id: GatewayId; name: string; domain: string; site: string; methods: Method[] }[] = [
-  { id: "pushinpay", name: "Pushin Pay", domain: "pushinpay.com.br", site: "https://pushinpay.com.br", methods: ["pix", "boleto"] },
-  { id: "syncpay", name: "SyncPay", domain: "syncpayments.com.br", site: "https://syncpayments.com.br", methods: ["pix", "card"] },
-  { id: "mercado_pago", name: "Mercado Pago", domain: "mercadopago.com.br", site: "https://www.mercadopago.com.br", methods: ["pix", "card", "boleto"] },
-  { id: "misticpay", name: "MisticPay", domain: "misticpay.com", site: "https://misticpay.com", methods: ["pix", "card", "boleto"] },
+  { id: "pushinpay", name: "Pushin Pay", domain: "pushinpay.com.br", site: "https://pushinpay.com.br", methods: ["pix"] },
+  { id: "syncpay", name: "SyncPay", domain: "syncpayments.com.br", site: "https://syncpayments.com.br", methods: ["pix"] },
+  { id: "mercado_pago", name: "Mercado Pago", domain: "mercadopago.com.br", site: "https://www.mercadopago.com.br", methods: ["pix"] },
+  { id: "misticpay", name: "MisticPay", domain: "misticpay.com", site: "https://misticpay.com", methods: ["pix"] },
 ];
 
 /** Gateways que ainda não estão liberados para os lojistas. */
@@ -266,7 +258,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
       <div
         key={g.id}
         className={`rounded-[18px] border bg-[#141416] flex flex-col transition-colors ${
-          soon ? "border-white/[0.08] opacity-60" : active ? "border-[#a6e22e]/35" : "border-white/[0.09] hover:border-white/[0.16]"
+          soon ? "border-white/[0.08] opacity-60" : active ? "border-[#3b82f6]/35" : "border-white/[0.09] hover:border-white/[0.16]"
         }`}
       >
         <div className="p-5 flex flex-col gap-4 flex-1">
@@ -279,8 +271,8 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
                 <h2 className="text-[17px] font-bold text-white tracking-tight">{g.name}</h2>
                 {soon && <span className="px-2 py-0.5 rounded-full border border-white/20 text-[11px] font-semibold text-zinc-300">Em breve</span>}
                 {active && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#a6e22e]/10 border border-[#a6e22e]/30 text-[11px] font-semibold text-[#b8f04a] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#b8f04a]" />
+                  <span className="px-2 py-0.5 rounded-full bg-[#3b82f6]/10 border border-[#3b82f6]/30 text-[11px] font-semibold text-[#60a5fa] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]" />
                     Conectado
                   </span>
                 )}
@@ -370,7 +362,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
                 type="button"
                 onClick={g.id === "mercado_pago" ? connectMp : openPushinPay}
                 disabled={blockedNew || busy === "mp-connect"}
-                className="ml-auto h-10 px-4 rounded-xl bg-[#a6e22e] hover:bg-[#b8f04a] text-[#0b0b0c] text-[14px] font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-auto h-10 px-4 rounded-xl bg-[#3b82f6] hover:bg-[#2563eb] text-white text-[14px] font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {busy === "mp-connect" && g.id === "mercado_pago" ? <Loader2 className="w-4 h-4 animate-spin" /> : blockedNew ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 Conectar
@@ -388,7 +380,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
       <SellerPageHeader
         title="Gateways de Recebimento"
         badge={
-          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-semibold flex items-center gap-1.5">
+          <span className="px-2.5 py-0.5 rounded-full bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/30 text-xs font-semibold flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5" />
             Criptografado
           </span>
@@ -427,7 +419,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
             {ppData?.tokenMasked && (
               <div className="px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[12.5px] flex items-center justify-between">
                 <span className="text-zinc-400">Token salvo</span>
-                <span className="font-mono text-[#b8f04a]">{ppData.tokenMasked}</span>
+                <span className="font-mono text-[#60a5fa]">{ppData.tokenMasked}</span>
               </div>
             )}
 
@@ -440,7 +432,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
                 value={ppToken}
                 onChange={(e) => setPpToken(e.target.value)}
                 placeholder={ppData?.hasCredentials ? "Deixe em branco para manter o atual" : "Cole aqui o token da Pushin Pay"}
-                className="h-11 rounded-xl bg-[#141416] border border-white/[0.1] px-3.5 text-[13px] text-white font-mono placeholder:text-zinc-500 placeholder:font-sans focus:outline-none focus:border-[#a6e22e]/60"
+                className="h-11 rounded-xl bg-[#141416] border border-white/[0.1] px-3.5 text-[13px] text-white font-mono placeholder:text-zinc-500 placeholder:font-sans focus:outline-none focus:border-[#3b82f6]/60"
               />
             </label>
 
@@ -448,7 +440,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
               <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-[12.5px]">
                   <span className="font-semibold text-zinc-300">URL do webhook</span>
-                  <button type="button" onClick={() => copyWebhook(ppData.webhookUrl!)} className="text-[#b8f04a] flex items-center gap-1">
+                  <button type="button" onClick={() => copyWebhook(ppData.webhookUrl!)} className="text-[#60a5fa] flex items-center gap-1">
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? "Copiado" : "Copiar"}
                   </button>
@@ -458,7 +450,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
             )}
 
             <p className="text-[12px] text-zinc-500 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-[#60a5fa] shrink-0" />
               O token é validado na Pushin Pay e guardado criptografado.
             </p>
 
@@ -469,7 +461,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
               <button
                 type="submit"
                 disabled={busy === "pp-save" || (!ppData?.hasCredentials && !ppToken.trim())}
-                className="h-10 px-4 rounded-xl bg-[#a6e22e] hover:bg-[#b8f04a] text-[#0b0b0c] text-[13.5px] font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                className="h-10 px-4 rounded-xl bg-[#3b82f6] hover:bg-[#2563eb] text-white text-[13.5px] font-semibold flex items-center gap-1.5 disabled:opacity-50"
               >
                 {busy === "pp-save" && <Loader2 className="w-4 h-4 animate-spin" />}
                 {busy === "pp-save" ? "Validando…" : "Salvar e ativar"}
@@ -494,7 +486,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
 
 function Notice({ tone, icon, children }: { tone: "ok" | "err" | "info" | "warn" | "muted"; icon: ReactNode; children: ReactNode }) {
   const cls = {
-    ok: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
+    ok: "bg-[#3b82f6]/10 border-[#3b82f6]/25 text-[#93c5fd]",
     err: "bg-red-500/10 border-red-500/20 text-red-300",
     info: "bg-blue-500/10 border-blue-500/20 text-blue-300",
     warn: "bg-amber-500/10 border-amber-500/20 text-amber-300",
