@@ -59,35 +59,21 @@ interface Props {
 
 /* ---------------- Marcas ---------------- */
 
+/** Logos oficiais (public/gateways). A MisticPay ainda não tem logo e usa a marca desenhada. */
+const LOGOS: Partial<Record<GatewayId, { src: string; pad: boolean }>> = {
+  pushinpay: { src: "/gateways/pushinpay.png", pad: false },
+  syncpay: { src: "/gateways/syncpay.png", pad: true },
+  mercado_pago: { src: "/gateways/mercadopago.png", pad: true },
+};
+
 function BrandMark({ id }: { id: GatewayId }) {
-  const base = "w-12 h-12 rounded-full flex items-center justify-center shrink-0";
-  if (id === "pushinpay")
-    return (
-      <div className={`${base} bg-[#5b4ff5]`}>
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 19V9a4 4 0 0 1 4-4h2a4 4 0 0 1 0 8h-4" />
-          <path d="M11 13l-3 3" />
-        </svg>
-      </div>
-    );
-  if (id === "syncpay")
+  const base = "w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden";
+  const logo = LOGOS[id];
+  if (logo)
     return (
       <div className={`${base} bg-white`}>
-        <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" strokeWidth="2.6" strokeLinecap="round">
-          <path d="M16.5 7.5A5 5 0 0 0 8 8.5c0 2 1.6 2.8 4 3.5" stroke="#1f2937" />
-          <path d="M7.5 16.5A5 5 0 0 0 16 15.5c0-2-1.6-2.8-4-3.5" stroke="#3b82f6" />
-        </svg>
-      </div>
-    );
-  if (id === "mercado_pago")
-    return (
-      <div className={`${base} bg-white`}>
-        <div className="w-10 h-7 rounded-full bg-[#00a6e8] flex items-center justify-center">
-          <svg viewBox="0 0 24 16" className="w-7 h-5" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 8l4-3 3 1 3-2 4 2 4-1 2 3" />
-            <path d="M9 6l3 4 2-1 2 2" />
-          </svg>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logo.src} alt="" className={logo.pad ? "w-[78%] h-[78%] object-contain" : "w-full h-full object-cover"} />
       </div>
     );
   return (
