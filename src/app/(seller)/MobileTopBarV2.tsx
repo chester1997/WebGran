@@ -46,7 +46,7 @@ export default function MobileTopBarV2({
             width={32}
             height={32}
             priority
-            className="w-8 h-8 rounded-[10px] object-contain shrink-0 select-none"
+            className="w-8 h-8 rounded-[5px] object-contain shrink-0 select-none"
           />
           <div className="flex flex-col min-w-0 leading-none">
             <span className="font-semibold text-[13.5px] text-white tracking-tight whitespace-nowrap">WebGran</span>

@@ -149,7 +149,7 @@ export default function SellerSidebar({
             width={40}
             height={40}
             priority
-            className="w-10 h-10 rounded-xl object-contain shrink-0 select-none"
+            className={`w-10 h-10 ${isOwner ? "rounded-md" : "rounded-xl"} object-contain shrink-0 select-none`}
           />
           <div className="flex flex-col min-w-0">
             <span className="font-bold text-[18px] text-white tracking-tight leading-tight">
