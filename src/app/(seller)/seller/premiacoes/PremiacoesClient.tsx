@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Download, Gift, Lock, Sparkles, Trophy, X } from "lucide-react";
+import { Check, Download, Gift, Lock, Sparkles, Trophy, X, Wallet, Target, Hourglass } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { PlaqueArt } from "@/components/rewards/PlaqueArt";
 import {
@@ -28,6 +28,21 @@ export type RedemptionView = {
 
 const brlInt = (v: number) => brl(v).replace(/,\d{2}$/, "");
 
+/** Posição (0–1) do faturamento na linha do tempo, com os marcos igualmente espaçados. */
+function timelinePosition(revenue: number): number {
+  const n = PLAQUES.length;
+  let prev = 0;
+  for (let i = 0; i < n; i++) {
+    const v = PLAQUES[i].value;
+    if (revenue < v) {
+      const within = (revenue - prev) / (v - prev);
+      return (i - 1 + Math.max(0, within)) / (n - 1);
+    }
+    prev = v;
+  }
+  return 1;
+}
+
 export default function PremiacoesClient({
   revenue,
   redemptions,
@@ -50,255 +65,338 @@ export default function PremiacoesClient({
   const hero = allReached ? PLAQUES[PLAQUES.length - 1] : next;
   const heroRatio = Math.min(1, revenue / hero.value);
   const t = hero.theme;
+  const levelTheme = (current ?? PLAQUES[0]).theme;
+  const linePos = Math.max(0, timelinePosition(revenue));
 
   return (
-    <div className="w-full min-w-0 pb-16 flex flex-col gap-8">
+    <div className="w-full min-w-0 pb-16">
       <SellerPageHeader
         title="Premiações"
         subtitle="Placas por faturamento acumulado. São permanentes e nunca resetam."
         actions={
           <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs"
-            style={{
-              borderColor: `rgba(${(current ?? PLAQUES[0]).theme.rgb},0.35)`,
-              background: `rgba(${(current ?? PLAQUES[0]).theme.rgb},0.08)`,
-            }}
+            className="inline-flex items-center gap-2 pl-2 pr-3 h-9 rounded-full border text-xs"
+            style={{ borderColor: `rgba(${levelTheme.rgb},0.28)`, background: `rgba(${levelTheme.rgb},0.06)` }}
           >
-            <Trophy className="w-4 h-4" style={{ color: (current ?? PLAQUES[0]).theme.light }} />
-            <span className="text-zinc-400">Seu nível atual</span>
-            <span className="font-semibold text-zinc-100">
-              {current ? current.level : "Iniciante"} · {brlInt(revenue)}
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center"
+              style={{ background: `rgba(${levelTheme.rgb},0.16)`, color: levelTheme.light }}
+            >
+              <Trophy className="w-3.5 h-3.5" />
             </span>
+            <span className="text-zinc-500 hidden sm:inline">Nível</span>
+            <span className="font-semibold text-zinc-100">{current ? current.level : "Iniciante"}</span>
+            <span className="w-px h-3.5 bg-white/10" />
+            <span className="font-medium text-zinc-300 tabular-nums">{brlInt(revenue)}</span>
           </div>
         }
       />
 
-      {notice && (
-        <div className="rounded-xl border border-[#3b82f6]/30 bg-[#3b82f6]/10 px-4 py-3 text-sm text-[#93c5fd] flex items-center justify-between gap-3">
-          <span>{notice}</span>
-          <button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso" className="text-zinc-400 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      <div className="mx-auto w-full max-w-[1320px] flex flex-col gap-12">
+        {notice && (
+          <div className="rounded-xl border border-[#3b82f6]/30 bg-[#3b82f6]/10 px-4 py-3 text-sm text-[#93c5fd] flex items-center justify-between gap-3">
+            <span>{notice}</span>
+            <button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso" className="text-zinc-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-      {/* Destaque: próxima conquista */}
-      <section
-        className="relative overflow-hidden rounded-2xl border border-white/[0.08] p-5 md:p-7 grid gap-6 md:grid-cols-[220px_1fr] items-center"
-        style={{ background: `radial-gradient(80% 120% at 0% 0%, rgba(${t.rgb},0.14) 0%, #0f1117 55%, #0c0d12 100%)` }}
-      >
-        <div className="w-[160px] md:w-full mx-auto">
-          <PlaqueArt plaque={hero} src={arts[hero.value]} />
-        </div>
-
-        <div className="min-w-0">
+        {/* ===================== Destaque: próxima conquista ===================== */}
+        <section
+          className="relative overflow-hidden rounded-[28px] border border-white/[0.06] p-6 sm:p-8 lg:p-10"
+          style={{
+            background: `radial-gradient(55% 90% at 14% 35%, rgba(${t.rgb},0.16) 0%, rgba(${t.rgb},0) 70%), linear-gradient(180deg, #101116 0%, #0b0c0f 100%)`,
+          }}
+        >
+          {/* filete de luz no topo */}
           <span
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border"
-            style={{ color: t.light, borderColor: `rgba(${t.rgb},0.4)`, background: `rgba(${t.rgb},0.1)` }}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {allReached ? "Todas as placas conquistadas" : "Sua próxima conquista"}
-          </span>
-          <h2 className="mt-3 text-3xl md:text-4xl font-bold text-white tracking-tight">Placa {hero.short}</h2>
-          <p className="text-sm text-zinc-400">Nível {hero.level}</p>
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 left-[8%] right-[8%] h-px"
+            style={{ background: `linear-gradient(90deg, transparent, rgba(${t.rgb},0.7), transparent)` }}
+          />
 
-          <div className="mt-5 flex items-end justify-between gap-3 tabular-nums">
-            <p className="text-sm text-zinc-400">
-              <span className="text-lg font-bold text-white">{brlInt(revenue)}</span> de {brlInt(hero.value)}
-            </p>
-            <span className="text-lg font-bold" style={{ color: t.light }}>
-              {formatGoalPercent(revenue, hero.value)}
-            </span>
-          </div>
-          <div className="mt-2 h-2 rounded-full bg-white/[0.08] overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${heroRatio * 100}%`, background: t.gradient, boxShadow: `0 0 12px rgba(${t.rgb},0.6)` }}
-            />
-          </div>
-          <p className="mt-2 text-xs text-zinc-500">
-            {allReached ? (
-              "Você conquistou todas as placas. Parabéns!"
-            ) : (
-              <>
-                Faltam <span className="font-semibold text-zinc-200">{brl(hero.value - revenue)}</span> para desbloquear sua próxima placa.
-              </>
-            )}
-          </p>
-
-          {/* Linha do tempo dos marcos */}
-          <ol className="mt-6 grid grid-cols-5 relative" aria-label="Marcos de faturamento">
-            <span aria-hidden="true" className="absolute left-[10%] right-[10%] top-3 h-px bg-white/10" />
-            {PLAQUES.map((p) => {
-              const done = revenue >= p.value;
-              const isNext = !allReached && p.value === next.value;
-              return (
-                <li key={p.value} className="relative flex flex-col items-center gap-1.5">
-                  <span
-                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center bg-[#0f1117]"
-                    style={
-                      done
-                        ? { background: p.theme.main, borderColor: p.theme.main }
-                        : isNext
-                          ? { borderColor: p.theme.main, boxShadow: `0 0 10px rgba(${p.theme.rgb},0.6)` }
-                          : { borderColor: "rgba(255,255,255,0.15)" }
-                    }
-                  >
-                    {done ? (
-                      <Check className="w-3.5 h-3.5 text-black/80" />
-                    ) : isNext ? (
-                      <span className="w-2 h-2 rounded-full" style={{ background: p.theme.main }} />
-                    ) : null}
-                  </span>
-                  <span className={`text-[11px] font-semibold tabular-nums ${done || isNext ? "text-zinc-200" : "text-zinc-600"}`}>
-                    {p.short}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      </section>
-
-      {/* Coleção */}
-      <section>
-        <div className="flex items-end justify-between gap-3 mb-4">
-          <div>
-            <p className="text-[10.5px] font-semibold tracking-[0.2em] text-zinc-500">COLEÇÃO</p>
-            <h3 className="text-lg font-bold text-white">Suas placas</h3>
-          </div>
-          <span className="text-xs text-zinc-500 tabular-nums">
-            {reachedCount} de {PLAQUES.length} conquistadas
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4">
-          {PLAQUES.map((p, i) => {
-            const done = revenue >= p.value;
-            const isNext = !allReached && p.value === next.value;
-            const red = activeRedemption(p.value);
-            const pt = p.theme;
-            return (
-              <article
-                key={p.value}
-                className="relative rounded-2xl border p-4 flex flex-col gap-3 bg-[#0f1117]"
-                style={{
-                  borderColor: isNext ? `rgba(${pt.rgb},0.55)` : done ? `rgba(${pt.rgb},0.25)` : "rgba(255,255,255,0.07)",
-                  boxShadow: isNext ? `0 0 30px -10px rgba(${pt.rgb},0.55)` : undefined,
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  {done ? (
-                    <Badge rgb={pt.rgb} color={pt.light}>
-                      <Check className="w-3 h-3" /> Conquistada
-                    </Badge>
-                  ) : isNext ? (
-                    <Badge rgb={pt.rgb} color={pt.light}>
-                      <Sparkles className="w-3 h-3" /> Próxima
-                    </Badge>
-                  ) : (
-                    <Badge rgb="255,255,255" color="#71717a">
-                      <Lock className="w-3 h-3" /> Bloqueada
-                    </Badge>
-                  )}
-                  <span className="text-[10.5px] font-semibold text-zinc-600 tabular-nums">#{String(i + 1).padStart(2, "0")}</span>
+          <div className="relative grid gap-8 lg:gap-14 md:grid-cols-[minmax(0,240px)_1fr] items-center">
+            {/* Placa em vitrine: halo, placa e reflexo */}
+            <div className="relative w-[170px] sm:w-[200px] md:w-full mx-auto">
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -inset-8 rounded-full"
+                style={{ background: `radial-gradient(closest-side, rgba(${t.rgb},0.45), rgba(${t.rgb},0))`, filter: "blur(18px)" }}
+              />
+              <PlaqueArt
+                plaque={hero}
+                src={arts[hero.value]}
+                sheen
+                className="shadow-[0_30px_60px_-25px_rgba(0,0,0,0.9)]"
+              />
+              {/* reflexo no chão */}
+              <div aria-hidden="true" className="relative h-14 overflow-hidden mt-1 opacity-35 [mask-image:linear-gradient(180deg,#000,transparent)]">
+                <div className="-scale-y-100 origin-top">
+                  <PlaqueArt plaque={hero} src={arts[hero.value]} />
                 </div>
-
-                <PlaqueArt plaque={p} src={arts[p.value]} locked={!done && !isNext} />
-
-                <div className="text-center">
-                  <p className="font-bold text-white">Placa {p.short}</p>
-                  <p className="text-xs text-zinc-500">Nível {p.level}</p>
-                </div>
-
-                <div>
-                  <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${Math.min(1, revenue / p.value) * 100}%`, background: done || isNext ? pt.gradient : "#3f3f46" }}
-                    />
-                  </div>
-                  <div className="mt-1.5 flex justify-between text-[10.5px] tabular-nums text-zinc-500">
-                    <span>{formatGoalPercent(revenue, p.value)}</span>
-                    <span>{formatPlaqueLong(p.value)}</span>
-                  </div>
-                </div>
-
-                <div className="mt-auto flex flex-col gap-2">
-                  {done ? (
-                    <>
-                      {arts[p.value] ? (
-                        <a
-                          href={arts[p.value] ?? undefined}
-                          download={`placa-${p.short.toLowerCase().replace(",", "-")}.webp`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="h-9 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-200 inline-flex items-center justify-center gap-1.5"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Baixar arte
-                        </a>
-                      ) : (
-                        <span className="h-9 rounded-lg border border-white/[0.06] text-xs text-zinc-500 inline-flex items-center justify-center gap-1.5">
-                          <Download className="w-3.5 h-3.5" /> Arte em breve
-                        </span>
-                      )}
-                      {red ? (
-                        <div className="rounded-lg border px-3 py-2 text-center" style={{ borderColor: `rgba(${pt.rgb},0.3)`, background: `rgba(${pt.rgb},0.08)` }}>
-                          <p className="text-xs font-semibold" style={{ color: pt.light }}>
-                            {REDEMPTION_STATUS_LABEL[red.status]}
-                          </p>
-                          {red.trackingCode && <p className="mt-0.5 text-[10.5px] text-zinc-400 break-all">Rastreio: {red.trackingCode}</p>}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setRedeeming(p)}
-                          className="h-9 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <Gift className="w-3.5 h-3.5" /> Resgatar placa
-                        </button>
-                      )}
-                    </>
-                  ) : isNext ? (
-                    <span
-                      className="h-9 rounded-lg text-xs font-semibold inline-flex items-center justify-center tabular-nums text-black/85"
-                      style={{ background: pt.gradient }}
-                    >
-                      Faltam {brlInt(p.value - revenue)}
-                    </span>
-                  ) : (
-                    <span className="h-9 rounded-lg border border-white/[0.07] text-xs text-zinc-500 inline-flex items-center justify-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5" /> Libera em {formatPlaqueLong(p.value)}
-                    </span>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Como funciona */}
-      <section>
-        <p className="text-[10.5px] font-semibold tracking-[0.2em] text-zinc-500 mb-3">COMO FUNCIONA</p>
-        <div className="grid gap-3 md:grid-cols-3">
-          {[
-            ["Venda pela WebGran", "Todo pagamento aprovado soma no seu faturamento acumulado. Reembolsos e chargebacks não contam."],
-            ["Bata a meta", "Ao atingir o valor, a placa é desbloqueada na hora e fica sua para sempre."],
-            ["Receba em casa", "Clique em Resgatar, informe o endereço e acompanhe aqui a produção e o envio."],
-          ].map(([title, text], i) => (
-            <div key={title} className="rounded-xl border border-white/[0.07] bg-[#0f1117] p-4 flex gap-3">
-              <span className="w-7 h-7 shrink-0 rounded-lg bg-[#3b82f6]/15 border border-[#3b82f6]/30 text-[#60a5fa] text-xs font-bold flex items-center justify-center">
-                {i + 1}
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-zinc-100">{title}</p>
-                <p className="mt-0.5 text-xs text-zinc-500 leading-relaxed">{text}</p>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+
+            <div className="min-w-0">
+              <p className="inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.28em]" style={{ color: t.light }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.main, boxShadow: `0 0 10px rgba(${t.rgb},0.9)` }} />
+                {allReached ? "Coleção completa" : "Sua próxima conquista"}
+              </p>
+              <h2
+                className="mt-3 text-[40px] sm:text-[52px] leading-[0.95] font-bold tracking-[-0.03em] bg-clip-text text-transparent"
+                style={{ backgroundImage: `linear-gradient(180deg, #ffffff 30%, ${t.light} 130%)` }}
+              >
+                Placa {hero.short}
+              </h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Nível <span className="text-zinc-200 font-medium">{hero.level}</span> · {formatPlaqueLong(hero.value)} em vendas
+              </p>
+
+              {/* números */}
+              <div className="mt-7 grid grid-cols-3 rounded-2xl border border-white/[0.06] bg-white/[0.015] divide-x divide-white/[0.06]">
+                {[
+                  { icon: Wallet, label: "Faturado", value: brlInt(revenue) },
+                  { icon: Target, label: "Meta", value: brlInt(hero.value) },
+                  { icon: Hourglass, label: allReached ? "Status" : "Faltam", value: allReached ? "Concluída" : brlInt(Math.max(0, hero.value - revenue)) },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="px-3 sm:px-5 py-3.5 min-w-0">
+                    <p className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em] text-zinc-500">
+                      <Icon className="w-3 h-3" /> {label}
+                    </p>
+                    <p className="mt-1 text-[15px] sm:text-lg font-semibold text-white tabular-nums truncate">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* progresso */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between text-xs text-zinc-500 mb-2">
+                  <span>Progresso até a placa</span>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: t.light }}>
+                    {formatGoalPercent(revenue, hero.value)}
+                  </span>
+                </div>
+                <div className="relative h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div
+                    className="relative h-full rounded-full overflow-hidden transition-all duration-1000 ease-out"
+                    style={{
+                      width: `max(${revenue > 0 ? "10px" : "0px"}, ${heroRatio * 100}%)`,
+                      background: t.gradient,
+                      boxShadow: `0 0 16px rgba(${t.rgb},0.7)`,
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 w-1/2 animate-[plaque-sheen_3.5s_ease-in-out_infinite] motion-reduce:hidden"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent)" }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* linha do tempo dos marcos */}
+              <ol className="relative mt-9 grid grid-cols-5" aria-label="Marcos de faturamento">
+                <span aria-hidden="true" className="absolute left-[10%] right-[10%] top-[13px] h-[2px] rounded-full bg-white/[0.07]" />
+                <span
+                  aria-hidden="true"
+                  className="absolute left-[10%] top-[13px] h-[2px] rounded-full transition-all duration-1000"
+                  style={{ width: `calc(80% * ${linePos})`, background: t.gradient, boxShadow: `0 0 8px rgba(${t.rgb},0.6)` }}
+                />
+                {PLAQUES.map((p) => {
+                  const done = revenue >= p.value;
+                  const isNext = !allReached && p.value === next.value;
+                  return (
+                    <li key={p.value} className="relative flex flex-col items-center gap-2">
+                      <span
+                        className={`relative w-7 h-7 rounded-full flex items-center justify-center border ${
+                          isNext ? "animate-[plaque-pulse_1.8s_ease-out_infinite] motion-reduce:animate-none" : ""
+                        }`}
+                        style={
+                          {
+                            "--pulse-rgb": p.theme.rgb,
+                            ...(done
+                              ? { background: p.theme.gradient, borderColor: "transparent", boxShadow: `0 0 12px rgba(${p.theme.rgb},0.55)` }
+                              : isNext
+                                ? { background: "#0d0e12", borderColor: p.theme.main }
+                                : { background: "#0d0e12", borderColor: "rgba(255,255,255,0.1)" }),
+                          } as unknown as React.CSSProperties
+                        }
+                      >
+                        {done ? (
+                          <Check className="w-3.5 h-3.5 text-black/75" strokeWidth={3} />
+                        ) : isNext ? (
+                          <span className="w-2 h-2 rounded-full" style={{ background: p.theme.main }} />
+                        ) : (
+                          <span className="w-1 h-1 rounded-full bg-white/25" />
+                        )}
+                      </span>
+                      <span className="flex flex-col items-center leading-tight">
+                        <span className={`text-[11.5px] font-semibold tabular-nums ${done || isNext ? "text-zinc-100" : "text-zinc-600"}`}>{p.short}</span>
+                        <span className="hidden sm:block text-[10px]" style={{ color: done || isNext ? p.theme.light : "#52525b" }}>
+                          {p.level}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================== Coleção ===================== */}
+        <section>
+          <div className="flex items-end justify-between gap-3 mb-5">
+            <div>
+              <p className="text-[10.5px] font-semibold tracking-[0.28em] text-zinc-500">COLEÇÃO</p>
+              <h3 className="mt-1 text-xl font-semibold text-white tracking-tight">Suas placas</h3>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-500 tabular-nums">
+              <span className="flex gap-1">
+                {PLAQUES.map((p) => (
+                  <span
+                    key={p.value}
+                    className="w-4 h-1 rounded-full"
+                    style={{ background: revenue >= p.value ? p.theme.main : "rgba(255,255,255,0.1)" }}
+                  />
+                ))}
+              </span>
+              {reachedCount} de {PLAQUES.length}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-5">
+            {PLAQUES.map((p, i) => {
+              const done = revenue >= p.value;
+              const isNext = !allReached && p.value === next.value;
+              const locked = !done && !isNext;
+              const red = activeRedemption(p.value);
+              const pt = p.theme;
+              return (
+                <article
+                  key={p.value}
+                  className="group relative rounded-[22px] p-2.5 pb-3.5 flex flex-col gap-3 border transition-all duration-300 hover:-translate-y-1"
+                  style={{
+                    background: "linear-gradient(180deg, #111216 0%, #0c0d10 100%)",
+                    borderColor: isNext ? `rgba(${pt.rgb},0.45)` : done ? `rgba(${pt.rgb},0.18)` : "rgba(255,255,255,0.05)",
+                    boxShadow: isNext ? `0 20px 50px -25px rgba(${pt.rgb},0.7)` : undefined,
+                  }}
+                >
+                  <div className="relative">
+                    {!locked && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -inset-2 rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                        style={{ background: `radial-gradient(closest-side, rgba(${pt.rgb},0.35), transparent)`, filter: "blur(14px)" }}
+                      />
+                    )}
+                    <PlaqueArt plaque={p} src={arts[p.value]} locked={locked} sheen={isNext} className="relative" />
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-[3px] rounded-full border backdrop-blur-md"
+                        style={
+                          locked
+                            ? { color: "#a1a1aa", borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.55)" }
+                            : { color: pt.light, borderColor: `rgba(${pt.rgb},0.35)`, background: "rgba(0,0,0,0.55)" }
+                        }
+                      >
+                        {done ? <Check className="w-3 h-3" /> : isNext ? <Sparkles className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                        {done ? "Conquistada" : isNext ? "Próxima" : "Bloqueada"}
+                      </span>
+                      <span className="text-[10px] font-semibold text-white/40 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                    </div>
+                  </div>
+
+                  <div className="px-1.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="font-semibold text-white tracking-tight">Placa {p.short}</p>
+                      <p className="text-[11px] font-medium truncate" style={{ color: locked ? "#71717a" : pt.light }}>
+                        {p.level}
+                      </p>
+                    </div>
+                    <div className="mt-2.5 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.min(1, revenue / p.value) * 100}%`, background: locked ? "#3f3f46" : pt.gradient }}
+                      />
+                    </div>
+                    <div className="mt-1.5 flex justify-between text-[10.5px] tabular-nums text-zinc-500">
+                      <span>{formatGoalPercent(revenue, p.value)}</span>
+                      <span>{formatPlaqueLong(p.value)}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto px-1.5 flex flex-col gap-2">
+                    {done ? (
+                      <>
+                        {red ? (
+                          <div className="rounded-xl border px-3 py-2 text-center" style={{ borderColor: `rgba(${pt.rgb},0.25)`, background: `rgba(${pt.rgb},0.07)` }}>
+                            <p className="text-xs font-semibold" style={{ color: pt.light }}>
+                              {REDEMPTION_STATUS_LABEL[red.status]}
+                            </p>
+                            {red.trackingCode && <p className="mt-0.5 text-[10.5px] text-zinc-400 break-all">Rastreio: {red.trackingCode}</p>}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setRedeeming(p)}
+                            className="h-9 rounded-xl bg-[#3b82f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors shadow-[0_8px_20px_-10px_rgba(59,130,246,0.9)]"
+                          >
+                            <Gift className="w-3.5 h-3.5" /> Resgatar placa
+                          </button>
+                        )}
+                        {arts[p.value] && (
+                          <a
+                            href={arts[p.value] ?? undefined}
+                            download={`placa-${p.short.toLowerCase().replace(",", "-")}.webp`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="h-8 rounded-xl text-[11.5px] font-medium text-zinc-400 hover:text-white inline-flex items-center justify-center gap-1.5 transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Baixar arte
+                          </a>
+                        )}
+                      </>
+                    ) : isNext ? (
+                      <span
+                        className="h-9 rounded-xl text-xs font-semibold inline-flex items-center justify-center tabular-nums border"
+                        style={{ color: pt.light, borderColor: `rgba(${pt.rgb},0.35)`, background: `rgba(${pt.rgb},0.08)` }}
+                      >
+                        Faltam {brlInt(p.value - revenue)}
+                      </span>
+                    ) : (
+                      <span className="h-9 rounded-xl text-[11.5px] text-zinc-600 inline-flex items-center justify-center gap-1.5">
+                        <Lock className="w-3 h-3" /> Libera em {formatPlaqueLong(p.value)}
+                      </span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ===================== Como funciona ===================== */}
+        <section>
+          <p className="text-[10.5px] font-semibold tracking-[0.28em] text-zinc-500 mb-4">COMO FUNCIONA</p>
+          <ol className="grid gap-3 md:grid-cols-3">
+            {[
+              ["Venda pela WebGran", "Todo pagamento aprovado soma no seu faturamento acumulado. Reembolsos e chargebacks não contam."],
+              ["Bata a meta", "Ao atingir o valor, a placa é desbloqueada na hora e fica sua para sempre."],
+              ["Receba em casa", "Clique em Resgatar, informe o endereço e acompanhe aqui a produção e o envio."],
+            ].map(([title, text], i) => (
+              <li key={title} className="relative rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5">
+                <span className="text-[34px] font-bold leading-none tracking-tight text-white/[0.07] absolute right-4 top-3 tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <p className="text-sm font-semibold text-zinc-100">{title}</p>
+                <p className="mt-1 text-xs text-zinc-500 leading-relaxed pr-6">{text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
 
       {redeeming && (
         <RedeemModal
@@ -312,17 +410,6 @@ export default function PremiacoesClient({
         />
       )}
     </div>
-  );
-}
-
-function Badge({ children, rgb, color }: { children: React.ReactNode; rgb: string; color: string }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-0.5 rounded-full border"
-      style={{ color, borderColor: `rgba(${rgb},0.3)`, background: `rgba(${rgb},0.08)` }}
-    >
-      {children}
-    </span>
   );
 }
 
