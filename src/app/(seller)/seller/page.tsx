@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
+import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { AnalyticsService } from "@/lib/analytics/analytics-service";
 import { db } from "@/db";
 import { telegramBots, sellerPaymentConnections } from "@/db/schema";
@@ -128,5 +129,5 @@ export default async function SellerDashboardPage() {
     displayName: b.displayName,
   }));
 
-  return <DashboardClient initialData={initialData} bots={cleanBots} setupChecklist={setupChecklist} />;
+  return <DashboardClient initialData={initialData} bots={cleanBots} setupChecklist={setupChecklist} isOwner={isOwnerAccount(user)} />;
 }

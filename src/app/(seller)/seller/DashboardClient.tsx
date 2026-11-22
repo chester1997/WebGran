@@ -42,6 +42,8 @@ interface DashboardClientProps {
   initialData: StoreAnalyticsData;
   bots?: DashboardBot[];
   setupChecklist?: SellerSetupChecklistData | null;
+  /** Redesign V2 (conta proprietária): filtros como botões de ícone ao lado da saudação. */
+  isOwner?: boolean;
 }
 
 function getGreetingByHour(hour: number): string {
@@ -100,7 +102,7 @@ function getPeriodDisplayLabel(periodKey: string): string {
   return "Últimos 30 dias";
 }
 
-export function DashboardClient({ initialData, bots = [] }: DashboardClientProps) {
+export function DashboardClient({ initialData, bots = [], isOwner = false }: DashboardClientProps) {
   const [data, setData] = useState<StoreAnalyticsData>(initialData);
   const [period, setPeriod] = useState<string>(initialData.period || "30D");
   const [selectedBot, setSelectedBot] = useState<string>("all");
@@ -117,6 +119,18 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
   const [customEnd, setCustomEnd] = useState<string>(() => getBusinessDateKey(new Date()));
   const [customError, setCustomError] = useState<string | null>(null);
   const periodPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Popover de bots (cabeçalho V2)
+  const [isBotOpen, setIsBotOpen] = useState(false);
+  const botPopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isBotOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (botPopoverRef.current && !botPopoverRef.current.contains(event.target as Node)) setIsBotOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isBotOpen]);
 
   // Click outside to close period popover
   useEffect(() => {
@@ -198,8 +212,198 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
   const activePeriodLabel = getPeriodDisplayLabel(period);
 
+  // Painel de período (presets + intervalo personalizado), usado nos dois layouts do cabeçalho.
+  const periodPanel = (
+    <div className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] max-w-[calc(100vw-32px)] bg-[#101218] border border-white/[0.1] rounded-2xl p-3 shadow-2xl z-50 backdrop-blur-md space-y-3 animate-in fade-in zoom-in-95 duration-100">
+      {/* Seção Presets */}
+      <div className="space-y-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block px-2 py-0.5">
+          Períodos Rápidos
+        </span>
+        <div className="grid grid-cols-1 gap-0.5">
+          {PRESET_PERIODS.map((opt) => {
+            const isSelected = period === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => handlePeriodChange(opt.key)}
+                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${isSelected
+                    ? "bg-[#3984FF]/15 text-[#3984FF] font-semibold"
+                    : "text-zinc-300 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+              >
+                <span>{opt.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded font-mono">
+                    {opt.badge}
+                  </span>
+                  {isSelected && <Check className="w-3 h-3 text-[#3984FF] shrink-0" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Seção Personalizada */}
+      <div className="pt-2 border-t border-white/[0.08] space-y-2.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
+          Intervalo Personalizado
+        </span>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="text-[10px] text-zinc-400 block font-medium">Data Inicial</label>
+            <input
+              type="date"
+              value={customStart}
+              max={getBusinessDateKey(new Date())}
+              onChange={(e) => {
+                setCustomStart(e.target.value);
+                setCustomError(null);
+              }}
+              className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-[#3984FF] text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-zinc-400 block font-medium">Data Final</label>
+            <input
+              type="date"
+              value={customEnd}
+              max={getBusinessDateKey(new Date())}
+              onChange={(e) => {
+                setCustomEnd(e.target.value);
+                setCustomError(null);
+              }}
+              className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-[#3984FF] text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
+            />
+          </div>
+        </div>
+
+        {customError && (
+          <p className="text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+            <AlertCircle className="w-3 h-3 shrink-0" />
+            {customError}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={handleApplyCustomPeriod}
+          disabled={isPending}
+          className="w-full bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl py-2 text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+        >
+          <span>Aplicar intervalo de datas</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const botLabel = (b: DashboardBot) => b.displayName || (b.username ? `@${b.username}` : `Bot ${b.id.slice(0, 6)}`);
+  const selectedBotObj = availableBots.find((b) => b.id === selectedBot);
+  const periodBadge = PRESET_PERIODS.find((p) => p.key === period)?.badge ?? (period.startsWith("CUSTOM:") ? "Per." : "30D");
+
   return (
     <>
+      {isOwner ? (
+        <SellerPageHeader>
+          <div className="flex items-center justify-between gap-3 w-full min-w-0 relative z-30 overflow-visible">
+            <div className="min-w-0">
+              <h1 className="flex items-center gap-2 text-base sm:text-xl md:text-2xl font-bold tracking-tight min-w-0">
+                <span className="truncate">
+                  <span className="text-zinc-400 font-normal">{greeting}, </span>
+                  <span className="text-white">{displayName}</span>
+                </span>
+                {isPending && <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin text-[#60a5fa]" aria-label="Atualizando" />}
+              </h1>
+              <p className="text-zinc-400 text-xs sm:text-sm truncate">{formattedDate}</p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Filtro de bot: botão de ícone em gradiente azul */}
+              <div className="relative" ref={botPopoverRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBotOpen((v) => !v);
+                    setIsPeriodOpen(false);
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={isBotOpen}
+                  aria-label={`Filtrar por bot: ${selectedBotObj ? botLabel(selectedBotObj) : "Todos os bots"}`}
+                  title={selectedBotObj ? botLabel(selectedBotObj) : "Todos os bots"}
+                  className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white border border-white/20 transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+                  style={{
+                    background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 55%, #60a5fa 100%)",
+                    boxShadow: "0 8px 20px -8px rgba(59,130,246,0.85), inset 0 1px 0 rgba(255,255,255,0.3)",
+                  }}
+                >
+                  <Bot className="w-5 h-5" />
+                  {selectedBotObj && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-white border-2 border-[#3b82f6]" aria-hidden="true" />
+                  )}
+                </button>
+                {isBotOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Bots"
+                    className="absolute right-0 top-full mt-2 w-[240px] max-w-[calc(100vw-32px)] bg-[#101218] border border-white/[0.1] rounded-2xl p-2 shadow-2xl z-50 space-y-0.5"
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block px-2 py-1">Filtrar por bot</span>
+                    {[{ id: "all", label: "Todos os bots" }, ...availableBots.map((b) => ({ id: b.id, label: botLabel(b) }))].map((opt) => {
+                      const sel = selectedBot === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          role="option"
+                          aria-selected={sel}
+                          onClick={() => {
+                            setIsBotOpen(false);
+                            if (!sel) handleBotChange(opt.id);
+                          }}
+                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                            sel ? "bg-[#3b82f6]/15 text-[#60a5fa] font-semibold" : "text-zinc-300 hover:bg-white/[0.05] hover:text-white"
+                          }`}
+                        >
+                          <span className="truncate">{opt.label}</span>
+                          {sel && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Filtro de período: botão de ícone com o período atual no selo */}
+              <div className="relative" ref={periodPopoverRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPeriodOpen((v) => !v);
+                    setIsBotOpen(false);
+                  }}
+                  aria-haspopup="dialog"
+                  aria-expanded={isPeriodOpen}
+                  aria-label={`Período: ${activePeriodLabel}`}
+                  title={activePeriodLabel}
+                  className={`relative w-10 h-10 rounded-xl flex items-center justify-center bg-[#15171D] hover:bg-[#1C1E26] border transition-all active:scale-95 cursor-pointer ${
+                    isPeriodOpen ? "border-[#3b82f6]/80 ring-1 ring-[#3b82f6]/30 text-white" : "border-white/[0.08] hover:border-zinc-700 text-zinc-300 hover:text-white"
+                  }`}
+                >
+                  <Calendar className="w-[18px] h-[18px]" />
+                  <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1 rounded-md bg-[#3b82f6] text-white text-[8.5px] font-bold leading-[13px] whitespace-nowrap shadow">
+                    {periodBadge}
+                  </span>
+                </button>
+                {isPeriodOpen && periodPanel}
+              </div>
+            </div>
+          </div>
+        </SellerPageHeader>
+      ) : (
       <SellerPageHeader
         title={
           <span>
@@ -262,96 +466,13 @@ export function DashboardClient({ initialData, bots = [] }: DashboardClientProps
 
               {/* Popover Dropdown */}
               {isPeriodOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] max-w-[calc(100vw-32px)] bg-[#101218] border border-white/[0.1] rounded-2xl p-3 shadow-2xl z-50 backdrop-blur-md space-y-3 animate-in fade-in zoom-in-95 duration-100">
-                  {/* Seção Presets */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block px-2 py-0.5">
-                      Períodos Rápidos
-                    </span>
-                    <div className="grid grid-cols-1 gap-0.5">
-                      {PRESET_PERIODS.map((opt) => {
-                        const isSelected = period === opt.key;
-                        return (
-                          <button
-                            key={opt.key}
-                            type="button"
-                            onClick={() => handlePeriodChange(opt.key)}
-                            className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${isSelected
-                                ? "bg-[#3984FF]/15 text-[#3984FF] font-semibold"
-                                : "text-zinc-300 hover:bg-white/[0.05] hover:text-white"
-                              }`}
-                          >
-                            <span>{opt.label}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded font-mono">
-                                {opt.badge}
-                              </span>
-                              {isSelected && <Check className="w-3 h-3 text-[#3984FF] shrink-0" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Seção Personalizada */}
-                  <div className="pt-2 border-t border-white/[0.08] space-y-2.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block">
-                      Intervalo Personalizado
-                    </span>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400 block font-medium">Data Inicial</label>
-                        <input
-                          type="date"
-                          value={customStart}
-                          max={getBusinessDateKey(new Date())}
-                          onChange={(e) => {
-                            setCustomStart(e.target.value);
-                            setCustomError(null);
-                          }}
-                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-[#3984FF] text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400 block font-medium">Data Final</label>
-                        <input
-                          type="date"
-                          value={customEnd}
-                          max={getBusinessDateKey(new Date())}
-                          onChange={(e) => {
-                            setCustomEnd(e.target.value);
-                            setCustomError(null);
-                          }}
-                          className="w-full bg-[#15171D] border border-white/[0.08] hover:border-zinc-700 focus:border-[#3984FF] text-zinc-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none transition-all [color-scheme:dark]"
-                        />
-                      </div>
-                    </div>
-
-                    {customError && (
-                      <p className="text-[11px] text-rose-400 flex items-center gap-1 font-medium">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {customError}
-                      </p>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handleApplyCustomPeriod}
-                      disabled={isPending}
-                      className="w-full bg-[#3984FF] hover:bg-[#2563EB] text-white font-medium rounded-xl py-2 text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                    >
-                      <span>Aplicar intervalo de datas</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+                periodPanel
               )}
             </div>
           </div>
         }
       />
+      )}
 
       <div className="w-full max-w-none flex flex-col gap-[20px] min-w-0 pb-0 relative">
 

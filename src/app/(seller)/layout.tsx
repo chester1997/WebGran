@@ -6,6 +6,8 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import SellerSidebar, { SellerProfileData } from "./SellerSidebar";
+import { isOwnerUser } from "@/lib/bots/owner-guard";
+import MobileTopBarV2 from "./MobileTopBarV2";
 import { SaleNotificationSoundHandler } from "@/components/audio/SaleNotificationSoundHandler";
 
 interface SellerLayoutProps {
@@ -186,6 +188,8 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
   }, []);
 
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
+  // Redesign V2 do header do celular: só a conta proprietária.
+  const ownerMobileHeader = isOwnerUser(sellerProfile);
 
   return (
     <div
@@ -259,6 +263,16 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
           <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0A0A0A)] border-b border-white/[0.08] lg:border-b-0 z-30 relative overflow-visible">
             {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): lg:hidden */}
+            {ownerMobileHeader ? (
+              <MobileTopBarV2
+                hidden={hideMobileTopBar}
+                drawerOpen={mobileDrawerOpen}
+                onToggleDrawer={() => setMobileDrawerOpen((prev) => !prev)}
+                buttonRef={hamburgerButtonRef}
+                avatarUrl={sellerProfile?.avatarUrl}
+                initialLetter={initialLetter}
+              />
+            ) : (
             <div className={`${hideMobileTopBar ? "hidden" : "lg:hidden flex"} items-center justify-between px-3.5 py-2.5 border-b border-white/[0.06] bg-[#0A0A0A]`}>
               <div className="flex items-center gap-2.5 shrink-0 min-w-0">
                 <button
@@ -301,6 +315,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
                 )}
               </div>
             </div>
+            )}
 
             {/* External Header Slot para Páginas do Seller (Portal) com altura uniforme de 112px no desktop e padding vertical refinado no mobile */}
             <div
