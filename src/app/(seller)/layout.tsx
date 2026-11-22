@@ -190,6 +190,10 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
   const initialLetter = (sellerProfile?.name || sellerProfile?.email || "V").charAt(0).toUpperCase();
   // Redesign V2 do header do celular: só a conta proprietária.
   const ownerMobileHeader = isOwnerUser(sellerProfile);
+  // V2: a linha entre o header e o conteúdo só aparece depois de rolar.
+  // Guarda em qual rota o conteúdo está rolado; ao trocar de página a linha volta a sumir.
+  const [scrolledPath, setScrolledPath] = useState<string | null>(null);
+  const contentScrolled = scrolledPath === pathname;
 
   return (
     <div
@@ -261,7 +265,11 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
         >
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
-          <header className="flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0A0A0A)] border-b border-white/[0.08] lg:border-b-0 z-30 relative overflow-visible">
+          <header
+            className={`flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0A0A0A)] border-b ${
+              ownerMobileHeader && !contentScrolled ? "border-transparent" : "border-white/[0.08]"
+            } lg:border-b-0 z-30 relative overflow-visible transition-colors duration-200`}
+          >
             {/* Linha Mobile Refinada (Menu + WebGran Logo Oficial + Avatar): lg:hidden */}
             {ownerMobileHeader ? (
               <MobileTopBarV2
@@ -328,6 +336,10 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
           <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10 z-10">
             {/* Área de Rolagem do Conteúdo */}
             <main
+              onScroll={(e) => {
+                const scrolled = e.currentTarget.scrollTop > 4;
+                if (scrolled !== contentScrolled) setScrolledPath(scrolled ? pathname : null);
+              }}
               tabIndex={0}
               aria-label="Painel do Vendedor"
               className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
