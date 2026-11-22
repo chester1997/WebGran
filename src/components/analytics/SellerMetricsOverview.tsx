@@ -15,6 +15,8 @@ interface KpiDataPoint {
 }
 
 interface SellerMetricsOverviewProps {
+  /** Redesign V2 (conta proprietária): no celular, 2 indicadores lado a lado e brilho azul no canto. */
+  compactMobile?: boolean;
   metrics?: CommercialMetrics | null;
   kpis?: {
     revenue?: KpiDataPoint;
@@ -73,6 +75,7 @@ export function SellerMetricsOverview({
   isPending = false,
   periodLabel = "Últimos 30 dias",
   funnelSlot,
+  compactMobile = false,
 }: SellerMetricsOverviewProps) {
   const [chartMode, setChartMode] = useState<"area" | "bar">("area");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -322,7 +325,69 @@ export function SellerMetricsOverview({
         aria-label="Indicadores de desempenho"
         className="bg-[#1C1C1E] rounded-[18px] sm:rounded-[22px] p-5 sm:p-6 lg:p-7 border border-white/[0.06] relative overflow-hidden"
       >
-        <div className="flex flex-col divide-y divide-white/[0.08] lg:divide-y-0 lg:grid lg:grid-cols-3 lg:divide-x lg:divide-white/[0.08]">
+        {compactMobile && (
+          <>
+            {/* Brilho azul suave no canto superior esquerdo (só no celular) */}
+            <span
+              aria-hidden="true"
+              className="lg:hidden pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(70% 55% at 0% 0%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0.09) 40%, rgba(59,130,246,0) 70%)",
+              }}
+            />
+            {/* Celular: vendas aprovadas e valor médio lado a lado, pagamentos confirmados embaixo */}
+            <div className="lg:hidden relative" data-testid="metrics-compact-mobile">
+              <div className="grid grid-cols-2">
+                <div className="min-w-0 pr-3.5 pb-4 border-r border-white/[0.08]">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-[#60a5fa] shrink-0 stroke-[2.25]" />
+                    <h3 className="text-[12.5px] font-semibold text-[var(--apple-text,#fff)] tracking-tight truncate">Vendas aprovadas</h3>
+                  </div>
+                  <p className="mt-3 text-[24px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none truncate">
+                    {receitaValue}
+                  </p>
+                  <p className="mt-1.5 text-[11.5px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium tabular-nums">
+                    {totalConfirmedSales} {totalConfirmedSales === 1 ? "venda" : "vendas"}
+                  </p>
+                </div>
+                <div className="min-w-0 pl-3.5 pb-4">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-[#60a5fa] shrink-0 stroke-[2.25]" />
+                    <h3 className="text-[12.5px] font-semibold text-[var(--apple-text,#fff)] tracking-tight truncate">Valor médio</h3>
+                  </div>
+                  <p className="mt-3 text-[24px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none truncate">
+                    {ticketValue}
+                  </p>
+                  <p className="mt-1.5 text-[11.5px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] font-medium">por venda</p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/[0.08]">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <CreditCard className="w-4 h-4 text-[#60a5fa] shrink-0 stroke-[2.25]" />
+                    <h3 className="text-[12.5px] font-semibold text-[var(--apple-text,#fff)] tracking-tight truncate">Pagamentos confirmados</h3>
+                  </div>
+                  <span className="shrink-0 text-[11.5px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] tabular-nums">
+                    {totalPixPaid} de {totalPixGenerated || 0} Pix pagos
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-[24px] font-bold tracking-tight text-[var(--apple-text,#fff)] tabular-nums leading-none">{pixValue}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#3b82f6] transition-all duration-700"
+                      style={{ width: `${Math.min(100, Math.max(0, rawRate))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className={`${compactMobile ? "hidden lg:grid" : "flex flex-col lg:grid"} divide-y divide-white/[0.08] lg:divide-y-0 lg:grid-cols-3 lg:divide-x lg:divide-white/[0.08]`}>
           {/* CARD 1 — Vendas aprovadas */}
           <div className="min-w-0 w-full flex flex-col justify-between pb-5 first:pt-0 last:pb-0 lg:pb-0 lg:px-7 first:lg:pl-0 last:lg:pr-0">
             <div>
@@ -442,7 +507,7 @@ export function SellerMetricsOverview({
         </div>
 
         {/* Linha de starts */}
-        <div className="pt-3.5 sm:pt-4 mt-4 sm:mt-5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] text-left">
+        <div className="relative pt-3.5 sm:pt-4 mt-4 sm:mt-5 border-t border-[var(--apple-separator,rgba(84,84,88,0.25))] flex items-center justify-between text-[12px] sm:text-[13px] lg:text-[14px] text-[var(--apple-text-secondary,rgba(235,235,245,0.6))] text-left">
           <span>
             <strong className="text-[var(--apple-text,#fff)] font-medium tabular-nums">{totalStartsCount}</strong>{" "}
             pessoas iniciaram conversa no período

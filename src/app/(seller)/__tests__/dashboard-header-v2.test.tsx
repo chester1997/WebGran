@@ -55,3 +55,19 @@ describe("MobileTopBarV2", () => {
     expect(html).toContain(">S<");
   });
 });
+
+describe("card de indicadores no celular (V2)", () => {
+  it("só a conta proprietária recebe o layout compacto", async () => {
+    vi.doUnmock("@/components/analytics/SellerMetricsOverview");
+    const { SellerMetricsOverview } = await vi.importActual<typeof import("@/components/analytics/SellerMetricsOverview")>(
+      "@/components/analytics/SellerMetricsOverview",
+    );
+    const owner = renderToStaticMarkup(<SellerMetricsOverview compactMobile />);
+    expect(owner).toContain('data-testid="metrics-compact-mobile"');
+    expect(owner).toContain("Pix pagos");
+    expect(owner).toContain("rgba(59,130,246,0.26)");
+    const other = renderToStaticMarkup(<SellerMetricsOverview />);
+    expect(other).not.toContain("metrics-compact-mobile");
+    expect(other).toContain("Dinheiro gerado pelas vendas aprovadas.");
+  });
+});

@@ -499,6 +499,7 @@ export function DashboardClient({ initialData, bots = [], isOwner = false }: Das
           chartSeries={data.chartSeries}
           isPending={isPending}
           periodLabel={activePeriodLabel}
+          compactMobile={isOwner}
         />
 
         {/* 3. Atividade recente, Mais Vendidos e Desempenho por Bot */}
