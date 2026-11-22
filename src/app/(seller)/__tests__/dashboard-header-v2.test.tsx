@@ -32,7 +32,7 @@ describe("cabeçalho do painel", () => {
     expect(html).toContain('aria-label="Filtrar por bot: Todos os bots"');
     expect(html).toContain("linear-gradient(135deg, #1d4ed8 0%, #3b82f6 55%, #60a5fa 100%)");
     expect(html).toContain('aria-label="Período: Últimos 30 dias"');
-    expect(html).toContain(">30D<");
+    expect(html).toContain(">30D</span>");
     expect(html).not.toContain("<select");
   });
 

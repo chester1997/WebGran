@@ -334,7 +334,7 @@ export function DashboardClient({ initialData, bots = [], isOwner = false }: Das
                   aria-expanded={isBotOpen}
                   aria-label={`Filtrar por bot: ${selectedBotObj ? botLabel(selectedBotObj) : "Todos os bots"}`}
                   title={selectedBotObj ? botLabel(selectedBotObj) : "Todos os bots"}
-                  className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white border border-white/20 transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+                  className="relative w-10 h-10 rounded-[9px] flex items-center justify-center text-white border border-white/20 transition-all hover:brightness-110 active:scale-95 cursor-pointer"
                   style={{
                     background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 55%, #60a5fa 100%)",
                     boxShadow: "0 8px 20px -8px rgba(59,130,246,0.85), inset 0 1px 0 rgba(255,255,255,0.3)",
@@ -389,14 +389,12 @@ export function DashboardClient({ initialData, bots = [], isOwner = false }: Das
                   aria-expanded={isPeriodOpen}
                   aria-label={`Período: ${activePeriodLabel}`}
                   title={activePeriodLabel}
-                  className={`relative w-10 h-10 rounded-xl flex items-center justify-center bg-[#15171D] hover:bg-[#1C1E26] border transition-all active:scale-95 cursor-pointer ${
+                  className={`relative h-10 pl-2.5 pr-3 rounded-[9px] inline-flex items-center gap-1.5 bg-[#15171D] hover:bg-[#1C1E26] border transition-all active:scale-95 cursor-pointer ${
                     isPeriodOpen ? "border-[#3b82f6]/80 ring-1 ring-[#3b82f6]/30 text-white" : "border-white/[0.08] hover:border-zinc-700 text-zinc-300 hover:text-white"
                   }`}
                 >
-                  <Calendar className="w-[18px] h-[18px]" />
-                  <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1 rounded-md bg-[#3b82f6] text-white text-[8.5px] font-bold leading-[13px] whitespace-nowrap shadow">
-                    {periodBadge}
-                  </span>
+                  <Calendar className="w-[17px] h-[17px] shrink-0" />
+                  <span className="text-[12px] font-semibold tabular-nums whitespace-nowrap">{periodBadge}</span>
                 </button>
                 {isPeriodOpen && periodPanel}
               </div>

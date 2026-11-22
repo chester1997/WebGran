@@ -30,7 +30,7 @@ export default function MobileTopBarV2({
           ref={buttonRef}
           type="button"
           onClick={onToggleDrawer}
-          className="group w-10 h-10 flex flex-col items-start justify-center gap-[5px] pl-[11px] rounded-xl bg-white/[0.035] border border-white/[0.07] hover:bg-white/[0.07] active:scale-95 transition-all cursor-pointer shrink-0"
+          className="group w-9 h-10 -ml-1 flex flex-col items-start justify-center gap-[5px] pl-1.5 rounded-lg active:scale-95 transition-transform cursor-pointer shrink-0"
           title={drawerOpen ? "Fechar menu" : "Abrir menu"}
           aria-label={drawerOpen ? "Fechar menu" : "Abrir menu"}
           aria-expanded={drawerOpen}
@@ -39,7 +39,7 @@ export default function MobileTopBarV2({
           <span className="block h-[2px] w-[12px] rounded-full bg-[#60a5fa] transition-all group-hover:w-[18px]" />
         </button>
 
-        <Link href="/seller" className="flex items-center gap-2.5 h-10 pl-1 pr-3 rounded-xl bg-white/[0.035] border border-white/[0.07] min-w-0">
+        <Link href="/seller" className="flex items-center gap-2.5 min-w-0">
           <Image
             src="/logo-webgran-icon.png"
             alt="WebGran"
