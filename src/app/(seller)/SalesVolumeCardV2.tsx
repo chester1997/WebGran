@@ -35,6 +35,17 @@ export function nextPlaque(revenue: number): { goal: number; allReached: boolean
   return goal ? { goal, allReached: false } : { goal: SALES_PLAQUES[SALES_PLAQUES.length - 1], allReached: true };
 }
 
+/** Cor de cada placa: bronze (50K), dourado (500K) e azul da plataforma (1,5M). */
+export type PlaqueTheme = { main: string; light: string; rgb: string; gradient: string };
+
+export const PLAQUE_THEMES: Record<number, PlaqueTheme> = {
+  50_000: { main: "#cd7f45", light: "#f0a66e", rgb: "205,127,69", gradient: "linear-gradient(90deg, #7c3f1d 0%, #cd7f45 60%, #f5b27a 100%)" },
+  500_000: { main: "#e0b24a", light: "#f5d27a", rgb: "224,178,74", gradient: "linear-gradient(90deg, #8a6420 0%, #e0b24a 60%, #fbe7a6 100%)" },
+  1_500_000: { main: "#3b82f6", light: "#60a5fa", rgb: "59,130,246", gradient: "linear-gradient(90deg, #1d4ed8 0%, #3b82f6 60%, #93c5fd 100%)" },
+};
+
+export const plaqueTheme = (plaque: number): PlaqueTheme => PLAQUE_THEMES[plaque] ?? PLAQUE_THEMES[1_500_000];
+
 /**
  * Card "Volume de vendas" do Redesign V2 — exclusivo da conta proprietária.
  * Mostra o faturamento rumo à próxima placa (50K → 500K → 1,5M), com trilha
@@ -49,6 +60,7 @@ export default function SalesVolumeCardV2({ totalRevenue }: { totalRevenue: numb
 
   const [intPart, centsPart] = brl(revenue).split(",");
   const pos = `${(ratio * 100).toFixed(2)}%`;
+  const t = plaqueTheme(goal);
 
   return (
     <div
@@ -61,24 +73,31 @@ export default function SalesVolumeCardV2({ totalRevenue }: { totalRevenue: numb
       {/* marca d'água do ícone e brilho azul */}
       <SolarSellerSalesVolumeIcon
         size={120}
-        className="pointer-events-none absolute -right-6 top-6 w-[120px] h-[120px] text-[#3b82f6] opacity-[0.06]"
+        className="pointer-events-none absolute -right-6 top-6 w-[120px] h-[120px] opacity-[0.07]"
+        style={{ color: t.main }}
       />
       <span
         aria-hidden="true"
         className="pointer-events-none absolute -right-10 -top-12 w-40 h-32 rounded-full"
-        style={{ background: "rgba(59,130,246,0.12)", filter: "blur(30px)" }}
+        style={{ background: `rgba(${t.rgb},0.13)`, filter: "blur(30px)" }}
       />
 
       {/* topo: ícone, título e próxima placa */}
       <div className="relative flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-7 h-7 shrink-0 rounded-lg border border-[#3b82f6]/30 bg-[#3b82f6]/10 flex items-center justify-center">
-            <SolarSellerSalesVolumeIcon size={16} className="w-4 h-4 text-[#60a5fa]" />
+          <span
+            className="w-7 h-7 shrink-0 rounded-lg border flex items-center justify-center"
+            style={{ borderColor: `rgba(${t.rgb},0.35)`, background: `rgba(${t.rgb},0.12)`, color: t.light }}
+          >
+            <SolarSellerSalesVolumeIcon size={16} className="w-4 h-4" />
           </span>
           <span className="text-[13px] font-semibold text-zinc-100 truncate">Volume de vendas</span>
         </div>
-        <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-semibold text-[#60a5fa] px-2 py-0.5 rounded-full border border-[#3b82f6]/35 bg-[#3b82f6]/10 tabular-nums">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+        <span
+          className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-0.5 rounded-full border tabular-nums"
+          style={{ color: t.light, borderColor: `rgba(${t.rgb},0.4)`, background: `rgba(${t.rgb},0.1)` }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.main }} />
           {allReached ? "Todas as placas" : `Próxima: ${formatPlaqueShort(goal)}`}
         </span>
       </div>
@@ -90,7 +109,7 @@ export default function SalesVolumeCardV2({ totalRevenue }: { totalRevenue: numb
           <span className="text-[17px] text-zinc-500">,{centsPart}</span>
         </p>
         <p className="mt-1.5 text-[11.5px] text-zinc-500 tabular-nums">
-          <span className="text-[#60a5fa] font-semibold">{formatGoalPercent(revenue, goal)}</span> da placa de{" "}
+          <span className="font-semibold" style={{ color: t.light }}>{formatGoalPercent(revenue, goal)}</span> da placa de{" "}
           {formatPlaqueLong(goal)}
         </p>
       </div>
@@ -109,22 +128,22 @@ export default function SalesVolumeCardV2({ totalRevenue }: { totalRevenue: numb
           className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full transition-all duration-700 ease-out"
           style={{
             width: pos,
-            background: "linear-gradient(90deg, #1d4ed8 0%, #3b82f6 60%, #93c5fd 100%)",
-            boxShadow: "0 0 12px rgba(59,130,246,0.65)",
+            background: t.gradient,
+            boxShadow: `0 0 12px rgba(${t.rgb},0.65)`,
           }}
         />
-        {[25, 50, 75].map((t) => (
+        {[25, 50, 75].map((tick) => (
           <span
-            key={t}
+            key={tick}
             aria-hidden="true"
             className="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-white/25"
-            style={{ left: `${t}%` }}
+            style={{ left: `${tick}%` }}
           />
         ))}
         <span
           aria-hidden="true"
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-[3px] border-[#3b82f6] transition-all duration-700 ease-out"
-          style={{ left: `clamp(8px, ${pos}, calc(100% - 8px))`, boxShadow: "0 0 12px rgba(59,130,246,0.85)" }}
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-[3px] transition-all duration-700 ease-out"
+          style={{ left: `clamp(8px, ${pos}, calc(100% - 8px))`, borderColor: t.main, boxShadow: `0 0 12px rgba(${t.rgb},0.85)` }}
         />
       </div>
 
@@ -155,16 +174,18 @@ export default function SalesVolumeCardV2({ totalRevenue }: { totalRevenue: numb
           {SALES_PLAQUES.map((p) => {
             const done = revenue >= p;
             const current = !allReached && p === goal;
+            const pt = plaqueTheme(p);
             return (
               <li key={p} className="flex items-center gap-2 text-[11.5px] tabular-nums">
                 <span
-                  className={`w-4 h-4 shrink-0 rounded-full flex items-center justify-center border ${
+                  className="w-4 h-4 shrink-0 rounded-full flex items-center justify-center border"
+                  style={
                     done
-                      ? "bg-[#3b82f6] border-[#3b82f6]"
+                      ? { background: pt.main, borderColor: pt.main }
                       : current
-                        ? "border-[#3b82f6] bg-[#3b82f6]/15"
-                        : "border-white/20"
-                  }`}
+                        ? { borderColor: pt.main, background: `rgba(${pt.rgb},0.15)` }
+                        : { borderColor: `rgba(${pt.rgb},0.35)` }
+                  }
                 >
                   {done && <Check className="w-2.5 h-2.5 text-white" />}
                 </span>

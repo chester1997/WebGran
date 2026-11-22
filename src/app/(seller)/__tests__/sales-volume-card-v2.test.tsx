@@ -25,5 +25,11 @@ describe("SalesVolumeCardV2 (placas)", () => {
     expect(html).toContain("187.600,00");
     expect(html).toContain("Ver premiações");
     expect(html).not.toMatch(/emerald|#10b981/);
+    expect(html).toContain("#e0b24a"); // dourado na placa de 500K
+  });
+
+  it("usa bronze na placa de 50K e azul na de 1,5M", () => {
+    expect(renderToStaticMarkup(<SalesVolumeCardV2 totalRevenue={45.5} />)).toContain("#cd7f45");
+    expect(renderToStaticMarkup(<SalesVolumeCardV2 totalRevenue={1004210} />)).toContain("59,130,246");
   });
 });
