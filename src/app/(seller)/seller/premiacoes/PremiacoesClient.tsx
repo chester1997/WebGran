@@ -92,7 +92,7 @@ export default function PremiacoesClient({
         }
       />
 
-      <div className="mx-auto w-full max-w-[1320px] flex flex-col gap-12">
+      <div className="w-full min-w-0 flex flex-col gap-12">
         {notice && (
           <div className="rounded-xl border border-[#3b82f6]/30 bg-[#3b82f6]/10 px-4 py-3 text-sm text-[#93c5fd] flex items-center justify-between gap-3">
             <span>{notice}</span>
