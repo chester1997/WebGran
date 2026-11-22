@@ -1,16 +1,20 @@
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { listAllRedemptions } from "@/lib/rewards/service";
+import { getPlaqueArts } from "@/lib/rewards/art";
 import AdminPremiacoesClient, { type AdminRedemption } from "./AdminPremiacoesClient";
 
 export default async function AdminPremiacoesPage() {
   await connection();
   await requireAdmin();
 
-  const { tableReady, rows } = await listAllRedemptions().catch((err) => {
-    console.error("[AdminPremiacoesPage]", err);
-    return { tableReady: false, rows: [] };
-  });
+  const [{ tableReady, rows }, { arts, custom }] = await Promise.all([
+    listAllRedemptions().catch((err) => {
+      console.error("[AdminPremiacoesPage]", err);
+      return { tableReady: false, rows: [] };
+    }),
+    getPlaqueArts(),
+  ]);
 
   const items: AdminRedemption[] = rows.map((r) => ({
     id: r.id,
@@ -26,5 +30,5 @@ export default async function AdminPremiacoesPage() {
     createdAt: r.createdAt.toISOString(),
   }));
 
-  return <AdminPremiacoesClient items={items} tableReady={tableReady} />;
+  return <AdminPremiacoesClient items={items} tableReady={tableReady} arts={arts} customArts={custom} />;
 }

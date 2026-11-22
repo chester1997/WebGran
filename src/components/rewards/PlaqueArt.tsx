@@ -2,11 +2,23 @@ import { Lock } from "lucide-react";
 import type { Plaque } from "@/lib/rewards/plaques";
 
 /**
- * Arte da placa. Usa a arte oficial quando existir (plaque.art);
+ * Arte da placa. Usa a arte em uso (troca do admin) ou a oficial padrão;
  * até lá, desenha a placa em código na cor do nível.
  */
-export function PlaqueArt({ plaque, locked = false, className = "" }: { plaque: Plaque; locked?: boolean; className?: string }) {
+export function PlaqueArt({
+  plaque,
+  src,
+  locked = false,
+  className = "",
+}: {
+  plaque: Plaque;
+  /** Arte em uso (troca do admin). Sem ela, usa a arte padrão da placa. */
+  src?: string | null;
+  locked?: boolean;
+  className?: string;
+}) {
   const { theme } = plaque;
+  const art = src === undefined ? plaque.art : src;
   return (
     <div
       className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl ${locked ? "grayscale opacity-45" : ""} ${className}`}
@@ -15,9 +27,9 @@ export function PlaqueArt({ plaque, locked = false, className = "" }: { plaque: 
         boxShadow: locked ? undefined : `0 18px 40px -18px rgba(${theme.rgb},0.6)`,
       }}
     >
-      {plaque.art ? (
+      {art ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={plaque.art} alt={`Placa ${plaque.short} — nível ${plaque.level}`} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={art} alt={`Placa ${plaque.short} — nível ${plaque.level}`} className="absolute inset-0 w-full h-full object-cover" />
       ) : (
         <div
           className="absolute inset-[7%] rounded-lg border flex flex-col items-center justify-between py-[10%]"

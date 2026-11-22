@@ -12,6 +12,7 @@ import {
   formatPlaqueLong,
   plaqueProgress,
   type Plaque,
+  type PlaqueArtMap,
   type RedemptionStatus,
 } from "@/lib/rewards/plaques";
 import { BR_UFS } from "@/lib/rewards/validate";
@@ -31,10 +32,13 @@ export default function PremiacoesClient({
   revenue,
   redemptions,
   redemptionReady,
+  arts,
 }: {
   revenue: number;
   redemptions: RedemptionView[];
   redemptionReady: boolean;
+  /** Arte em uso de cada placa (troca do admin ou padrão). */
+  arts: PlaqueArtMap;
 }) {
   const { next, allReached, current, reachedCount } = plaqueProgress(revenue);
   const [redeeming, setRedeeming] = useState<Plaque | null>(null);
@@ -84,7 +88,7 @@ export default function PremiacoesClient({
         style={{ background: `radial-gradient(80% 120% at 0% 0%, rgba(${t.rgb},0.14) 0%, #0f1117 55%, #0c0d12 100%)` }}
       >
         <div className="w-[160px] md:w-full mx-auto">
-          <PlaqueArt plaque={hero} />
+          <PlaqueArt plaque={hero} src={arts[hero.value]} />
         </div>
 
         <div className="min-w-0">
@@ -200,7 +204,7 @@ export default function PremiacoesClient({
                   <span className="text-[10.5px] font-semibold text-zinc-600 tabular-nums">#{String(i + 1).padStart(2, "0")}</span>
                 </div>
 
-                <PlaqueArt plaque={p} locked={!done && !isNext} />
+                <PlaqueArt plaque={p} src={arts[p.value]} locked={!done && !isNext} />
 
                 <div className="text-center">
                   <p className="font-bold text-white">Placa {p.short}</p>
@@ -223,10 +227,12 @@ export default function PremiacoesClient({
                 <div className="mt-auto flex flex-col gap-2">
                   {done ? (
                     <>
-                      {p.art ? (
+                      {arts[p.value] ? (
                         <a
-                          href={p.art}
-                          download={`placa-${p.short.toLowerCase()}.png`}
+                          href={arts[p.value] ?? undefined}
+                          download={`placa-${p.short.toLowerCase().replace(",", "-")}.webp`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="h-9 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-200 inline-flex items-center justify-center gap-1.5"
                         >
                           <Download className="w-3.5 h-3.5" /> Baixar arte

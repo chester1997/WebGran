@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { getStorePaidRevenue, listStoreRedemptions } from "@/lib/rewards/service";
+import { getPlaqueArts } from "@/lib/rewards/art";
 import SetupStoreClient from "../SetupStoreClient";
 import PremiacoesClient, { type RedemptionView } from "./PremiacoesClient";
 
@@ -13,12 +14,13 @@ export default async function PremiacoesPage() {
   const store = await getCurrentStore();
   if (!store) return <SetupStoreClient />;
 
-  const [revenue, redemptions] = await Promise.all([
+  const [revenue, redemptions, { arts }] = await Promise.all([
     getStorePaidRevenue(store.id),
     listStoreRedemptions(store.id).catch((err) => {
       console.error("[PremiacoesPage] redemptions:", err);
       return { tableReady: false, rows: [] };
     }),
+    getPlaqueArts(),
   ]);
 
   const views: RedemptionView[] = redemptions.rows.map((r) => ({
@@ -29,5 +31,5 @@ export default async function PremiacoesPage() {
     createdAt: r.createdAt.toISOString(),
   }));
 
-  return <PremiacoesClient revenue={revenue} redemptions={views} redemptionReady={redemptions.tableReady} />;
+  return <PremiacoesClient revenue={revenue} redemptions={views} redemptionReady={redemptions.tableReady} arts={arts} />;
 }

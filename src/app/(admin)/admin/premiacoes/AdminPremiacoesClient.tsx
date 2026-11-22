@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { ImageUp, RotateCcw } from "lucide-react";
+import { PlaqueArt } from "@/components/rewards/PlaqueArt";
 import AdminPageHeader from "../../AdminPageHeader";
 import {
   REDEMPTION_STATUSES,
   REDEMPTION_STATUS_LABEL,
   brl,
+  PLAQUES,
   getPlaque,
+  type Plaque,
+  type PlaqueArtMap,
   type RedemptionStatus,
 } from "@/lib/rewards/plaques";
 import { updatePlaqueRedemption } from "./actions";
@@ -28,7 +33,17 @@ export type AdminRedemption = {
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-export default function AdminPremiacoesClient({ items, tableReady }: { items: AdminRedemption[]; tableReady: boolean }) {
+export default function AdminPremiacoesClient({
+  items,
+  tableReady,
+  arts,
+  customArts,
+}: {
+  items: AdminRedemption[];
+  tableReady: boolean;
+  arts: PlaqueArtMap;
+  customArts: Record<number, boolean>;
+}) {
   const [filter, setFilter] = useState<"OPEN" | "ALL">("OPEN");
   const shown = filter === "ALL" ? items : items.filter((i) => i.status !== "DELIVERED" && i.status !== "CANCELED");
   const openCount = items.filter((i) => i.status !== "DELIVERED" && i.status !== "CANCELED").length;
@@ -42,7 +57,7 @@ export default function AdminPremiacoesClient({ items, tableReady }: { items: Ad
             {openCount} em aberto
           </span>
         }
-        subtitle="Pedidos de resgate das placas físicas de faturamento. Atualize o status e o rastreio; o vendedor acompanha pela página de Premiações."
+        subtitle="Troque as artes das placas e acompanhe os pedidos de resgate das placas físicas. O vendedor vê tudo pela página de Premiações."
       />
 
       {!tableReady && (
@@ -51,6 +66,21 @@ export default function AdminPremiacoesClient({ items, tableReady }: { items: Ad
         </p>
       )}
 
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-white">Artes das placas</h2>
+          <p className="text-xs text-zinc-500">
+            A imagem aparece na página de Premiações dos vendedores e no botão Baixar arte. PNG, JPG ou WEBP de até 4 MB, de preferência em retrato 3:4 (ex.: 1488×2000).
+          </p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+          {PLAQUES.map((p) => (
+            <ArtSlot key={p.value} plaque={p} initialUrl={arts[p.value] ?? null} initialCustom={!!customArts[p.value]} />
+          ))}
+        </div>
+      </section>
+
+      <h2 className="text-sm font-semibold text-white pt-2">Pedidos de resgate</h2>
       <div className="inline-flex rounded-lg border border-white/[0.08] bg-[#0F1014] p-0.5 text-xs">
         {([["OPEN", "Em aberto"], ["ALL", "Todos"]] as const).map(([v, l]) => (
           <button
@@ -142,6 +172,96 @@ function RedemptionRow({ item }: { item: AdminRedemption }) {
         </button>
         {msg && <span className="text-[11px] text-zinc-400 w-full lg:text-right">{msg}</span>}
       </div>
+    </div>
+  );
+}
+
+function ArtSlot({ plaque, initialUrl, initialCustom }: { plaque: Plaque; initialUrl: string | null; initialCustom: boolean }) {
+  const [url, setUrl] = useState(initialUrl);
+  const [custom, setCustom] = useState(initialCustom);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.set("plaqueValue", String(plaque.value));
+      fd.set("file", file);
+      const res = await fetch("/api/admin/premiacoes/art", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || "Não foi possível enviar.");
+      setUrl(data.url);
+      setCustom(true);
+      setMsg({ ok: true, text: "Arte trocada." });
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "Erro inesperado." });
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const restore = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/premiacoes/art?plaque=${plaque.value}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || "Não foi possível restaurar.");
+      setUrl(data.url ?? plaque.art);
+      setCustom(false);
+      setMsg({ ok: true, text: "Arte padrão restaurada." });
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "Erro inesperado." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-[#0F1014] p-3 flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold" style={{ color: plaque.theme.light }}>
+          Placa {plaque.short}
+        </span>
+        <span className="text-[10px] text-zinc-500">{custom ? "Personalizada" : "Padrão"}</span>
+      </div>
+      <div className={busy ? "opacity-50" : ""}>
+        <PlaqueArt plaque={plaque} src={url} />
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        aria-label={`Nova arte da Placa ${plaque.short}`}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void upload(f);
+        }}
+      />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+        className="h-8 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] disabled:opacity-50 text-xs font-semibold text-white inline-flex items-center justify-center gap-1.5"
+      >
+        <ImageUp className="w-3.5 h-3.5" /> {busy ? "Enviando..." : "Trocar imagem"}
+      </button>
+      {custom && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={restore}
+          className="h-8 rounded-lg border border-white/10 hover:bg-white/[0.05] disabled:opacity-50 text-xs text-zinc-300 inline-flex items-center justify-center gap-1.5"
+        >
+          <RotateCcw className="w-3.5 h-3.5" /> Restaurar padrão
+        </button>
+      )}
+      {msg && <p className={`text-[11px] ${msg.ok ? "text-[#60a5fa]" : "text-red-400"}`}>{msg.text}</p>}
     </div>
   );
 }
