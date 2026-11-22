@@ -1757,3 +1757,31 @@ export const flowBroadcasts = pgTable('flow_broadcasts', {
 }, (t) => ({
   flowIdx: index('flow_broadcasts_flow_idx').on(t.flowId, t.createdAt),
 }));
+
+/**
+ * Premiações: pedidos de resgate das placas físicas de faturamento (migration 0027).
+ * Um pedido ativo por placa e loja; o admin acompanha status e rastreio.
+ */
+export const plaqueRedemptions = pgTable('plaque_redemptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  plaqueValue: integer('plaque_value').notNull(),
+  fullName: text('full_name').notNull(),
+  phone: text('phone').notNull(),
+  zipCode: text('zip_code').notNull(),
+  street: text('street').notNull(),
+  number: text('number').notNull(),
+  complement: text('complement'),
+  district: text('district').notNull(),
+  city: text('city').notNull(),
+  state: text('state').notNull(),
+  notes: text('notes'),
+  revenueAtRequest: decimal('revenue_at_request', { precision: 14, scale: 2 }).notNull().default('0'),
+  status: text('status').notNull().default('PENDING'), // 'PENDING' | 'PRODUCING' | 'SHIPPED' | 'DELIVERED' | 'CANCELED'
+  trackingCode: text('tracking_code'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  statusIdx: index('plaque_redemptions_status_idx').on(t.status, t.createdAt),
+}));

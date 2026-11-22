@@ -38,6 +38,7 @@ import {
   SolarPaletteRoundIcon,
   SolarSettingsIcon,
   SolarShop2Icon,
+  SolarCupStarIcon,
 } from "@/components/icons/solar";
 
 interface AdminUser {
@@ -98,6 +99,7 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
     { label: "Vendedores e Taxas", href: "/admin/sellers", icon: SolarUsersGroupRoundedIcon },
     { label: "Comissão da Plataforma", href: "/admin/commission", icon: SolarHandMoneyIcon },
     { label: "Relatórios", href: "/admin/reports", icon: SolarChart2Icon },
+    { label: "Premiações", href: "/admin/premiacoes", icon: SolarCupStarIcon },
   ];
 
   // Section 3: PLATAFORMA

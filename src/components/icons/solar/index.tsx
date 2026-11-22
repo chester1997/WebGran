@@ -575,3 +575,29 @@ export const SOLAR_MENU_ICONS = [
     Component: SolarShop2Icon,
   },
 ] as const;
+
+/**
+ * Premiações (cup-star duotone)
+ */
+export function SolarCupStarIcon({
+  size = 16,
+  className,
+  ...props
+}: SolarIconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      {...props}
+    >
+      <path opacity=".5" d="M5 4H3.5A1.5 1.5 0 0 0 2 5.5v1A4.5 4.5 0 0 0 6.06 11a6.5 6.5 0 0 1-1.06-3.5V4Zm14 0h1.5A1.5 1.5 0 0 1 22 5.5v1A4.5 4.5 0 0 1 17.94 11 6.5 6.5 0 0 0 19 7.5V4Z" />
+      <path d="M6 3.75C6 2.78 6.78 2 7.75 2h8.5c.97 0 1.75.78 1.75 1.75V8a6 6 0 0 1-12 0V3.75Zm6.55 2.1a.6.6 0 0 0-1.1 0l-.6 1.3-1.42.17a.6.6 0 0 0-.34 1.04l1.05.96-.28 1.4a.6.6 0 0 0 .89.65L12 10.7l1.25.67a.6.6 0 0 0 .89-.65l-.28-1.4 1.05-.96a.6.6 0 0 0-.34-1.04l-1.42-.17-.6-1.3Z" />
+      <path opacity=".5" d="M11 14.92V18H9a2 2 0 0 0-2 2v1.25c0 .41.34.75.75.75h8.5c.41 0 .75-.34.75-.75V20a2 2 0 0 0-2-2h-2v-3.08a7 7 0 0 1-2 0Z" />
+    </svg>
+  );
+}
