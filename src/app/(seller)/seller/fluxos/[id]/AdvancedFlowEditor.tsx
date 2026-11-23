@@ -1,7 +1,53 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Maximize2, Minus, Plus, Trash2 } from "lucide-react";
+import "@xyflow/react/dist/base.css";
+import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType, type DragEvent as ReactDragEvent } from "react";
+import {
+  Background,
+  BackgroundVariant,
+  Handle,
+  MiniMap,
+  Panel,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
+  type Connection,
+  type Edge,
+  type Node,
+  type NodeProps,
+} from "@xyflow/react";
+import {
+  Clock,
+  Copy,
+  CornerDownRight,
+  GitBranch,
+  HelpCircle,
+  Image as ImageIcon,
+  KeyRound,
+  LayoutList,
+  LocateFixed,
+  Lock,
+  Maximize,
+  MessageSquare,
+  Mic,
+  Minus,
+  MoreHorizontal,
+  PackagePlus,
+  Plus,
+  QrCode,
+  Redo2,
+  Shuffle,
+  StickyNote,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Undo2,
+  Unlock,
+  Zap,
+} from "lucide-react";
 import {
   graphChecklist,
   isFailOutput,
@@ -12,44 +58,281 @@ import {
   normalizeGraph,
   PALETTE_CATEGORIES,
   type FlowGraph,
-  type FlowNode,
   type NodeType,
   type NodeTypeDef,
 } from "@/lib/flows/advanced-graph";
 import { saveFlowConfigAction } from "../actions";
-import { CARD, Callout, INPUT, useToast } from "../_components/flow-ui";
+import { BTN_GHOST, BTN_PRI, INPUT, Modal, useToast } from "../_components/flow-ui";
 import EditorTopBar, { type SaveState } from "../_components/EditorTopBar";
 import Toaster from "../_components/Toaster";
 import type { FlowChat, FlowProduct } from "./BasicFlowEditor";
 
-/* Medidas fixas dos blocos: as ligações são calculadas a partir delas, sem medir o DOM. */
-const NODE_W = 232;
-const HEAD_H = 42;
-const BODY_H = 44;
-const OUT_PAD = 4;
-const OUT_H = 24;
-const PORT_R = 7;
+/* ------------------------------------------------------------------ */
+/* Tipos e utilidades                                                  */
+/* ------------------------------------------------------------------ */
+type Values = Record<string, string | number>;
+type BlockData = { type: NodeType; values: Values };
+type BlockNode = Node<BlockData, "block">;
 
+const ACCENT = "#3b82f6";
 const def = (t: NodeType) => NODE_TYPES[t] as NodeTypeDef;
 const newId = () => `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const brl = (v: number) => "R$ " + (Number(v) || 0).toFixed(2).replace(".", ",");
+const edgeId = (source: string, out: string) => `${source}|${out}`;
 
-function outPoint(n: FlowNode, index: number) {
-  return { x: n.x + NODE_W, y: n.y + HEAD_H + BODY_H + OUT_PAD + index * OUT_H + OUT_H / 2 };
-}
-function inPoint(n: FlowNode) {
-  return { x: n.x, y: n.y + HEAD_H / 2 };
+const ICONS: Record<NodeType, ComponentType<{ className?: string }>> = {
+  inicio: Zap,
+  texto: MessageSquare,
+  midia: ImageIcon,
+  audio: Mic,
+  botoes: LayoutList,
+  digitando: MoreHorizontal,
+  pergunta: HelpCircle,
+  espera: Clock,
+  condicao: GitBranch,
+  ab: Shuffle,
+  salto: CornerDownRight,
+  pix: QrCode,
+  bump: PackagePlus,
+  upsell: TrendingUp,
+  downsell: TrendingDown,
+  entrega: KeyRound,
+  nota: StickyNote,
+};
+
+const DESC: Record<NodeType, string> = {
+  inicio: "Começa quando o cliente manda /start",
+  texto: "Envia uma mensagem de texto",
+  midia: "Envia foto ou vídeo com legenda",
+  audio: "Envia um áudio de voz",
+  botoes: "Texto com botões, um caminho por botão",
+  digitando: "Mostra “digitando…” por alguns segundos",
+  pergunta: "Pergunta e guarda a resposta",
+  espera: "Espera um tempo antes de seguir",
+  condicao: "Divide o caminho por uma regra",
+  ab: "Divide os clientes em dois caminhos",
+  salto: "Continua em outro bloco",
+  pix: "Gera o Pix de um plano",
+  bump: "Oferta extra antes do Pix",
+  upsell: "Oferta logo depois da compra",
+  downsell: "Desconto para quem não comprou",
+  entrega: "Libera o acesso ao grupo ou canal",
+  nota: "Anotação que só você vê",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  Mensagens: "Comunicação",
+  Lógica: "Lógica e fluxo",
+  Venda: "Venda",
+  "Entrega e notas": "Entrega e notas",
+};
+
+function toFlow(g: FlowGraph): { nodes: BlockNode[]; edges: Edge[] } {
+  return {
+    nodes: g.nodes.map((n) => ({
+      id: n.id,
+      type: "block",
+      position: { x: n.x, y: n.y },
+      data: { type: n.type, values: { ...n.data } },
+      deletable: n.type !== "inicio",
+    })),
+    edges: g.edges.map((e) => ({ id: edgeId(e.from, e.out), source: e.from, sourceHandle: e.out, target: e.to, targetHandle: "in" })),
+  };
 }
 
-export default function AdvancedFlowEditor({
-  flowId,
-  name,
-  status,
-  bots,
-  products,
-  chats,
-  initialGraph,
-}: {
+function toGraph(nodes: BlockNode[], edges: Edge[]): FlowGraph {
+  return {
+    version: 1,
+    nodes: nodes.map((n) => ({ id: n.id, type: n.data.type, x: Math.round(n.position.x), y: Math.round(n.position.y), data: n.data.values })),
+    edges: edges.map((e) => ({ from: e.source, out: String(e.sourceHandle ?? "out"), to: e.target })),
+  };
+}
+
+/** Numeração dos blocos na ordem em que o cliente passa por eles (a partir do Início). */
+function blockOrder(nodes: BlockNode[], edges: Edge[]): Map<string, number> {
+  const order = new Map<string, number>();
+  const start = nodes.find((n) => n.data.type === "inicio");
+  const queue = start ? [start.id] : [];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (order.has(id)) continue;
+    order.set(id, order.size + 1);
+    const node = nodes.find((n) => n.id === id);
+    if (!node) continue;
+    for (const [k] of nodeOutputs({ type: node.data.type, data: node.data.values })) {
+      const e = edges.find((x) => x.source === id && x.sourceHandle === k);
+      if (e && !order.has(e.target)) queue.push(e.target);
+    }
+  }
+  for (const n of nodes) if (n.data.type !== "nota" && !order.has(n.id)) order.set(n.id, order.size + 1);
+  return order;
+}
+
+function summary(type: NodeType, values: Values, products: FlowProduct[]) {
+  if (type === "pix") {
+    const p = products.find((x) => x.id === values.productId);
+    return `${p ? `${p.title} · ${brl(p.price)}` : "Escolha o plano"} · espera ${values.wait} min`;
+  }
+  return def(type).summary(values);
+}
+
+/** Histórico de desfazer/refazer (fora do React; avisa a tela quando muda). */
+function createHistory(initial: string) {
+  let past: string[] = [];
+  let future: string[] = [];
+  let current = initial;
+  let snap = { canUndo: false, canRedo: false };
+  const listeners = new Set<() => void>();
+  const emit = () => {
+    snap = { canUndo: past.length > 0, canRedo: future.length > 0 };
+    listeners.forEach((l) => l());
+  };
+  return {
+    subscribe: (l: () => void) => {
+      listeners.add(l);
+      return () => {
+        listeners.delete(l);
+      };
+    },
+    get: () => snap,
+    record: (key: string) => {
+      if (key === current) return;
+      past = [...past.slice(-79), current];
+      future = [];
+      current = key;
+      emit();
+    },
+    undo: (): string | null => {
+      const prev = past.pop();
+      if (prev === undefined) return null;
+      future.push(current);
+      current = prev;
+      emit();
+      return prev;
+    },
+    redo: (): string | null => {
+      const next = future.pop();
+      if (next === undefined) return null;
+      past.push(current);
+      current = next;
+      emit();
+      return next;
+    },
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Contexto compartilhado com os blocos                                */
+/* ------------------------------------------------------------------ */
+interface EditorCtx {
+  order: Map<string, number>;
+  products: FlowProduct[];
+  locked: boolean;
+  open: (id: string) => void;
+  duplicate: (id: string) => void;
+  remove: (id: string) => void;
+}
+const Ctx = createContext<EditorCtx | null>(null);
+const useEditor = () => useContext(Ctx)!;
+
+const PORT = "!w-[13px] !h-[13px] !rounded-full !border-2 !bg-[#0e0f13] transition-colors";
+
+/* ------------------------------------------------------------------ */
+/* Bloco                                                               */
+/* ------------------------------------------------------------------ */
+const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) {
+  const ed = useEditor();
+  const d = def(data.type);
+  const Icon = ICONS[data.type];
+  const outs = nodeOutputs({ type: data.type, data: data.values });
+  const num = ed.order.get(id);
+  const text = summary(data.type, data.values, ed.products);
+
+  if (data.type === "nota") {
+    return (
+      <div
+        onDoubleClick={() => ed.open(id)}
+        className={`group w-[240px] rounded-[12px] border px-3.5 py-3 bg-[#1d1a0f] text-[13px] leading-[1.5] text-amber-100/90 shadow-[0_14px_30px_-18px_#000] ${selected ? "border-amber-300/70 ring-[3px] ring-amber-300/15" : "border-amber-300/20"}`}
+      >
+        <div className="flex items-center gap-2 mb-1.5 text-[11.5px] font-semibold text-amber-200/80">
+          <StickyNote className="w-3.5 h-3.5" />
+          Nota
+          <NodeActions id={id} className="ml-auto" />
+        </div>
+        <p className="whitespace-pre-wrap break-words line-clamp-6">{String(data.values.text || "") || "Clique duas vezes para escrever."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onDoubleClick={() => ed.open(id)}
+      className={`group relative w-[288px] rounded-[16px] border bg-[linear-gradient(180deg,#17181d_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_38px_-20px_rgba(0,0,0,0.95)] transition-[border-color,box-shadow] ${
+        selected ? "border-[#3b82f6]/70 ring-[3px] ring-[#3b82f6]/20" : "border-white/[0.09] hover:border-white/[0.16]"
+      }`}
+    >
+      {/* fio de luz azul no topo */}
+      <span aria-hidden="true" className="pointer-events-none absolute left-5 right-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${ACCENT}, transparent)` }} />
+
+      {data.type !== "inicio" && (
+        <Handle type="target" position={Position.Left} id="in" isConnectable={!ed.locked} className={`${PORT} !border-zinc-400 hover:!border-[#3b82f6]`} style={{ top: 29 }} />
+      )}
+
+      <header className="relative flex items-center gap-2.5 h-[58px] px-3.5 border-b border-white/[0.06]">
+        {num !== undefined && (
+          <span className="w-6 h-6 rounded-full bg-[#3b82f6] text-white text-[12px] font-semibold flex items-center justify-center shrink-0 tabular-nums shadow-[0_0_0_3px_rgba(59,130,246,0.15)]">{num}</span>
+        )}
+        <span className="w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: d.color + "1f", color: d.color }}>
+          <Icon className="w-[15px] h-[15px]" />
+        </span>
+        <b className="text-[15px] font-semibold text-white tracking-tight truncate">{d.label}</b>
+        {data.type !== "inicio" && <NodeActions id={id} className="absolute right-2.5 top-[15px] pl-3 bg-[linear-gradient(90deg,transparent,#17181d_30%)]" />}
+      </header>
+
+      <div className="px-3.5 py-3 text-[13px] leading-[1.5] text-zinc-400 break-words">
+        <span className="line-clamp-3">{text}</span>
+      </div>
+
+      {outs.length > 0 && (
+        <div className="border-t border-white/[0.06] py-1.5">
+          {outs.map(([k, label]) => {
+            const tone = isSuccessOutput(k) ? "!border-emerald-400 hover:!bg-emerald-400" : isFailOutput(k) ? "!border-red-400 hover:!bg-red-400" : "!border-[#3b82f6] hover:!bg-[#3b82f6]";
+            const txt = isSuccessOutput(k) ? "text-emerald-400/90" : isFailOutput(k) ? "text-red-400/90" : label ? "text-zinc-400" : "text-[#60a5fa]";
+            return (
+              <div key={k} className="relative flex items-center justify-end h-[26px] pr-4 pl-3.5">
+                <span className={`text-[12px] truncate ${txt}`}>{label || "Próximo passo"}</span>
+                <Handle type="source" position={Position.Right} id={k} isConnectable={!ed.locked} className={`${PORT} ${tone}`} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+});
+
+function NodeActions({ id, className = "" }: { id: string; className?: string }) {
+  const ed = useEditor();
+  if (ed.locked) return null;
+  const btn = "nodrag w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 transition-colors";
+  return (
+    <span className={`flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity ${className}`}>
+      <button type="button" aria-label="Duplicar bloco" title="Duplicar (Ctrl+D)" onClick={(e) => { e.stopPropagation(); ed.duplicate(id); }} className={`${btn} hover:text-white hover:bg-white/[0.07]`}>
+        <Copy className="w-3.5 h-3.5" />
+      </button>
+      <button type="button" aria-label="Excluir bloco" title="Excluir (Delete)" onClick={(e) => { e.stopPropagation(); ed.remove(id); }} className={`${btn} hover:text-red-400 hover:bg-red-500/10`}>
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </span>
+  );
+}
+
+const nodeTypes = { block: Block };
+
+/* ------------------------------------------------------------------ */
+/* Editor                                                              */
+/* ------------------------------------------------------------------ */
+type Props = {
   flowId: string;
   name: string;
   status: "draft" | "published";
@@ -58,381 +341,526 @@ export default function AdvancedFlowEditor({
   chats: FlowChat[];
   botName: string;
   initialGraph: FlowGraph;
-}) {
+};
+
+export default function AdvancedFlowEditor(props: Props) {
+  return (
+    <ReactFlowProvider>
+      <Editor {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function Editor({ flowId, name, status, bots, products, chats, initialGraph }: Props) {
   const toast = useToast();
-  const [graph, setGraph] = useState<FlowGraph>(() => normalizeGraph(initialGraph));
-  const [sel, setSel] = useState<string | null>(null);
-  const [scale, setScale] = useState(0.9);
-  const [connecting, setConnecting] = useState<{ from: string; out: string } | null>(null);
+  const rf = useReactFlow<BlockNode, Edge>();
+  const initial = useMemo(() => toFlow(normalizeGraph(initialGraph)), [initialGraph]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<BlockNode>(initial.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial.edges);
+  const [locked, setLocked] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; draft: Values } | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("saved");
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
-  const justDragged = useRef(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const graph = useMemo(() => toGraph(nodes, edges), [nodes, edges]);
+  const graphKey = useMemo(() => JSON.stringify(graph), [graph]);
+  const order = useMemo(() => blockOrder(nodes, edges), [nodes, edges]);
+
+  /** Sobe a cada fim de arrasto/restauração: refaz histórico e salvamento com a posição final. */
+  const [tick, bump] = useState(0);
+
+  /* ---------- salvamento automático ---------- */
   const lastSaved = useRef<string | null>(null);
   const seq = useRef(0);
-
-  const byId = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
-  const selected = sel ? byId.get(sel) || null : null;
-
-  // Salvamento automático.
   useEffect(() => {
-    const snapshot = JSON.stringify(graph);
-    if (lastSaved.current === null) lastSaved.current = snapshot;
-    if (snapshot === lastSaved.current) {
+    if (lastSaved.current === null) lastSaved.current = graphKey;
+    if (graphKey === lastSaved.current) {
       setSaveState((s) => (s === "dirty" ? "saved" : s));
       return;
     }
     setSaveState("dirty");
     const id = ++seq.current;
     const t = setTimeout(async () => {
+      if (dragging.current) return;
       setSaveState("saving");
-      const res = await saveFlowConfigAction(flowId, graph);
+      const res = await saveFlowConfigAction(flowId, JSON.parse(graphKey));
       if (id !== seq.current) return;
       if (!res.success) {
         setSaveState("error");
         toast(res.error, "err");
       } else {
-        lastSaved.current = snapshot;
+        lastSaved.current = graphKey;
         setSaveState("saved");
       }
     }, 1200);
     return () => clearTimeout(t);
-  }, [graph, flowId, toast]);
+  }, [graphKey, tick, flowId, toast]);
 
-  const mutate = useCallback((fn: (g: FlowGraph) => FlowGraph) => setGraph((g) => fn(g)), []);
+  /* ---------- desfazer / refazer ---------- */
+  const [history] = useState(() => createHistory(graphKey));
+  const { canUndo, canRedo } = useSyncExternalStore(history.subscribe, history.get, history.get);
+  useEffect(() => {
+    if (!dragging.current) history.record(graphKey);
+  }, [graphKey, tick, history]);
 
-  const addNode = (type: NodeType) => {
-    if (graph.nodes.length >= MAX_NODES) {
-      toast(`Limite de ${MAX_NODES} blocos por fluxo.`, "err");
-      return;
-    }
-    const w = wrapRef.current;
-    const cx = w ? (w.scrollLeft + w.clientWidth / 2) / scale : 400;
-    const cy = w ? (w.scrollTop + w.clientHeight / 2) / scale : 300;
-    const data: Record<string, string | number> = { ...def(type).defaults };
-    if (type === "pix" && products[0]) data.productId = products[0].id;
-    if (type === "entrega" && chats[0]) data.chatId = chats[0].id;
-    const node: FlowNode = { id: newId(), type, x: Math.max(10, Math.round(cx - NODE_W / 2 + (Math.random() * 60 - 30))), y: Math.max(10, Math.round(cy - 60 + (Math.random() * 60 - 30))), data };
-    mutate((g) => ({ ...g, nodes: [...g.nodes, node] }));
-    setSel(node.id);
-  };
+  const restore = useCallback(
+    (key: string | null) => {
+      if (!key) return;
+      const f = toFlow(JSON.parse(key) as FlowGraph);
+      setNodes(f.nodes);
+      setEdges(f.edges);
+    },
+    [setNodes, setEdges]
+  );
+  const undo = useCallback(() => restore(history.undo()), [restore, history]);
+  const redo = useCallback(() => restore(history.redo()), [restore, history]);
 
-  const removeNode = (id: string) => {
-    if (byId.get(id)?.type === "inicio") return;
-    mutate((g) => ({ ...g, nodes: g.nodes.filter((n) => n.id !== id), edges: g.edges.filter((e) => e.from !== id && e.to !== id) }));
-    setSel(null);
-  };
+  /* ---------- ações nos blocos ---------- */
+  const centerPoint = useCallback(() => {
+    const r = canvasRef.current?.getBoundingClientRect();
+    return r ? rf.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 }) : { x: 300, y: 200 };
+  }, [rf]);
 
-  const duplicateNode = (id: string) => {
-    const n = byId.get(id);
-    if (!n || n.type === "inicio") return;
-    const copy: FlowNode = { ...n, id: newId(), x: n.x + 30, y: n.y + 40, data: { ...n.data } };
-    mutate((g) => ({ ...g, nodes: [...g.nodes, copy] }));
-    setSel(copy.id);
-  };
+  const addNode = useCallback(
+    (type: NodeType, at?: { x: number; y: number }) => {
+      if (nodes.length >= MAX_NODES) {
+        toast(`Limite de ${MAX_NODES} blocos por fluxo.`, "err");
+        return;
+      }
+      const p = at || centerPoint();
+      const values: Values = { ...def(type).defaults };
+      if (type === "pix" && products[0]) values.productId = products[0].id;
+      if (type === "entrega" && chats[0]) values.chatId = chats[0].id;
+      const jitter = at ? 0 : Math.round(Math.random() * 40 - 20);
+      const node: BlockNode = {
+        id: newId(),
+        type: "block",
+        position: { x: Math.round(p.x - 144 + jitter), y: Math.round(p.y - 60 + jitter) },
+        data: { type, values },
+        selected: true,
+        deletable: true,
+      };
+      setNodes((ns) => [...ns.map((n) => (n.selected ? { ...n, selected: false } : n)), node]);
+      setPaletteOpen(false);
+    },
+    [nodes.length, centerPoint, products, chats, setNodes, toast]
+  );
 
-  const setData = (id: string, key: string, value: string | number) =>
-    mutate((g) => {
-      const nodes = g.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, [key]: value } } : n));
-      // Se um bloco de botões perdeu saídas, remove as ligações órfãs.
-      const valid = new Set(nodes.flatMap((n) => nodeOutputs(n).map(([k]) => `${n.id}|${k}`)));
-      return { ...g, nodes, edges: g.edges.filter((e) => valid.has(`${e.from}|${e.out}`)) };
-    });
+  const duplicate = useCallback(
+    (id: string) => {
+      setNodes((ns) => {
+        const n = ns.find((x) => x.id === id);
+        if (!n || n.data.type === "inicio" || ns.length >= MAX_NODES) return ns;
+        const copy: BlockNode = { ...n, id: newId(), position: { x: n.position.x + 36, y: n.position.y + 44 }, data: { type: n.data.type, values: { ...n.data.values } }, selected: true, deletable: true };
+        return [...ns.map((x) => ({ ...x, selected: false })), copy];
+      });
+    },
+    [setNodes]
+  );
 
-  const connectTo = (targetId: string) => {
-    if (!connecting) return;
-    const target = byId.get(targetId);
-    if (target && target.type !== "inicio" && targetId !== connecting.from) {
-      mutate((g) => ({ ...g, edges: [...g.edges.filter((e) => !(e.from === connecting.from && e.out === connecting.out)), { from: connecting.from, out: connecting.out, to: targetId }] }));
-    }
-    setConnecting(null);
-  };
+  const remove = useCallback(
+    (id: string) => {
+      if (nodes.find((n) => n.id === id)?.data.type === "inicio") return;
+      setNodes((ns) => ns.filter((n) => n.id !== id));
+      setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
+    },
+    [nodes, setNodes, setEdges]
+  );
 
-  // Teclado: Esc cancela ligação; Delete apaga o bloco selecionado (fora de campos de texto).
+  const open = useCallback(
+    (id: string) => {
+      const n = nodes.find((x) => x.id === id);
+      if (n) setEditing({ id, draft: { ...n.data.values } });
+    },
+    [nodes]
+  );
+
+  const saveEdit = useCallback(() => {
+    if (!editing) return;
+    const node = nodes.find((n) => n.id === editing.id);
+    if (!node) return setEditing(null);
+    const valid = new Set(nodeOutputs({ type: node.data.type, data: editing.draft }).map(([k]) => k));
+    setNodes((ns) => ns.map((n) => (n.id === editing.id ? { ...n, data: { ...n.data, values: editing.draft } } : n)));
+    // Um bloco de botões que perdeu saídas perde também as ligações delas.
+    setEdges((es) => es.filter((e) => e.source !== editing.id || valid.has(String(e.sourceHandle))));
+    setEditing(null);
+  }, [editing, nodes, setNodes, setEdges]);
+
+  /* ---------- ligações ---------- */
+  const typeOf = useCallback((id: string | null | undefined) => nodes.find((n) => n.id === id)?.data.type, [nodes]);
+
+  const link = useCallback(
+    (source: string, out: string, target: string) => {
+      if (source === target || typeOf(target) === "inicio" || typeOf(target) === "nota") return;
+      setEdges((es) => [...es.filter((e) => !(e.source === source && e.sourceHandle === out)), { id: edgeId(source, out), source, sourceHandle: out, target, targetHandle: "in" }]);
+    },
+    [setEdges, typeOf]
+  );
+
+  const onConnect = useCallback((c: Connection) => c.sourceHandle && link(c.source, c.sourceHandle, c.target), [link]);
+
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) => c.source !== c.target && typeOf(c.target) !== "inicio" && typeOf(c.target) !== "nota" && (c.targetHandle ?? "in") === "in",
+    [typeOf]
+  );
+
+  // Soltar a linha em cima do bloco (não só na bolinha) também liga.
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, state: { isValid?: boolean | null; fromNode?: { id: string } | null; fromHandle?: { id?: string | null; type?: string } | null }) => {
+      if (state.isValid || !state.fromNode || !state.fromHandle?.id || state.fromHandle.type !== "source") return;
+      const pt = "changedTouches" in event ? event.changedTouches[0] : event;
+      const el = document.elementFromPoint(pt.clientX, pt.clientY)?.closest<HTMLElement>(".react-flow__node");
+      const target = el?.dataset.id;
+      if (target) link(state.fromNode.id, state.fromHandle.id, target);
+    },
+    [link]
+  );
+
+  /* ---------- arrastar da lista para o canvas ---------- */
+  const onDrop = useCallback(
+    (e: ReactDragEvent) => {
+      const type = e.dataTransfer.getData("application/x-webgran-block") as NodeType;
+      if (!type || !(type in NODE_TYPES)) return;
+      e.preventDefault();
+      addNode(type, rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+    },
+    [addNode, rf]
+  );
+
+  /* ---------- atalhos ---------- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName || "");
-      if (e.key === "Escape") setConnecting(null);
-      if ((e.key === "Delete" || e.key === "Backspace") && sel && !typing) removeNode(sel);
+      if (editing || paletteOpen) return;
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName || "") || (e.target as HTMLElement)?.isContentEditable;
+      if (typing) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if (mod && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+      else if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        const s = nodes.find((n) => n.selected);
+        if (s) duplicate(s.id);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [editing, paletteOpen, undo, redo, duplicate, nodes]);
 
-  // Arrastar blocos pelo cabeçalho.
-  const onPointerDown = (e: React.PointerEvent, n: FlowNode) => {
-    if (e.button !== 0) return;
-    dragRef.current = { id: n.id, sx: e.clientX, sy: e.clientY, ox: n.x, oy: n.y, moved: false };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d) return;
-    const dx = (e.clientX - d.sx) / scale;
-    const dy = (e.clientY - d.sy) / scale;
-    if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
-    const x = Math.max(0, Math.round(d.ox + dx));
-    const y = Math.max(0, Math.round(d.oy + dy));
-    setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => (n.id === d.id ? { ...n, x, y } : n)) }));
-  };
-  const onPointerUp = () => {
-    if (dragRef.current?.moved) {
-      justDragged.current = true;
-      setTimeout(() => (justDragged.current = false), 0);
-    }
-    dragRef.current = null;
-  };
+  /* ---------- visual das ligações ---------- */
+  const styledEdges = useMemo(
+    () =>
+      edges.map((e) => {
+        const k = String(e.sourceHandle);
+        const color = e.selected ? ACCENT : isSuccessOutput(k) ? "rgba(52,211,153,0.7)" : isFailOutput(k) ? "rgba(248,113,113,0.65)" : "rgba(148,163,184,0.55)";
+        return { ...e, style: { stroke: color, strokeWidth: e.selected ? 2.5 : 2 }, interactionWidth: 22 };
+      }),
+    [edges]
+  );
 
-  const width = Math.max(1700, ...graph.nodes.map((n) => n.x + NODE_W + 400));
-  const height = Math.max(900, ...graph.nodes.map((n) => n.y + 400));
-
-  const paths = graph.edges.flatMap((e) => {
-    const a = byId.get(e.from);
-    const b = byId.get(e.to);
-    if (!a || !b) return [];
-    const idx = nodeOutputs(a).findIndex(([k]) => k === e.out);
-    if (idx < 0) return [];
-    const p1 = outPoint(a, idx);
-    const p2 = inPoint(b);
-    const dx = Math.max(50, Math.abs(p2.x - p1.x) / 2);
-    const tone = isSuccessOutput(e.out) ? "rgba(52,211,153,.75)" : isFailOutput(e.out) ? "rgba(248,113,113,.65)" : "rgba(148,163,184,.6)";
-    return [{ key: `${e.from}|${e.out}`, d: `M${p1.x},${p1.y} C${p1.x + dx},${p1.y} ${p2.x - dx},${p2.y} ${p2.x},${p2.y}`, tone, e }];
-  });
-
+  const ctx = useMemo<EditorCtx>(() => ({ order, products, locked, open, duplicate, remove }), [order, products, locked, open, duplicate, remove]);
   const checklist = graphChecklist(graph).map((c) => ({ ...c, onFix: undefined }));
+  const editingNode = editing ? nodes.find((n) => n.id === editing.id) : null;
+  const ctrlBtn = "w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-35 disabled:hover:bg-transparent";
 
   return (
-    <div className="w-full max-w-full pb-10 space-y-4">
+    <div className="w-full flex flex-col h-[calc(100dvh-3.5rem)] min-h-[560px]">
       <Toaster />
       <EditorTopBar flowId={flowId} name={name} type="advanced" status={status} bots={bots} saveState={saveState} checklist={checklist} />
 
-      <div className="relative grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)] 2xl:grid-cols-[200px_minmax(0,1fr)_320px] gap-3.5 items-stretch">
-        {/* Paleta */}
-        <aside aria-label="Blocos" className={`${CARD} p-2.5 flex lg:flex-col gap-3 overflow-auto lg:max-h-[calc(100vh-170px)]`}>
-          {PALETTE_CATEGORIES.map((cat) => (
-            <div key={cat} className="shrink-0">
-              <p className="text-[10.5px] tracking-[0.08em] font-semibold text-zinc-500 uppercase px-1.5 pb-1">{cat}</p>
-              <div className="flex lg:flex-col gap-0.5">
-                {(Object.entries(NODE_TYPES) as [NodeType, NodeTypeDef][])
-                  .filter(([, d]) => d.category === cat)
-                  .map(([k, d]) => (
-                    <button key={k} type="button" onClick={() => addNode(k)} className="flex items-center gap-2.5 px-2 py-1.5 rounded-[9px] text-[13px] text-zinc-300 hover:bg-white/[0.05] text-left whitespace-nowrap">
-                      <span className="w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-[12px] font-bold shrink-0" style={{ background: d.color + "22", color: d.color }}>{d.icon}</span>
-                      <span className="flex-1">{d.label}</span>
-                      <Plus className="w-3.5 h-3.5 text-zinc-600" />
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ))}
+      <div className="flex-1 min-h-0 mt-4 flex gap-4">
+        {/* Lista de blocos */}
+        <aside aria-label="Blocos disponíveis" className="hidden lg:flex w-[260px] shrink-0 flex-col rounded-[16px] border border-white/[0.07] bg-[#111215] overflow-hidden">
+          <PaletteHeader />
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-2.5 pb-3">
+            <Palette onAdd={(t) => addNode(t)} />
+          </div>
         </aside>
 
         {/* Canvas */}
-        <section className={`${CARD} relative overflow-hidden flex flex-col min-w-0`}>
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/[0.07] text-[12.5px] text-zinc-500 flex-wrap">
-            <span>Clique num bloco para editar. Para ligar, clique na bolinha de saída e depois no bloco de destino.</span>
-            <span className="font-mono text-[11.5px]">{graph.nodes.length} blocos · {graph.edges.length} ligações</span>
-          </div>
-          <div
-            ref={wrapRef}
-            className="relative flex-1 overflow-auto min-h-[560px] h-[calc(100vh-230px)]"
-            style={{ backgroundColor: "#0c0d11", backgroundImage: "radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px)", backgroundSize: `${22 * scale}px ${22 * scale}px` }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setSel(null);
-                setConnecting(null);
-              }
-            }}
-          >
-            {connecting && <div className="sticky top-3 z-10 mx-auto w-max bg-[#3984FF] text-white text-[12.5px] px-3 py-1.5 rounded-full">Clique no bloco de destino · Esc cancela</div>}
-            <div className="relative origin-top-left" style={{ width, height, transform: `scale(${scale})` }} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
-              <svg className="absolute inset-0 overflow-visible" width={width} height={height}>
-                {paths.map((p) => (
-                  <path
-                    key={p.key}
-                    d={p.d}
-                    fill="none"
-                    stroke={p.tone}
-                    strokeWidth={2}
-                    className="cursor-pointer hover:!stroke-red-400 [pointer-events:stroke]"
-                    onClick={() => mutate((g) => ({ ...g, edges: g.edges.filter((x) => !(x.from === p.e.from && x.out === p.e.out)) }))}
-                  >
-                    <title>Clique para remover a ligação</title>
-                  </path>
-                ))}
-              </svg>
-              {graph.nodes.map((n) => {
-                const d = def(n.type);
-                const outs = nodeOutputs(n);
-                const isSel = sel === n.id;
-                return (
-                  <div
-                    key={n.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Bloco ${d.label}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (justDragged.current) return;
-                      if (connecting) connectTo(n.id);
-                      else setSel(n.id);
-                    }}
-                    onKeyDown={(e) => { if (e.key === "Enter") setSel(n.id); }}
-                    className={`absolute rounded-[14px] border bg-[#16171c] shadow-[0_14px_30px_-18px_#000] select-none ${isSel ? "border-[#3984FF] ring-[3px] ring-[#3984FF]/25" : "border-white/[0.13]"} ${connecting && connecting.from !== n.id && n.type !== "inicio" ? "outline-dashed outline-2 outline-offset-2 outline-[#60a5fa]/60" : ""}`}
-                    style={{ left: n.x, top: n.y, width: NODE_W }}
-                  >
-                    {n.type !== "inicio" && n.type !== "nota" && (
-                      <span className="absolute -left-[8px] rounded-full bg-[#16171c] border-2 border-zinc-400" style={{ top: HEAD_H / 2 - PORT_R, width: PORT_R * 2, height: PORT_R * 2 }} aria-hidden="true" />
-                    )}
-                    <div className="flex items-center gap-2 px-2.5 border-b border-white/[0.08] cursor-grab active:cursor-grabbing touch-none" style={{ height: HEAD_H }} onPointerDown={(e) => onPointerDown(e, n)}>
-                      <span className="w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-[12px] font-bold shrink-0" style={{ background: d.color + "22", color: d.color }}>{d.icon}</span>
-                      <b className="text-[13px] text-white truncate">{d.label}</b>
-                    </div>
-                    <div className="px-2.5 py-1.5 text-[12px] leading-[1.35] text-zinc-400 overflow-hidden" style={{ height: BODY_H }}>
-                      <span className="line-clamp-2">{nodeSummary(n, products)}</span>
-                    </div>
-                    {outs.length > 0 && (
-                      <div className="border-t border-white/[0.08]" style={{ paddingTop: OUT_PAD, paddingBottom: OUT_PAD }}>
-                        {outs.map(([k, label]) => {
-                          const on = connecting?.from === n.id && connecting.out === k;
-                          const ring = isSuccessOutput(k) ? "border-emerald-400" : isFailOutput(k) ? "border-red-400" : "border-zinc-400";
-                          return (
-                            <div key={k} className="relative flex items-center justify-end pr-3 text-[11.5px] text-zinc-500" style={{ height: OUT_H }}>
-                              <span className="truncate max-w-[180px]">{label}</span>
-                              <button
-                                type="button"
-                                aria-label={`Ligar saída ${label || "continua"}`}
-                                title="Clique e depois clique no bloco de destino"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConnecting(on ? null : { from: n.id, out: k });
-                                }}
-                                className={`absolute -right-[8px] rounded-full border-2 ${on ? "bg-[#3984FF] border-[#3984FF]" : `bg-[#16171c] ${ring} hover:bg-[#3984FF]`}`}
-                                style={{ width: PORT_R * 2, height: PORT_R * 2, top: OUT_H / 2 - PORT_R }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="absolute left-3 bottom-3 flex gap-1 z-10">
-            {[
-              { icon: Plus, label: "Aproximar", on: () => setScale((s) => Math.min(1.3, +(s + 0.1).toFixed(2))) },
-              { icon: Minus, label: "Afastar", on: () => setScale((s) => Math.max(0.5, +(s - 0.1).toFixed(2))) },
-              { icon: Maximize2, label: "Tamanho padrão", on: () => setScale(0.9) },
-            ].map(({ icon: I, label, on }) => (
-              <button key={label} type="button" aria-label={label} title={label} onClick={on} className="w-8 h-8 rounded-lg border border-white/[0.1] bg-[#16171c] text-zinc-400 hover:text-white flex items-center justify-center"><I className="w-4 h-4" /></button>
-            ))}
-          </div>
-        </section>
+        <div
+          ref={canvasRef}
+          className="relative flex-1 min-w-0 rounded-[16px] border border-white/[0.07] overflow-hidden bg-[#0b0c0f]"
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes("application/x-webgran-block")) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }
+          }}
+          onDrop={onDrop}
+        >
+          <Ctx.Provider value={ctx}>
+            <ReactFlow<BlockNode, Edge>
+              nodes={nodes}
+              edges={styledEdges}
+              nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onConnectEnd={onConnectEnd as never}
+              isValidConnection={isValidConnection}
+              onNodeDragStart={() => { dragging.current = true; }}
+              onNodeDragStop={() => { dragging.current = false; bump((n) => n + 1); }}
+              onNodeClick={(_, n) => { if (!locked) open(n.id); }}
+              nodesDraggable={!locked}
+              nodesConnectable={!locked}
+              connectionRadius={36}
+              connectionLineStyle={{ stroke: ACCENT, strokeWidth: 2 }}
+              deleteKeyCode={locked ? null : ["Delete", "Backspace"]}
+              minZoom={0.25}
+              maxZoom={1.75}
+              fitView
+              fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
+              proOptions={{ hideAttribution: true }}
+              className="webgran-flow"
+            >
+              <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="rgba(255,255,255,0.09)" />
 
-        {/* Painel do bloco */}
-        <aside className={`${CARD} flex-col min-w-0 ${selected ? "flex absolute right-3 top-12 bottom-14 z-20 w-[min(320px,calc(100%-24px))] overflow-y-auto shadow-2xl shadow-black/60 2xl:static 2xl:w-auto 2xl:shadow-none" : "hidden 2xl:flex"}`} aria-label="Configuração do bloco">
-          {!selected ? (
-            <div className="p-4 flex flex-col gap-2.5 text-[13px] text-zinc-400 leading-relaxed">
-              <p className="text-[14px] font-semibold text-white">Nenhum bloco selecionado</p>
-              <p>Clique num bloco do canvas para editar aqui. Os blocos da esquerda entram no meio da tela.</p>
-              <p>Saídas <span className="text-emerald-400">verdes</span> são o caminho bom (pagou, aceitou). <span className="text-red-400">Vermelhas</span> são o caminho de recuperação.</p>
-              <p>Para apagar uma ligação, clique nela. Para apagar um bloco, selecione e aperte Delete.</p>
-            </div>
-          ) : (
-            <Inspector node={selected} graph={graph} products={products} chats={chats} onChange={(k, v) => setData(selected.id, k, v)} onDelete={() => removeNode(selected.id)} onDuplicate={() => duplicateNode(selected.id)} />
-          )}
-        </aside>
+              <Panel position="top-left" className="!m-3 hidden sm:block">
+                <span className="inline-flex items-center gap-2 h-8 px-3 rounded-[9px] border border-white/[0.07] bg-[#121316]/90 backdrop-blur text-[12px] text-[#8b8b94]">
+                  Puxe da bolinha de um bloco até outro para ligar
+                  <span className="w-px h-3.5 bg-white/[0.1]" />
+                  <span className="tabular-nums">{nodes.length} blocos · {edges.length} ligações</span>
+                </span>
+              </Panel>
+
+              <Panel position="bottom-left" className="!m-3 hidden sm:block">
+                <div className="flex flex-col rounded-[10px] border border-white/[0.08] bg-[#121316] overflow-hidden divide-y divide-white/[0.06] shadow-[0_10px_24px_-12px_#000]">
+                  <button type="button" aria-label="Aproximar" title="Aproximar" onClick={() => rf.zoomIn({ duration: 200 })} className={ctrlBtn}><Plus className="w-4 h-4" /></button>
+                  <button type="button" aria-label="Afastar" title="Afastar" onClick={() => rf.zoomOut({ duration: 200 })} className={ctrlBtn}><Minus className="w-4 h-4" /></button>
+                  <button type="button" aria-label="Enquadrar tudo" title="Enquadrar tudo" onClick={() => rf.fitView({ duration: 300, maxZoom: 1, padding: 0.3 })} className={ctrlBtn}><Maximize className="w-[15px] h-[15px]" /></button>
+                  <button type="button" aria-pressed={locked} aria-label={locked ? "Destravar edição" : "Travar edição"} title={locked ? "Destravar" : "Travar (evita mover sem querer)"} onClick={() => setLocked((v) => !v)} className={`${ctrlBtn} ${locked ? "!text-[#60a5fa]" : ""}`}>
+                    {locked ? <Lock className="w-[15px] h-[15px]" /> : <Unlock className="w-[15px] h-[15px]" />}
+                  </button>
+                </div>
+              </Panel>
+
+              <Panel position="bottom-center" className="!mb-3">
+                <div className="flex items-center gap-0.5 p-1 rounded-[12px] border border-white/[0.08] bg-[#121316] shadow-[0_10px_24px_-12px_#000]">
+                  <button type="button" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!canUndo} onClick={undo} className={`${ctrlBtn} rounded-[8px]`}><Undo2 className="w-4 h-4" /></button>
+                  <button type="button" aria-label="Refazer" title="Refazer (Ctrl+Y)" disabled={!canRedo} onClick={redo} className={`${ctrlBtn} rounded-[8px]`}><Redo2 className="w-4 h-4" /></button>
+                  <span className="w-px h-5 mx-1 bg-white/[0.08]" />
+                  <button type="button" aria-label="Adicionar nota" title="Adicionar nota" disabled={locked} onClick={() => addNode("nota")} className={`${ctrlBtn} rounded-[8px] !text-amber-300/80 hover:!text-amber-200`}><StickyNote className="w-4 h-4" /></button>
+                  <button type="button" aria-label="Centralizar" title="Centralizar" onClick={() => rf.fitView({ duration: 300, maxZoom: 1, padding: 0.3 })} className={`${ctrlBtn} rounded-[8px]`}><LocateFixed className="w-4 h-4" /></button>
+                  <button type="button" disabled={locked} onClick={() => setPaletteOpen(true)} className="lg:hidden ml-1 inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-[#3b82f6] text-white text-[12.5px] font-semibold disabled:opacity-40">
+                    <Plus className="w-3.5 h-3.5" />Bloco
+                  </button>
+                </div>
+              </Panel>
+
+              <MiniMap
+                position="bottom-right"
+                pannable
+                zoomable
+                className="!m-3 !rounded-[12px] !overflow-hidden !border !border-white/[0.08] hidden sm:block"
+                bgColor="#0f1013"
+                maskColor="rgba(0,0,0,0.55)"
+                nodeColor={(n) => ((n as BlockNode).data?.type === "nota" ? "#a16207" : ACCENT)}
+                nodeBorderRadius={6}
+                style={{ width: 172, height: 112 }}
+              />
+            </ReactFlow>
+          </Ctx.Provider>
+        </div>
+      </div>
+
+      {editing && editingNode && (
+        <EditModal
+          node={editingNode}
+          draft={editing.draft}
+          setDraft={(k, v) => setEditing((s) => (s ? { ...s, draft: { ...s.draft, [k]: v } } : s))}
+          products={products}
+          chats={chats}
+          graph={graph}
+          onClose={() => setEditing(null)}
+          onSave={saveEdit}
+        />
+      )}
+
+      {paletteOpen && (
+        <Modal title="Adicionar bloco" subtitle="Toque num bloco para colocar no meio da tela." onClose={() => setPaletteOpen(false)}>
+          <Palette onAdd={(t) => addNode(t)} compact />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Lista de blocos                                                     */
+/* ------------------------------------------------------------------ */
+function PaletteHeader() {
+  return (
+    <div className="flex items-center gap-3 px-4 pt-4 pb-3.5 mb-1 border-b border-white/[0.06]">
+      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center bg-[#3b82f6]/[0.14] text-[#60a5fa] shrink-0">
+        <LayoutList className="w-[18px] h-[18px]" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[14px] font-semibold text-white">Blocos disponíveis</p>
+        <p className="text-[12px] text-[#8b8b94]">Clique para adicionar ou arraste</p>
       </div>
     </div>
   );
 }
 
-function nodeSummary(n: FlowNode, products: FlowProduct[]) {
-  if (n.type === "pix") {
-    const p = products.find((x) => x.id === n.data.productId);
-    return `${p ? `${p.title} · ${brl(p.price)}` : "Escolha o plano"} · espera ${n.data.wait} min`;
-  }
-  return def(n.type).summary(n.data);
+function Palette({ onAdd, compact = false }: { onAdd: (t: NodeType) => void; compact?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      {PALETTE_CATEGORIES.map((cat) => (
+        <div key={cat} className="mt-3 first:mt-2">
+          <p className="px-1.5 pb-1.5 text-[11px] font-semibold tracking-[0.08em] uppercase text-[#8b8b94]">{CATEGORY_LABEL[cat] || cat}</p>
+          <div className="flex flex-col gap-1.5">
+            {(Object.entries(NODE_TYPES) as [NodeType, NodeTypeDef][])
+              .filter(([, d]) => d.category === cat)
+              .map(([k, d]) => {
+                const Icon = ICONS[k];
+                return (
+                  <div
+                    key={k}
+                    draggable={!compact}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("application/x-webgran-block", k);
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
+                    onClick={() => onAdd(k)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAdd(k); } }}
+                    aria-label={`Adicionar bloco ${d.label}`}
+                    className="group flex items-center gap-3 px-2.5 py-2 rounded-[11px] border border-white/[0.06] bg-[#16171b] hover:bg-[#1b1c21] hover:border-white/[0.12] cursor-pointer active:cursor-grabbing transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50"
+                  >
+                    <span className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: d.color + "1f", color: d.color }}>
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-medium text-white truncate">{d.label}</span>
+                      <span className="block text-[11.5px] text-[#8b8b94] truncate">{DESC[k]}</span>
+                    </span>
+                    <span className="w-6 h-6 rounded-[7px] flex items-center justify-center text-zinc-500 border border-white/[0.08] group-hover:text-white group-hover:border-white/[0.2] shrink-0 transition-colors">
+                      <Plus className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function Inspector({
+/* ------------------------------------------------------------------ */
+/* Janela de edição do bloco                                           */
+/* ------------------------------------------------------------------ */
+function EditModal({
   node,
-  graph,
+  draft,
+  setDraft,
   products,
   chats,
-  onChange,
-  onDelete,
-  onDuplicate,
+  graph,
+  onClose,
+  onSave,
 }: {
-  node: FlowNode;
-  graph: FlowGraph;
+  node: BlockNode;
+  draft: Values;
+  setDraft: (key: string, value: string | number) => void;
   products: FlowProduct[];
   chats: FlowChat[];
-  onChange: (key: string, value: string | number) => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
+  graph: FlowGraph;
+  onClose: () => void;
+  onSave: () => void;
 }) {
-  const d = def(node.type);
-  const outs = nodeOutputs(node);
+  const type = node.data.type;
+  const d = def(type);
+  const Icon = ICONS[type];
+  const outs = nodeOutputs({ type, data: draft });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        onSave();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSave]);
+
   const optionsFor = (key: string, fallback?: string[]): [string, string][] => {
-    if (node.type === "pix" && key === "productId") return [["", "Escolha…"], ...products.map((p) => [p.id, `${p.title} · ${brl(p.price)}`] as [string, string])];
-    if (node.type === "entrega" && key === "chatId") return [["", chats.length ? "Escolha…" : "Ligue um bot para listar os grupos"], ...chats.map((c) => [c.id, c.title] as [string, string])];
+    if (type === "pix" && key === "productId") return [["", "Escolha…"], ...products.map((p) => [p.id, `${p.title} · ${brl(p.price)}`] as [string, string])];
+    if (type === "entrega" && key === "chatId") return [["", chats.length ? "Escolha…" : "Ligue um bot para listar os grupos"], ...chats.map((c) => [c.id, c.title] as [string, string])];
     return (fallback || []).map((o) => [o, o]);
   };
 
   return (
-    <>
-      <header className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/[0.07]">
-        <span className="w-[30px] h-[30px] rounded-lg flex items-center justify-center font-bold" style={{ background: d.color + "22", color: d.color }}>{d.icon}</span>
-        <b className="flex-1 text-[14.5px] text-white">{d.label}</b>
-        {node.type !== "inicio" && (
-          <>
-            <button type="button" onClick={onDuplicate} aria-label="Duplicar bloco" title="Duplicar" className="w-8 h-8 rounded-lg border border-white/[0.08] text-zinc-500 hover:text-white flex items-center justify-center"><Copy className="w-4 h-4" /></button>
-            <button type="button" onClick={onDelete} aria-label="Excluir bloco" title="Excluir" className="w-8 h-8 rounded-lg border border-white/[0.08] text-zinc-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
-          </>
-        )}
-      </header>
-      <div className="p-4 flex flex-col gap-3.5">
-        {d.fields.length === 0 && <Callout>Este é o começo do fluxo. Ligue a saída dele no primeiro bloco da conversa.</Callout>}
-        {d.fields.map((f) => {
+    <Modal
+      title={d.label}
+      subtitle={DESC[type]}
+      onClose={onClose}
+      footer={
+        <div className="flex items-center w-full gap-2">
+          <span className="hidden sm:flex items-center gap-1.5 mr-auto text-[11.5px] text-[#8b8b94]">
+            <kbd className="px-1.5 py-0.5 rounded-[5px] border border-white/[0.1] bg-white/[0.04] font-sans">Esc</kbd> fecha ·
+            <kbd className="px-1.5 py-0.5 rounded-[5px] border border-white/[0.1] bg-white/[0.04] font-sans">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 rounded-[5px] border border-white/[0.1] bg-white/[0.04] font-sans">Enter</kbd> salva
+          </span>
+          <button type="button" className={`${BTN_GHOST} ml-auto sm:ml-0`} onClick={onClose}>Cancelar</button>
+          <button type="button" className={BTN_PRI} onClick={onSave}>Salvar</button>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3 -mt-1">
+          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: d.color + "1f", color: d.color }}>
+            <Icon className="w-[18px] h-[18px]" />
+          </span>
+          <p className="text-[13px] text-zinc-400 leading-snug">
+            {type === "inicio" ? "O fluxo começa sempre que o cliente manda /start para o bot. Ligue a saída deste bloco no primeiro passo da conversa." : "As mudanças só entram no bloco quando você salvar."}
+          </p>
+        </div>
+
+        {d.fields.map((f, i) => {
           const id = `g-${node.id}-${f.key}`;
-          const value = node.data[f.key] ?? "";
+          const value = draft[f.key] ?? "";
           return (
-            <label key={f.key} className="flex flex-col gap-1.5">
-              <span className="text-[12.5px] font-semibold text-zinc-300">{f.label}</span>
+            <label key={f.key} htmlFor={id} className="flex flex-col gap-1.5">
+              <span className="text-[13px] font-medium text-zinc-200">{f.label}</span>
               {f.type === "area" ? (
-                <textarea id={id} rows={4} maxLength={4000} value={String(value)} onChange={(e) => onChange(f.key, e.target.value)} className={`${INPUT} resize-y leading-relaxed`} />
+                <textarea id={id} autoFocus={i === 0} rows={f.key === "buttons" ? 4 : 5} maxLength={4000} value={String(value)} onChange={(e) => setDraft(f.key, e.target.value)} className={`${INPUT} resize-y leading-relaxed`} />
               ) : f.type === "select" ? (
-                <select id={id} value={String(value)} onChange={(e) => onChange(f.key, e.target.value)} className={INPUT}>
+                <select id={id} value={String(value)} onChange={(e) => setDraft(f.key, e.target.value)} className={`${INPUT} cursor-pointer`}>
                   {optionsFor(f.key, f.options).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               ) : f.type === "num" ? (
-                <input id={id} type="number" min={0} step="any" value={Number(value) || 0} onChange={(e) => onChange(f.key, Number(e.target.value))} className={INPUT} />
+                <input id={id} autoFocus={i === 0} type="number" min={0} step="any" value={Number(value) || 0} onChange={(e) => setDraft(f.key, Number(e.target.value))} className={`${INPUT} tabular-nums`} />
               ) : (
-                <input id={id} maxLength={300} value={String(value)} onChange={(e) => onChange(f.key, e.target.value)} className={INPUT} />
+                <input id={id} autoFocus={i === 0} maxLength={300} value={String(value)} onChange={(e) => setDraft(f.key, e.target.value)} className={INPUT} />
               )}
             </label>
           );
         })}
+
         {outs.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <span className="text-[12.5px] font-semibold text-zinc-300">Saídas</span>
-            {outs.map(([k, l]) => {
-              const e = graph.edges.find((x) => x.from === node.id && x.out === k);
-              const t = e && graph.nodes.find((n) => n.id === e.to);
-              return (
-                <div key={k} className="flex justify-between gap-2 text-[12.5px] px-2.5 py-1.5 rounded-[9px] bg-[#0d0e12] border border-white/[0.08]">
-                  <span className={isSuccessOutput(k) ? "text-emerald-400" : isFailOutput(k) ? "text-red-400" : "text-zinc-300"}>{l || "Continua"}</span>
-                  <span className="text-zinc-500 truncate">{t ? "→ " + def(t.type).label : "sem ligação"}</span>
-                </div>
-              );
-            })}
+            <span className="text-[13px] font-medium text-zinc-200">Saídas</span>
+            <div className="rounded-[10px] border border-white/[0.07] bg-[#0d0e11] divide-y divide-white/[0.06]">
+              {outs.map(([k, l]) => {
+                const e = graph.edges.find((x) => x.from === node.id && x.out === k);
+                const t = e && graph.nodes.find((n) => n.id === e.to);
+                return (
+                  <div key={k} className="flex justify-between gap-3 px-3 py-2 text-[12.5px]">
+                    <span className={isSuccessOutput(k) ? "text-emerald-400" : isFailOutput(k) ? "text-red-400" : "text-zinc-300"}>{l || "Próximo passo"}</span>
+                    <span className="text-[#8b8b94] truncate">{t ? "→ " + def(t.type).label : "sem ligação"}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
-        <p className="text-[12px] text-zinc-600">Variáveis nas mensagens: {"{nome}"}, {"{saudacao}"}, {"{plano}"}.</p>
+
+        {type !== "inicio" && type !== "nota" && <p className="text-[12px] text-[#8b8b94]">Variáveis nas mensagens: {"{nome}"}, {"{saudacao}"}, {"{plano}"}.</p>}
       </div>
-    </>
+    </Modal>
   );
 }

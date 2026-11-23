@@ -125,8 +125,8 @@ export function normalizeGraph(input: unknown): FlowGraph {
     nodes.push({
       id: raw.id,
       type,
-      x: Math.max(0, Math.min(4000, Math.round(Number(raw.x) || 0))),
-      y: Math.max(0, Math.min(3000, Math.round(Number(raw.y) || 0))),
+      x: Math.max(-20000, Math.min(20000, Math.round(Number(raw.x) || 0))),
+      y: Math.max(-20000, Math.min(20000, Math.round(Number(raw.y) || 0))),
       data,
     });
   }
