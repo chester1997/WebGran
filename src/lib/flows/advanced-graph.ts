@@ -110,8 +110,8 @@ export const NODE_TYPES = {
       if (n(d.timeout) > 0) outs.push(["sem", "Sem clique"]);
       return outs;
     },
-    fields: [{ key: "items", type: "json" }, { key: "buttons", type: "json" }, { key: "btnText", type: "area" }, { key: "timeout", type: "num" }],
-    defaults: { items: "[]", buttons: "[]", btnText: "", timeout: 0 },
+    fields: [{ key: "items", type: "json" }, { key: "buttons", type: "json" }, { key: "btnText", type: "area" }, { key: "timeout", type: "num" }, { key: "simulate", type: "bool" }, { key: "simSec", type: "num" }],
+    defaults: { items: "[]", buttons: "[]", btnText: "", timeout: 0, simulate: 0, simSec: 2 },
     summary: (d) => {
       const items = jsonList<MsgItem>(d.items);
       if (!items.length) return "Clique para gerenciar";
@@ -189,8 +189,8 @@ export const NODE_TYPES = {
   pagamento: {
     label: "Pagamento", desc: "Gerar cobrança PIX", category: "Pagamento", color: "#22c55e",
     outputs: [["pago", "Pagou"], ["expirou", "Expirou"]],
-    fields: [{ key: "value", type: "num" }, { key: "desc", type: "text", max: 120 }, { key: "saleType", type: "select" }, { key: "timeout", type: "num" }, { key: "msg", type: "area" }, { key: "qr", type: "select" }],
-    defaults: { value: 0, desc: "", saleType: "principal", timeout: 15, msg: "", qr: "botao" },
+    fields: [{ key: "value", type: "num" }, { key: "desc", type: "text", max: 120 }, { key: "saleType", type: "select" }, { key: "timeout", type: "num" }, { key: "msg", type: "area" }, { key: "qr", type: "select" }, { key: "payColor", type: "select" }, { key: "checkColor", type: "select" }],
+    defaults: { value: 0, desc: "", saleType: "principal", timeout: 15, msg: "", qr: "botao", payColor: "none", checkColor: "none" },
     summary: (d) => `${money(d.value)} · PIX · ${n(d.timeout)}min`,
   },
 

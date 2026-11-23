@@ -72,11 +72,11 @@ import {
   type NodeTypeDef,
 } from "@/lib/flows/advanced-graph";
 import { saveFlowConfigAction } from "../actions";
-import { BTN_GHOST, BTN_PRI, Modal, useToast } from "../_components/flow-ui";
+import { Modal, useToast } from "../_components/flow-ui";
 import EditorTopBar, { type SaveState } from "../_components/EditorTopBar";
 import Toaster from "../_components/Toaster";
 import type { FlowChat, FlowProduct } from "./BasicFlowEditor";
-import { BlockForm } from "./advanced-forms";
+import { BlockForm, BlockModal } from "./advanced-forms";
 
 /* ------------------------------------------------------------------ */
 /* Tipos e utilidades                                                  */
@@ -783,40 +783,16 @@ function EditModal({
   const d = def(type);
   const outs = nodeOutputs({ type, data: draft });
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        e.preventDefault();
-        onSave();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onSave]);
+  const WIDE: NodeType[] = ["mensagem", "texto", "imagem", "video", "audio", "arquivo", "condicao", "fakecall"];
 
   return (
-    <Modal
-      title={d.label}
-      subtitle={d.desc}
-      onClose={onClose}
-      footer={
-        <div className="flex items-center w-full gap-2">
-          <span className="hidden sm:flex items-center gap-1.5 mr-auto text-[11.5px] text-[#8b8b94]">
-            <kbd className="px-1.5 py-0.5 rounded-[5px] border border-white/[0.1] bg-white/[0.04] font-sans">Esc</kbd> fecha ·
-            <kbd className="px-1.5 py-0.5 rounded-[5px] border border-white/[0.1] bg-white/[0.04] font-sans">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 rounded-[5px] border border-white/[0.1] bg-white/[0.04] font-sans">Enter</kbd> salva
-          </span>
-          <button type="button" className={`${BTN_GHOST} ml-auto sm:ml-0`} onClick={onClose}>Cancelar</button>
-          <button type="button" className={BTN_PRI} onClick={onSave}>Salvar</button>
-        </div>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <BlockForm type={type} draft={draft} set={setDraft} chats={chats} storeBots={storeBots} currentBotIds={currentBotIds} />
+    <BlockModal title={d.label} subtitle={d.desc} color={d.color} icon={ICONS[type]} wide={WIDE.includes(type)} onClose={onClose} onSave={onSave}>
+      <BlockForm type={type} draft={draft} set={setDraft} chats={chats} storeBots={storeBots} currentBotIds={currentBotIds} />
 
         {outs.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium text-zinc-200">Saídas</span>
-            <div className="rounded-[10px] border border-white/[0.07] bg-[#0d0e11] divide-y divide-white/[0.06]">
+          <section className="flex flex-col gap-2">
+            <span className="text-[14px] font-semibold text-white">Saídas</span>
+            <div className="rounded-[12px] border border-white/[0.08] bg-[#121316] divide-y divide-white/[0.06]">
               {outs.map(([k, l]) => {
                 const e = graph.edges.find((x) => x.from === node.id && x.out === k);
                 const t = e && graph.nodes.find((n) => n.id === e.to);
@@ -828,10 +804,8 @@ function EditModal({
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
-
-      </div>
-    </Modal>
+    </BlockModal>
   );
 }

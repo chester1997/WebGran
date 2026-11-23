@@ -454,8 +454,15 @@ async function walk(r: Run, startId: string | undefined) {
         const btnText = render(r, d.btnText);
         // Sem "texto acima dos botões", os botões vão no último texto.
         const lastTextIdx = !btnText && kb ? items.map((x) => x.t).lastIndexOf("texto") : -1;
+        const simulate = num(d.simulate) === 1;
+        const simMs = Math.min(5, Math.max(1, num(d.simSec) || 2)) * 1000;
         for (let i = 0; i < items.length; i++) {
           const it = items[i];
+          if (simulate && it.t !== "delay") {
+            const k = it.t === "midia" ? kindOf(str(it.url)) : null;
+            await chatAction(r, !k ? "typing" : k === "photo" ? "upload_photo" : k === "video" ? "upload_video" : k === "voice" || k === "audio" ? "record_voice" : "upload_document");
+            await sleep(simMs);
+          }
           if (it.t === "texto") {
             const html = spoilerHtml(render(r, it.text), it.spoiler);
             if (html) await send(r.ctx, r.uid, html, i === lastTextIdx ? kb : undefined);
@@ -616,7 +623,7 @@ async function walk(r: Run, startId: string | undefined) {
         const add = r.state.addOn;
         r.state.addOn = null;
         const name = str(d.desc).trim() || "Pagamento";
-        await startPix(r, node, { name: add ? `${name} + ${add.name}` : name, price: value + (add?.price || 0), unit: "vitalicio", amount: 1 }, Math.max(1, num(d.timeout)), str(d.qr) || "botao", str(d.msg));
+        await startPix(r, node, { name: add ? `${name} + ${add.name}` : name, price: value + (add?.price || 0), unit: "vitalicio", amount: 1 }, Math.max(1, num(d.timeout)), str(d.qr) || "botao", str(d.msg), { pay: str(d.payColor), check: str(d.checkColor) });
         return; // espera o pagamento
       }
 
@@ -717,7 +724,10 @@ async function offerFor(r: Run, node: FlowNode): Promise<{ name: string; price: 
 }
 
 /** Gera o Pix e espera: pago → saída de sucesso; tempo esgotado → "Não pagou". */
-async function startPix(r: Run, node: FlowNode, item: { name: string; price: number; unit: PeriodUnit; amount: number }, waitMin: number, qrMode: string, customMsg = "") {
+const BTN_STYLE: Record<string, string> = { blue: "primary", green: "success", red: "danger" };
+const styled = (b: Record<string, unknown>, color?: string) => (color && BTN_STYLE[color] ? { ...b, style: BTN_STYLE[color] } : b);
+
+async function startPix(r: Run, node: FlowNode, item: { name: string; price: number; unit: PeriodUnit; amount: number }, waitMin: number, qrMode: string, customMsg = "", colors: { pay?: string; check?: string } = {}) {
   const { CartService } = await import("@/lib/cart/cart-service");
   const { createPlanCheckout } = await import("./flow-checkout");
   const customer = await CartService.getOrCreateCustomerForTelegramUser(r.ctx.storeId, { id: r.user.id, first_name: r.user.first_name, last_name: r.user.last_name, username: r.user.username });
@@ -737,15 +747,22 @@ async function startPix(r: Run, node: FlowNode, item: { name: string; price: num
   const orderId = res.orderId;
   const code = res.pix?.qrCode || "";
   const hasQr = Boolean(res.pix?.qrCodeBase64);
-  const kb: Kb = { inline_keyboard: [[{ text: "🔍 VERIFICAR PAGAMENTO", callback_data: cb(r, "chk", orderId) }]] };
+  const kb: Kb = { inline_keyboard: [[styled({ text: "🔍 VERIFICAR PAGAMENTO", callback_data: cb(r, "chk", orderId) }, colors.check)]] };
   const qr = qrMode === "Por botão" ? "botao" : qrMode === "Junto do Pix" ? "junto" : qrMode;
-  if (qr === "botao" && hasQr) kb.inline_keyboard.push([{ text: "📱 Mostrar QR Code", callback_data: cb(r, "qr", orderId) }]);
+  if (qr === "botao" && hasQr) kb.inline_keyboard.unshift([styled({ text: "📱 Pagar com QR Code", callback_data: cb(r, "qr", orderId) }, colors.pay)]);
   if (qr === "junto" && hasQr) await sendMedia(r.ctx, r.uid, `${appBaseUrl()}/api/telegram/order-qr/${orderId}`);
 
   const total = res.total ?? item.price;
   const template = customMsg.trim() || `💳 Pague agora e garanta <b>{plano}</b>!\n\nValor: <b>{valor}</b>\n\nCopie o código Pix abaixo:`;
-  const head = renderFlowText(template, { ...textVars(r), "{plano}": item.name, "{descricao}": item.name, "{valor}": brl(total) });
-  await send(r.ctx, r.uid, code ? `${head}\n\n${pixCodeHtml(code, "caixa")}` : head, kb);
+  const vars = { ...textVars(r), "{plano}": item.name, "{descricao}": item.name, "{valor}": brl(total) };
+  if (code && template.includes("{pix}")) {
+    // O vendedor escolheu onde o código Pix aparece na mensagem.
+    const [before, ...after] = template.split("{pix}");
+    await send(r.ctx, r.uid, `${renderFlowText(before, vars)}\n${pixCodeHtml(code, "caixa")}\n${renderFlowText(after.join("{pix}"), vars)}`.trim(), kb);
+  } else {
+    const head = renderFlowText(template.replace(/\{pix\}/g, ""), vars);
+    await send(r.ctx, r.uid, code ? `${head}\n\n${pixCodeHtml(code, "caixa")}` : head, kb);
+  }
   await scheduleJob(r, "adv_pix", orderId, new Date(Date.now() + waitMin * 60_000), { nodeId: node.id, orderId });
 }
 
