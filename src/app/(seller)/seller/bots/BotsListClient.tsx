@@ -11,6 +11,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
+import { HeaderMeta } from "@/components/layout/HeaderMeta";
 import BotCard, { BotCardData } from "./components/BotCard";
 import NewBotModal from "./components/NewBotModal";
 import { 
@@ -158,9 +159,7 @@ export default function BotsListClient({ bots: initialBots, storeSlug }: BotsLis
       <SellerPageHeader
         title="Bots"
         badge={
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[#3984FF]/10 text-[#3984FF] border border-[#3984FF]/25">
-            {bots.length} {bots.length === 1 ? "bot conectado" : "bots conectados"}
-          </span>
+          <HeaderMeta value={bots.length} label={bots.length === 1 ? "bot conectado" : "bots conectados"} />
         }
         subtitle="Gerencie seus bots do Telegram, acompanhe o status de conexão, métricas de vendas e configure os modos de funcionamento."
         actions={
