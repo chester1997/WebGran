@@ -668,7 +668,7 @@ function urlBase64ToUint8Array(base64String: string) {
   })();
 
   return (
-    <div className="w-full max-w-[1040px] mx-auto pb-12 space-y-5">
+    <div className="w-full min-w-0 pb-12 space-y-5">
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 bg-[#151619] border border-white/10 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-sm font-medium animate-in slide-in-from-top duration-200">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
