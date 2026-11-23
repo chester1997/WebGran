@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Copy, Check, RefreshCw, Wallet } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
+import { HeaderMeta } from "@/components/layout/HeaderMeta";
 import { formatBusinessDateTime } from "@/lib/analytics/timezone-utils";
 import {
   EmptyState,
@@ -97,9 +98,7 @@ export default function FinanceiroClientV2({ metrics, transactions }: { metrics:
         portalId="seller-page-header-portal"
         title="Financeiro"
         badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-[#3984FF]/10 text-[#60a5fa] border border-[#3984FF]/25">
-            {transactions.length} {transactions.length === 1 ? "registro" : "registros"}
-          </span>
+          <HeaderMeta value={transactions.length} label={transactions.length === 1 ? "registro" : "registros"} />
         }
         subtitle="Quanto você vendeu, quanto ficou com você e o que ainda está pendente."
         actions={

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/seller-v2";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
+import { HeaderMeta } from "@/components/layout/HeaderMeta";
 
 type GatewayId = "pushinpay" | "syncpay" | "mercado_pago" | "misticpay";
 /** Por enquanto a plataforma só recebe por Pix, em qualquer gateway. */
@@ -257,11 +258,14 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
     return (
       <div
         key={g.id}
-        className={`rounded-[18px] border bg-[#141416] flex flex-col transition-colors ${
+        className={`rounded-[18px] border bg-[#141416] overflow-hidden flex flex-col transition-colors ${
           soon ? "border-white/[0.08] opacity-60" : active ? "border-[#3b82f6]/35" : "border-white/[0.09] hover:border-white/[0.16]"
         }`}
       >
-        <div className="p-5 flex flex-col gap-4 flex-1">
+        <div
+          className="p-5 flex flex-col gap-4 flex-1 bg-[#1c1c20] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+          data-gateway-top=""
+        >
           <div className="flex items-start gap-3.5">
             <div className={soon ? "grayscale" : ""}>
               <BrandMark id={g.id} />
@@ -322,7 +326,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
           )}
         </div>
 
-        <div className="border-t border-white/[0.08] px-5 py-3.5 flex items-center gap-2 min-h-[64px]">
+        <div className="border-t border-white/[0.07] px-5 py-3.5 flex items-center gap-2 min-h-[64px]">
           {soon ? (
             <span className="text-[13.5px] text-zinc-400">Integração em construção.</span>
           ) : active ? (
@@ -380,10 +384,7 @@ export default function RecebimentosClientV2({ connection, pushinPayConnection, 
       <SellerPageHeader
         title="Gateways de Recebimento"
         badge={
-          <span className="px-2.5 py-0.5 rounded-full bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/30 text-xs font-semibold flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Criptografado
-          </span>
+          <HeaderMeta icon={<ShieldCheck />} label="Criptografado" />
         }
         subtitle="Conecte o gateway que vai receber os pagamentos da sua loja."
       />

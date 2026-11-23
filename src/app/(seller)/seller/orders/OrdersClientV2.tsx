@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Download, ShoppingCart } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
+import { HeaderMeta } from "@/components/layout/HeaderMeta";
 import { formatBusinessDateTime } from "@/lib/analytics/timezone-utils";
 import { RetryDeliveryButton } from "./RetryDeliveryButton";
 import { buildOrdersCSV, type SerializedOrder } from "./OrdersClient";
@@ -112,9 +113,7 @@ export function OrdersClientV2({ initialOrders = [] }: { initialOrders: Serializ
         portalId="seller-page-header-portal"
         title="Pedidos"
         badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-[#3984FF]/10 text-[#60a5fa] border border-[#3984FF]/25">
-            {initialOrders.length} {initialOrders.length === 1 ? "pedido" : "pedidos"}
-          </span>
+          <HeaderMeta value={initialOrders.length} label={initialOrders.length === 1 ? "pedido" : "pedidos"} />
         }
         subtitle="Vendas e pagamentos dos seus bots em tempo real."
         actions={

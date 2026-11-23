@@ -15,7 +15,7 @@ import {
   moveFlowAction,
   setFlowBotsAction,
 } from "./actions";
-import { BTN_GHOST, BTN_PRI, BTN_SEC, CARD, Callout, FlowTypeIcon, INPUT, Modal, StatusPill, TypePill, useToast } from "./_components/flow-ui";
+import { BTN_GHOST, BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "./_components/flow-ui";
 import Toaster from "./_components/Toaster";
 
 type TypeFilter = "all" | "linked" | "basic" | "advanced";
@@ -25,6 +25,29 @@ type ModalState =
   | { kind: "delete"; flow: FlowSummary }
   | { kind: "folder" }
   | null;
+
+/** Superfície com relevo: luz fina no topo, sombra em camadas embaixo. */
+const SURFACE =
+  "relative rounded-[16px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
+
+/** Ícone em “tecla” 3D. `accent` acende em azul (filtro ativo). */
+function Tile({ children, size = 36, accent = false }: { children: React.ReactNode; size?: number; accent?: boolean }) {
+  return (
+    <span
+      className={`shrink-0 rounded-[10px] flex items-center justify-center transition-all duration-300 ${accent ? "text-white" : "text-[#7fb0ff]"}`}
+      style={{
+        width: size,
+        height: size,
+        background: accent ? "linear-gradient(180deg,#4b8ff8 0%,#1d4ed8 100%)" : "linear-gradient(180deg,#2a2c33 0%,#16171c 100%)",
+        boxShadow: accent
+          ? "inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.35), 0 8px 18px -8px rgba(59,130,246,0.75)"
+          : "inset 0 1px 0 rgba(255,255,255,0.11), inset 0 -1px 0 rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.045), 0 8px 16px -8px rgba(0,0,0,0.9)",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Recife" });
@@ -113,21 +136,45 @@ export default function FlowsListClient({
       .catch(() => toast("Esse arquivo não é um fluxo exportado da WebGran.", "err"));
   };
 
-  const SumCard = ({ k, icon, label, n }: { k: TypeFilter; icon: React.ReactNode; label: string; n: number }) => (
-    <button
-      type="button"
-      onClick={() => setTypeFilter(typeFilter === k ? "all" : k)}
-      className={`${CARD} text-left px-5 py-4 flex flex-col gap-2.5 transition-colors ${typeFilter === k ? "!border-[#3984FF]/50 bg-[#3984FF]/[0.04]" : "hover:!border-white/[0.14]"}`}
-    >
-      <span className="flex items-center gap-2.5 text-[12.5px] text-zinc-400 font-medium">{icon}{label}</span>
-      <span className="text-[26px] font-semibold tracking-tight tabular-nums text-white">
-        {n}<span className="text-[14px] text-zinc-500 font-medium ml-1.5">{n === 1 ? "fluxo" : "fluxos"}</span>
-      </span>
-    </button>
-  );
+  const SumCard = ({ k, icon, label, n }: { k: TypeFilter; icon: React.ReactNode; label: string; n: number }) => {
+    const on = typeFilter === k;
+    return (
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={() => setTypeFilter(on ? "all" : k)}
+        className={`${SURFACE} group overflow-hidden text-left px-5 py-[18px] flex items-center gap-4 transition-all duration-300 hover:-translate-y-[2px] ${
+          on ? "!border-[#3b82f6]/45 !shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_1px_rgba(59,130,246,0.18),0_16px_34px_-16px_rgba(59,130,246,0.45)]" : "hover:!border-white/[0.12]"
+        }`}
+      >
+        {/* luz azul suave quando o filtro está ativo */}
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${on ? "opacity-100" : "opacity-0"}`}
+          style={{ background: "radial-gradient(80% 120% at 0% 0%, rgba(59,130,246,0.14) 0%, rgba(59,130,246,0) 60%)" }}
+        />
+        {/* ícone fantasma ao fundo */}
+        <span aria-hidden="true" className="pointer-events-none absolute -right-4 -bottom-6 text-white/[0.025] [&>svg]:w-28 [&>svg]:h-28 transition-transform duration-500 group-hover:-rotate-6">
+          {icon}
+        </span>
+        <Tile size={42} accent={on}>{icon}</Tile>
+        <span className="relative min-w-0">
+          <span className="block text-[12.5px] font-medium text-zinc-400 truncate">{label}</span>
+          <span className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-[26px] leading-none font-semibold tracking-tight tabular-nums text-white">{n}</span>
+            <span className="text-[13px] text-zinc-500 font-medium">{n === 1 ? "fluxo" : "fluxos"}</span>
+          </span>
+        </span>
+      </button>
+    );
+  };
 
   const chip = (active: boolean) =>
-    `inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[9px] border text-[12.5px] font-medium transition-colors ${active ? "border-[#3984FF]/50 bg-[#3984FF]/[0.12] text-white" : "border-white/[0.08] text-zinc-400 hover:text-zinc-200"}`;
+    `inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[9px] text-[12.5px] font-medium transition-all ${
+      active
+        ? "bg-[linear-gradient(180deg,#24262d_0%,#1a1b20_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(255,255,255,0.09),0_4px_10px_-4px_rgba(0,0,0,0.8)]"
+        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+    }`;
 
   return (
     <div className="w-full max-w-full pb-10 space-y-5">
@@ -157,12 +204,12 @@ export default function FlowsListClient({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        <SumCard k="linked" label="Ligados a um bot" n={counts.linked} icon={<span className="w-8 h-8 rounded-[9px] bg-emerald-500/[0.12] text-emerald-400 flex items-center justify-center"><Link2 className="w-4 h-4" /></span>} />
-        <SumCard k="basic" label="Fluxos básicos" n={counts.basic} icon={<span className="w-8 h-8 rounded-[9px] bg-[#3984FF]/[0.12] text-[#60a5fa] flex items-center justify-center"><Zap className="w-4 h-4" /></span>} />
-        <SumCard k="advanced" label="Fluxos avançados" n={counts.advanced} icon={<span className="w-8 h-8 rounded-[9px] bg-violet-400/[0.12] text-violet-300 flex items-center justify-center"><Network className="w-4 h-4" /></span>} />
+        <SumCard k="linked" label="Ligados a um bot" n={counts.linked} icon={<Link2 className="w-[18px] h-[18px]" />} />
+        <SumCard k="basic" label="Fluxos básicos" n={counts.basic} icon={<Zap className="w-[18px] h-[18px]" />} />
+        <SumCard k="advanced" label="Fluxos avançados" n={counts.advanced} icon={<Network className="w-[18px] h-[18px]" />} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1">
         <button type="button" className={chip(folder === "__all")} onClick={() => setFolder("__all")}>Todos <span className="text-[11px] text-zinc-500 tabular-nums">{flows.length}</span></button>
         <button type="button" className={chip(folder === "__none")} onClick={() => setFolder("__none")}>Sem pasta <span className="text-[11px] text-zinc-500 tabular-nums">{flows.filter((f) => !f.folder).length}</span></button>
         {folders.map((p) => (
@@ -170,7 +217,7 @@ export default function FlowsListClient({
             <Folder className="w-3.5 h-3.5" />{p} <span className="text-[11px] text-zinc-500 tabular-nums">{flows.filter((f) => f.folder === p).length}</span>
           </button>
         ))}
-        <button type="button" className={`${chip(false)} border-dashed`} onClick={() => setModal({ kind: "folder" })} disabled={!available}>
+        <button type="button" className={`${chip(false)} border border-dashed border-white/[0.1] ml-1`} onClick={() => setModal({ kind: "folder" })} disabled={!available}>
           <FolderPlus className="w-3.5 h-3.5" />Nova pasta
         </button>
         {typeFilter !== "all" && (
@@ -179,63 +226,101 @@ export default function FlowsListClient({
       </div>
 
       {shown.length === 0 ? (
-        <div className={`${CARD} px-6 py-14 flex flex-col items-center text-center`}>
-          <span className="w-12 h-12 rounded-[12px] border border-white/[0.08] bg-white/[0.02] flex items-center justify-center text-zinc-500"><Network className="w-5 h-5" /></span>
+        <div className={`${SURFACE} px-6 py-14 flex flex-col items-center text-center`}>
+          <Tile size={48}><Network className="w-5 h-5" /></Tile>
           <p className="mt-3 text-[14px] font-semibold text-zinc-200">{flows.length ? "Nenhum fluxo neste filtro" : "Você ainda não tem fluxos"}</p>
           <p className="mt-1 text-[13px] text-zinc-500 max-w-sm">{flows.length ? "Escolha outra pasta ou limpe o filtro." : "Crie o primeiro e ligue a um bot de “Venda na conversa”."}</p>
           {!flows.length && available && <Link href="/seller/fluxos/novo" className={`${BTN_PRI} mt-4`}><Plus className="w-4 h-4" />Criar fluxo</Link>}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5">
-          {shown.map((f) => (
-            <article key={f.id} className={`${CARD} p-4 flex flex-col gap-3.5 hover:!border-white/[0.14] transition-colors`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <FlowTypeIcon type={f.type} size={42} />
-                  <div className="min-w-0">
-                    <h3 className="text-[15px] font-semibold text-white truncate">{f.name}</h3>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <TypePill type={f.type} />
-                      <StatusPill status={f.status} />
-                      {f.folder && <span className="inline-flex items-center gap-1 text-[11.5px] text-zinc-500"><Folder className="w-3 h-3" />{f.folder}</span>}
+          {shown.map((f) => {
+            const adv = f.type === "advanced";
+            const published = f.status === "published";
+            return (
+              <article key={f.id} className={`${SURFACE} group overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-[2px] hover:border-white/[0.12]`}>
+                {/* grade pontilhada do editor, sumindo para a esquerda */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-0 top-0 h-28 w-1/2 opacity-60 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{
+                    backgroundImage: "radial-gradient(rgba(255,255,255,0.09) 1px, transparent 1px)",
+                    backgroundSize: "12px 12px",
+                    WebkitMaskImage: "linear-gradient(225deg, #000 0%, transparent 70%)",
+                    maskImage: "linear-gradient(225deg, #000 0%, transparent 70%)",
+                  }}
+                />
+
+                <div className="relative p-4 pb-3.5 flex flex-col gap-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Tile size={42}>{adv ? <Network className="w-[18px] h-[18px]" /> : <Zap className="w-[18px] h-[18px]" />}</Tile>
+                      <div className="min-w-0">
+                        <h3 className="text-[15px] font-semibold text-white tracking-tight truncate">{f.name}</h3>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[12px] text-zinc-500">
+                          <span>{adv ? "Avançado" : "Básico"}</span>
+                          <span className="w-[3px] h-[3px] rounded-full bg-zinc-700" />
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${published ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" : "bg-amber-400/80"}`} />
+                            {published ? "Publicado" : "Rascunho"}
+                          </span>
+                          {f.folder && (
+                            <>
+                              <span className="w-[3px] h-[3px] rounded-full bg-zinc-700" />
+                              <span className="inline-flex items-center gap-1"><Folder className="w-3 h-3" />{f.folder}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-0.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                      {[
+                        { icon: Folder, label: "Mover para pasta", on: () => setModal({ kind: "move", flow: f }) },
+                        { icon: Copy, label: "Duplicar", on: () => act(() => duplicateFlowAction(f.id), "Fluxo duplicado como rascunho.") },
+                        { icon: Download, label: "Exportar", on: () => exportFlow(f) },
+                      ].map(({ icon: I, label, on }) => (
+                        <button key={label} type="button" title={label} aria-label={label} onClick={on} disabled={pending} className="w-8 h-8 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.06] flex items-center justify-center transition-colors">
+                          <I className="w-[15px] h-[15px]" />
+                        </button>
+                      ))}
+                      <button type="button" title="Excluir" aria-label="Excluir" onClick={() => setModal({ kind: "delete", flow: f })} className="w-8 h-8 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors">
+                        <Trash2 className="w-[15px] h-[15px]" />
+                      </button>
                     </div>
                   </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 min-h-[26px]">
+                    {f.bots.length ? (
+                      f.bots.map((b) => (
+                        <span key={b.id} className="inline-flex items-center gap-1.5 h-[26px] text-[12px] px-2.5 rounded-[8px] bg-white/[0.035] ring-1 ring-inset ring-white/[0.06] text-zinc-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]" />@{b.username}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[12.5px] text-zinc-600">Nenhum bot ligado ainda</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  {[
-                    { icon: Folder, label: "Mover para pasta", on: () => setModal({ kind: "move", flow: f }) },
-                    { icon: Copy, label: "Duplicar", on: () => act(() => duplicateFlowAction(f.id), "Fluxo duplicado como rascunho.") },
-                    { icon: Download, label: "Exportar", on: () => exportFlow(f) },
-                  ].map(({ icon: I, label, on }) => (
-                    <button key={label} type="button" title={label} aria-label={label} onClick={on} disabled={pending} className="w-[30px] h-[30px] rounded-lg border border-white/[0.08] text-zinc-500 hover:text-white hover:bg-white/[0.05] flex items-center justify-center">
-                      <I className="w-[15px] h-[15px]" />
-                    </button>
-                  ))}
-                  <button type="button" title="Excluir" aria-label="Excluir" onClick={() => setModal({ kind: "delete", flow: f })} className="w-[30px] h-[30px] rounded-lg border border-white/[0.08] text-zinc-500 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center">
-                    <Trash2 className="w-[15px] h-[15px]" />
+
+                <div className="relative mt-auto border-t border-white/[0.05] bg-black/[0.18] px-4 py-3 flex items-center gap-2">
+                  <p className="text-[11.5px] text-zinc-600 mr-auto truncate">Editado em {fmtDate(f.updatedAt)}</p>
+                  <button
+                    type="button"
+                    onClick={() => setModal({ kind: "link", flow: f })}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-semibold text-zinc-200 bg-[linear-gradient(180deg,#26282f_0%,#1b1c21_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(255,255,255,0.07),0_4px_10px_-4px_rgba(0,0,0,0.8)] hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />Ligar bots
                   </button>
+                  <Link
+                    href={`/seller/fluxos/${f.id}`}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-semibold text-white bg-[linear-gradient(180deg,#4b8ff8_0%,#2563eb_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_0_1px_rgba(37,99,235,0.6),0_6px_14px_-6px_rgba(59,130,246,0.7)] hover:brightness-110 transition-[filter] whitespace-nowrap"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />Editar fluxo
+                  </Link>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 min-h-[24px]">
-                {f.bots.length ? (
-                  f.bots.map((b) => (
-                    <span key={b.id} className="inline-flex items-center gap-1.5 text-[12px] px-2.5 py-0.5 rounded-full bg-white/[0.05] text-zinc-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />@{b.username}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-[12.5px] text-zinc-600">Nenhum bot ligado ainda</span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Link href={`/seller/fluxos/${f.id}`} className={`${BTN_PRI} !h-[34px] !text-[12.5px]`}><Pencil className="w-3.5 h-3.5" />Editar fluxo</Link>
-                <button type="button" onClick={() => setModal({ kind: "link", flow: f })} className={`${BTN_SEC} !h-[34px] !text-[12.5px]`}><Link2 className="w-3.5 h-3.5" />Ligar bots</button>
-              </div>
-              <p className="text-[12px] text-zinc-600">Editado em {fmtDate(f.updatedAt)}</p>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 

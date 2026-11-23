@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Ban, Check, Copy, ExternalLink, Loader2, Send, ShieldCheck, Users, X } from "lucide-react";
 import SellerPageHeader from "@/components/layout/SellerPageHeader";
+import { HeaderMeta } from "@/components/layout/HeaderMeta";
 import { BUSINESS_TIMEZONE } from "@/lib/analytics/timezone-utils";
 import { Avatar, EmptyState, LoadMore, Pill, SearchField, Segmented, StatStrip, V2_CARD, brl } from "../_v2/list-ui";
 import { blockCustomerAction, unblockCustomerAction } from "./actions";
@@ -123,9 +124,7 @@ export default function CustomersClientV2({
       <SellerPageHeader
         title="Clientes"
         badge={
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-[#3984FF]/10 text-[#60a5fa] border border-[#3984FF]/25">
-            {stats.total} {stats.total === 1 ? "cliente" : "clientes"}
-          </span>
+          <HeaderMeta value={stats.total} label={stats.total === 1 ? "cliente" : "clientes"} />
         }
         subtitle="Quem abriu o seu Mini App, quem comprou e quem está bloqueado."
       />
