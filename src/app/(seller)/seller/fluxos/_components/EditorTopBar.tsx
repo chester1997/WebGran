@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Loader2, Pencil, Rocket, Save, Send } from "lucide-react";
 import { flowTestLinkAction, publishFlowAction, renameFlowAction, unpublishFlowAction } from "../actions";
-import { BTN_GHOST, BTN_PRI, BTN_SEC, Callout, INPUT, Modal, StatusPill, TypePill, useToast } from "./flow-ui";
+import { BTN_GHOST, BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "./flow-ui";
 
 export type SaveState = "saved" | "saving" | "dirty" | "error";
 export interface ChecklistItem {
@@ -69,57 +69,61 @@ export default function EditorTopBar({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+      <div className="flex items-center justify-between gap-x-4 gap-y-3 flex-wrap pb-4 border-b border-white/[0.07]">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/seller/fluxos"
             aria-label="Voltar para Meus Fluxos"
-            className="inline-flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-[10px] border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.07] text-[13px] font-medium text-zinc-300 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 h-9 pl-1.5 pr-2.5 -ml-1.5 rounded-[9px] text-[13px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />Meus Fluxos
           </Link>
-          {editing ? (
-            <span className="flex items-center gap-1.5">
-              <input
-                autoFocus
-                aria-label="Nome do fluxo"
-                maxLength={40}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") rename();
-                  if (e.key === "Escape") { setEditing(false); setDraft(name); }
-                }}
-                className={`${INPUT} !py-1.5 !text-[16px] !w-[240px]`}
-              />
-              <button type="button" onClick={rename} disabled={pending} className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 hover:bg-white/[0.06]" aria-label="Salvar nome">
-                {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              </button>
-            </span>
-          ) : (
-            <button type="button" onClick={() => setEditing(true)} className="group inline-flex items-center gap-1.5 text-[20px] font-bold tracking-tight text-white" title="Renomear">
-              {name}<Pencil className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-300" />
-            </button>
-          )}
-          <TypePill type={type} />
-          {bots.length ? (
-            bots.map((b) => (
-              <span key={b.id} className="inline-flex items-center gap-1.5 text-[12px] px-2.5 py-0.5 rounded-full bg-white/[0.05] text-zinc-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />@{b.username}
+          <span className="w-px h-6 bg-white/[0.1] shrink-0" aria-hidden="true" />
+          <div className="min-w-0">
+            {editing ? (
+              <span className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  aria-label="Nome do fluxo"
+                  maxLength={40}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") rename();
+                    if (e.key === "Escape") { setEditing(false); setDraft(name); }
+                  }}
+                  className={`${INPUT} !py-1 !text-[15px] !w-[240px]`}
+                />
+                <button type="button" onClick={rename} disabled={pending} className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/[0.06]" aria-label="Salvar nome">
+                  {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
               </span>
-            ))
-          ) : (
-            <Link href="/seller/fluxos" className="text-[12.5px] text-[#60a5fa] hover:text-[#93c5fd]">Ligar a um bot</Link>
-          )}
-          <StatusPill status={status} />
+            ) : (
+              <button type="button" onClick={() => setEditing(true)} className="group inline-flex items-center gap-1.5 text-[16px] font-semibold tracking-tight text-white max-w-full" title="Renomear">
+                <span className="truncate">{name}</span><Pencil className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-300 shrink-0" />
+              </button>
+            )}
+            <p className="text-[12.5px] text-[#8b8b94] truncate">
+              {type === "advanced" ? "Fluxo avançado" : "Fluxo básico"}
+              {" · "}
+              {bots.length ? (
+                bots.map((b) => "@" + b.username).join(", ")
+              ) : (
+                <Link href="/seller/fluxos" className="text-[#60a5fa] hover:text-[#93c5fd]">Ligar a um bot</Link>
+              )}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[12px] mr-1 ${saveState === "error" ? "text-red-400" : saveState === "dirty" ? "text-amber-400" : "text-zinc-500"}`} aria-live="polite">{saveText}</span>
+          <span className={`inline-flex items-center gap-2 text-[12.5px] mr-1.5 ${saveState === "error" ? "text-red-400" : saveState === "dirty" ? "text-amber-400" : "text-[#8b8b94]"}`} aria-live="polite">
+            <span className={`w-1.5 h-1.5 rounded-full ${saveState === "error" ? "bg-red-400" : saveState === "dirty" || saveState === "saving" ? "bg-amber-400" : status === "published" ? "bg-emerald-400" : "bg-zinc-500"}`} />
+            {status === "published" ? "Publicado" : "Rascunho"} · {saveState === "saved" ? (status === "published" ? "salvo, já vale no bot" : "salvo") : saveText.toLowerCase()}
+          </span>
           {extra}
           {onSaveNow && (
             <button
               type="button"
-              className={BTN_SEC}
+              className={BTN_GHOST}
               disabled={savePending || saveState === "saving"}
               title={status === "published" ? "Salva agora. Como o fluxo está publicado, o bot já usa as mudanças." : "Salva o rascunho agora."}
               onClick={() =>
@@ -160,7 +164,7 @@ export default function EditorTopBar({
             {testPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}Testar no Telegram
           </button>
           <button type="button" className={BTN_PRI} onClick={() => setPublishOpen(true)}>
-            <Rocket className="w-4 h-4" />{status === "published" ? "Publicado" : "Publicar"}
+            {status === "published" ? <Check className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}{status === "published" ? "Publicado" : "Publicar"}
           </button>
         </div>
       </div>

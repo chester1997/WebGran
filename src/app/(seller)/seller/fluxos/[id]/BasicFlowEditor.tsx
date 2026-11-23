@@ -28,7 +28,7 @@ import {
   type DeliveryKind,
 } from "@/lib/flows/basic-config";
 import { saveFlowConfigAction } from "../actions";
-import { BTN_GHOST, BTN_SEC, CARD, Callout, INPUT, useToast } from "../_components/flow-ui";
+import { BTN_GHOST, BTN_SEC, Callout, INPUT, useToast } from "../_components/flow-ui";
 import EditorTopBar, { type ChecklistItem, type SaveState } from "../_components/EditorTopBar";
 import TelegramPreview, { previewHtml, type PreviewButton, type PreviewItem } from "../_components/TelegramPreview";
 import Toaster from "../_components/Toaster";
@@ -80,6 +80,37 @@ const STEPS: [BasicStepId, string][] = [
   ["vip", "Entregável"], ["disparo", "Disparo"], ["suporte", "Suporte"],
 ];
 
+/** Etapas agrupadas pelo caminho da venda (menu lateral). */
+const STEP_GROUPS: [string, BasicStepId[]][] = [
+  ["Entrada", ["inicio", "planos"]],
+  ["Ofertas", ["upsell", "downsell", "bump"]],
+  ["Pagamento", ["pix", "expiracao"]],
+  ["Entrega", ["vip", "mimos"]],
+  ["Ajustes", ["botoes", "rastreio", "disparo", "suporte"]],
+];
+
+const STEP_DESC: Record<BasicStepId, string> = {
+  inicio: "O que o cliente recebe quando manda /start para o bot.",
+  planos: "Os planos à venda, com preço, duração e para onde vai cada compra.",
+  upsell: "Ofertas enviadas depois que o cliente paga.",
+  downsell: "Mensagens para recuperar quem não comprou ou não pagou o Pix.",
+  bump: "Uma oferta extra que entra na mesma compra, antes do Pix.",
+  pix: "A mensagem com o código Pix e o que acompanha a cobrança.",
+  mimos: "Botões para o cliente mandar um mimo em dinheiro.",
+  rastreio: "Pixels e UTMs para medir as vendas de cada campanha.",
+  expiracao: "O que o bot envia quando o plano do cliente vence.",
+  botoes: "As cores dos botões que o cliente vê no Telegram.",
+  vip: "Para onde o cliente vai depois de pagar.",
+  disparo: "Mensagens em massa para os leads do bot.",
+  suporte: "Quem atende quando o cliente usa /suporte.",
+};
+
+const STATUS_DOT: Record<string, string> = {
+  ok: "bg-emerald-400",
+  pend: "bg-amber-400",
+  off: "ring-[1.5px] ring-inset ring-zinc-600",
+};
+
 const V_START = ["{nome}", "{saudacao}", "{localizacao}"];
 const V_OFFER = ["{nome}", "{localizacao}"];
 const V_PIX = ["{codigo_pix}", "{nome_plano}", "{valor_final}", "{duracao}"];
@@ -97,6 +128,7 @@ export default function BasicFlowEditor({
   chats,
   botName,
   initialConfig,
+  initialStep = "inicio",
 }: {
   flowId: string;
   name: string;
@@ -106,10 +138,13 @@ export default function BasicFlowEditor({
   chats: FlowChat[];
   botName: string;
   initialConfig: BasicFlowConfig;
+  /** Etapa aberta ao carregar (padrão: Início). */
+  initialStep?: BasicStepId;
 }) {
   const toast = useToast();
   const [config, setConfig] = useState<BasicFlowConfig>(() => normalizeBasicConfig(initialConfig));
-  const [step, setStep] = useState<BasicStepId>("inicio");
+  const [activeField, setActiveField] = useState<string | null>(null);
+  const [step, setStep] = useState<BasicStepId>(initialStep);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const lastSaved = useRef<string | null>(null);
   const seq = useRef(0);
@@ -174,6 +209,7 @@ export default function BasicFlowEditor({
 
   const goto = (s: BasicStepId) => {
     setStep(s);
+    setActiveField(null);
     if (window.innerWidth < 1024) formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
@@ -187,52 +223,70 @@ export default function BasicFlowEditor({
   ];
 
   const [st, stLabel] = basicStepStatus(step, config);
+  const stepLabel = (id: BasicStepId) => STEPS.find((s) => s[0] === id)![1];
   const label = STEPS.find((s) => s[0] === step)![1];
 
   return (
-    <div className="w-full max-w-full pb-10 space-y-5">
+    <div className="w-full max-w-full pb-10">
       <Toaster />
       <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} onSaveNow={saveNow} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)_360px] gap-4 items-start">
-        <nav aria-label="Seções do fluxo" className={`${CARD} p-2 lg:sticky lg:top-4 flex lg:flex-col gap-0.5 overflow-x-auto`}>
-          <p className="hidden lg:block px-2.5 pt-1.5 pb-2">
-            <span className="block text-[14px] font-semibold text-white">Configurações</span>
-            <span className="block text-[12px] text-zinc-500 truncate">{bots[0] ? "@" + bots[0].username : "Sem bot ligado"}</span>
-          </p>
-          {STEPS.map(([id, l]) => {
-            const [s] = basicStepStatus(id, config);
-            const on = step === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => goto(id)}
-                aria-current={on ? "page" : undefined}
-                className={`relative flex items-center gap-3 px-3 h-[42px] rounded-[10px] text-left whitespace-nowrap shrink-0 ${on ? "bg-[#1c1c1c] text-white font-semibold" : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"}`}
-              >
-                {on && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-[#3984FF]" />}
-                <span className={on ? "text-[#3984FF]" : ""}><FlowStepIcon step={id} /></span>
-                <span className="flex-1 text-[14px]">{l}</span>
-                <span className={`w-2 h-2 rounded-full shrink-0 ${s === "ok" ? "bg-emerald-400" : s === "pend" ? "bg-amber-400" : "border border-zinc-600"}`} />
-              </button>
-            );
-          })}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[208px_minmax(0,1fr)_340px] gap-6 xl:gap-8 items-start">
+        {/* Jornada: etapas agrupadas pelo caminho da venda */}
+        <nav aria-label="Etapas do fluxo" className="lg:sticky lg:top-2 -mx-1 lg:mx-0 flex lg:flex-col gap-1 lg:gap-0 overflow-x-auto pb-1 lg:pb-0">
+          {STEP_GROUPS.map(([group, ids], gi) => (
+            <div key={group} className="contents lg:block">
+              <p className={`hidden lg:block px-2.5 mb-1 text-[11.5px] font-semibold text-[#8b8b94] ${gi ? "mt-5" : ""}`}>{group}</p>
+              {ids.map((id) => {
+                const [s] = basicStepStatus(id, config);
+                const on = step === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => goto(id)}
+                    aria-current={on ? "page" : undefined}
+                    className={`group flex items-center gap-2.5 h-[34px] px-2.5 rounded-[8px] text-left whitespace-nowrap shrink-0 lg:w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 ${
+                      on ? "bg-[#17181c] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]" : "text-zinc-400 hover:text-white hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <span className={`[&_svg]:w-4 [&_svg]:h-4 flex ${on ? "text-[#3b82f6]" : "text-zinc-500 group-hover:text-zinc-300"}`}><FlowStepIcon step={id} /></span>
+                    <span className="flex-1 text-[13.5px]">{stepLabel(id)}</span>
+                    <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${STATUS_DOT[s] || STATUS_DOT.off}`} title={basicStepStatus(id, config)[1]} />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <div ref={formRef} className="flex flex-col gap-4 min-w-0 scroll-mt-4">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-[19px] font-semibold text-white">{label}</h2>
-            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11.5px] font-semibold ${st === "ok" ? "text-emerald-400 border-emerald-500/25 bg-emerald-500/[0.08]" : st === "pend" ? "text-amber-400 border-amber-500/25 bg-amber-500/[0.08]" : "text-zinc-400 border-white/[0.13]"}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current" />{stLabel}
-            </span>
-          </div>
+        <div
+          ref={formRef}
+          className="min-w-0 w-full max-w-[780px] xl:justify-self-center flex flex-col gap-7 scroll-mt-4"
+          onFocusCapture={(e) => {
+            const id = (e.target as HTMLElement).id;
+            if (id) setActiveField(id);
+          }}
+        >
+          <header>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-[24px] font-semibold tracking-tight text-white">{label}</h2>
+              <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[#8b8b94]">
+                <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[st] || STATUS_DOT.off}`} />
+                {stLabel}
+              </span>
+            </div>
+            <p className="mt-1 text-[14px] text-zinc-400">{STEP_DESC[step]}</p>
+          </header>
           <Section step={step} c={config} update={update} chats={chatList} goto={goto} flowId={flowId} published={status === "published"} />
         </div>
 
-        <aside className="lg:col-start-2 xl:col-start-auto xl:sticky xl:top-4 flex flex-col gap-2.5" aria-label="Prévia no Telegram">
-          <div className="flex justify-between text-[12.5px] text-zinc-500"><span>Como o cliente vê</span><span>Prévia</span></div>
-          <TelegramPreview title={botName} items={buildPreview(step, config)} />
+        <aside className="lg:col-start-2 xl:col-start-auto xl:sticky xl:top-2 flex flex-col gap-2.5 w-full max-w-[780px] xl:max-w-none" aria-label="Prévia no Telegram">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[12px] font-semibold text-zinc-400">Prévia no Telegram</span>
+            <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#8b8b94]"><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />Ao vivo</span>
+          </div>
+          <TelegramPreview title={botName} items={buildPreview(step, config)} activeSrc={activeField} />
         </aside>
       </div>
     </div>
@@ -352,7 +406,7 @@ function Section({ step, c, update, chats, goto, flowId, published }: { step: Ba
           </Card>
           <Card title="Mídias iniciais" sub={`Até ${MAX_MEDIA} fotos ou vídeos curtos (vídeo até 4 MB).`}>
             <InitialMedia c={c} update={update} />
-            <Select id="f-send-mode" label="Como enviar" value={c.inicio.sendMode} onChange={(v) => update((d) => { d.inicio.sendMode = v as "album" | "seq"; })} options={[["album", "Álbum — envia as mídias agrupadas"], ["seq", "Sequencial — envia uma mídia por vez"]]} />
+            <Seg label="Como enviar" value={c.inicio.sendMode} onChange={(v) => update((d) => { d.inicio.sendMode = v; })} options={[["album", "Álbum"], ["seq", "Uma por vez"]]} />
             <Toggle title="Mídia dinâmica" desc="Usa nome e idade da modelo nas mensagens. A cidade vem do link de rastreamento." checked={c.inicio.dynamic} onChange={(v) => update((d) => { d.inicio.dynamic = v; })} />
             {c.inicio.dynamic && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -596,7 +650,7 @@ function Section({ step, c, update, chats, goto, flowId, published }: { step: Ba
     case "pix":
       return (
         <>
-          <Card title="💠 Mensagem PIX" right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.pix.msg = ""; })}>🔄 Restaurar padrão</button>}>
+          <Card title="💠 Mensagem PIX" right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.pix.msg = ""; })}>Restaurar padrão</button>}>
             <AreaField id="f-pix-msg" label="Mensagem do PIX" value={c.pix.msg} onChange={(v) => update((d) => { d.pix.msg = v; })} vars={[...V_PIX, "{nome}"]} hint="Em branco usa a mensagem padrão. Sem {codigo_pix}, o código vai conforme a posição abaixo." />
             <ChoiceCards label="Posição do código PIX" value={c.pix.pos} onChange={(v) => update((d) => { d.pix.pos = v; })} options={[["junto", "Junto com o texto", "Código integrado na mensagem"], ["separada", "Mensagem separada", "Código em mensagem própria"]]} />
             <ChoiceCards label="Formato do código" value={c.pix.fmt} onChange={(v) => update((d) => { d.pix.fmt = v; })} options={[["caixa", "Caixa destacada", "00020126580014BR.GOV.BCB.PIX…"], ["pre", "Texto formatado", "00020126580014BR.GOV.BCB.PIX…"], ["code", "Código simples", "00020126580014BR.GOV.BCB.PIX…"]]} />
@@ -695,7 +749,7 @@ function Section({ step, c, update, chats, goto, flowId, published }: { step: Ba
     case "expiracao":
       return (
         <>
-          <Card title="⏰ Expiração" right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.expiracao = { msg: "", discount: 0, mediaUrl: "" }; })}>🔄 Resetar expiração</button>}>
+          <Card title="⏰ Expiração" right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.expiracao = { msg: "", discount: 0, mediaUrl: "" }; })}>Restaurar padrão</button>}>
             <AreaField id="f-exp-msg" label="Mensagem de expiração" rows={3} value={c.expiracao.msg} onChange={(v) => update((d) => { d.expiracao.msg = v; })} vars={["{nome}"]} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               <Select id="f-exp-disc" label="Desconto para renovação" value={String(c.expiracao.discount)} onChange={(v) => update((d) => { d.expiracao.discount = Number(v); })} options={[["0", "Sem desconto"], ...Array.from({ length: 15 }, (_, k) => (k + 1) * 5).map((v) => [String(v), `${v}% OFF`] as [string, string])]} hint="Aplicado em todos os planos na renovação." />
@@ -721,7 +775,7 @@ function Section({ step, c, update, chats, goto, flowId, published }: { step: Ba
     case "vip":
       return (
         <>
-          <Card title="⭐ Entregável" sub="Destino dos planos marcados como “Usar entrega padrão”. Também dá para escolher em Planos." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.groupId = ""; d.vip.link = ""; })}>🗑️ Remover entregável</button>}>
+          <Card title="⭐ Entregável" sub="Destino dos planos marcados como “Usar entrega padrão”. Também dá para escolher em Planos." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.groupId = ""; d.vip.link = ""; })}>Remover entregável</button>}>
             <DeliveryPicker id="f-vip-deliv" label="Destino da entrega padrão" chats={chats} value={{ useDefault: false, type: c.vip.deliveryType, groupId: c.vip.groupId, link: c.vip.link }} onChange={(v) => update((d) => { d.vip.deliveryType = v.type; d.vip.groupId = v.groupId; d.vip.link = v.link; })} />
             {c.planos.items.some((p) => !planDelivery(p, c)) && (
               <Callout tone="warn">Planos sem entrega: {c.planos.items.filter((p) => !planDelivery(p, c)).map((p) => p.name || "sem nome").join(", ")}. <button type="button" className="underline" onClick={() => goto("planos")}>Ver planos</button></Callout>
@@ -731,7 +785,7 @@ function Section({ step, c, update, chats, goto, flowId, published }: { step: Ba
             <Card title="🎯 Pelo ID" sub="Depois do pagamento o bot gera um convite só para aquele cliente e, quando o plano vence, tira ele do grupo ou canal. O bot precisa ser admin com permissão de convidar e banir usuários." />
             <Card title="🔗 Pelo link" sub="O bot envia o link de convite do grupo ou canal depois do pagamento. Como o link é o mesmo para todos, o bot não consegue remover a pessoa quando o plano vence." />
           </div>
-          <Card title="✉️ Mensagem de entrega (opcional)" sub="Mensagem depois do pagamento. {link_vip} vira o link de acesso." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.msg = ""; })}>🔄 Restaurar padrão</button>}>
+          <Card title="✉️ Mensagem de entrega (opcional)" sub="Mensagem depois do pagamento. {link_vip} vira o link de acesso." right={<button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.vip.msg = ""; })}>Restaurar padrão</button>}>
             <AreaField id="f-vip-msg" label="Mensagem de entrega" value={c.vip.msg} onChange={(v) => update((d) => { d.vip.msg = v; })} vars={V_DELIVERY} />
             <MediaField label="Mídia (opcional)" accept="visual" value={c.vip.mediaUrl} onChange={(v) => update((d) => { d.vip.mediaUrl = v; })} />
           </Card>
@@ -746,7 +800,7 @@ function Section({ step, c, update, chats, goto, flowId, published }: { step: Ba
     case "suporte":
       return (
         <>
-          <Card title="🙋 Suporte" right={c.suporte.user ? <button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.suporte.user = ""; })}>🗑️ Remover suporte</button> : undefined}>
+          <Card title="🙋 Suporte" right={c.suporte.user ? <button type="button" className={`${BTN_GHOST} !h-8 !text-[12.5px]`} onClick={() => update((d) => { d.suporte.user = ""; })}>Remover suporte</button> : undefined}>
             <TextField id="f-sup-user" label="Username do suporte" max={64} placeholder="Ex.: @meu_suporte" value={c.suporte.user} onChange={(v) => update((d) => { d.suporte.user = v; })} hint="Username do Telegram (com ou sem @). Pode ser um usuário ou bot." />
           </Card>
           <Card title="💡 Como funciona?" sub="Quando um cliente usa o comando /suporte no bot, ele recebe um botão para falar direto com o usuário ou bot de suporte configurado aqui." />
@@ -821,7 +875,7 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
     });
   };
   const media = (url?: string) => (url ? [{ url: isVideoUrl(url) ? undefined : url, label: isVideoUrl(url) ? "▶ Vídeo" : "Mídia" }] : undefined);
-  const bot = (text: string, kb?: PreviewButton[][], mediaUrl?: string): PreviewItem => ({ kind: "bot", html: text.trim() ? previewHtml(text, pv) : undefined, kb, media: media(mediaUrl) });
+  const bot = (text: string, kb?: PreviewButton[][], mediaUrl?: string, src?: string): PreviewItem => ({ kind: "bot", html: text.trim() ? previewHtml(text, pv) : undefined, kb, media: media(mediaUrl), src });
 
   switch (step) {
     case "inicio": {
@@ -834,8 +888,8 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
       }
       const direct = c.inicio.showPlans && c.planos.items.some((p) => p.name.trim() && p.price >= 1);
       const kb: PreviewButton[][] = [...(direct ? plansKb() : [[{ t: c.inicio.btn || "🔥 Ver Planos", c: B.cta }]]), ...c.inicio.redirects.filter((r) => r.text).map((r) => [{ t: r.text }]), ...(c.mimos.on ? [[{ t: c.mimos.btn, c: B.mimo }]] : [])];
-      out.push(bot(c.inicio.msg || "(escreva a mensagem principal)", kb));
-      if (c.inicio.msg2.trim()) out.push(bot(c.inicio.msg2));
+      out.push(bot(c.inicio.msg || "(escreva a mensagem principal)", kb, undefined, "f-inicio-msg"));
+      if (c.inicio.msg2.trim()) out.push(bot(c.inicio.msg2, undefined, undefined, "f-inicio-msg2"));
       if (c.inicio.antiClone) out.push({ kind: "sys", text: "🔒 Encaminhar e salvar está bloqueado" });
       return out;
     }
@@ -845,7 +899,7 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
       const out: PreviewItem[] = [{ kind: "sys", text: "Pagamento aprovado · acesso entregue" }];
       c.upsell.items.forEach((u, i) => {
         if (c.upsell.mode === "sequencial" && i > 0) out.push({ kind: "sys", text: "Próxima oferta só depois da resposta", wait: true });
-        out.push({ kind: "sys", text: u.delayUnit === "imediato" ? "Na hora" : `⏱ ${u.delayValue} ${u.delayUnit} depois`, wait: true }, bot(u.msg || u.name || "(mensagem da oferta)", [[{ t: `Pagar ${brl(u.price)}`, c: B.upsell }], [{ t: "❌ Não tenho interesse" }]], u.mediaUrl));
+        out.push({ kind: "sys", text: u.delayUnit === "imediato" ? "Na hora" : `⏱ ${u.delayValue} ${u.delayUnit} depois`, wait: true }, bot(u.msg || u.name || "(mensagem da oferta)", [[{ t: `Pagar ${brl(u.price)}`, c: B.upsell }], [{ t: "❌ Não tenho interesse" }]], u.mediaUrl, `f-up-msg-${u.id}`));
       });
       if (!c.upsell.items.length) out.push({ kind: "sys", text: "Nenhum upsell configurado" });
       return out;
@@ -855,7 +909,7 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
       c.downsell.items.forEach((r) => {
         out.push({ kind: "sys", text: r.audience === "pix" ? "Gerou PIX e não pagou" : "Deu /start e não comprou" }, { kind: "sys", text: `⏱ ${r.delayValue} ${r.delayUnit} depois`, wait: true });
         if (r.audioUrl) out.push({ kind: "bot", voice: true });
-        out.push(bot(r.msg || "(mensagem de recuperação)", plansKb(r.discount, r.discountType === "fixed", r.planIds.length ? r.planIds : undefined), r.mediaUrl));
+        out.push(bot(r.msg || "(mensagem de recuperação)", plansKb(r.discount, r.discountType === "fixed", r.planIds.length ? r.planIds : undefined), r.mediaUrl, `f-ds-msg-${r.id}`));
       });
       if (!out.length) out.push({ kind: "sys", text: "Nenhum downsell configurado" });
       return out;
@@ -866,9 +920,9 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
       const p = c.planos.items.find((x) => x.id === b.planId);
       const out: PreviewItem[] = [{ kind: "me", text: p ? `${p.name} - ${brl(p.price)}` : "Plano" }];
       if (b.audioUrl) out.push({ kind: "bot", voice: true });
-      out.push(bot(b.msg || `Leve também ${b.name || "a oferta"} por ${brl(b.price)}?`, [[{ t: b.yes, c: B.aceitar }], [{ t: b.no, c: B.recusar }]], b.mediaUrl));
-      if (b.ifAccept.on) out.push({ kind: "sys", text: "Se aceitar" }, bot(b.ifAccept.msg, undefined, b.ifAccept.mediaUrl));
-      if (b.ifDecline.on) out.push({ kind: "sys", text: "Se recusar" }, bot(b.ifDecline.msg, undefined, b.ifDecline.mediaUrl));
+      out.push(bot(b.msg || `Leve também ${b.name || "a oferta"} por ${brl(b.price)}?`, [[{ t: b.yes, c: B.aceitar }], [{ t: b.no, c: B.recusar }]], b.mediaUrl, `f-bp-msg-${b.id}`));
+      if (b.ifAccept.on) out.push({ kind: "sys", text: "Se aceitar" }, bot(b.ifAccept.msg, undefined, b.ifAccept.mediaUrl, `f-bp-ifAccept-${b.id}`));
+      if (b.ifDecline.on) out.push({ kind: "sys", text: "Se recusar" }, bot(b.ifDecline.msg, undefined, b.ifDecline.mediaUrl, `f-bp-ifDecline-${b.id}`));
       return out;
     }
     case "pix": {
@@ -881,8 +935,8 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
       if (c.pix.fallbackOn) kb.push([{ t: c.pix.fallbackBtn }]);
       const msg = c.pix.msg.trim() ? c.pix.msg : "🌟 Você selecionou o seguinte plano:\n\n🎁 Plano: {nome_plano}\n💰 Valor: R$ {valor_final}\n\n💠 Pague via Pix Copia e Cola:";
       const msgHtml = previewHtml(msg.replace("{codigo_pix}", ""), pv);
-      if (c.pix.pos === "junto" || msg.includes("{codigo_pix}")) out.push({ kind: "bot", html: msgHtml + pixCodeHtml(c.pix.fmt), kb });
-      else out.push({ kind: "bot", html: msgHtml }, { kind: "bot", html: pixCodeHtml(c.pix.fmt).replace(/^<br>/, ""), kb });
+      if (c.pix.pos === "junto" || msg.includes("{codigo_pix}")) out.push({ kind: "bot", html: msgHtml + pixCodeHtml(c.pix.fmt), kb, src: "f-pix-msg" });
+      else out.push({ kind: "bot", html: msgHtml, src: "f-pix-msg" }, { kind: "bot", html: pixCodeHtml(c.pix.fmt).replace(/^<br>/, ""), kb });
       if (c.pix.proofOn && c.pix.proofMsgs[0]) out.push({ kind: "proof", text: c.pix.proofMsgs[0] });
       return out;
     }
@@ -890,18 +944,18 @@ function buildPreview(step: BasicStepId, c: BasicFlowConfig): PreviewItem[] {
       if (!c.mimos.on) return [{ kind: "sys", text: "Mimos desligados" }];
       const out: PreviewItem[] = [{ kind: "me", text: c.mimos.btn }];
       if (c.mimos.audioUrl) out.push({ kind: "bot", voice: true });
-      out.push(bot(c.mimos.msg || "🎁 Envie um mimo!", c.mimos.values.map((m) => [{ t: `${m.label || "Mimo"} - ${brl(m.value)}`, c: B.mimoFixo }]), c.mimos.mediaUrl));
+      out.push(bot(c.mimos.msg || "🎁 Envie um mimo!", c.mimos.values.map((m) => [{ t: `${m.label || "Mimo"} - ${brl(m.value)}`, c: B.mimoFixo }]), c.mimos.mediaUrl, "f-mimo-msg"));
       if (c.mimos.thanks) out.push({ kind: "sys", text: "Depois do pagamento" }, bot(c.mimos.thanks));
       return out;
     }
     case "rastreio":
       return [{ kind: "sys", text: "Eventos: /start (Lead) · PIX gerado (InitiateCheckout) · compra (Purchase)" }];
     case "expiracao":
-      return [{ kind: "sys", text: "Plano expirou · removido do grupo" }, bot(c.expiracao.msg || "⏰ Seu plano expirou! Renove agora 👇", plansKb(c.expiracao.discount), c.expiracao.mediaUrl)];
+      return [{ kind: "sys", text: "Plano expirou · removido do grupo" }, bot(c.expiracao.msg || "⏰ Seu plano expirou! Renove agora 👇", plansKb(c.expiracao.discount), c.expiracao.mediaUrl, "f-exp-msg")];
     case "botoes":
       return [bot("Assim ficam os botões do seu bot:", BUTTON_KEYS.map((k) => [{ t: BUTTON_LABELS[k][0], c: B[k] }]))];
     case "vip":
-      return [{ kind: "sys", text: "Pagamento aprovado" }, bot(c.vip.msg || "🎉 PAGAMENTO CONFIRMADO! (mensagem padrão)", [[{ t: "🔓 Acessar agora", c: "green" }]], c.vip.mediaUrl)];
+      return [{ kind: "sys", text: "Pagamento aprovado" }, bot(c.vip.msg || "🎉 PAGAMENTO CONFIRMADO! (mensagem padrão)", [[{ t: "🔓 Acessar agora", c: "green" }]], c.vip.mediaUrl, "f-vip-msg")];
     case "disparo":
       return [{ kind: "sys", text: "Disparo para os leads do bot" }, bot("{saudacao}, {nome}! 🔥 Novidade no grupo VIP…", plansKb())];
     case "suporte":

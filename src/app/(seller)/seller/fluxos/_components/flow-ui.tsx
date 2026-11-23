@@ -3,15 +3,16 @@
 import { useCallback, useEffect, type ReactNode } from "react";
 import { Info, Network, X, Zap } from "lucide-react";
 
-export const CARD = "bg-[#141519] border border-white/[0.08] rounded-[16px]";
+/** Superfície dos grupos: um tom acima do fundo, linha fina. */
+export const CARD = "bg-[#121316] border border-white/[0.07] rounded-[14px]";
 export const INPUT =
-  "w-full bg-[#0d0e12] border border-white/[0.13] focus:border-[#3984FF] rounded-[10px] px-3 py-2 text-[13.5px] text-white outline-none transition-colors placeholder:text-zinc-600";
+  "w-full bg-[#0d0e11] border border-white/[0.09] hover:border-white/[0.14] focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#3b82f6]/15 rounded-[9px] px-3 py-2 text-[14px] text-white outline-none transition-[border-color,box-shadow] placeholder:text-zinc-600";
 export const BTN_PRI =
-  "inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-[10px] bg-[#3984FF] hover:bg-[#2f74e6] text-white text-[13.5px] font-semibold transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap";
+  "inline-flex items-center justify-center gap-2 h-9 px-4 rounded-[9px] bg-[#3b82f6] hover:bg-[#2f74e6] text-white text-[13.5px] font-semibold transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50";
 export const BTN_SEC =
-  "inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-[10px] border border-white/[0.13] bg-white/[0.03] hover:bg-white/[0.07] text-[13.5px] font-semibold text-zinc-100 transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap";
+  "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-[9px] border border-white/[0.11] bg-[#17181c] hover:bg-[#1d1e23] text-[13.5px] font-medium text-zinc-100 transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20";
 export const BTN_GHOST =
-  "inline-flex items-center justify-center gap-2 h-[38px] px-3 rounded-[10px] text-[13.5px] font-medium text-zinc-400 hover:text-white transition-colors";
+  "inline-flex items-center justify-center gap-2 h-9 px-3 rounded-[9px] text-[13.5px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20";
 
 export function FlowTypeIcon({ type, size = 38 }: { type: "basic" | "advanced"; size?: number }) {
   const adv = type === "advanced";

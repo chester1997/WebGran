@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { ButtonColor } from "@/lib/flows/basic-config";
 
 export type PreviewButton = { t: string; c?: ButtonColor };
@@ -7,7 +8,7 @@ export type PreviewItem =
   | { kind: "me"; text: string }
   | { kind: "sys"; text: string; wait?: boolean }
   | { kind: "proof"; text: string }
-  | { kind: "bot"; html?: string; media?: { url?: string; label: string; qr?: boolean }[]; voice?: boolean; kb?: PreviewButton[][] };
+  | { kind: "bot"; html?: string; media?: { url?: string; label: string; qr?: boolean }[]; voice?: boolean; kb?: PreviewButton[][]; /** Campo do editor que gera esta mensagem. */ src?: string };
 
 /** Valores de exemplo usados só na prévia. */
 export const PREVIEW_VARS: Record<string, string> = {
@@ -40,9 +41,20 @@ const BTN: Record<ButtonColor, string> = {
   red: "bg-[#d14b4b] text-white",
 };
 
-export default function TelegramPreview({ title, items }: { title: string; items: PreviewItem[] }) {
+export default function TelegramPreview({ title, items, activeSrc }: { title: string; items: PreviewItem[]; /** Destaca a mensagem do campo em edição. */ activeSrc?: string | null }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!activeSrc) return;
+    const el = listRef.current?.querySelector<HTMLElement>("[data-active-msg]");
+    const box = listRef.current;
+    if (!el || !box) return;
+    // Rola só a prévia (nunca a página) até a mensagem destacada.
+    const top = el.offsetTop - box.offsetTop - 24;
+    box.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }, [activeSrc]);
   return (
-    <div className="rounded-[26px] border border-white/[0.13] bg-[#0e1621] overflow-hidden shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]">
+    <div className="rounded-[28px] p-[6px] bg-[#1a1b1f] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_30px_60px_-30px_rgba(0,0,0,0.9)]">
+    <div className="rounded-[22px] bg-[#0e1621] overflow-hidden">
       <div className="flex items-center gap-2.5 px-3.5 py-3 bg-[#17212b] border-b border-black/30">
         <span className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3984FF] to-[#1d4ed8] flex items-center justify-center font-bold text-[14px] text-white">
           {(title.trim()[0] || "B").toUpperCase()}
@@ -53,7 +65,8 @@ export default function TelegramPreview({ title, items }: { title: string; items
         </div>
       </div>
       <div
-        className="px-2.5 pt-3.5 pb-4 flex flex-col gap-2 min-h-[420px] max-h-[640px] overflow-y-auto"
+        ref={listRef}
+        className="relative px-2.5 pt-3.5 pb-4 flex flex-col gap-2 min-h-[420px] max-h-[640px] overflow-y-auto"
         style={{ backgroundImage: "radial-gradient(120% 80% at 0% 0%, rgba(57,132,255,.10), transparent 60%), radial-gradient(100% 80% at 100% 100%, rgba(99,102,241,.10), transparent 60%)" }}
       >
         {items.map((m, i) => {
@@ -74,8 +87,9 @@ export default function TelegramPreview({ title, items }: { title: string; items
                 <span className="block text-right text-[10.5px] text-[#9fb3c8] mt-0.5">21:07 ✓✓</span>
               </div>
             );
+          const active = !!activeSrc && m.src === activeSrc;
           return (
-            <div key={i} className="self-start max-w-[88%] flex flex-col gap-1">
+            <div key={i} data-active-msg={active ? "" : undefined} className="self-start max-w-[88%] flex flex-col gap-1">
               {m.voice && (
                 <div className="flex items-center gap-2 bg-[#182533] rounded-[14px] px-3 py-2 text-[12px] text-[#9fb3c8]">
                   <span className="w-[30px] h-[30px] rounded-full bg-[#3a7bd5] text-white flex items-center justify-center text-[11px]">▶</span>
@@ -98,7 +112,7 @@ export default function TelegramPreview({ title, items }: { title: string; items
                 </div>
               )}
               {m.html && (
-                <div className="bg-[#182533] rounded-[14px] rounded-bl-[4px] px-3 py-2 text-[13.5px] leading-[1.45] text-[#e5ecf3] [overflow-wrap:anywhere] [&_code]:font-mono [&_code]:text-[12px] [&_code]:bg-white/[0.08] [&_code]:px-1 [&_code]:rounded">
+                <div className={`bg-[#182533] rounded-[14px] rounded-bl-[4px] px-3 py-2 text-[13.5px] leading-[1.45] text-[#e5ecf3] [overflow-wrap:anywhere] [&_code]:font-mono [&_code]:text-[12px] [&_code]:bg-white/[0.08] [&_code]:px-1 [&_code]:rounded transition-shadow duration-300 ${active ? "shadow-[0_0_0_1.5px_rgba(59,130,246,0.8),0_0_0_6px_rgba(59,130,246,0.14)]" : ""}`}>
                   <span dangerouslySetInnerHTML={{ __html: m.html }} />
                   <span className="block text-right text-[10.5px] text-[#7f91a4] mt-0.5">21:07</span>
                 </div>
@@ -118,6 +132,7 @@ export default function TelegramPreview({ title, items }: { title: string; items
           );
         })}
       </div>
+    </div>
     </div>
   );
 }
