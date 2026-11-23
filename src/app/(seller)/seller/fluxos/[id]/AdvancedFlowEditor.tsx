@@ -569,13 +569,15 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph, sto
   const ctrlBtn = "w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-35 disabled:hover:bg-transparent";
 
   return (
-    <div className="w-full flex flex-col h-[calc(100dvh-3.5rem)] min-h-[560px]">
+    <div className="-mx-4 sm:-mx-6 md:-mx-7 lg:-mx-8 -mt-4 sm:-mt-5 -mb-6 md:-mb-8 flex flex-col h-[100dvh] min-h-[560px] overflow-hidden bg-[#0b0c0f]">
       <Toaster />
-      <EditorTopBar flowId={flowId} name={name} type="advanced" status={status} bots={bots} saveState={saveState} checklist={checklist} />
+      <div className="shrink-0 px-4 sm:px-6 pt-4 bg-[var(--seller-bg,#0A0A0A)] [&>div:first-child]:pb-3.5">
+        <EditorTopBar flowId={flowId} name={name} type="advanced" status={status} bots={bots} saveState={saveState} checklist={checklist} />
+      </div>
 
-      <div className="flex-1 min-h-0 mt-4 flex gap-4">
+      <div className="flex-1 min-h-0 flex">
         {/* Lista de blocos */}
-        <aside aria-label="Blocos disponíveis" className="hidden lg:flex w-[260px] shrink-0 flex-col rounded-[16px] border border-white/[0.07] bg-[#111215] overflow-hidden">
+        <aside aria-label="Blocos disponíveis" className="hidden lg:flex w-[272px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0f1012] overflow-hidden">
           <PaletteHeader />
           <div className="flex-1 overflow-y-auto custom-scrollbar px-2.5 pb-3">
             <Palette onAdd={(t) => addNode(t)} />
@@ -585,7 +587,7 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph, sto
         {/* Canvas */}
         <div
           ref={canvasRef}
-          className="relative flex-1 min-w-0 rounded-[16px] border border-white/[0.07] overflow-hidden bg-[#0b0c0f]"
+          className="relative flex-1 min-w-0 overflow-hidden bg-[#0b0c0f]"
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes("application/x-webgran-block")) {
               e.preventDefault();
