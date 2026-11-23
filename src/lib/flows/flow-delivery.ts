@@ -98,6 +98,13 @@ async function grantAccess(tg: Tg, telegramUserId: string, type: string, value: 
   return url;
 }
 
+/** Libera um destino para a compra (usado pelo bloco "Liberar acesso" do fluxo avançado). */
+export async function grantFlowAccess(p: Purchase, telegramUserId: string, type: string, value: string, name: string, orderId: string, expiresAt: Date | null): Promise<string | null> {
+  const tg = await botFor(p);
+  if (!tg) return null;
+  return grantAccess(tg, telegramUserId, type, value, name, orderId, expiresAt);
+}
+
 type Extra = { id: string; name: string; price: number; deliveryType: string; deliveryValue: string; inviteLink?: string };
 
 /**
@@ -156,7 +163,19 @@ export async function deliverFlowPurchase(orderId: string): Promise<boolean> {
       "{duracao}": planPeriodLabel({ unit: purchase.periodUnit as PeriodUnit, amount: purchase.periodAmount }),
     };
 
-    if (kind === "mimo") {
+    if (kind === "adv") {
+      // Fluxo avançado: o pagamento só marca a compra; a entrega é o bloco "Liberar acesso"
+      // (o fluxo segue pela saída "Pagou" logo abaixo).
+      const expiresAt = planExpiresAt(purchase.periodUnit, purchase.periodAmount, order.paidAt || new Date());
+      await db.update(flowPurchases).set({ status: "ACTIVE", expiresAt, error: null, updatedAt: new Date() }).where(eq(flowPurchases.id, purchase.id));
+      try {
+        const { onAdvancedPaid } = await import("./advanced-runtime");
+        await onAdvancedPaid({ ...purchase, status: "ACTIVE", expiresAt }, tg.token, customerTgId, firstName, lastName);
+      } catch (err) {
+        // A compra já está paga e marcada: um erro ao seguir o fluxo não desfaz a venda.
+        console.error(`[flow-delivery] Fluxo avançado após o pagamento do pedido ${orderId} falhou:`, (err as Error)?.message);
+      }
+    } else if (kind === "mimo") {
       // Mimo: nada a entregar, só o agradecimento.
       await db.update(flowPurchases).set({ status: "ACTIVE", error: null, updatedAt: new Date() }).where(eq(flowPurchases.id, purchase.id));
       if (c?.mimos.mediaUrl) await sendPic(c.mimos.mediaUrl);

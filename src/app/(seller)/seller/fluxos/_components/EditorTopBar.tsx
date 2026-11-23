@@ -144,8 +144,8 @@ export default function EditorTopBar({
           <button
             type="button"
             className={BTN_SEC}
-            disabled={type !== "basic" || !bots.length || testPending}
-            title={type !== "basic" ? "O teste do fluxo avançado chega numa próxima etapa" : !bots.length ? "Ligue o fluxo a um bot para testar" : "Abre o bot no Telegram rodando este rascunho, só para você"}
+            disabled={!bots.length || testPending}
+            title={!bots.length ? "Ligue o fluxo a um bot para testar" : "Abre o bot no Telegram rodando este rascunho, só para você"}
             onClick={() => {
               // Abre a aba já no clique (evita bloqueio de pop-up) e preenche o link depois.
               const w = window.open("about:blank", "_blank");

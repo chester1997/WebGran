@@ -43,7 +43,7 @@ export const NODE_TYPES = {
   espera: { label: "Esperar", category: "Lógica", color: "#fbbf24", icon: "⏱", outputs: [["out", ""]], fields: [{ key: "n", label: "Tempo", type: "num" }, { key: "u", label: "Unidade", type: "select", options: ["minutos", "horas", "dias"] }], defaults: { n: 15, u: "minutos" }, summary: (d) => `Espera ${s(d.n)} ${s(d.u)}` },
   condicao: { label: "Condição", category: "Lógica", color: "#f472b6", icon: "◇", outputs: [["sim", "Sim"], ["nao", "Não"]], fields: [{ key: "rule", label: "Se o cliente", type: "select", options: ["Já comprou algum plano", "Gerou Pix e não pagou", "Está com acesso ativo", "Veio de uma campanha (UTM)"] }], defaults: { rule: "Já comprou algum plano" }, summary: (d) => "Se " + s(d.rule).toLowerCase() },
   ab: { label: "Teste A/B", category: "Lógica", color: "#fb923c", icon: "⑂", outputs: [["a", "Caminho A"], ["b", "Caminho B"]], fields: [{ key: "pct", label: "% para o caminho A", type: "num" }], defaults: { pct: 50 }, summary: (d) => `${s(d.pct)}% vão para A` },
-  salto: { label: "Ir para", category: "Lógica", color: "#a3a3a3", icon: "↪", outputs: [], fields: [{ key: "target", label: "Bloco de destino", type: "text" }], defaults: { target: "" }, summary: (d) => "Continua em: " + (s(d.target) || "—") },
+  salto: { label: "Ir para", category: "Lógica", color: "#a3a3a3", icon: "↪", outputs: [], fields: [{ key: "target", label: "Número do bloco de destino (o número azul no canvas)", type: "text" }], defaults: { target: "" }, summary: (d) => "Continua em: " + (s(d.target) || "—") },
   pix: { label: "Pix", category: "Venda", color: "#34d399", icon: "$", outputs: [["pago", "Pagou"], ["nao", "Não pagou"]], fields: [{ key: "productId", label: "Plano", type: "select" }, { key: "wait", label: "Considerar “não pagou” depois de (min)", type: "num" }, { key: "qr", label: "QR Code", type: "select", options: ["Por botão", "Junto do Pix", "Não enviar"] }], defaults: { productId: "", wait: 30, qr: "Por botão" }, summary: (d) => `Espera ${s(d.wait)} min pelo pagamento` },
   bump: { label: "Order Bump", category: "Venda", color: "#f59e0b", icon: "+", outputs: [["sim", "Aceitou"], ["nao", "Recusou"]], fields: [{ key: "name", label: "Oferta", type: "text" }, { key: "price", label: "Preço (R$)", type: "num" }, { key: "text", label: "Mensagem", type: "area" }], defaults: { name: "Oferta extra", price: 9.9, text: "Leve também por um preço especial?" }, summary: (d) => `${s(d.name)} · ${money(d.price)}` },
   upsell: { label: "Upsell", category: "Venda", color: "#60a5fa", icon: "↗", outputs: [["sim", "Comprou"], ["nao", "Recusou"]], fields: [{ key: "name", label: "Oferta", type: "text" }, { key: "price", label: "Preço (R$)", type: "num" }, { key: "text", label: "Mensagem", type: "area" }], defaults: { name: "Oferta especial", price: 29.9, text: "Oferta só para quem acabou de entrar." }, summary: (d) => `${s(d.name)} · ${money(d.price)}` },
@@ -148,6 +148,29 @@ export function normalizeGraph(input: unknown): FlowGraph {
     edges.push({ from: from.id, out, to: to.id });
   }
   return { version: 1, nodes, edges };
+}
+
+/**
+ * Número de cada bloco na ordem em que o cliente passa por eles, a partir do Início
+ * (o mesmo número azul do editor). Blocos soltos vêm depois; notas não entram.
+ */
+export function graphOrder(g: FlowGraph): Map<string, number> {
+  const order = new Map<string, number>();
+  const start = g.nodes.find((n) => n.type === "inicio");
+  const queue = start ? [start.id] : [];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (order.has(id)) continue;
+    order.set(id, order.size + 1);
+    const node = g.nodes.find((n) => n.id === id);
+    if (!node) continue;
+    for (const [k] of nodeOutputs(node)) {
+      const e = g.edges.find((x) => x.from === id && x.out === k);
+      if (e && !order.has(e.to)) queue.push(e.to);
+    }
+  }
+  for (const n of g.nodes) if (n.type !== "nota" && !order.has(n.id)) order.set(n.id, order.size + 1);
+  return order;
 }
 
 /** Checklist mínima antes de publicar (usada na tela e, depois, pelo servidor). */

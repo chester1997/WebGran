@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { flowBroadcasts, flowJobs, products, salesFlowBots, salesFlowFolders, salesFlows, telegramBotChats, telegramBots } from "@/db/schema";
 import { blankBasicConfig, normalizeBasicConfig, planDelivery, templateBasicConfig, type BasicFlowConfig } from "./basic-config";
-import { blankGraph, normalizeGraph } from "./advanced-graph";
+import { blankGraph, graphChecklist, normalizeGraph } from "./advanced-graph";
 
 export const FLOW_LIMIT = 30;
 export type FlowType = "basic" | "advanced";
@@ -328,8 +328,14 @@ export function basicPublishProblems(config: BasicFlowConfig, botCount: number) 
 export async function publishFlow(storeId: string, flowId: string) {
   return guard(async () => {
     const f = await ownFlow(storeId, flowId);
-    if (f.type !== "basic") throw new Error("O fluxo avançado ainda não pode ser publicado. Ele começa a rodar numa próxima etapa.");
     const bots = await db.select({ botId: salesFlowBots.botId }).from(salesFlowBots).where(eq(salesFlowBots.flowId, flowId));
+    if (f.type === "advanced") {
+      const missing = graphChecklist(normalizeGraph(f.config)).filter((c) => c.required && !c.ok).map((c) => c.label);
+      if (!bots.length) missing.unshift("Ligue o fluxo a um bot");
+      if (missing.length) throw new Error(`Falta: ${missing.join(", ")}.`);
+      await db.update(salesFlows).set({ status: "published", updatedAt: new Date() }).where(eq(salesFlows.id, flowId));
+      return;
+    }
     const config = normalizeBasicConfig(f.config);
     const problems = basicPublishProblems(config, bots.length);
     if (problems.length) throw new Error(problems.join(" "));
@@ -347,8 +353,7 @@ export async function unpublishFlow(storeId: string, flowId: string) {
 /** Link "Testar no Telegram": abre o bot ligado já rodando o rascunho. */
 export async function flowTestLink(storeId: string, flowId: string) {
   return guard(async () => {
-    const f = await ownFlow(storeId, flowId);
-    if (f.type !== "basic") throw new Error("O teste do fluxo avançado chega numa próxima etapa.");
+    await ownFlow(storeId, flowId);
     const bot = await db
       .select({ username: telegramBots.username })
       .from(salesFlowBots)

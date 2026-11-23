@@ -388,6 +388,31 @@ export async function POST(req: NextRequest) {
         return respondOk();
       }
 
+      // Botões do Fluxo Avançado (blocos ligados): "al:" publicado, "at:" teste do rascunho.
+      if (/^a[lt]:/.test(cbData)) {
+        const advMode = cbData.startsWith("at:") ? "test" : "live";
+        scheduleFlowTick();
+        try {
+          const Adv = await import("@/lib/flows/advanced-runtime");
+          const flow = await Adv.getAdvancedFlowForBot(resolved.bot.id, { includeDraft: advMode === "test" });
+          if (flow && chatId) {
+            await Adv.runAdvancedCallback(
+              { token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id },
+              flow,
+              advMode,
+              { id: cbId, data: cbData, chatId, user: update.callback_query.from, messageId: update.callback_query.message?.message_id }
+            );
+          } else {
+            await new TelegramBotService(token).answerCallbackQuery(cbId, "Essa opção não está mais disponível. Mande /start de novo.", true);
+          }
+        } catch (flowErr: unknown) {
+          console.error("[TELEGRAM WEBHOOK] Erro no fluxo avançado (botão):", (flowErr as Error)?.message || flowErr);
+          try { await new TelegramBotService(token).answerCallbackQuery(cbId, "⚠️ Não consegui concluir agora. Tente de novo.", true); } catch {}
+        }
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
+      }
+
       if (cbData.startsWith("check_pay:") || cbData.startsWith("order_check:")) {
         const orderId = cbData.replace(/^(check_pay:|order_check:)/, "").trim();
         const botService = new TelegramBotService(token);
@@ -705,8 +730,8 @@ export async function POST(req: NextRequest) {
             if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
             return respondOk();
           }
-        } catch (flowErr: any) {
-          console.error("[TELEGRAM WEBHOOK] Erro no fluxo (/suporte):", flowErr?.message || flowErr);
+        } catch (flowErr: unknown) {
+          console.error("[TELEGRAM WEBHOOK] Erro no fluxo (/suporte):", (flowErr as Error)?.message || flowErr);
         }
         const { handleSupportCommand } = await import("@/lib/telegram/bot-cart-handler");
         await handleSupportCommand({ store, botService, miniAppUrl }, chatId, store);
@@ -715,6 +740,28 @@ export async function POST(req: NextRequest) {
       }
 
       const isStartCommand = text.startsWith("/start");
+      if (!isStartCommand && text.trim() && !text.startsWith("/")) {
+        // Fluxo Avançado: a mensagem pode ser a resposta de um bloco "Pergunta".
+        try {
+          const Adv = await import("@/lib/flows/advanced-runtime");
+          const flow = await Adv.getAdvancedFlowForBot(resolved.bot.id, { includeDraft: true });
+          if (flow) {
+            scheduleFlowTick();
+            const handled = await Adv.runAdvancedText(
+              { token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id },
+              flow,
+              update.message.from || { id: chatId },
+              text
+            );
+            if (handled) {
+              if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+              return respondOk();
+            }
+          }
+        } catch (flowErr: any) {
+          console.error("[TELEGRAM WEBHOOK] Erro no fluxo avançado (resposta):", flowErr?.message || flowErr);
+        }
+      }
       if (!isStartCommand) {
         // Mensagem de diálogo / conversação (já sincronizada em telegram_customers e persistida em telegram_messages acima).
         // Evita disparo de respostas automáticas repetitivas para mensagens de chat ou testes inbound.
@@ -899,6 +946,34 @@ export async function POST(req: NextRequest) {
           }
         } catch (flowErr: any) {
           console.error("[TELEGRAM WEBHOOK] Fluxo indisponível no /start, usando boas-vindas padrão:", flowErr?.message || flowErr);
+        }
+        // Sem fluxo básico: tenta o Fluxo Avançado (publicado, ou rascunho pelo link de teste).
+        if (!flowToRun && FlowRuntime) {
+          try {
+            const Adv = await import("@/lib/flows/advanced-runtime");
+            const testFlowId = FlowRuntime.parseTestStartParam(startParam);
+            const adv = await Adv.getAdvancedFlowForBot(resolved.bot.id, { includeDraft: !!testFlowId });
+            const advMode = testFlowId && adv && adv.flowId === testFlowId ? "test" : adv?.status === "published" ? "live" : null;
+            if (adv && advMode) {
+              scheduleFlowTick();
+              try {
+                await Adv.runAdvancedStart(
+                  { token, storeId: store.id, storeSlug: store.slug, botDbId: resolved.bot.id },
+                  adv,
+                  advMode,
+                  chatId,
+                  update.message.from || { id: chatId },
+                  advMode === "live" ? startParam : ""
+                );
+              } catch (advErr: unknown) {
+                console.error("[TELEGRAM WEBHOOK] Erro ao rodar o fluxo avançado no /start:", (advErr as Error)?.message || advErr);
+              }
+              if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+              return respondOk();
+            }
+          } catch (advErr: unknown) {
+            console.error("[TELEGRAM WEBHOOK] Fluxo avançado indisponível no /start:", (advErr as Error)?.message || advErr);
+          }
         }
         if (flowToRun && FlowRuntime) {
           scheduleFlowTick();

@@ -15,7 +15,7 @@ import { flowBroadcasts, flowJobs, flowPurchases, orders, telegramBots, telegram
 import { decrypt } from "@/lib/encryption";
 import type { DelayUnit } from "./basic-config";
 
-export type JobKind = "downsell" | "upsell" | "broadcast";
+export type JobKind = "downsell" | "upsell" | "broadcast" | "adv_step" | "adv_wait" | "adv_pix";
 
 function isMissing(err: unknown) {
   const e = err as { code?: string; message?: string; cause?: { code?: string; message?: string } };
@@ -154,34 +154,45 @@ export async function processFlowJobs(opts: { budgetMs?: number; limit?: number 
             tokens.set(job.botId, bot?.tokenEncrypted ? { token: decrypt(bot.tokenEncrypted), tgBotId: bot.botId } : null);
           }
           const tg = tokens.get(job.botId);
-          if (!flows.has(job.botId)) flows.set(job.botId, await runtime.getBasicFlowForBot(job.botId, { includeDraft: true }));
-          const flow = flows.get(job.botId);
-          if (!tg || !flow || (job.flowId && flow.flowId !== job.flowId)) {
-            status = "canceled";
-            error = "Bot ou fluxo não está mais ligado.";
-          } else {
-            const mode = flow.status === "published" ? "live" : "test";
-            const ctx = { token: tg.token, storeId: job.storeId, storeSlug: "", botDbId: job.botId };
-            const payload = (job.payload || {}) as Record<string, unknown>;
-
-            if (job.kind === "downsell") {
-              const orderId = typeof payload.orderId === "string" ? payload.orderId : "";
-              let skip = await paidSince(job.botId, job.telegramUserId, job.createdAt);
-              if (!skip && orderId) {
-                const o = await db.query.orders.findFirst({ where: eq(orders.id, orderId), columns: { status: true } });
-                skip = o?.status === "paid";
-              }
-              if (skip) status = "canceled";
-              else if (!(await runtime.sendDownsellOffer(ctx, flow, mode, job.telegramUserId, job.ref, String(payload.firstName || "")))) status = "canceled";
-            } else if (job.kind === "upsell") {
-              if (!(await runtime.sendUpsellOffer(ctx, flow, mode, job.telegramUserId, job.ref))) status = "canceled";
-            } else if (job.kind === "broadcast") {
-              const ok = await sendBroadcastItem(ctx, flow, job);
-              if (ok === null) status = "canceled";
-              else if (!ok) { status = "failed"; error = "Não entregue (bloqueou o bot ou saiu)."; }
-              await new Promise((r) => setTimeout(r, 40)); // ~25 mensagens/s, abaixo do limite do Telegram
-            } else {
+          if (job.kind.startsWith("adv_")) {
+            // Fluxo avançado (espera, pergunta sem resposta, Pix não pago).
+            if (!tg) {
               status = "canceled";
+              error = "Bot sem token.";
+            } else {
+              const { runAdvancedJob } = await import("./advanced-runtime");
+              status = await runAdvancedJob(job, tg.token);
+            }
+          } else {
+            if (!flows.has(job.botId)) flows.set(job.botId, await runtime.getBasicFlowForBot(job.botId, { includeDraft: true }));
+            const flow = flows.get(job.botId);
+            if (!tg || !flow || (job.flowId && flow.flowId !== job.flowId)) {
+              status = "canceled";
+              error = "Bot ou fluxo não está mais ligado.";
+            } else {
+              const mode = flow.status === "published" ? "live" : "test";
+              const ctx = { token: tg.token, storeId: job.storeId, storeSlug: "", botDbId: job.botId };
+              const payload = (job.payload || {}) as Record<string, unknown>;
+
+              if (job.kind === "downsell") {
+                const orderId = typeof payload.orderId === "string" ? payload.orderId : "";
+                let skip = await paidSince(job.botId, job.telegramUserId, job.createdAt);
+                if (!skip && orderId) {
+                  const o = await db.query.orders.findFirst({ where: eq(orders.id, orderId), columns: { status: true } });
+                  skip = o?.status === "paid";
+                }
+                if (skip) status = "canceled";
+                else if (!(await runtime.sendDownsellOffer(ctx, flow, mode, job.telegramUserId, job.ref, String(payload.firstName || "")))) status = "canceled";
+              } else if (job.kind === "upsell") {
+                if (!(await runtime.sendUpsellOffer(ctx, flow, mode, job.telegramUserId, job.ref))) status = "canceled";
+              } else if (job.kind === "broadcast") {
+                const ok = await sendBroadcastItem(ctx, flow, job);
+                if (ok === null) status = "canceled";
+                else if (!ok) { status = "failed"; error = "Não entregue (bloqueou o bot ou saiu)."; }
+                await new Promise((r) => setTimeout(r, 40)); // ~25 mensagens/s, abaixo do limite do Telegram
+              } else {
+                status = "canceled";
+              }
             }
           }
         } catch (err) {

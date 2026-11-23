@@ -21,7 +21,7 @@ export interface PlanCheckoutInput {
   /** "none" só para mimo (não entrega nada). */
   delivery: { type: "group" | "link" | "none"; value: string };
   /** Tipo da compra (padrão "plan"). */
-  kind?: "plan" | "upsell" | "mimo";
+  kind?: "plan" | "upsell" | "mimo" | "adv";
   /** Order Bump aceito: somado no mesmo Pix e entregue junto. */
   extras?: FlowExtra[];
 }
