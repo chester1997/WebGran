@@ -23,6 +23,10 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
   // cabeçalho do bot faz a volta. Essa rota já é exclusiva da conta proprietária.
   const hideMobileTopBar = /^\/seller\/bots\/(?!new$)[^/]+$/.test(pathname || "");
 
+  // Editor de um fluxo (/seller/fluxos/<id>): tela cheia, sem sidebar nem cabeçalho do painel.
+  // A volta é pelo "Meus Fluxos" do próprio editor. Rota exclusiva da conta proprietária.
+  const focusMode = /^\/seller\/fluxos\/[0-9a-f-]{36}$/i.test(pathname || "");
+
   const hamburgerButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileSidebarRef = useRef<HTMLElement | null>(null);
   const prevMobileOpenRef = useRef(mobileDrawerOpen);
@@ -215,6 +219,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
       <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--seller-bg,#0A0A0A)] relative">
 
         {/* Desktop Sidebar: Fixa à esquerda, sem colapso, scroll invisível */}
+        {!focusMode && (
         <aside className="w-[var(--sidebar-w,320px)] bg-[var(--seller-bg,#0A0A0A)] h-full shrink-0 hidden lg:block">
           <SellerSidebar
             sellerProfile={sellerProfile}
@@ -222,7 +227,9 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
             salesGoal={SALES_GOAL}
           />
         </aside>
+        )}
 
+        {!focusMode && (<>
         {/* Mobile Drawer Backdrop (Transição suave sincronizada) */}
         <div
           onClick={() => setMobileDrawerOpen(false)}
@@ -254,6 +261,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
             onNavigateMobile={handleMobileNavigate}
           />
         </aside>
+        </>)}
 
         {/* Content Canvas Wrapper (Acompanha o movimento empurrando suavemente para a direita) */}
         <div
@@ -265,6 +273,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
         >
 
           {/* Header Unificado (Mobile: barra compacta única <= 96px / Desktop: portal executivo) */}
+          {!focusMode && (
           <header
             className={`flex-none shrink-0 grow-0 w-full bg-[var(--seller-bg,#0A0A0A)] border-b ${
               ownerMobileHeader && !contentScrolled ? "border-transparent" : "border-white/[0.08]"
@@ -331,9 +340,10 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
               className="w-full px-4 sm:px-6 md:px-7 lg:px-8 pt-3.5 pb-4 lg:py-0 min-h-0 lg:min-h-[var(--header-h,112px)] h-auto flex items-center relative z-30 overflow-visible"
             />
           </header>
+          )}
 
           {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado e Fundo Sólido Uniforme */}
-          <div className="flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10 z-10">
+          <div className={`flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] z-10 ${focusMode ? "" : "rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10"}`}>
             {/* Área de Rolagem do Conteúdo */}
             <main
               onScroll={(e) => {
@@ -342,7 +352,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
               }}
               tabIndex={0}
               aria-label="Painel do Vendedor"
-              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 md:px-7 lg:px-8 pt-4 sm:pt-6 pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10"
+              className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 md:px-7 lg:px-8 ${focusMode ? "pt-4 sm:pt-5" : "pt-4 sm:pt-6"} pb-6 md:pb-8 bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/10 custom-scrollbar relative z-10`}
             >
               <SaleNotificationSoundHandler />
               <div className="w-full relative z-10 overflow-clip">

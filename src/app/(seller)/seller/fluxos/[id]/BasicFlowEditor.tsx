@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Copy, ImagePlus, Loader2, Plus, RefreshCw } from "lucide-react";
-import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import {
   BUTTON_KEYS,
   BUTTON_LABELS,
@@ -193,7 +192,6 @@ export default function BasicFlowEditor({
   return (
     <div className="w-full max-w-full pb-10 space-y-5">
       <Toaster />
-      <SellerPageHeader title={name} subtitle="Fluxo básico · venda na conversa" />
       <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} onSaveNow={saveNow} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)_360px] gap-4 items-start">

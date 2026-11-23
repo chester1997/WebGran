@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Maximize2, Minus, Plus, Trash2 } from "lucide-react";
-import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import {
   graphChecklist,
   isFailOutput,
@@ -205,7 +204,6 @@ export default function AdvancedFlowEditor({
   return (
     <div className="w-full max-w-full pb-10 space-y-4">
       <Toaster />
-      <SellerPageHeader title={name} subtitle="Fluxo avançado · blocos ligados" />
       <EditorTopBar flowId={flowId} name={name} type="advanced" status={status} bots={bots} saveState={saveState} checklist={checklist} />
 
       <div className="relative grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)] 2xl:grid-cols-[200px_minmax(0,1fr)_320px] gap-3.5 items-stretch">

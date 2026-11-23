@@ -71,7 +71,11 @@ export default function EditorTopBar({
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-          <Link href="/seller/fluxos" className="inline-flex items-center gap-1 text-[13px] text-zinc-400 hover:text-white">
+          <Link
+            href="/seller/fluxos"
+            aria-label="Voltar para Meus Fluxos"
+            className="inline-flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-[10px] border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.07] text-[13px] font-medium text-zinc-300 hover:text-white transition-colors"
+          >
             <ChevronLeft className="w-4 h-4" />Meus Fluxos
           </Link>
           {editing ? (
