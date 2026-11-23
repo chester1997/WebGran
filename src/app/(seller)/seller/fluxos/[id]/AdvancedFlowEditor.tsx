@@ -59,6 +59,9 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  jsonList,
+  type MsgButton,
+  type MsgItem,
   graphChecklist,
   isFailOutput,
   isSuccessOutput,
@@ -94,6 +97,7 @@ const edgeId = (source: string, out: string) => `${source}|${out}`;
 const ICONS: Record<NodeType, ComponentType<{ className?: string }>> = {
   inicio: Zap,
   mensagem: MessageCircle,
+  botao: LayoutList,
   texto: MessageSquare,
   imagem: ImageIcon,
   video: Video,
@@ -284,9 +288,13 @@ const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) 
         <NodeActions id={id} help={d.desc} canEdit={data.type !== "inicio"} className="absolute right-2.5 top-[15px] pl-3 bg-[linear-gradient(90deg,transparent,#17181d_30%)]" />
       </header>
 
-      <div className="px-3.5 py-3 text-[13px] leading-[1.5] text-zinc-400 break-words">
-        <span className="line-clamp-3">{text}</span>
-      </div>
+      {data.type === "mensagem" || data.type === "botao" ? (
+        <MessagePreview type={data.type} values={data.values} />
+      ) : (
+        <div className="px-3.5 py-3 text-[13px] leading-[1.5] text-zinc-400 break-words">
+          <span className="line-clamp-3">{text}</span>
+        </div>
+      )}
 
       {outs.length > 0 && (
         <div className="border-t border-white/[0.06] py-1.5">
@@ -295,6 +303,7 @@ const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) 
             const txt = isSuccessOutput(k) ? "text-emerald-400/90" : isFailOutput(k) ? "text-red-400/90" : label ? "text-zinc-400" : "text-[#60a5fa]";
             return (
               <div key={k} className="relative flex items-center justify-end h-[26px] pr-4 pl-3.5">
+                {btnColor(data, k) && <span className="w-2 h-2 rounded-[3px] mr-1.5 shrink-0" style={{ background: btnColor(data, k) }} />}
                 <span className={`text-[12px] truncate ${txt}`}>{label || "Próximo passo"}</span>
                 <Handle type="source" position={Position.Right} id={k} isConnectable={!ed.locked} className={`${PORT} ${tone}`} />
               </div>
@@ -326,6 +335,61 @@ function NodeActions({ id, className = "", help, canEdit = true }: { id: string;
         <Trash2 className="w-3.5 h-3.5" />
       </button>
     </span>
+  );
+}
+
+const BTN_HEX: Record<string, string> = { blue: "#3b82f6", green: "#22c55e", red: "#ef4444" };
+/** Cor escolhida para o botão daquela saída (Mensagem / Botões). */
+function btnColor(data: BlockData, out: string): string | undefined {
+  if ((data.type !== "mensagem" && data.type !== "botao") || !/^b\d+$/.test(out)) return undefined;
+  const btns = jsonList<MsgButton>(data.values.buttons).filter((b) => String(b.label || "").trim() && !String(b.url || "").trim());
+  return BTN_HEX[btns[Number(out.slice(1))]?.color || ""];
+}
+
+/** Corpo do bloco Mensagem/Botões: mídia, texto e botões com link. */
+function MessagePreview({ type, values }: { type: NodeType; values: Values }) {
+  const items = type === "mensagem" ? jsonList<MsgItem>(values.items) : [];
+  const links = jsonList<MsgButton>(values.buttons).filter((b) => String(b.label || "").trim() && String(b.url || "").trim());
+  const headline = type === "botao" ? String(values.text || "") : "";
+  if (!items.length && !headline && !links.length) {
+    return <div className="px-3.5 py-3 text-[13px] text-zinc-400">{type === "botao" ? "Clique para configurar os botões" : "Clique para gerenciar"}</div>;
+  }
+  return (
+    <div className="px-3 py-2.5 flex flex-col gap-1.5">
+      {headline && <p className="px-0.5 text-[12.5px] leading-[1.45] text-zinc-300 line-clamp-2">{headline}</p>}
+      {items.slice(0, 4).map((it, i) => {
+        const url = String(it.url || "");
+        const isImg = /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);
+        return (
+          <div key={i} className="flex items-center gap-2 rounded-[8px] bg-white/[0.035] border border-white/[0.06] px-2 py-1.5 min-w-0">
+            {it.t === "midia" ? (
+              isImg ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt="" className="w-7 h-7 rounded-[5px] object-cover shrink-0" />
+              ) : (
+                <span className="w-7 h-7 rounded-[5px] bg-[#34d399]/15 text-[#34d399] flex items-center justify-center shrink-0"><ImageIcon className="w-3.5 h-3.5" /></span>
+              )
+            ) : it.t === "texto" ? (
+              <span className="w-7 h-7 rounded-[5px] bg-[#60a5fa]/15 text-[#60a5fa] flex items-center justify-center shrink-0"><MessageSquare className="w-3.5 h-3.5" /></span>
+            ) : (
+              <span className="w-7 h-7 rounded-[5px] bg-[#fbbf24]/15 text-[#fbbf24] flex items-center justify-center shrink-0"><Clock className="w-3.5 h-3.5" /></span>
+            )}
+            <span className="min-w-0 leading-tight">
+              <span className="block text-[11.5px] font-semibold text-zinc-200">{it.t === "midia" ? "Mídia" : it.t === "texto" ? "Texto" : "Delay"}</span>
+              <span className="block text-[11px] text-zinc-500 truncate">
+                {it.t === "midia" ? (url ? decodeURIComponent(url.split("/").pop() || "") : "Sem arquivo") : it.t === "texto" ? String(it.text || "") || "Vazio" : `${Number(it.sec) || 0} seg`}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+      {items.length > 4 && <span className="px-0.5 text-[11px] text-zinc-500">+{items.length - 4} itens</span>}
+      {links.map((b, i) => (
+        <span key={i} className="truncate rounded-[7px] px-2 py-1 text-[11.5px] text-center text-white/90" style={{ background: BTN_HEX[b.color || ""] ? `${BTN_HEX[b.color || ""]}55` : "rgba(255,255,255,0.07)" }}>
+          🔗 {b.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -570,7 +634,7 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph, sto
 
   return (
     // Ocupa a janela inteira (o editor de fluxo já esconde a sidebar e o cabeçalho do painel).
-    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-[#0b0c0f]">
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-[#050506]">
       <Toaster />
       <div className="shrink-0 px-4 sm:px-6 pt-4 bg-[var(--seller-bg,#0A0A0A)] [&>div:first-child]:pb-3.5">
         <EditorTopBar flowId={flowId} name={name} type="advanced" status={status} bots={bots} saveState={saveState} checklist={checklist} />
@@ -588,7 +652,7 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph, sto
         {/* Canvas */}
         <div
           ref={canvasRef}
-          className="relative flex-1 min-w-0 overflow-hidden bg-[#0b0c0f]"
+          className="relative flex-1 min-w-0 overflow-hidden bg-[#050506]"
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes("application/x-webgran-block")) {
               e.preventDefault();
@@ -622,7 +686,7 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph, sto
               proOptions={{ hideAttribution: true }}
               className="webgran-flow"
             >
-              <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="rgba(255,255,255,0.09)" />
+              <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="rgba(255,255,255,0.11)" />
 
               <Panel position="top-left" className="!m-3 hidden sm:block">
                 <span className="inline-flex items-center gap-2 h-8 px-3 rounded-[9px] border border-white/[0.07] bg-[#121316]/90 backdrop-blur text-[12px] text-[#8b8b94]">
@@ -736,7 +800,8 @@ function Palette({ onAdd, compact = false }: { onAdd: (t: NodeType) => void; com
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAdd(k); } }}
                     aria-label={`Adicionar bloco ${d.label}`}
-                    className="group flex items-center gap-3 px-2.5 py-2 rounded-[11px] border border-white/[0.06] bg-[#16171b] hover:bg-[#1b1c21] hover:border-white/[0.12] cursor-pointer active:cursor-grabbing transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50"
+                    style={{ "--c": d.color } as React.CSSProperties}
+                    className="group flex items-center gap-3 px-2.5 py-2 rounded-[11px] border border-white/[0.06] bg-[#16171b] hover:[border-color:color-mix(in_srgb,var(--c)_55%,transparent)] hover:[background:color-mix(in_srgb,var(--c)_9%,#16171b)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--c)_20%,transparent)] cursor-pointer active:cursor-grabbing transition-[background,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50"
                   >
                     <span className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: d.color + "1f", color: d.color }}>
                       <Icon className="w-4 h-4" />
@@ -745,7 +810,7 @@ function Palette({ onAdd, compact = false }: { onAdd: (t: NodeType) => void; com
                       <span className="block text-[13.5px] font-medium text-white truncate">{d.label}</span>
                       <span className="block text-[11.5px] text-[#8b8b94] truncate">{d.desc}</span>
                     </span>
-                    <span className="w-6 h-6 rounded-[7px] flex items-center justify-center text-zinc-500 border border-white/[0.08] group-hover:text-white group-hover:border-white/[0.2] shrink-0 transition-colors">
+                    <span className="w-6 h-6 rounded-[7px] flex items-center justify-center text-zinc-500 border border-white/[0.08] group-hover:[background:var(--c)] group-hover:[border-color:var(--c)] group-hover:text-[#0b0c0f] shrink-0 transition-colors">
                       <Plus className="w-3.5 h-3.5" />
                     </span>
                   </div>
@@ -786,7 +851,7 @@ function EditModal({
   const d = def(type);
   const outs = nodeOutputs({ type, data: draft });
 
-  const WIDE: NodeType[] = ["mensagem", "texto", "imagem", "video", "audio", "arquivo", "condicao", "fakecall"];
+  const WIDE: NodeType[] = ["mensagem", "botao", "texto", "imagem", "video", "audio", "arquivo", "condicao", "fakecall"];
 
   return (
     <BlockModal title={d.label} subtitle={d.desc} color={d.color} icon={ICONS[type]} wide={WIDE.includes(type)} onClose={onClose} onSave={onSave}>

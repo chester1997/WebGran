@@ -52,9 +52,21 @@ export interface MsgItem {
   spoiler?: boolean;
   sec?: number;
 }
+export type BtnColor = "none" | "blue" | "green" | "red";
 export interface MsgButton {
   label: string;
   url?: string;
+  /** Cor do botão no Telegram (Bot API 9.4). */
+  color?: BtnColor;
+}
+
+/** Saídas de uma lista de botões: um caminho por botão sem link (+ "Sem clique" com timeout). */
+function buttonOutputs(d: Record<string, unknown>): Array<[string, string]> {
+  const btns = jsonList<MsgButton>(d.buttons).filter((b) => s(b.label).trim() && !s(b.url).trim()).slice(0, 8);
+  if (!btns.length) return [["out", ""]];
+  const outs: Array<[string, string]> = btns.map((b, i) => [`b${i}`, s(b.label).trim()]);
+  if (n(d.timeout) > 0) outs.push(["sem", "Sem clique"]);
+  return outs;
 }
 export type RuleKind = "horario" | "idioma" | "utm_source" | "utm_medium" | "utm_campaign" | "pagou";
 export interface CondRule {
@@ -103,13 +115,7 @@ export const NODE_TYPES = {
   /* ---------------- Comunicação ---------------- */
   mensagem: {
     label: "Mensagem", desc: "Enviar texto, mídia ou botões", category: "Comunicação", color: "#3b82f6",
-    outputs: (d) => {
-      const btns = jsonList<MsgButton>(d.buttons).filter((b) => s(b.label).trim() && !s(b.url).trim()).slice(0, 8);
-      if (!btns.length) return [["out", ""]];
-      const outs: Array<[string, string]> = btns.map((b, i) => [`b${i}`, s(b.label).trim()]);
-      if (n(d.timeout) > 0) outs.push(["sem", "Sem clique"]);
-      return outs;
-    },
+    outputs: buttonOutputs,
     fields: [{ key: "items", type: "json" }, { key: "buttons", type: "json" }, { key: "btnText", type: "area" }, { key: "timeout", type: "num" }, { key: "simulate", type: "bool" }, { key: "simSec", type: "num" }],
     defaults: { items: "[]", buttons: "[]", btnText: "", timeout: 0, simulate: 0, simSec: 2 },
     summary: (d) => {
@@ -119,6 +125,13 @@ export const NODE_TYPES = {
       const parts = [`${items.length} ${items.length === 1 ? "item" : "itens"}`];
       return first ? s(first.text).slice(0, 90) : parts.join(" · ");
     },
+  },
+  botao: {
+    label: "Botões", desc: "Enviar botões para o lead escolher", category: "Comunicação", color: "#818cf8",
+    outputs: buttonOutputs,
+    fields: [{ key: "text", type: "area" }, { key: "buttons", type: "json" }, { key: "timeout", type: "num" }],
+    defaults: { text: "Escolha uma opção 👇", buttons: JSON.stringify([{ label: "Opção 1" }, { label: "Opção 2" }]), timeout: 0 },
+    summary: (d) => s(d.text) || "Clique para configurar os botões",
   },
   texto: {
     label: "Texto", desc: "Enviar uma mensagem de texto", category: "Comunicação", color: "#60a5fa",

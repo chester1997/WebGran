@@ -240,3 +240,20 @@ describe("link de campanha", () => {
     expect(parseCampaign("instagram")).toEqual({ source: "instagram", campaign: "", medium: "" });
   });
 });
+
+describe("bloco Botões e cores dos botões", () => {
+  const start = { id: "start", type: "inicio", x: 0, y: 0, data: {} };
+  it("Botões manda o texto com os botões coloridos e espera o clique", async () => {
+    const g = {
+      nodes: [start, { id: "bt", type: "botao", x: 0, y: 0, data: { text: "Qual plano?", buttons: JSON.stringify([{ label: "Mensal", color: "green" }, { label: "Anual", color: "red" }, { label: "Site", url: "https://x.com", color: "blue" }]) } }],
+      edges: [{ from: "start", out: "out", to: "bt" }],
+    } as unknown as FlowGraph;
+    await runAdvancedStart(ctx, flowOf(g), "live", 123, user);
+    const msg = sent.find((s) => s.method === "sendMessage")!.payload;
+    expect(msg.text).toBe("Qual plano?");
+    const kb = msg.reply_markup.inline_keyboard;
+    expect(kb[0][0]).toMatchObject({ text: "Mensal", callback_data: "al:g:bt:b0", style: "success" });
+    expect(kb[1][0]).toMatchObject({ text: "Anual", callback_data: "al:g:bt:b1", style: "danger" });
+    expect(kb[2][0]).toMatchObject({ text: "Site", url: "https://x.com", style: "primary" });
+  });
+});

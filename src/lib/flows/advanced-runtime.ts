@@ -436,22 +436,24 @@ async function walk(r: Run, startId: string | undefined) {
         break;
 
       /* ---------- Comunicação ---------- */
-      case "mensagem": {
-        const items = jsonList<MsgItem>(d.items);
+      case "mensagem":
+      case "botao": {
+        const onlyButtons = node.type === "botao";
+        const items = onlyButtons ? [] : jsonList<MsgItem>(d.items);
         const allButtons = jsonList<MsgButton>(d.buttons).filter((b) => str(b.label).trim());
         const rows: Kb["inline_keyboard"] = [];
         let cbIndex = 0;
         for (const b of allButtons.slice(0, 8)) {
           const url = str(b.url).trim();
           if (url) {
-            if (/^https:\/\//i.test(url)) rows.push([{ text: str(b.label).slice(0, 64), url }]);
+            if (/^https:\/\//i.test(url)) rows.push([styled({ text: str(b.label).slice(0, 64), url }, b.color)]);
           } else {
-            rows.push([{ text: str(b.label).slice(0, 64), callback_data: cb(r, "g", node.id, `b${cbIndex}`) }]);
+            rows.push([styled({ text: str(b.label).slice(0, 64), callback_data: cb(r, "g", node.id, `b${cbIndex}`) }, b.color)]);
             cbIndex++;
           }
         }
         const kb = rows.length ? { inline_keyboard: rows } : undefined;
-        const btnText = render(r, d.btnText);
+        const btnText = onlyButtons ? render(r, d.text) || "Escolha uma opção 👇" : render(r, d.btnText);
         // Sem "texto acima dos botões", os botões vão no último texto.
         const lastTextIdx = !btnText && kb ? items.map((x) => x.t).lastIndexOf("texto") : -1;
         const simulate = num(d.simulate) === 1;

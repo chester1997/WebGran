@@ -791,6 +791,9 @@ export function BlockForm({ type, draft, set, chats, storeBots, currentBotIds }:
     case "mensagem":
       return <MessageForm draft={draft} set={set} />;
 
+    case "botao":
+      return <ButtonsOnlyForm draft={draft} set={set} />;
+
     default:
       return <InfoNote>Este é um bloco da versão anterior. Ele continua funcionando; para mudar, troque por um bloco novo da lista.</InfoNote>;
   }
@@ -892,6 +895,66 @@ function ConditionForm({ draft, setJson }: { draft: Values; setJson: (k: string,
 }
 
 /* ------------------------------------------------------------------ */
+/* Botões (lista com texto, link opcional e cor)                       */
+/* ------------------------------------------------------------------ */
+const BTN_COLORS: [NonNullable<MsgButton["color"]>, string, string][] = [["blue", "#2f6fdc", "Azul"], ["green", "#1f9d55", "Verde"], ["red", "#c0392b", "Vermelho"]];
+
+function ButtonsEditor({ label, buttons, setButtons }: { label: string; buttons: MsgButton[]; setButtons: (l: MsgButton[]) => void }) {
+  const upd = (i: number, patch: Partial<MsgButton>) => setButtons(buttons.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  return (
+    <Field
+      label={label}
+      hint="Quando há botões, o fluxo pausa até o lead clicar. Botão com link abre o link e não cria caminho. A cor aparece no Telegram."
+      action={buttons.length < 8 ? <AddChip label="Botão" color="#3b82f6" onClick={() => setButtons([...buttons, { label: "" }])} /> : undefined}
+    >
+      {buttons.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {buttons.map((b, i) => (
+            <div key={i} className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto] items-center gap-2">
+              <input value={b.label} maxLength={64} onChange={(e) => upd(i, { label: e.target.value })} className={`${FIELD} min-w-0`} placeholder="Texto do botão" />
+              <input value={b.url || ""} maxLength={500} onChange={(e) => upd(i, { url: e.target.value.trim() })} className={`${FIELD} min-w-0`} placeholder="Link (opcional)" />
+              <span className="flex gap-1 shrink-0" role="group" aria-label="Cor do botão">
+                {BTN_COLORS.map(([k, hex, name]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    title={name}
+                    aria-label={`${name}${b.color === k ? " (selecionada)" : ""}`}
+                    aria-pressed={b.color === k}
+                    onClick={() => upd(i, { color: b.color === k ? "none" : k })}
+                    className="w-7 h-7 rounded-[7px] transition-shadow"
+                    style={{ background: hex, opacity: b.color && b.color !== "none" && b.color !== k ? 0.45 : 1, boxShadow: b.color === k ? "0 0 0 2px #0f1012, 0 0 0 4px #fff" : "none" }}
+                  />
+                ))}
+              </span>
+              <button type="button" className={`${iconBtn} !w-9 !h-9 hover:!text-red-400`} onClick={() => setButtons(buttons.filter((_, j) => j !== i))} aria-label="Remover botão"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Field>
+  );
+}
+
+function ButtonsOnlyForm({ draft, set }: { draft: Values; set: (k: string, v: string | number) => void }) {
+  const buttons = jsonList<MsgButton>(draft.buttons);
+  return (
+    <>
+      <Field label="Mensagem" hint="Texto enviado junto com os botões.">
+        <TextArea value={str(draft.text)} set={(t) => set("text", t)} rows={3} placeholder="Escolha uma opção 👇" />
+      </Field>
+      <ButtonsEditor label="Botões" buttons={buttons} setButtons={(l) => set("buttons", JSON.stringify(l))} />
+      <ToggleRow title="Timeout automático" desc="Se o lead não clicar em nenhum botão, segue pela saída “Sem clique” depois de X minutos" on={num(draft.timeout) > 0} set={(on) => set("timeout", on ? 5 : 0)}>
+        <span className="flex items-center gap-2">
+          <input type="number" min={1} value={num(draft.timeout)} onChange={(e) => set("timeout", Math.max(1, Math.round(Number(e.target.value))))} className={`${FIELD} w-[100px] text-center tabular-nums`} />
+          <span className="text-[13px] text-zinc-500">minutos</span>
+        </span>
+      </ToggleRow>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Mensagem (conteúdo composto + botões)                               */
 /* ------------------------------------------------------------------ */
 function MessageForm({ draft, set }: { draft: Values; set: (k: string, v: string | number) => void }) {
@@ -951,19 +1014,7 @@ function MessageForm({ draft, set }: { draft: Values; set: (k: string, v: string
         )}
       </Field>
 
-      <Field label="Botões (opcional)" hint="Quando há botões, o fluxo pausa até o lead clicar. Botão com link abre o link e não cria caminho." action={buttons.length < 8 ? <AddChip label="Botão" color="#3b82f6" onClick={() => setButtons([...buttons, { label: "" }])} /> : undefined}>
-        {buttons.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {buttons.map((b, i) => (
-              <div key={i} className="flex gap-2">
-                <input value={b.label} maxLength={64} onChange={(e) => setButtons(buttons.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} className={`${FIELD} flex-1`} placeholder="Texto do botão" />
-                <input value={b.url || ""} maxLength={500} onChange={(e) => setButtons(buttons.map((x, j) => (j === i ? { ...x, url: e.target.value.trim() } : x)))} className={`${FIELD} flex-1`} placeholder="Link (opcional)" />
-                <button type="button" className={`${iconBtn} !w-10 !h-10 hover:!text-red-400`} onClick={() => setButtons(buttons.filter((_, j) => j !== i))} aria-label="Remover botão"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Field>
+      <ButtonsEditor label="Botões (opcional)" buttons={buttons} setButtons={setButtons} />
 
       {buttons.length > 0 && (
         <>
