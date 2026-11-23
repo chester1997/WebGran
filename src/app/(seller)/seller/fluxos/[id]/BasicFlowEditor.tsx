@@ -227,19 +227,23 @@ export default function BasicFlowEditor({
   const label = STEPS.find((s) => s[0] === step)![1];
 
   return (
-    <div className="w-full max-w-full pb-10">
+    // No computador o editor ocupa a janela inteira: etapas (esquerda), conteúdo (meio) e prévia (direita),
+    // cada parte com a sua rolagem. No celular segue o fluxo normal da página.
+    <div className="w-full max-w-full pb-10 lg:pb-0 lg:fixed lg:inset-0 lg:z-40 lg:flex lg:flex-col lg:bg-[#0b0c0f]">
       <Toaster />
-      {/* Topo fixo (no computador): só a área do meio rola */}
-      <div className="lg:sticky lg:top-[-20px] z-30 -mt-4 sm:-mt-5 pt-4 sm:pt-5 bg-[var(--seller-bg,#0A0A0A)]">
+      <div className="lg:shrink-0 lg:px-6 lg:pt-4 bg-[var(--seller-bg,#0A0A0A)]">
         <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} onSaveNow={saveNow} />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_360px] gap-6 xl:gap-8 items-start">
+      <div className="mt-6 lg:mt-0 flex flex-col lg:flex-row gap-6 lg:gap-0 lg:flex-1 lg:min-h-0">
         {/* Jornada: etapas agrupadas pelo caminho da venda */}
-        <nav aria-label="Etapas do fluxo" className="lg:sticky lg:top-[var(--flow-head,100px)] lg:max-h-[calc(100dvh-var(--flow-head,100px)-24px)] lg:overflow-y-auto custom-scrollbar -mx-1 lg:mx-0 flex lg:flex-col gap-1 lg:gap-0.5 overflow-x-auto pb-1 lg:pb-2">
+        <nav
+          aria-label="Etapas do fluxo"
+          className="custom-scrollbar -mx-1 lg:mx-0 flex lg:flex-col gap-1 lg:gap-0.5 overflow-x-auto pb-1 lg:w-[264px] lg:shrink-0 lg:overflow-y-auto lg:overflow-x-hidden lg:px-3 lg:py-5 lg:bg-[#15171d] lg:border-r lg:border-white/[0.08]"
+        >
           {STEP_GROUPS.map(([group, ids], gi) => (
             <div key={group} className="contents lg:block">
-              <p className={`hidden lg:block px-3 mb-1 text-[12px] font-semibold text-[#8b8b94] ${gi ? "mt-5" : ""}`}>{group}</p>
+              <p className={`hidden lg:block px-3 mb-1 text-[11px] font-semibold tracking-[0.08em] uppercase text-[#8b8b94] ${gi ? "mt-5" : ""}`}>{group}</p>
               {ids.map((id) => {
                 const [s] = basicStepStatus(id, config);
                 const on = step === id;
@@ -249,11 +253,12 @@ export default function BasicFlowEditor({
                     type="button"
                     onClick={() => goto(id)}
                     aria-current={on ? "page" : undefined}
-                    className={`group flex items-center gap-3 h-[38px] px-3 rounded-[9px] text-left whitespace-nowrap shrink-0 lg:w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 ${
-                      on ? "bg-[#17181c] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]" : "text-zinc-400 hover:text-white hover:bg-white/[0.03]"
+                    className={`group relative flex items-center gap-3 h-[38px] px-3 rounded-[9px] text-left whitespace-nowrap shrink-0 lg:w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 ${
+                      on ? "bg-[#3b82f6]/[0.12] text-white shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]" : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
                     }`}
                   >
-                    <span className={`[&_svg]:w-4 [&_svg]:h-4 flex ${on ? "text-[#3b82f6]" : "text-zinc-500 group-hover:text-zinc-300"}`}><FlowStepIcon step={id} /></span>
+                    {on && <span className="hidden lg:block absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-[#3b82f6]" />}
+                    <span className={`[&_svg]:w-4 [&_svg]:h-4 flex ${on ? "text-[#60a5fa]" : "text-zinc-500 group-hover:text-zinc-300"}`}><FlowStepIcon step={id} /></span>
                     <span className="flex-1 text-[14px]">{stepLabel(id)}</span>
                     <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${STATUS_DOT[s] || STATUS_DOT.off}`} title={basicStepStatus(id, config)[1]} />
                   </button>
@@ -263,35 +268,51 @@ export default function BasicFlowEditor({
           ))}
         </nav>
 
-        <div
-          ref={formRef}
-          className="min-w-0 w-full flex flex-col gap-7 lg:scroll-mt-[var(--flow-head,100px)] scroll-mt-4"
-          onFocusCapture={(e) => {
-            const id = (e.target as HTMLElement).id;
-            if (id) setActiveField(id);
-          }}
-        >
-          <header>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-[24px] font-semibold tracking-tight text-white">{label}</h2>
-              <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[#8b8b94]">
-                <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[st] || STATUS_DOT.off}`} />
-                {stLabel}
-              </span>
+        {/* Conteúdo da etapa */}
+        <div className="min-w-0 lg:flex-1 lg:overflow-y-auto custom-scrollbar">
+          <div
+            ref={formRef}
+            className="w-full flex flex-col gap-7 scroll-mt-4 lg:px-8 lg:py-7"
+            onFocusCapture={(e) => {
+              const id = (e.target as HTMLElement).id;
+              if (id) setActiveField(id);
+            }}
+          >
+            <header>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-[24px] font-semibold tracking-tight text-white">{label}</h2>
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[#8b8b94]">
+                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[st] || STATUS_DOT.off}`} />
+                  {stLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-[14px] text-zinc-400">{STEP_DESC[step]}</p>
+            </header>
+            <Section step={step} c={config} update={update} chats={chatList} goto={goto} flowId={flowId} published={status === "published"} />
+
+            {/* Prévia embaixo do conteúdo em telas menores */}
+            <div className="xl:hidden flex flex-col gap-2.5 max-w-[420px]">
+              <PreviewHead />
+              <TelegramPreview title={botName} items={buildPreview(step, config)} activeSrc={activeField} />
             </div>
-            <p className="mt-1 text-[14px] text-zinc-400">{STEP_DESC[step]}</p>
-          </header>
-          <Section step={step} c={config} update={update} chats={chatList} goto={goto} flowId={flowId} published={status === "published"} />
+          </div>
         </div>
 
-        <aside className="lg:col-start-2 xl:col-start-auto xl:sticky xl:top-[var(--flow-head,100px)] xl:max-h-[calc(100dvh-var(--flow-head,100px)-24px)] xl:overflow-y-auto custom-scrollbar flex flex-col gap-2.5 w-full" aria-label="Prévia no Telegram">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-semibold text-zinc-400">Prévia no Telegram</span>
-            <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#8b8b94]"><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />Ao vivo</span>
-          </div>
+        {/* Prévia fixa à direita */}
+        <aside aria-label="Prévia no Telegram" className="hidden xl:flex xl:flex-col gap-2.5 w-[400px] shrink-0 overflow-y-auto custom-scrollbar px-5 py-5 bg-[#15171d] border-l border-white/[0.08]">
+          <PreviewHead />
           <TelegramPreview title={botName} items={buildPreview(step, config)} activeSrc={activeField} />
         </aside>
       </div>
+    </div>
+  );
+}
+
+function PreviewHead() {
+  return (
+    <div className="flex items-center justify-between px-1">
+      <span className="text-[12px] font-semibold text-zinc-400">Prévia no Telegram</span>
+      <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#8b8b94]"><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />Ao vivo</span>
     </div>
   );
 }
