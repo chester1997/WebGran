@@ -309,13 +309,14 @@ export function ItemShell({ title, onRemove, children, right }: { title: ReactNo
 /* ------------------------------------------------------------------ */
 export type MediaAccept = "image" | "visual" | "audio";
 
-export async function uploadFlowFile(file: File): Promise<string> {
-  if (file.type.startsWith("image/")) {
+export async function uploadFlowFile(file: File, asDocument = false): Promise<string> {
+  if (!asDocument && file.type.startsWith("image/")) {
     const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
     return (await uploadOptimizedImage(file, "banners")).url;
   }
   const fd = new FormData();
   fd.append("file", file);
+  if (asDocument) fd.append("kind", "file");
   const res = await fetch("/api/flows/media", { method: "POST", body: fd });
   const data = await res.json().catch(() => null);
   if (!res.ok || !data?.success) throw new Error(data?.error || "Não foi possível enviar o arquivo.");

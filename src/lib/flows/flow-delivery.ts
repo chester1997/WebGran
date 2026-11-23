@@ -307,6 +307,14 @@ export async function processExpiredFlowPurchases(limit = 200): Promise<{ proces
             removal = "SKIPPED_NOT_MEMBER";
           }
         }
+        if ((p as Purchase & { kind?: string }).kind === "adv") {
+          try {
+            const { onAdvancedExpired } = await import("./advanced-runtime");
+            await onAdvancedExpired(p, tg.token, customer.telegramUserId, customer.firstName || "");
+          } catch (err) {
+            console.warn("[flow-delivery] Fluxo avançado no vencimento falhou:", (err as Error)?.message);
+          }
+        } else {
         const c = await flowConfig(p.flowId);
         const f = p.flowId ? await db.query.salesFlows.findFirst({ where: eq(salesFlows.id, p.flowId), columns: { status: true } }) : null;
         const prefix = f?.status === "published" ? "fl" : "ft";
@@ -325,6 +333,7 @@ export async function processExpiredFlowPurchases(limit = 200): Promise<{ proces
           });
         } catch (err) {
           console.warn("[flow-delivery] Aviso de expiração falhou:", (err as Error)?.message);
+        }
         }
       }
     } catch (err) {

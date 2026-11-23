@@ -20,9 +20,13 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import {
+  Activity,
+  Banknote,
+  Bot,
   Clock,
   Copy,
   CornerDownRight,
+  File as FileIcon,
   GitBranch,
   HelpCircle,
   Image as ImageIcon,
@@ -31,21 +35,27 @@ import {
   LocateFixed,
   Lock,
   Maximize,
+  MessageCircle,
   MessageSquare,
   Mic,
   Minus,
   MoreHorizontal,
   PackagePlus,
+  PhoneCall,
   Plus,
   QrCode,
   Redo2,
   Shuffle,
   StickyNote,
+  TextCursorInput,
   Trash2,
   TrendingDown,
   TrendingUp,
   Undo2,
   Unlock,
+  UserMinus,
+  Users,
+  Video,
   Zap,
 } from "lucide-react";
 import {
@@ -62,10 +72,11 @@ import {
   type NodeTypeDef,
 } from "@/lib/flows/advanced-graph";
 import { saveFlowConfigAction } from "../actions";
-import { BTN_GHOST, BTN_PRI, INPUT, Modal, useToast } from "../_components/flow-ui";
+import { BTN_GHOST, BTN_PRI, Modal, useToast } from "../_components/flow-ui";
 import EditorTopBar, { type SaveState } from "../_components/EditorTopBar";
 import Toaster from "../_components/Toaster";
 import type { FlowChat, FlowProduct } from "./BasicFlowEditor";
+import { BlockForm } from "./advanced-forms";
 
 /* ------------------------------------------------------------------ */
 /* Tipos e utilidades                                                  */
@@ -82,49 +93,33 @@ const edgeId = (source: string, out: string) => `${source}|${out}`;
 
 const ICONS: Record<NodeType, ComponentType<{ className?: string }>> = {
   inicio: Zap,
+  mensagem: MessageCircle,
   texto: MessageSquare,
-  midia: ImageIcon,
+  imagem: ImageIcon,
+  video: Video,
   audio: Mic,
-  botoes: LayoutList,
+  arquivo: FileIcon,
   digitando: MoreHorizontal,
-  pergunta: HelpCircle,
+  fakecall: PhoneCall,
   espera: Clock,
   condicao: GitBranch,
   ab: Shuffle,
+  input: TextCursorInput,
+  pagamento: Banknote,
+  grupo: Users,
+  bottaxa: Bot,
+  remover: UserMinus,
+  pixel: Activity,
+  nota: StickyNote,
+  midia: ImageIcon,
+  botoes: LayoutList,
+  pergunta: HelpCircle,
   salto: CornerDownRight,
   pix: QrCode,
   bump: PackagePlus,
   upsell: TrendingUp,
   downsell: TrendingDown,
   entrega: KeyRound,
-  nota: StickyNote,
-};
-
-const DESC: Record<NodeType, string> = {
-  inicio: "Começa quando o cliente manda /start",
-  texto: "Envia uma mensagem de texto",
-  midia: "Envia foto ou vídeo com legenda",
-  audio: "Envia um áudio de voz",
-  botoes: "Texto com botões, um caminho por botão",
-  digitando: "Mostra “digitando…” por alguns segundos",
-  pergunta: "Pergunta e guarda a resposta",
-  espera: "Espera um tempo antes de seguir",
-  condicao: "Divide o caminho por uma regra",
-  ab: "Divide os clientes em dois caminhos",
-  salto: "Continua em outro bloco",
-  pix: "Gera o Pix de um plano",
-  bump: "Oferta extra antes do Pix",
-  upsell: "Oferta logo depois da compra",
-  downsell: "Desconto para quem não comprou",
-  entrega: "Libera o acesso ao grupo ou canal",
-  nota: "Anotação que só você vê",
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  Mensagens: "Comunicação",
-  Lógica: "Lógica e fluxo",
-  Venda: "Venda",
-  "Entrega e notas": "Entrega e notas",
 };
 
 function toFlow(g: FlowGraph): { nodes: BlockNode[]; edges: Edge[] } {
@@ -271,8 +266,8 @@ const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) 
         selected ? "border-[#3b82f6]/70 ring-[3px] ring-[#3b82f6]/20" : "border-white/[0.09] hover:border-white/[0.16]"
       }`}
     >
-      {/* fio de luz azul no topo */}
-      <span aria-hidden="true" className="pointer-events-none absolute left-5 right-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${ACCENT}, transparent)` }} />
+      {/* fio de luz no topo, na cor do bloco */}
+      <span aria-hidden="true" className="pointer-events-none absolute left-5 right-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${d.color}, transparent)` }} />
 
       {data.type !== "inicio" && (
         <Handle type="target" position={Position.Left} id="in" isConnectable={!ed.locked} className={`${PORT} !border-zinc-400 hover:!border-[#3b82f6]`} style={{ top: 29 }} />
@@ -280,13 +275,13 @@ const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) 
 
       <header className="relative flex items-center gap-2.5 h-[58px] px-3.5 border-b border-white/[0.06]">
         {num !== undefined && (
-          <span className="w-6 h-6 rounded-full bg-[#3b82f6] text-white text-[12px] font-semibold flex items-center justify-center shrink-0 tabular-nums shadow-[0_0_0_3px_rgba(59,130,246,0.15)]">{num}</span>
+          <span className="w-6 h-6 rounded-full text-[#0b0c0f] text-[12px] font-bold flex items-center justify-center shrink-0 tabular-nums" style={{ background: d.color, boxShadow: `0 0 0 3px ${d.color}26` }}>{num}</span>
         )}
         <span className="w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: d.color + "1f", color: d.color }}>
           <Icon className="w-[15px] h-[15px]" />
         </span>
         <b className="text-[15px] font-semibold text-white tracking-tight truncate">{d.label}</b>
-        {data.type !== "inicio" && <NodeActions id={id} className="absolute right-2.5 top-[15px] pl-3 bg-[linear-gradient(90deg,transparent,#17181d_30%)]" />}
+        <NodeActions id={id} help={d.desc} canEdit={data.type !== "inicio"} className="absolute right-2.5 top-[15px] pl-3 bg-[linear-gradient(90deg,transparent,#17181d_30%)]" />
       </header>
 
       <div className="px-3.5 py-3 text-[13px] leading-[1.5] text-zinc-400 break-words">
@@ -311,12 +306,19 @@ const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) 
   );
 });
 
-function NodeActions({ id, className = "" }: { id: string; className?: string }) {
+function NodeActions({ id, className = "", help, canEdit = true }: { id: string; className?: string; help?: string; canEdit?: boolean }) {
   const ed = useEditor();
-  if (ed.locked) return null;
   const btn = "nodrag w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 transition-colors";
+  if (ed.locked || !canEdit) {
+    return help ? (
+      <span className={`flex items-center ${className}`}>
+        <span title={help} aria-label={help} className={`${btn} cursor-help hover:text-white`}><HelpCircle className="w-3.5 h-3.5" /></span>
+      </span>
+    ) : null;
+  }
   return (
     <span className={`flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity ${className}`}>
+      {help && <span title={help} aria-label={help} className={`${btn} cursor-help hover:text-white`}><HelpCircle className="w-3.5 h-3.5" /></span>}
       <button type="button" aria-label="Duplicar bloco" title="Duplicar (Ctrl+D)" onClick={(e) => { e.stopPropagation(); ed.duplicate(id); }} className={`${btn} hover:text-white hover:bg-white/[0.07]`}>
         <Copy className="w-3.5 h-3.5" />
       </button>
@@ -341,6 +343,8 @@ type Props = {
   chats: FlowChat[];
   botName: string;
   initialGraph: FlowGraph;
+  /** Todos os bots da loja (bloco Bot/Taxa). */
+  storeBots?: { id: string; username: string; displayName?: string | null }[];
 };
 
 export default function AdvancedFlowEditor(props: Props) {
@@ -351,7 +355,7 @@ export default function AdvancedFlowEditor(props: Props) {
   );
 }
 
-function Editor({ flowId, name, status, bots, products, chats, initialGraph }: Props) {
+function Editor({ flowId, name, status, bots, products, chats, initialGraph, storeBots = [] }: Props) {
   const toast = useToast();
   const rf = useReactFlow<BlockNode, Edge>();
   const initial = useMemo(() => toFlow(normalizeGraph(initialGraph)), [initialGraph]);
@@ -432,7 +436,7 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph }: P
       const p = at || centerPoint();
       const values: Values = { ...def(type).defaults };
       if (type === "pix" && products[0]) values.productId = products[0].id;
-      if (type === "entrega" && chats[0]) values.chatId = chats[0].id;
+      if ((type === "entrega" || type === "grupo") && chats[0]) values.chatId = chats[0].id;
       const jitter = at ? 0 : Math.round(Math.random() * 40 - 20);
       const node: BlockNode = {
         id: newId(),
@@ -656,7 +660,7 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph }: P
                 className="!m-3 !rounded-[12px] !overflow-hidden !border !border-white/[0.08] hidden sm:block"
                 bgColor="#0f1013"
                 maskColor="rgba(0,0,0,0.55)"
-                nodeColor={(n) => ((n as BlockNode).data?.type === "nota" ? "#a16207" : ACCENT)}
+                nodeColor={(n) => { const ty = (n as BlockNode).data?.type; return ty ? def(ty).color : ACCENT; }}
                 nodeBorderRadius={6}
                 style={{ width: 172, height: 112 }}
               />
@@ -670,8 +674,9 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph }: P
           node={editingNode}
           draft={editing.draft}
           setDraft={(k, v) => setEditing((s) => (s ? { ...s, draft: { ...s.draft, [k]: v } } : s))}
-          products={products}
           chats={chats}
+          storeBots={storeBots}
+          currentBotIds={bots.map((b) => b.id)}
           graph={graph}
           onClose={() => setEditing(null)}
           onSave={saveEdit}
@@ -709,10 +714,10 @@ function Palette({ onAdd, compact = false }: { onAdd: (t: NodeType) => void; com
     <div className="flex flex-col">
       {PALETTE_CATEGORIES.map((cat) => (
         <div key={cat} className="mt-3 first:mt-2">
-          <p className="px-1.5 pb-1.5 text-[11px] font-semibold tracking-[0.08em] uppercase text-[#8b8b94]">{CATEGORY_LABEL[cat] || cat}</p>
+          <p className="px-1.5 pb-1.5 text-[11px] font-semibold tracking-[0.08em] uppercase text-[#8b8b94]">{cat}</p>
           <div className="flex flex-col gap-1.5">
             {(Object.entries(NODE_TYPES) as [NodeType, NodeTypeDef][])
-              .filter(([, d]) => d.category === cat)
+              .filter(([, d]) => d.category === cat && !d.hidden)
               .map(([k, d]) => {
                 const Icon = ICONS[k];
                 return (
@@ -735,7 +740,7 @@ function Palette({ onAdd, compact = false }: { onAdd: (t: NodeType) => void; com
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13.5px] font-medium text-white truncate">{d.label}</span>
-                      <span className="block text-[11.5px] text-[#8b8b94] truncate">{DESC[k]}</span>
+                      <span className="block text-[11.5px] text-[#8b8b94] truncate">{d.desc}</span>
                     </span>
                     <span className="w-6 h-6 rounded-[7px] flex items-center justify-center text-zinc-500 border border-white/[0.08] group-hover:text-white group-hover:border-white/[0.2] shrink-0 transition-colors">
                       <Plus className="w-3.5 h-3.5" />
@@ -757,8 +762,9 @@ function EditModal({
   node,
   draft,
   setDraft,
-  products,
   chats,
+  storeBots,
+  currentBotIds,
   graph,
   onClose,
   onSave,
@@ -766,15 +772,15 @@ function EditModal({
   node: BlockNode;
   draft: Values;
   setDraft: (key: string, value: string | number) => void;
-  products: FlowProduct[];
   chats: FlowChat[];
+  storeBots: { id: string; username: string; displayName?: string | null }[];
+  currentBotIds: string[];
   graph: FlowGraph;
   onClose: () => void;
   onSave: () => void;
 }) {
   const type = node.data.type;
   const d = def(type);
-  const Icon = ICONS[type];
   const outs = nodeOutputs({ type, data: draft });
 
   useEffect(() => {
@@ -788,16 +794,10 @@ function EditModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onSave]);
 
-  const optionsFor = (key: string, fallback?: string[]): [string, string][] => {
-    if (type === "pix" && key === "productId") return [["", "Escolha…"], ...products.map((p) => [p.id, `${p.title} · ${brl(p.price)}`] as [string, string])];
-    if (type === "entrega" && key === "chatId") return [["", chats.length ? "Escolha…" : "Ligue um bot para listar os grupos"], ...chats.map((c) => [c.id, c.title] as [string, string])];
-    return (fallback || []).map((o) => [o, o]);
-  };
-
   return (
     <Modal
       title={d.label}
-      subtitle={DESC[type]}
+      subtitle={d.desc}
       onClose={onClose}
       footer={
         <div className="flex items-center w-full gap-2">
@@ -811,35 +811,7 @@ function EditModal({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 -mt-1">
-          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: d.color + "1f", color: d.color }}>
-            <Icon className="w-[18px] h-[18px]" />
-          </span>
-          <p className="text-[13px] text-zinc-400 leading-snug">
-            {type === "inicio" ? "O fluxo começa sempre que o cliente manda /start para o bot. Ligue a saída deste bloco no primeiro passo da conversa." : "As mudanças só entram no bloco quando você salvar."}
-          </p>
-        </div>
-
-        {d.fields.map((f, i) => {
-          const id = `g-${node.id}-${f.key}`;
-          const value = draft[f.key] ?? "";
-          return (
-            <label key={f.key} htmlFor={id} className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-medium text-zinc-200">{f.label}</span>
-              {f.type === "area" ? (
-                <textarea id={id} autoFocus={i === 0} rows={f.key === "buttons" ? 4 : 5} maxLength={4000} value={String(value)} onChange={(e) => setDraft(f.key, e.target.value)} className={`${INPUT} resize-y leading-relaxed`} />
-              ) : f.type === "select" ? (
-                <select id={id} value={String(value)} onChange={(e) => setDraft(f.key, e.target.value)} className={`${INPUT} cursor-pointer`}>
-                  {optionsFor(f.key, f.options).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              ) : f.type === "num" ? (
-                <input id={id} autoFocus={i === 0} type="number" min={0} step="any" value={Number(value) || 0} onChange={(e) => setDraft(f.key, Number(e.target.value))} className={`${INPUT} tabular-nums`} />
-              ) : (
-                <input id={id} autoFocus={i === 0} maxLength={300} value={String(value)} onChange={(e) => setDraft(f.key, e.target.value)} className={INPUT} />
-              )}
-            </label>
-          );
-        })}
+        <BlockForm type={type} draft={draft} set={setDraft} chats={chats} storeBots={storeBots} currentBotIds={currentBotIds} />
 
         {outs.length > 0 && (
           <div className="flex flex-col gap-1.5">
@@ -859,7 +831,6 @@ function EditModal({
           </div>
         )}
 
-        {type !== "inicio" && type !== "nota" && <p className="text-[12px] text-[#8b8b94]">Variáveis nas mensagens: {"{nome}"}, {"{saudacao}"}, {"{plano}"}.</p>}
       </div>
     </Modal>
   );

@@ -52,7 +52,7 @@ export default async function FluxoEditorPage({ params }: { params: Promise<{ id
   };
 
   return flow.type === "advanced" ? (
-    <AdvancedFlowEditor {...shared} initialGraph={flow.config as FlowGraph} />
+    <AdvancedFlowEditor {...shared} initialGraph={flow.config as FlowGraph} storeBots={storeBots.map((b) => ({ id: b.id, username: b.username, displayName: b.displayName }))} />
   ) : (
     <BasicFlowEditor {...shared} initialConfig={flow.config as BasicFlowConfig} />
   );
