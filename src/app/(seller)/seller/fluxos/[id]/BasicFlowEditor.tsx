@@ -229,14 +229,17 @@ export default function BasicFlowEditor({
   return (
     <div className="w-full max-w-full pb-10">
       <Toaster />
-      <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} onSaveNow={saveNow} />
+      {/* Topo fixo (no computador): só a área do meio rola */}
+      <div className="lg:sticky lg:top-[-20px] z-30 -mt-4 sm:-mt-5 pt-4 sm:pt-5 bg-[var(--seller-bg,#0A0A0A)]">
+        <EditorTopBar flowId={flowId} name={name} type="basic" status={status} bots={bots} saveState={saveState} checklist={checklist} onSaveNow={saveNow} />
+      </div>
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[208px_minmax(0,1fr)_340px] gap-6 xl:gap-8 items-start">
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_360px] gap-6 xl:gap-8 items-start">
         {/* Jornada: etapas agrupadas pelo caminho da venda */}
-        <nav aria-label="Etapas do fluxo" className="lg:sticky lg:top-2 -mx-1 lg:mx-0 flex lg:flex-col gap-1 lg:gap-0 overflow-x-auto pb-1 lg:pb-0">
+        <nav aria-label="Etapas do fluxo" className="lg:sticky lg:top-[var(--flow-head,100px)] lg:max-h-[calc(100dvh-var(--flow-head,100px)-24px)] lg:overflow-y-auto custom-scrollbar -mx-1 lg:mx-0 flex lg:flex-col gap-1 lg:gap-0.5 overflow-x-auto pb-1 lg:pb-2">
           {STEP_GROUPS.map(([group, ids], gi) => (
             <div key={group} className="contents lg:block">
-              <p className={`hidden lg:block px-2.5 mb-1 text-[11.5px] font-semibold text-[#8b8b94] ${gi ? "mt-5" : ""}`}>{group}</p>
+              <p className={`hidden lg:block px-3 mb-1 text-[12px] font-semibold text-[#8b8b94] ${gi ? "mt-5" : ""}`}>{group}</p>
               {ids.map((id) => {
                 const [s] = basicStepStatus(id, config);
                 const on = step === id;
@@ -246,12 +249,12 @@ export default function BasicFlowEditor({
                     type="button"
                     onClick={() => goto(id)}
                     aria-current={on ? "page" : undefined}
-                    className={`group flex items-center gap-2.5 h-[34px] px-2.5 rounded-[8px] text-left whitespace-nowrap shrink-0 lg:w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 ${
+                    className={`group flex items-center gap-3 h-[38px] px-3 rounded-[9px] text-left whitespace-nowrap shrink-0 lg:w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 ${
                       on ? "bg-[#17181c] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]" : "text-zinc-400 hover:text-white hover:bg-white/[0.03]"
                     }`}
                   >
                     <span className={`[&_svg]:w-4 [&_svg]:h-4 flex ${on ? "text-[#3b82f6]" : "text-zinc-500 group-hover:text-zinc-300"}`}><FlowStepIcon step={id} /></span>
-                    <span className="flex-1 text-[13.5px]">{stepLabel(id)}</span>
+                    <span className="flex-1 text-[14px]">{stepLabel(id)}</span>
                     <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${STATUS_DOT[s] || STATUS_DOT.off}`} title={basicStepStatus(id, config)[1]} />
                   </button>
                 );
@@ -262,7 +265,7 @@ export default function BasicFlowEditor({
 
         <div
           ref={formRef}
-          className="min-w-0 w-full max-w-[780px] xl:justify-self-center flex flex-col gap-7 scroll-mt-4"
+          className="min-w-0 w-full flex flex-col gap-7 lg:scroll-mt-[var(--flow-head,100px)] scroll-mt-4"
           onFocusCapture={(e) => {
             const id = (e.target as HTMLElement).id;
             if (id) setActiveField(id);
@@ -281,7 +284,7 @@ export default function BasicFlowEditor({
           <Section step={step} c={config} update={update} chats={chatList} goto={goto} flowId={flowId} published={status === "published"} />
         </div>
 
-        <aside className="lg:col-start-2 xl:col-start-auto xl:sticky xl:top-2 flex flex-col gap-2.5 w-full max-w-[780px] xl:max-w-none" aria-label="Prévia no Telegram">
+        <aside className="lg:col-start-2 xl:col-start-auto xl:sticky xl:top-[var(--flow-head,100px)] xl:max-h-[calc(100dvh-var(--flow-head,100px)-24px)] xl:overflow-y-auto custom-scrollbar flex flex-col gap-2.5 w-full" aria-label="Prévia no Telegram">
           <div className="flex items-center justify-between px-1">
             <span className="text-[12px] font-semibold text-zinc-400">Prévia no Telegram</span>
             <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#8b8b94]"><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />Ao vivo</span>
