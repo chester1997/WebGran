@@ -1,7 +1,7 @@
 "use client";
 
 import "@xyflow/react/dist/base.css";
-import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType, type DragEvent as ReactDragEvent } from "react";
+import { createContext, createElement, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType, type DragEvent as ReactDragEvent, type ReactNode } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -21,6 +21,11 @@ import {
 } from "@xyflow/react";
 import {
   Activity,
+  ArrowRight,
+  CheckCircle2,
+  CornerUpLeft,
+  MousePointerClick,
+  XCircle,
   Banknote,
   Bot,
   Clock,
@@ -291,21 +296,31 @@ const Block = memo(function Block({ id, data, selected }: NodeProps<BlockNode>) 
       {data.type === "mensagem" || data.type === "botao" ? (
         <MessagePreview type={data.type} values={data.values} />
       ) : (
-        <div className="px-3.5 py-3 text-[13px] leading-[1.5] text-zinc-400 break-words">
-          <span className="line-clamp-3">{text}</span>
-        </div>
+        <NodeBody type={data.type} values={data.values} fallback={text} />
       )}
 
       {outs.length > 0 && (
-        <div className="border-t border-white/[0.06] py-1.5">
+        <div className="px-3 pb-3 pt-0.5 flex flex-col gap-1.5">
           {outs.map(([k, label]) => {
-            const tone = isSuccessOutput(k) ? "!border-emerald-400 hover:!bg-emerald-400" : isFailOutput(k) ? "!border-red-400 hover:!bg-red-400" : "!border-[#3b82f6] hover:!bg-[#3b82f6]";
-            const txt = isSuccessOutput(k) ? "text-emerald-400/90" : isFailOutput(k) ? "text-red-400/90" : label ? "text-zinc-400" : "text-[#60a5fa]";
+            if (!label) {
+              // Saída única ("Próximo passo"): discreta, no canto.
+              return (
+                <div key={k} className="relative flex items-center justify-end h-[22px] pr-1">
+                  <span className="text-[11.5px] font-medium" style={{ color: d.color }}>Próximo passo</span>
+                  <Handle type="source" position={Position.Right} id={k} isConnectable={!ed.locked} className={`${PORT} hover:!bg-[color:var(--h)]`} style={{ right: -12, borderColor: d.color, ["--h" as string]: d.color }} />
+                </div>
+              );
+            }
+            const tone = outTone(data, k);
+            const OutIcon = outIcon(k);
             return (
-              <div key={k} className="relative flex items-center justify-end h-[26px] pr-4 pl-3.5">
-                {btnColor(data, k) && <span className="w-2 h-2 rounded-[3px] mr-1.5 shrink-0" style={{ background: btnColor(data, k) }} />}
-                <span className={`text-[12px] truncate ${txt}`}>{label || "Próximo passo"}</span>
-                <Handle type="source" position={Position.Right} id={k} isConnectable={!ed.locked} className={`${PORT} ${tone}`} />
+              <div key={k} className="relative">
+                <div className="flex items-center gap-2 h-9 px-3 rounded-[9px] border text-[12.5px] font-semibold" style={{ color: tone, borderColor: `${tone}4d`, background: `${tone}14` }}>
+                  <OutIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="flex-1 min-w-0 truncate">{label}</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                </div>
+                <Handle type="source" position={Position.Right} id={k} isConnectable={!ed.locked} className={PORT} style={{ right: -12, borderColor: tone }} />
               </div>
             );
           })}
@@ -339,6 +354,78 @@ function NodeActions({ id, className = "", help, canEdit = true }: { id: string;
 }
 
 const BTN_HEX: Record<string, string> = { blue: "#3b82f6", green: "#22c55e", red: "#ef4444" };
+const OK_HEX = "#22c55e";
+const FAIL_HEX = "#ef4444";
+
+/** Cor da pílula de uma saída. */
+function outTone(data: BlockData, k: string): string {
+  if (isSuccessOutput(k)) return OK_HEX;
+  if (isFailOutput(k)) return FAIL_HEX;
+  return btnColor(data, k) || def(data.type).color;
+}
+
+/** Ícone da pílula de uma saída. */
+function outIcon(k: string): ComponentType<{ className?: string }> {
+  if (k === "resp") return CornerUpLeft;
+  if (k === "pago" || k === "sim" || k === "atendeu") return CheckCircle2;
+  if (k === "sem" || k === "expirou" || k === "expirado") return Clock;
+  if (k === "nao" || k === "recusou") return XCircle;
+  if (k === "senao") return ArrowRight;
+  if (/^c\d+$/.test(k)) return GitBranch;
+  if (/^[a-h]$/.test(k)) return Shuffle;
+  return MousePointerClick;
+}
+
+const UNIT_SHORT: Record<string, string> = { segundos: "s", minutos: "min", horas: "h", dias: " dias" };
+const KIND_LABEL: Record<string, string> = { texto: "Texto", numero: "Número", email: "E-mail", telefone: "Telefone" };
+const money = (v: unknown) => (Number(v) || 0).toFixed(2);
+
+/** Caixinha com o conteúdo principal do bloco + linha de detalhe (como na referência). */
+function NodeBody({ type, values: v, fallback }: { type: NodeType; values: Values; fallback: string }) {
+  const box = (content: ReactNode, empty = false) => (
+    <div className={`rounded-[9px] border border-white/[0.07] bg-[#0c0d10] px-3 py-2.5 text-[13px] leading-[1.45] break-words ${empty ? "text-zinc-500" : "text-zinc-200"}`}>{content}</div>
+  );
+  const meta = (s: string) => <p className="px-0.5 text-[11.5px] text-zinc-500">{s}</p>;
+  // Filhos fixos (não é lista): createElement evita o aviso de "key".
+  const wrap = (...children: ReactNode[]) => createElement("div", { className: "px-3 pt-3 pb-2 flex flex-col gap-2" }, ...children);
+  const str = (x: unknown) => (x == null ? "" : String(x));
+  switch (type) {
+    case "input":
+      return wrap(box(<span className="line-clamp-2">{str(v.text) || "Pergunta não configurada"}</span>, !str(v.text)), meta(`${KIND_LABEL[str(v.kind)] || "Texto"} · ${Number(v.wait) || 0}${UNIT_SHORT[str(v.u) || "segundos"] || "s"}`));
+    case "pagamento":
+      return wrap(
+        box(<span className="flex items-baseline justify-between gap-2"><span className="text-[12px] text-zinc-500">BRL R$</span><span className="text-[17px] font-bold text-white tabular-nums">{money(v.value)}</span></span>),
+        meta(`PIX · ${Number(v.timeout) || 0}min${str(v.desc) ? ` · ${str(v.desc)}` : ""}`)
+      );
+    case "espera":
+      return wrap(box(<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-[#fbbf24]" /><b className="text-white tabular-nums">{Number(v.n) || 0}</b><span className="text-zinc-400">{({ segundos: "seg", minutos: "min", horas: "horas", dias: "dias" } as Record<string, string>)[str(v.u) || "minutos"]}</span></span>));
+    case "digitando":
+      return wrap(box(<span className="flex items-center justify-between gap-2"><span className="flex items-center gap-2"><b className="text-white tabular-nums">{Number(v.sec) || 0}</b><span className="text-zinc-400">seg</span></span><span className="text-[12px] text-[#a5b4fc]">{v.action === "gravando" ? "gravando áudio" : "digitando"}</span></span>));
+    case "texto":
+      return wrap(box(<span className="line-clamp-3 whitespace-pre-line">{str(v.text) || "Clique para escrever"}</span>, !str(v.text)));
+    case "grupo":
+      return wrap(box(v.chatId ? "Grupo selecionado" : "Selecione o grupo", !v.chatId), meta(Number(v.days) > 0 ? `Acesso por ${Number(v.days)} dias` : "Acesso sem vencimento"));
+    case "bottaxa":
+      return wrap(box(v.botId ? "🤖 Acessar bot" : "Selecionar bot", !v.botId));
+    case "fakecall":
+      return wrap(box(<span className="line-clamp-2">📞 {str(v.name) ? `Chamada de ${str(v.name)}` : "Chamada simulada"}</span>));
+    case "imagem":
+    case "video":
+    case "audio":
+    case "arquivo": {
+      const url = str(v.url);
+      return wrap(
+        box(url ? <span className="block truncate">{decodeURIComponent(url.split("/").pop() || "arquivo")}</span> : "Clique para enviar o arquivo", !url),
+        ...(type === "video" && v.format === "redondo" ? [meta("Recado redondo")] : type === "audio" ? [meta(v.mode === "musica" ? "Música" : "Áudio gravado")] : [])
+      );
+    }
+    case "condicao":
+    case "ab":
+      return wrap(meta(fallback));
+    default:
+      return <div className="px-3.5 py-3 text-[13px] leading-[1.5] text-zinc-400 break-words"><span className="line-clamp-3">{fallback}</span></div>;
+  }
+}
 /** Cor escolhida para o botão daquela saída (Mensagem / Botões). */
 function btnColor(data: BlockData, out: string): string | undefined {
   if ((data.type !== "mensagem" && data.type !== "botao") || !/^b\d+$/.test(out)) return undefined;
