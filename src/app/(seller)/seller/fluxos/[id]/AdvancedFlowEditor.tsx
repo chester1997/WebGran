@@ -569,7 +569,8 @@ function Editor({ flowId, name, status, bots, products, chats, initialGraph, sto
   const ctrlBtn = "w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-35 disabled:hover:bg-transparent";
 
   return (
-    <div className="-mx-4 sm:-mx-6 md:-mx-7 lg:-mx-8 -mt-4 sm:-mt-5 -mb-6 md:-mb-8 flex flex-col h-[100dvh] min-h-[560px] overflow-hidden bg-[#0b0c0f]">
+    // Ocupa a janela inteira (o editor de fluxo já esconde a sidebar e o cabeçalho do painel).
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-[#0b0c0f]">
       <Toaster />
       <div className="shrink-0 px-4 sm:px-6 pt-4 bg-[var(--seller-bg,#0A0A0A)] [&>div:first-child]:pb-3.5">
         <EditorTopBar flowId={flowId} name={name} type="advanced" status={status} bots={bots} saveState={saveState} checklist={checklist} />
