@@ -136,10 +136,11 @@ export default function FlowsListClient({
       .catch(() => toast("Esse arquivo não é um fluxo exportado da WebGran.", "err"));
   };
 
-  const SumCard = ({ k, icon, label, n }: { k: TypeFilter; icon: React.ReactNode; label: string; n: number }) => {
+  const sumCard = (k: TypeFilter, label: string, n: number, icon: React.ReactNode) => {
     const on = typeFilter === k;
     return (
       <button
+        key={k}
         type="button"
         aria-pressed={on}
         onClick={() => setTypeFilter(on ? "all" : k)}
@@ -153,16 +154,27 @@ export default function FlowsListClient({
           className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${on ? "opacity-100" : "opacity-0"}`}
           style={{ background: "radial-gradient(80% 120% at 0% 0%, rgba(59,130,246,0.14) 0%, rgba(59,130,246,0) 60%)" }}
         />
-        {/* ícone fantasma ao fundo */}
-        <span aria-hidden="true" className="pointer-events-none absolute -right-4 -bottom-6 text-white/[0.025] [&>svg]:w-28 [&>svg]:h-28 transition-transform duration-500 group-hover:-rotate-6">
-          {icon}
-        </span>
         <Tile size={42} accent={on}>{icon}</Tile>
-        <span className="relative min-w-0">
+        <span className="relative min-w-0 flex-1">
           <span className="block text-[12.5px] font-medium text-zinc-400 truncate">{label}</span>
           <span className="mt-1 flex items-baseline gap-1.5">
             <span className="text-[26px] leading-none font-semibold tracking-tight tabular-nums text-white">{n}</span>
             <span className="text-[13px] text-zinc-500 font-medium">{n === 1 ? "fluxo" : "fluxos"}</span>
+          </span>
+        </span>
+        {/* participação no total: barra fina e discreta */}
+        <span className="relative hidden sm:flex flex-col items-end gap-1.5 shrink-0 w-[84px]">
+          <span className="text-[11.5px] font-medium tabular-nums text-zinc-500">
+            {flows.length ? Math.round((n / flows.length) * 100) : 0}% do total
+          </span>
+          <span className="block w-full h-[4px] rounded-full bg-white/[0.06] overflow-hidden">
+            <span
+              className={`block h-full rounded-full transition-all duration-500 ${on ? "bg-[#3b82f6]" : "bg-[#3b82f6]/60 group-hover:bg-[#3b82f6]/80"}`}
+              style={{ width: `${flows.length ? Math.max(4, (n / flows.length) * 100) : 0}%` }}
+            />
+          </span>
+          <span className={`text-[11px] transition-colors ${on ? "text-[#7fb0ff]" : "text-zinc-600 group-hover:text-zinc-400"}`}>
+            {on ? "Filtrando" : "Clique p/ filtrar"}
           </span>
         </span>
       </button>
@@ -204,9 +216,9 @@ export default function FlowsListClient({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        <SumCard k="linked" label="Ligados a um bot" n={counts.linked} icon={<Link2 className="w-[18px] h-[18px]" />} />
-        <SumCard k="basic" label="Fluxos básicos" n={counts.basic} icon={<Zap className="w-[18px] h-[18px]" />} />
-        <SumCard k="advanced" label="Fluxos avançados" n={counts.advanced} icon={<Network className="w-[18px] h-[18px]" />} />
+        {sumCard("linked", "Ligados a um bot", counts.linked, <Link2 className="w-[18px] h-[18px]" />)}
+        {sumCard("basic", "Fluxos básicos", counts.basic, <Zap className="w-[18px] h-[18px]" />)}
+        {sumCard("advanced", "Fluxos avançados", counts.advanced, <Network className="w-[18px] h-[18px]" />)}
       </div>
 
       <div className="flex flex-wrap items-center gap-1">
