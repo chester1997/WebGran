@@ -67,7 +67,9 @@ export async function processExpiredAccesses(): Promise<ExpiredProcessResult> {
 
     try {
       const telegramChatId = acc.telegramChatId || acc.product?.deliveryValue;
-      const telegramUserId = acc.customer?.telegramUserId;
+      // Cliente da Loja Web ("web:<id>") não tem conta do Telegram: não há o que remover do grupo.
+      const rawTgUserId = acc.customer?.telegramUserId;
+      const telegramUserId = rawTgUserId && !String(rawTgUserId).startsWith('web:') ? rawTgUserId : null;
       const isExternalDelivery = acc.deliveryType === 'external' || acc.product?.deliveryType === 'external';
       const requiresTelegramRevocation = Boolean(
         !isExternalDelivery &&

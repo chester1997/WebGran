@@ -1785,3 +1785,53 @@ export const plaqueRedemptions = pgTable('plaque_redemptions', {
 }, (t) => ({
   statusIdx: index('plaque_redemptions_status_idx').on(t.status, t.createdAt),
 }));
+
+// ===================== LOJA WEB (navegador, sem Telegram) =====================
+// Migration 0028_web_store.sql. Cada cliente web tem um "cliente sombra" em telegram_customers
+// (telegram_user_id = 'web:<id>') para reaproveitar carrinho, combos, checkout, entrega e vídeos.
+export const webCustomers = pgTable('web_customers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  shadowCustomerId: uuid('shadow_customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  whatsapp: text('whatsapp'),
+  telegram: text('telegram'),
+  status: text('status').notNull().default('active'),
+  lastLoginAt: timestamp('last_login_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeEmailUidx: uniqueIndex('web_customers_store_email_uidx').on(t.storeId, t.email),
+  shadowUidx: uniqueIndex('web_customers_shadow_uidx').on(t.shadowCustomerId),
+  storeCreatedIdx: index('web_customers_store_created_idx').on(t.storeId, t.createdAt),
+}));
+
+export const webCustomerSessions = pgTable('web_customer_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  webCustomerId: uuid('web_customer_id').notNull().references(() => webCustomers.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  customerIdx: index('web_customer_sessions_customer_idx').on(t.webCustomerId),
+}));
+
+export const webSupportTickets = pgTable('web_support_tickets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  webCustomerId: uuid('web_customer_id').notNull().references(() => webCustomers.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  contactVia: text('contact_via').notNull().default('whatsapp'), // 'whatsapp' | 'telegram' | 'email'
+  status: text('status').notNull().default('open'), // 'open' | 'answered' | 'closed'
+  sellerReply: text('seller_reply'),
+  repliedAt: timestamp('replied_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeStatusIdx: index('web_support_tickets_store_status_idx').on(t.storeId, t.status, t.createdAt),
+  customerIdx: index('web_support_tickets_customer_idx').on(t.webCustomerId),
+}));

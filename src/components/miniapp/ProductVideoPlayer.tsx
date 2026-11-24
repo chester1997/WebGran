@@ -34,6 +34,8 @@ export interface ProductVideoPlayerProps {
   watermark?: WatermarkData | null;
   onProgressUpdate?: (positionSeconds: number, durationSeconds: number) => void;
   onBack?: () => void;
+  /** false = não grava o progresso na rota do Mini App (a Loja Web grava pelo onProgressUpdate). */
+  syncProgress?: boolean;
 }
 
 type WatermarkPosition =
@@ -66,6 +68,7 @@ export function ProductVideoPlayer({
   watermark,
   onProgressUpdate,
   onBack,
+  syncProgress = true,
 }: ProductVideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -100,6 +103,7 @@ export function ProductVideoPlayer({
       if (onProgressUpdate) {
         onProgressUpdate(pos, dur);
       }
+      if (!syncProgress) return;
       fetch(`/api/miniapp/videos/${videoId}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,7 +113,7 @@ export function ProductVideoPlayer({
         }),
       }).catch((err) => console.warn("[VideoPlayer] Progress sync failed:", err));
     },
-    [videoId, onProgressUpdate]
+    [videoId, onProgressUpdate, syncProgress]
   );
 
   // Initialize HLS / Native Video Playback

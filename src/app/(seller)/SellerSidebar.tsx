@@ -31,6 +31,7 @@ import {
   SolarSellerLogoutIcon,
   SolarSellerSalesVolumeIcon,
   SolarSellerFlowsIcon,
+  SolarSellerWebStoreIcon,
 } from "@/components/icons/solar/seller-icons";
 
 export interface SellerProfileData {
@@ -306,6 +307,14 @@ export default function SellerSidebar({
                 isActive={pathname === "/seller/fluxos" || pathname.startsWith("/seller/fluxos/")}
                 onClick={(e) => handleLinkClick(e, "/seller/fluxos")}
                 icon={SolarSellerFlowsIcon}
+                accent="blue"
+              />
+              <SidebarNavItem
+                href="/seller/loja-web"
+                label="Loja Web"
+                isActive={pathname === "/seller/loja-web" || pathname.startsWith("/seller/loja-web/")}
+                onClick={(e) => handleLinkClick(e, "/seller/loja-web")}
+                icon={SolarSellerWebStoreIcon}
                 accent="blue"
               />
             </div>

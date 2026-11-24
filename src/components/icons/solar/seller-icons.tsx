@@ -952,3 +952,19 @@ export function SolarFlowsBoldDuotone({ size = 18, className, ...props }: SolarI
 }
 
 export const SolarSellerFlowsIcon = SolarFlowsBoldDuotone;
+
+/**
+ * Loja Web (shop-bold-duotone, desenho próprio no mesmo estilo duotone)
+ */
+export function SolarShopBoldDuotone({ size = 18, className, ...props }: SolarIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className} {...props}>
+      <g fill="currentColor">
+        <path opacity=".5" d="M3.5 10.6V17c0 2.36 0 3.54.73 4.27.74.73 1.92.73 4.27.73h7c2.36 0 3.54 0 4.27-.73.73-.73.73-1.91.73-4.27v-6.4a3.6 3.6 0 0 1-4.25-.7A3.6 3.6 0 0 1 12 11a3.6 3.6 0 0 1-4.25-1.1 3.6 3.6 0 0 1-4.25.7Z" />
+        <path d="M9.75 22v-3.5c0-.94 0-1.4.3-1.7.3-.3.76-.3 1.7-.3h.5c.94 0 1.4 0 1.7.3.3.3.3.76.3 1.7V22zM2.6 6.04l1.17-2.6C4.2 2.49 4.4 2 4.86 1.75 5.3 1.5 5.83 1.5 6.9 1.5h10.2c1.07 0 1.6 0 2.04.25.46.25.66.74 1.09 1.69l1.17 2.6c.42.93.15 2.03-.65 2.66a2.1 2.1 0 0 1-3.05-.4l-.45-.6-.45.6a2.1 2.1 0 0 1-3.4 0l-.4-.55-.4.55a2.1 2.1 0 0 1-3.4 0L9.2 7.75l-.4.55a2.1 2.1 0 0 1-3.4 0l-.45-.6-.45.6a2.1 2.1 0 0 1-3.05.4 2.17 2.17 0 0 1-.65-2.66Z" />
+      </g>
+    </svg>
+  );
+}
+
+export const SolarSellerWebStoreIcon = SolarShopBoldDuotone;

@@ -789,6 +789,12 @@ export class AccessDeliveryService {
     storeSlug?: string,
     claimToken?: string
   ): Promise<DeliveryResult> {
+    // Cliente da Loja Web ("web:<id>"): não tem chat no Telegram. A entrega acontece normalmente
+    // (acesso/link gravados), só não há mensagem no bot nem checagem de membro do grupo.
+    if (customer && String(customer.telegramUserId || '').startsWith('web:')) {
+      customer = { ...customer, telegramUserId: null };
+    }
+
     let heartbeatTimer: NodeJS.Timeout | null = null;
     let isRenewing = false;
     if (claimToken && typeof (db as any).execute === 'function') {

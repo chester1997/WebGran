@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { telegramCustomers } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, notLike } from "drizzle-orm";
 import { orders } from "@/db/schema";
 import { CustomerBlockService } from "@/lib/customers/customer-block-service";
 import CustomersClient from "./CustomersClient";
@@ -21,7 +21,8 @@ export default async function CustomersPage() {
   }
 
   const items = await db.query.telegramCustomers.findMany({
-    where: eq(telegramCustomers.storeId, store.id),
+    // Clientes da Loja Web (telegram_user_id 'web:<id>') têm aba própria.
+    where: and(eq(telegramCustomers.storeId, store.id), notLike(telegramCustomers.telegramUserId, 'web:%')),
     orderBy: [desc(telegramCustomers.createdAt)]
   });
 
