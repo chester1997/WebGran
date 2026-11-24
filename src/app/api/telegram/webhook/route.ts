@@ -993,6 +993,20 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Bot em "Venda na conversa" (Meus Fluxos) sem fluxo publicado: NÃO mostra a boas-vindas
+      // do Mini App (loja, carrinho, catálogo). Responde de forma neutra até um fluxo ser publicado.
+      if ((resolved.bot as { salesMode?: string | null }).salesMode === "PADRAO") {
+        console.warn(`[TELEGRAM WEBHOOK] Bot ${resolved.bot.id} em Venda na conversa sem fluxo publicado: boas-vindas do Mini App bloqueada.`);
+        try {
+          const name = (update.message.from?.first_name || "").replace(/[<>&]/g, "");
+          await botService.sendMessage(chatId, `👋 Olá${name ? `, ${name}` : ""}! Estamos preparando tudo por aqui. Volte em instantes.`);
+        } catch (msgErr: unknown) {
+          console.error("[TELEGRAM WEBHOOK] Falha na resposta neutra (Venda na conversa):", (msgErr as Error)?.message || msgErr);
+        }
+        if (updateCheckpoint) await updateCheckpoint('effects_confirmed');
+        return respondOk();
+      }
+
       // Customer name formatting
       const customerFirstName = update.message.from?.first_name || "Cliente";
 
