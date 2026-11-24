@@ -8,6 +8,7 @@ import {
   Copy,
   Globe,
   KeyRound,
+  Tags,
   LifeBuoy,
   Loader2,
   Mail,
@@ -168,7 +169,10 @@ export default function WebStoreClient({
         badge={<HeaderMeta value={stats.customers} label={stats.customers === 1 ? "cliente" : "clientes"} icon={<Users />} />}
         subtitle="Sua loja aberta no navegador, sem precisar do Telegram. Em teste: só você vê esta aba."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={BTN_SEC} onClick={() => setTab("combos")}>
+              <Tags className="w-4 h-4" /> Ofertas e combos
+            </button>
             <button
               type="button"
               className={BTN_SEC}
@@ -216,7 +220,7 @@ export default function WebStoreClient({
             [
               ["produtos", "Produtos", webProducts.length],
               ["vitrine", "Vitrine", null],
-              ["combos", "Combos", webCombos.filter((c) => c.type === "curated").length],
+              ["combos", "Ofertas e combos", webCombos.length],
               ["aparencia", "Aparência", null],
               ["clientes", "Clientes", customers.length],
               ["suporte", "Suporte", stats.openTickets],

@@ -127,7 +127,7 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
               {it.coverUrl && <img src={it.coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top brightness-[0.8] md:object-center md:scale-125 md:blur-[32px] md:brightness-[0.5]" />}
               {it.coverUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.coverUrl} alt="" className="hidden md:block absolute right-[7%] top-1/2 -translate-y-[54%] h-[70%] aspect-[2/3] object-cover rounded-[18px] shadow-[0_40px_90px_-20px_rgba(0,0,0,0.95)] ring-1 ring-white/10" />
+                <img src={it.coverUrl} alt="" className="hidden md:block absolute right-[7%] top-1/2 -translate-y-[54%] h-[70%] aspect-[2/3] object-cover rounded-[8px] shadow-[0_40px_90px_-20px_rgba(0,0,0,0.95)] ring-1 ring-white/10" />
               )}
             </>
           )}
@@ -159,11 +159,11 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
               if (!lines.some((l) => l.id === p.id)) add(p.id);
               router.push(`/loja/${slug}/carrinho`);
             }}
-            className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 sm:px-7 rounded-[12px] bg-white text-black text-[15px] sm:text-[16px] font-bold hover:bg-zinc-200 transition-colors"
+            className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 sm:px-7 rounded-[6px] bg-white text-black text-[15px] sm:text-[16px] font-bold hover:bg-zinc-200 transition-colors"
           >
             <Play className="w-5 h-5 fill-black" /> Comprar · {brl(p.price)}
           </button>
-          <Link href={`/loja/${slug}/produto/${p.slug}`} className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 rounded-[12px] bg-zinc-500/40 hover:bg-zinc-500/55 backdrop-blur text-[15px] sm:text-[16px] font-bold transition-colors">
+          <Link href={`/loja/${slug}/produto/${p.slug}`} className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 rounded-[6px] bg-zinc-500/40 hover:bg-zinc-500/55 backdrop-blur text-[15px] sm:text-[16px] font-bold transition-colors">
             <Info className="w-5 h-5" /> Mais detalhes
           </Link>
         </div>
@@ -217,17 +217,17 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
     return () => window.clearTimeout(t);
   }, [hit]);
   return (
-    <div className={`group/card relative shrink-0 snap-start aspect-[2/3] rounded-[10px] bg-[#15161a] ring-1 ring-white/[0.06] transition-[transform,box-shadow] duration-300 hover:scale-[1.07] hover:z-10 hover:shadow-[0_22px_40px_-12px_rgba(0,0,0,0.95)] hover:ring-2 hover:ring-[#3b82f6] ${done ? "ring-2 ring-[#3b82f6]" : ""} ${className}`}>
-      <Link href={`/loja/${slug}/produto/${p.slug}`} aria-label={p.title} className="absolute inset-0 rounded-[10px] overflow-hidden">
+    <div className={`group/card relative shrink-0 snap-start aspect-[2/3] rounded-[6px] bg-[#15161a] ring-1 ring-white/[0.06] transition-[transform,box-shadow] duration-300 hover:scale-[1.07] hover:z-10 hover:shadow-[0_22px_40px_-12px_rgba(0,0,0,0.95)] hover:ring-2 hover:ring-[#3b82f6] ${done ? "ring-2 ring-[#3b82f6]" : ""} ${className}`}>
+      <Link href={`/loja/${slug}/produto/${p.slug}`} aria-label={p.title} className="absolute inset-0 rounded-[6px] overflow-hidden">
         {p.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.coverUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center p-3 text-center text-[12px] font-semibold text-zinc-400">{p.title}</span>
         )}
-        {p.isNew && <span className="absolute top-2 right-2 h-5 px-1.5 rounded-[5px] bg-white text-black text-[10px] font-black flex items-center">NOVO</span>}
+        {p.isNew && <span className="absolute top-2 right-2 h-5 px-1.5 rounded-[3px] bg-white text-black text-[10px] font-black flex items-center">NOVO</span>}
         {p.compareAtPrice && p.compareAtPrice > p.price && (
-          <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[5px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
+          <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[3px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
         )}
         <span className="absolute inset-x-0 bottom-0 pt-10 pl-2.5 pr-12 pb-2.5 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity">
           <span className="block text-[12px] font-semibold leading-tight line-clamp-2 mb-1.5">{p.title}</span>
@@ -296,7 +296,7 @@ function ContinueRow({ slug, row }: { slug: string; row: Row }) {
           <Link
             key={p.id}
             href={`/loja/${slug}/conta/produto/${p.id}`}
-            className="group/c relative shrink-0 snap-start w-[250px] sm:w-[320px] aspect-video rounded-[12px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.07] hover:ring-2 hover:ring-[#3b82f6] transition-[box-shadow,transform] hover:scale-[1.03]"
+            className="group/c relative shrink-0 snap-start w-[250px] sm:w-[320px] aspect-video rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.07] hover:ring-2 hover:ring-[#3b82f6] transition-[box-shadow,transform] hover:scale-[1.03]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {(p.bannerUrl || p.coverUrl) && <img src={p.bannerUrl || p.coverUrl || ""} alt="" className="absolute inset-0 w-full h-full object-cover object-[center_30%]" />}

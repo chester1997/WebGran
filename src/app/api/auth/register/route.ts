@@ -6,10 +6,16 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, storeName } = await req.json();
+    const { name, email, password, storeName, whatsapp, telegram } = await req.json();
 
     if (!name || !email || !password || !storeName) {
       return NextResponse.json({ error: "Preencha todos os campos." }, { status: 400 });
+    }
+
+    const { validateSellerContacts, saveSellerContacts } = await import("@/lib/sellers/contacts");
+    const contactError = validateSellerContacts(String(whatsapp || ""), String(telegram || ""));
+    if (contactError) {
+      return NextResponse.json({ error: contactError }, { status: 400 });
     }
 
     if (password.length < 6) {
@@ -53,6 +59,7 @@ export async function POST(req: Request) {
     }).returning({ id: users.id });
 
     const sellerId = newUser[0].id;
+    await saveSellerContacts(sellerId, String(whatsapp || ""), String(telegram || ""));
 
     const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
     const storeCheck = await checkLimit(sellerId, "max_stores", 0);

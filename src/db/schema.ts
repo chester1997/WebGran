@@ -1860,3 +1860,12 @@ export const webStoreSettings = pgTable('web_store_settings', {
   promoImageUrl: text('promo_image_url'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// Contatos do vendedor informados no cadastro (WhatsApp e Telegram)
+export const sellerContacts = pgTable('seller_contacts', {
+  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  whatsapp: text('whatsapp'),
+  telegram: text('telegram'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

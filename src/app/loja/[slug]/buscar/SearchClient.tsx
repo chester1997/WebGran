@@ -22,7 +22,7 @@ export function SearchClient({ slug, items }: { slug: string; items: { id: strin
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar títulos"
-          className="w-full h-14 pl-12 pr-12 rounded-[14px] bg-[#121316] border border-white/[0.09] text-[16px] outline-none focus:border-[#3b82f6]/70 focus:ring-4 focus:ring-[#3b82f6]/15"
+          className="w-full h-14 pl-12 pr-12 rounded-[8px] bg-[#121316] border border-white/[0.09] text-[16px] outline-none focus:border-[#3b82f6]/70 focus:ring-4 focus:ring-[#3b82f6]/15"
         />
         {q && (
           <button type="button" onClick={() => setQ("")} aria-label="Limpar" className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-white">
@@ -36,7 +36,7 @@ export function SearchClient({ slug, items }: { slug: string; items: { id: strin
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5 sm:gap-3">
           {shown.map((p) => (
-            <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="group relative aspect-[2/3] rounded-[10px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition hover:scale-[1.04]">
+            <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="group relative aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition hover:scale-[1.04]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {p.coverUrl && <img src={p.coverUrl} alt={p.title} loading="lazy" className="w-full h-full object-cover" />}
               <span className="absolute inset-x-0 bottom-0 p-2 pt-8 bg-gradient-to-t from-black/95 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">

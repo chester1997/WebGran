@@ -23,8 +23,7 @@ export interface WebProductView {
   copiedFrom: string | null;
 }
 
-const SURFACE =
-  "relative rounded-[16px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
+const SURFACE = "relative rounded-[16px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const DURATIONS: [string, string][] = [
   ["lifetime", "Vitalício"],
@@ -176,7 +175,9 @@ function CopyModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
           <div className="flex items-center justify-between text-[11.5px] text-zinc-500 px-0.5">
-            <span>{copyable.length} {copyable.length === 1 ? "pode ser copiado" : "podem ser copiados"}</span>
+            <span>
+              {copyable.length} {copyable.length === 1 ? "pode ser copiado" : "podem ser copiados"}
+            </span>
             <span>{shown.length - copyable.length} bloqueados</span>
           </div>
           <ul className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 -mr-1 [scrollbar-width:thin] [scrollbar-color:#2a2c33_transparent]">
@@ -207,9 +208,7 @@ function CopyModal({ onClose }: { onClose: () => void }) {
                     {blocked ? (
                       <Lock className="w-4 h-4 text-zinc-500 shrink-0" />
                     ) : (
-                      <span className={`w-5 h-5 rounded-[6px] border flex items-center justify-center shrink-0 ${on ? "bg-[#3b82f6] border-[#3b82f6]" : "border-zinc-600"}`}>
-                        {on && <Check className="w-3.5 h-3.5 text-white" />}
-                      </span>
+                      <span className={`w-5 h-5 rounded-[6px] border flex items-center justify-center shrink-0 ${on ? "bg-[#3b82f6] border-[#3b82f6]" : "border-zinc-600"}`}>{on && <Check className="w-3.5 h-3.5 text-white" />}</span>
                     )}
                   </button>
                 </li>
@@ -294,7 +293,7 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
           badge: null,
           published: f.published,
         },
-        videos
+        videos,
       );
       if (!r.ok) {
         setError(r.error);
@@ -321,126 +320,145 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
   const filteredLib = (lib || []).filter((v) => !videos.includes(v.id) && (!vq.trim() || v.title.toLowerCase().includes(vq.trim().toLowerCase())));
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={product ? `Editar ${product.title}` : "Novo produto"}>
-      <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => !pending && onClose()} />
-      <aside className="relative w-full max-w-[640px] h-full flex flex-col bg-[#111215] border-l border-white/[0.08] shadow-2xl">
-        <div className="px-5 py-4 border-b border-white/[0.07] flex items-center gap-3">
-          <h2 className="text-[15.5px] font-semibold text-white flex-1 truncate">{product ? "Editar produto" : "Novo produto da Loja Web"}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={product ? `Editar ${product.title}` : "Novo produto"}>
+      <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={() => !pending && onClose()} />
+      <div className="relative w-full max-w-[1100px] h-[min(860px,calc(100dvh-24px))] sm:h-[min(860px,calc(100dvh-48px))] flex flex-col bg-[#111215] border border-white/[0.09] rounded-[12px] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)] overflow-hidden">
+        <div className="px-5 sm:px-6 py-4 border-b border-white/[0.07] flex items-center gap-3 shrink-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[16px] font-semibold text-white truncate">{product ? "Editar produto" : "Novo produto da Loja Web"}</h2>
+            <p className="text-[12.5px] text-zinc-500 truncate">Dados e imagens à esquerda, vídeos que o cliente assiste à direita.</p>
+          </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="w-9 h-9 rounded-[9px] flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06]">
             <X className="w-[18px] h-[18px]" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-4">
-            <ImageSlot label="Capa (2:3)" url={f.coverUrl} busy={uploading === "cover"} tall onFile={(file) => upload("cover", file)} onClear={() => setF((s) => ({ ...s, coverUrl: "" }))} />
-            <div className="space-y-3 min-w-0">
-              <Field label="Nome">
-                <input value={f.title} onChange={set("title")} maxLength={140} className={INPUT} placeholder="Ex.: A Loba Negra Rejeitada" />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Preço (R$)">
-                  <input value={f.price} onChange={set("price")} inputMode="decimal" className={INPUT} placeholder="5,00" />
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="p-5 sm:p-6 space-y-5 lg:overflow-y-auto lg:border-r lg:border-white/[0.07]">
+            <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-4">
+              <ImageSlot label="Capa (2:3)" url={f.coverUrl} busy={uploading === "cover"} tall onFile={(file) => upload("cover", file)} onClear={() => setF((s) => ({ ...s, coverUrl: "" }))} />
+              <div className="space-y-3 min-w-0">
+                <Field label="Nome">
+                  <input value={f.title} onChange={set("title")} maxLength={140} className={INPUT} placeholder="Ex.: A Loba Negra Rejeitada" />
                 </Field>
-                <Field label="Preço “de” (opcional)">
-                  <input value={f.compareAtPrice} onChange={set("compareAtPrice")} inputMode="decimal" className={INPUT} placeholder="9,90" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Preço (R$)">
+                    <input value={f.price} onChange={set("price")} inputMode="decimal" className={INPUT} placeholder="5,00" />
+                  </Field>
+                  <Field label="Preço “de” (opcional)">
+                    <input value={f.compareAtPrice} onChange={set("compareAtPrice")} inputMode="decimal" className={INPUT} placeholder="9,90" />
+                  </Field>
+                </div>
+                <Field label="Tempo de acesso">
+                  <select value={f.duration} onChange={set("duration")} className={INPUT}>
+                    {DURATIONS.map(([k, l]) => (
+                      <option key={k} value={k}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
-              <Field label="Tempo de acesso">
-                <select value={f.duration} onChange={set("duration")} className={INPUT}>
-                  {DURATIONS.map(([k, l]) => (
-                    <option key={k} value={k}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </Field>
             </div>
+
+            <ImageSlot
+              label="Imagem larga do banner (16:9, opcional). Sem ela, a loja usa a capa."
+              url={f.bannerUrl}
+              busy={uploading === "banner"}
+              onFile={(file) => upload("banner", file)}
+              onClear={() => setF((s) => ({ ...s, bannerUrl: "" }))}
+            />
+
+            <Field label="Frase curta (aparece no banner e no card)">
+              <input value={f.shortDescription} onChange={set("shortDescription")} maxLength={220} className={INPUT} placeholder="Romance, traição e uma reviravolta que ninguém espera." />
+            </Field>
+            <Field label="Descrição">
+              <textarea value={f.description} onChange={set("description")} rows={4} maxLength={5000} className={`${INPUT} !h-auto py-2.5 resize-none`} />
+            </Field>
+
+            <label className="flex items-center gap-3 rounded-[8px] border border-white/[0.07] p-3 cursor-pointer">
+              <input type="checkbox" checked={f.published} onChange={(e) => setF((s) => ({ ...s, published: e.target.checked }))} className="w-4 h-4 accent-[#3b82f6]" />
+              <span>
+                <span className="block text-[13px] font-medium text-zinc-200">Mostrar na loja</span>
+                <span className="block text-[12px] text-zinc-500">Desmarcado, o produto fica como rascunho e ninguém vê.</span>
+              </span>
+            </label>
           </div>
-
-          <ImageSlot label="Imagem larga do banner (16:9, opcional). Sem ela, a loja usa a capa." url={f.bannerUrl} busy={uploading === "banner"} onFile={(file) => upload("banner", file)} onClear={() => setF((s) => ({ ...s, bannerUrl: "" }))} />
-
-          <Field label="Frase curta (aparece no banner e no card)">
-            <input value={f.shortDescription} onChange={set("shortDescription")} maxLength={220} className={INPUT} placeholder="Romance, traição e uma reviravolta que ninguém espera." />
-          </Field>
-          <Field label="Descrição">
-            <textarea value={f.description} onChange={set("description")} rows={4} maxLength={5000} className={`${INPUT} !h-auto py-2.5 resize-none`} />
-          </Field>
-
-          <div>
-            <div className="flex items-baseline justify-between mb-2">
-              <span className="text-[13px] font-medium text-zinc-300">Vídeos do produto ({videos.length})</span>
-              <span className="text-[11.5px] text-zinc-500">Na ordem em que o cliente assiste</span>
-            </div>
-            {videos.length > 0 && (
-              <ol className="space-y-1.5 mb-3">
-                {videos.map((id, i) => {
-                  const v = byId.get(id);
-                  return (
-                    <li key={id} className="flex items-center gap-2.5 rounded-[10px] bg-white/[0.03] border border-white/[0.06] p-1.5 pr-2">
-                      <span className="w-6 text-center text-[12px] text-zinc-500 tabular-nums">{i + 1}</span>
-                      <span className="w-[64px] aspect-video rounded-[6px] overflow-hidden bg-[#1a1b20] shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {v?.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
-                      </span>
-                      <span className="flex-1 min-w-0 text-[12.5px] text-zinc-200 truncate">{v?.title || "Vídeo"}</span>
-                      <button type="button" aria-label="Subir" onClick={() => move(i, -1)} disabled={i === 0} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30">
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" aria-label="Descer" onClick={() => move(i, 1)} disabled={i === videos.length - 1} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30">
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" aria-label="Tirar do produto" onClick={() => setVideos((l) => l.filter((x) => x !== id))} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 hover:text-red-400">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-            <div className="rounded-[12px] border border-white/[0.07] bg-black/20">
-              <div className="p-2 border-b border-white/[0.06]">
-                <input value={vq} onChange={(e) => setVq(e.target.value)} placeholder="Buscar na Biblioteca de vídeos" className={`${INPUT} !h-9`} />
+          <div className="p-5 sm:p-6 flex flex-col gap-3 min-h-0 lg:overflow-hidden">
+            <div className="flex flex-col min-h-0 flex-1">
+              <div className="flex items-baseline justify-between mb-2">
+                <span className="text-[13px] font-medium text-zinc-300">Vídeos do produto ({videos.length})</span>
+                <span className="text-[11.5px] text-zinc-500">Na ordem em que o cliente assiste</span>
               </div>
-              {!lib ? (
-                <p className="flex items-center justify-center gap-2 p-5 text-[12.5px] text-zinc-500">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando a Biblioteca...
-                </p>
-              ) : filteredLib.length === 0 ? (
-                <p className="p-5 text-center text-[12.5px] text-zinc-500">{lib.length ? "Nenhum vídeo encontrado." : "Sua Biblioteca não tem vídeos prontos."}</p>
-              ) : (
-                <ul className="max-h-[260px] overflow-y-auto p-1.5 space-y-1">
-                  {filteredLib.slice(0, 120).map((v) => (
-                    <li key={v.id}>
-                      <button type="button" onClick={() => setVideos((l) => [...l, v.id])} className="w-full flex items-center gap-2.5 p-1.5 rounded-[9px] text-left hover:bg-white/[0.04]">
+              {videos.length > 0 && (
+                <ol className="space-y-1.5 mb-3 max-h-[40%] overflow-y-auto shrink-0 pr-1">
+                  {videos.map((id, i) => {
+                    const v = byId.get(id);
+                    return (
+                      <li key={id} className="flex items-center gap-2.5 rounded-[10px] bg-white/[0.03] border border-white/[0.06] p-1.5 pr-2">
+                        <span className="w-6 text-center text-[12px] text-zinc-500 tabular-nums">{i + 1}</span>
                         <span className="w-[64px] aspect-video rounded-[6px] overflow-hidden bg-[#1a1b20] shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          {v.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
+                          {v?.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
                         </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[12.5px] text-zinc-200 truncate">{v.title}</span>
-                          <span className="block text-[11px] text-zinc-500 truncate">{v.products.length ? `Em: ${v.products.join(", ")}` : "Sem produto"}</span>
-                        </span>
-                        <Plus className="w-4 h-4 text-[#7fb0ff] shrink-0" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                        <span className="flex-1 min-w-0 text-[12.5px] text-zinc-200 truncate">{v?.title || "Vídeo"}</span>
+                        <button type="button" aria-label="Subir" onClick={() => move(i, -1)} disabled={i === 0} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30">
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Descer"
+                          onClick={() => move(i, 1)}
+                          disabled={i === videos.length - 1}
+                          className="w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" aria-label="Tirar do produto" onClick={() => setVideos((l) => l.filter((x) => x !== id))} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-zinc-500 hover:text-red-400">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
               )}
+              <div className="rounded-[8px] border border-white/[0.07] bg-black/20 flex flex-col min-h-[240px] lg:min-h-0 lg:flex-1 overflow-hidden">
+                <div className="p-2 border-b border-white/[0.06]">
+                  <input value={vq} onChange={(e) => setVq(e.target.value)} placeholder="Buscar na Biblioteca de vídeos" className={`${INPUT} !h-9`} />
+                </div>
+                {!lib ? (
+                  <p className="flex items-center justify-center gap-2 p-5 text-[12.5px] text-zinc-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Carregando a Biblioteca...
+                  </p>
+                ) : filteredLib.length === 0 ? (
+                  <p className="p-5 text-center text-[12.5px] text-zinc-500">{lib.length ? "Nenhum vídeo encontrado." : "Sua Biblioteca não tem vídeos prontos."}</p>
+                ) : (
+                  <ul className="max-h-[320px] lg:max-h-none lg:flex-1 overflow-y-auto p-1.5 space-y-1">
+                    {filteredLib.slice(0, 120).map((v) => (
+                      <li key={v.id}>
+                        <button type="button" onClick={() => setVideos((l) => [...l, v.id])} className="w-full flex items-center gap-2.5 p-1.5 rounded-[9px] text-left hover:bg-white/[0.04]">
+                          <span className="w-[64px] aspect-video rounded-[6px] overflow-hidden bg-[#1a1b20] shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {v.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[12.5px] text-zinc-200 truncate">{v.title}</span>
+                            <span className="block text-[11px] text-zinc-500 truncate">{v.products.length ? `Em: ${v.products.join(", ")}` : "Sem produto"}</span>
+                          </span>
+                          <Plus className="w-4 h-4 text-[#7fb0ff] shrink-0" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </div>
 
-          <label className="flex items-center gap-3 rounded-[12px] border border-white/[0.07] p-3 cursor-pointer">
-            <input type="checkbox" checked={f.published} onChange={(e) => setF((s) => ({ ...s, published: e.target.checked }))} className="w-4 h-4 accent-[#3b82f6]" />
-            <span>
-              <span className="block text-[13px] font-medium text-zinc-200">Mostrar na loja</span>
-              <span className="block text-[12px] text-zinc-500">Desmarcado, o produto fica como rascunho e ninguém vê.</span>
-            </span>
-          </label>
-          {error && <p className="rounded-[10px] border border-red-500/25 bg-red-500/[0.07] px-3.5 py-2.5 text-[13px] text-red-300">{error}</p>}
+            {error && <p className="shrink-0 rounded-[8px] border border-red-500/25 bg-red-500/[0.07] px-3.5 py-2.5 text-[13px] text-red-300">{error}</p>}
+          </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-white/[0.07] flex items-center gap-2">
+        <div className="px-5 sm:px-6 py-4 border-t border-white/[0.07] flex items-center gap-2 shrink-0 bg-[#111215]">
           {product && (
             <button type="button" onClick={archive} disabled={pending} className={`${BTN_SEC} hover:!text-red-300`}>
               <Trash2 className="w-4 h-4" /> Tirar da loja
@@ -453,7 +471,7 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
             {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Salvar
           </button>
         </div>
-      </aside>
+      </div>
     </div>
   );
 }

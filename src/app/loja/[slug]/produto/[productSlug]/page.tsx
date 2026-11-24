@@ -54,7 +54,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
           </div>
           {product.coverUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.coverUrl} alt={product.title} className="hidden md:block w-[260px] aspect-[2/3] object-cover rounded-[16px] ring-1 ring-white/10 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.95)]" />
+            <img src={product.coverUrl} alt={product.title} className="hidden md:block w-[260px] aspect-[2/3] object-cover rounded-[8px] ring-1 ring-white/10 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.95)]" />
           )}
         </div>
       </section>
@@ -89,7 +89,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
                 return (
                   <li key={v.id}>
                     {owned ? (
-                      <Link href={`/loja/${slug}/conta/produto/${product.id}?v=${v.id}`} className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-[12px] hover:bg-white/[0.04]">
+                      <Link href={`/loja/${slug}/conta/produto/${product.id}?v=${v.id}`} className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-[6px] hover:bg-white/[0.04]">
                         {content}
                       </Link>
                     ) : (
@@ -123,7 +123,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
           <h2 className="px-4 sm:px-8 lg:px-10 text-[20px] font-bold mb-1">Mais títulos</h2>
           <div className="flex gap-2.5 overflow-x-auto px-4 sm:px-8 lg:px-10 pt-3 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {more.map((p) => (
-              <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="shrink-0 w-[118px] sm:w-[160px] aspect-[2/3] rounded-[10px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition hover:scale-[1.05]">
+              <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="shrink-0 w-[118px] sm:w-[160px] aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition hover:scale-[1.05]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {p.coverUrl && <img src={p.coverUrl} alt={p.title} loading="lazy" className="w-full h-full object-cover" />}
               </Link>

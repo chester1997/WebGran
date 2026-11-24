@@ -5,18 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  ShoppingBag, 
-  ArrowRight, 
-  Sparkles, 
-  Heart,
-  Loader2,
-  CheckCircle2,
-  ShieldCheck
-} from "lucide-react";
+import { Mail, Lock, User, ShoppingBag, ArrowRight, Sparkles, Heart, Loader2, CheckCircle2, ShieldCheck, Phone, AtSign } from "lucide-react";
 
 interface AuthContainerProps {
   initialMode?: "login" | "register";
@@ -40,6 +29,8 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regStoreName, setRegStoreName] = useState("");
+  const [regWhatsapp, setRegWhatsapp] = useState("");
+  const [regTelegram, setRegTelegram] = useState("");
   const [regError, setRegError] = useState("");
   const [regLoading, setRegLoading] = useState(false);
 
@@ -80,6 +71,8 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
           email: regEmail,
           password: regPassword,
           storeName: regStoreName,
+          whatsapp: regWhatsapp,
+          telegram: regTelegram,
         }),
       });
 
@@ -316,6 +309,42 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-300 mb-1">WhatsApp</label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        required
+                        autoComplete="tel"
+                        maxLength={20}
+                        placeholder="(11) 99999-9999"
+                        value={regWhatsapp}
+                        onChange={(e) => setRegWhatsapp(e.target.value)}
+                        className="w-full bg-[#18181B] border border-[#27272A] rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-300 mb-1">Telegram</label>
+                    <div className="relative">
+                      <AtSign className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={33}
+                        placeholder="seuusuario"
+                        value={regTelegram}
+                        onChange={(e) => setRegTelegram(e.target.value.replace(/^@+/, ""))}
+                        className="w-full bg-[#18181B] border border-[#27272A] rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="-mt-1.5 text-[11px] text-zinc-500">Usamos só para falar com você sobre a sua conta.</p>
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-300 mb-1">

@@ -36,6 +36,8 @@ import {
   TrendingUp,
   Tag,
   Check,
+  Phone,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -381,7 +383,9 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
     let matchesSearch =
       !q ||
       s.name.toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q);
+      s.email.toLowerCase().includes(q) ||
+      (s.whatsapp || "").includes(q.replace(/\D/g, "") || "\u0000") ||
+      (s.telegram || "").toLowerCase().includes(q.replace(/^@/, ""));
 
     // Match stores and telegram bots
     if (!matchesSearch && s.stores && s.stores.length > 0) {
@@ -885,6 +889,26 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                             <Mail className="w-3 h-3 text-gray-500 shrink-0" />
                             <span className="truncate">{seller.email}</span>
                           </div>
+                          {(seller.whatsapp || seller.telegram) && (
+                            <div className="flex items-center gap-2.5 mt-1 text-[11px]">
+                              {seller.whatsapp && (
+                                <a
+                                  href={`https://wa.me/${seller.whatsapp.length <= 11 ? `55${seller.whatsapp}` : seller.whatsapp}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[#7fb0ff] hover:underline"
+                                  title="Abrir WhatsApp"
+                                >
+                                  <Phone className="w-3 h-3 shrink-0" /> {seller.whatsapp}
+                                </a>
+                              )}
+                              {seller.telegram && (
+                                <a href={`https://t.me/${seller.telegram}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#7fb0ff] hover:underline" title="Abrir Telegram">
+                                  <Send className="w-3 h-3 shrink-0" /> @{seller.telegram}
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>

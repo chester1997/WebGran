@@ -106,7 +106,7 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
       {/* Menu lateral (computador): recolhe e expande */}
       <nav
         aria-label="Navegação da loja"
-        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 w-[var(--rail)] flex-col gap-1 px-3.5 pt-4 pb-5 transition-[width,background-color] duration-300 ease-out ${open ? "bg-[#0b0c0f]" : "bg-[#07080a]"}`}
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 w-[var(--rail)] flex-col gap-1 px-3.5 pt-4 pb-5 transition-[width,background-color] duration-300 ease-out bg-[#121317] shadow-[1px_0_0_rgba(255,255,255,0.04),8px_0_24px_-12px_rgba(0,0,0,0.8)]`}
       >
         <div className={`flex items-center h-12 mb-5 ${open ? "px-1" : "justify-center"}`}>
           <Link href={base} aria-label={store.name} className="flex items-center gap-3 min-w-0">
@@ -156,14 +156,14 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
           <span className={`font-extrabold tracking-tight text-[17px] truncate ${open ? "lg:invisible" : ""}`}>{store.name}</span>
         </Link>
         {customer ? (
-          <Link href={`${base}/conta`} className="inline-flex items-center gap-2 h-9 pl-1 pr-3 rounded-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-[13px] font-medium transition-colors">
+          <Link href={`${base}/conta`} className="inline-flex items-center gap-2.5 h-11 pl-1 pr-3.5 rounded-[8px] bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-[14px] font-semibold transition-colors">
             {customer.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={customer.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+              <img src={customer.avatarUrl} alt="" className="w-9 h-9 rounded-[6px] object-cover" />
             ) : (
-              <span className="w-7 h-7 rounded-full bg-[#3b82f6] text-white text-[12px] font-bold flex items-center justify-center">{customer.name.trim().charAt(0).toUpperCase()}</span>
+              <span className="w-9 h-9 rounded-[6px] bg-[#3b82f6] text-white text-[14px] font-bold flex items-center justify-center">{customer.name.trim().charAt(0).toUpperCase()}</span>
             )}
-            <span className="hidden sm:inline max-w-[120px] truncate">{customer.name.split(" ")[0]}</span>
+            <span className="hidden sm:inline max-w-[140px] truncate">{customer.name.split(" ")[0]}</span>
           </Link>
         ) : (
           !isAuth && (

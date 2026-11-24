@@ -51,6 +51,8 @@ export interface SellerItem {
   id: string;
   name: string;
   email: string;
+  whatsapp: string | null;
+  telegram: string | null;
   role: string;
   createdAt: string;
   status: string;
@@ -121,6 +123,9 @@ export async function loadAdminSellersList(): Promise<SellerItem[]> {
     current.volume += Number(o.total || 0);
     storeMetrics.set(o.storeId, current);
   }
+
+  const { loadSellerContacts } = await import("@/lib/sellers/contacts");
+  const contacts = await loadSellerContacts(sellersData.map((s) => s.id));
 
   const enrichedSellers: SellerItem[] = await Promise.all(
     sellersData.map(async (seller) => {
@@ -244,6 +249,8 @@ export async function loadAdminSellersList(): Promise<SellerItem[]> {
         id: seller.id,
         name: seller.name,
         email: seller.email,
+        whatsapp: contacts.get(seller.id)?.whatsapp || null,
+        telegram: contacts.get(seller.id)?.telegram || null,
         role: seller.role,
         createdAt: seller.createdAt ? new Date(seller.createdAt).toISOString() : new Date().toISOString(),
         status: computedStatus,
