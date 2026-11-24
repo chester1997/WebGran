@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, Copy, Film, ImagePlus, Loader2, Lock, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "../fluxos/_components/flow-ui";
+import { BTN_PRI, BTN_SEC, Callout, INPUT, useToast } from "../fluxos/_components/flow-ui";
+import { Modal, Portal } from "./LojaModal";
+import { PRODUCT_BADGE_OPTIONS, getProductBadge } from "@/lib/product-badge";
 import { archiveWebProductAction, copyCandidatesAction, copyProductsAction, saveWebProductAction, videoPickerAction } from "./actions";
 
 export interface WebProductView {
@@ -180,7 +182,7 @@ function CopyModal({ onClose }: { onClose: () => void }) {
             </span>
             <span>{shown.length - copyable.length} bloqueados</span>
           </div>
-          <ul className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 -mr-1 [scrollbar-width:thin] [scrollbar-color:#2a2c33_transparent]">
+          <ul className="grid grid-cols-1 gap-2">
             {shown.map((c) => {
               const blocked = Boolean(c.blockedReason) || c.alreadyCopied;
               const on = sel.has(c.id);
@@ -233,6 +235,7 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
     price: product ? String(product.price) : "",
     compareAtPrice: product?.compareAtPrice ? String(product.compareAtPrice) : "",
     duration: product?.duration || "lifetime",
+    badge: getProductBadge(product?.badge)?.value || "",
     published: product ? product.status === "web_active" : true,
   });
   const [lib, setLib] = useState<LibVideo[] | null>(null);
@@ -290,7 +293,7 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
           price: Number(String(f.price).replace(",", ".")),
           compareAtPrice: f.compareAtPrice ? Number(String(f.compareAtPrice).replace(",", ".")) : null,
           duration: f.duration,
-          badge: null,
+          badge: f.badge || null,
           published: f.published,
         },
         videos,
@@ -320,7 +323,8 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
   const filteredLib = (lib || []).filter((v) => !videos.includes(v.id) && (!vq.trim() || v.title.toLowerCase().includes(vq.trim().toLowerCase())));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={product ? `Editar ${product.title}` : "Novo produto"}>
+    <Portal>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={product ? `Editar ${product.title}` : "Novo produto"}>
       <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={() => !pending && onClose()} />
       <div className="relative w-full max-w-[1100px] h-[min(860px,calc(100dvh-24px))] sm:h-[min(860px,calc(100dvh-48px))] flex flex-col bg-[#111215] border border-white/[0.09] rounded-[12px] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)] overflow-hidden">
         <div className="px-5 sm:px-6 py-4 border-b border-white/[0.07] flex items-center gap-3 shrink-0">
@@ -368,6 +372,27 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
               onFile={(file) => upload("banner", file)}
               onClear={() => setF((s) => ({ ...s, bannerUrl: "" }))}
             />
+
+            <Field label="Badge do card (a mesma do Mini App)">
+              <div className="flex flex-wrap gap-1.5">
+                {PRODUCT_BADGE_OPTIONS.map((o) => {
+                  const on = f.badge === o.value;
+                  return (
+                    <button
+                      key={o.value || "none"}
+                      type="button"
+                      onClick={() => setF((s) => ({ ...s, badge: o.value }))}
+                      aria-pressed={on}
+                      className={`h-8 px-2.5 rounded-[6px] border text-[12px] font-semibold transition-colors ${
+                        on ? "border-[#3b82f6] bg-[#3b82f6]/[0.12] text-white" : "border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:border-white/[0.16]"
+                      }`}
+                    >
+                      {o.value ? o.label : "Sem badge"}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
 
             <Field label="Frase curta (aparece no banner e no card)">
               <input value={f.shortDescription} onChange={set("shortDescription")} maxLength={220} className={INPUT} placeholder="Romance, traição e uma reviravolta que ninguém espera." />
@@ -473,6 +498,7 @@ function ProductEditor({ product, onClose }: { product: WebProductView | null; o
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

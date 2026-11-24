@@ -1,5 +1,6 @@
 "use client";
 
+import { getProductBadge } from "@/lib/product-badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -31,6 +32,8 @@ export interface CardItem {
   duration: string | null;
   videoCount: number;
   isNew: boolean;
+  /** Badge do produto (mesma do Mini App): novo, dublado, legendado... */
+  badge?: string | null;
   /** Imagem horizontal definida na Vitrine para os Destaques do topo. */
   heroUrl?: string | null;
 }
@@ -199,10 +202,26 @@ function Track({ title, children, link }: { title: string; children: React.React
   );
 }
 
+const BADGE_STYLE: Record<string, string> = {
+  novo: "bg-white text-black",
+  dublado: "bg-[#3b82f6] text-white",
+  legendado: "bg-red-600 text-white",
+  br: "bg-gradient-to-r from-emerald-600 via-green-500 to-amber-400 text-zinc-950",
+  em_alta: "bg-amber-400 text-zinc-950",
+  lancamento: "bg-purple-600 text-white",
+  "1_temporada": "bg-sky-600 text-white",
+};
+
+function webBadge(v?: string | null) {
+  const b = getProductBadge(v);
+  return b ? { label: b.label, cls: BADGE_STYLE[b.value] || "bg-white text-black" } : null;
+}
+
 function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: { slug: string; p: CardItem; className?: string }) {
   const { add } = useCart();
   const [hit, setHit] = useState(0);
   const [done, setDone] = useState(false);
+  const badge = webBadge(p.badge);
   useEffect(() => {
     if (!hit) return;
     const t = window.setTimeout(() => setDone(false), 1500);
@@ -217,13 +236,12 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
         ) : (
           <span className="absolute inset-0 flex items-center justify-center p-3 text-center text-[12px] font-semibold text-zinc-400">{p.title}</span>
         )}
-        {p.isNew && <span className="absolute top-2 right-2 h-5 px-1.5 rounded-[3px] bg-white text-black text-[10px] font-black flex items-center">NOVO</span>}
+        {badge && <span className={`absolute top-2 right-2 h-5 px-1.5 rounded-[3px] text-[10px] font-black uppercase tracking-wide flex items-center ${badge.cls}`}>{badge.label}</span>}
         {p.compareAtPrice && p.compareAtPrice > p.price && (
           <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[3px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
         )}
-        <span className="absolute inset-x-0 bottom-0 pt-14 pl-2.5 pr-12 pb-2.5 bg-gradient-to-t from-black/95 via-black/65 to-transparent">
-          <span className="block text-[12px] font-semibold leading-tight line-clamp-2 mb-1.5">{p.title}</span>
-          <span className="block text-[12.5px] font-bold">{brl(p.price)}</span>
+        <span className="absolute inset-x-0 bottom-0 h-16 pl-2.5 pr-12 pb-3 flex items-end bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+          <span className="block text-[13px] font-bold tabular-nums">{brl(p.price)}</span>
         </span>
       </Link>
       <button
@@ -234,11 +252,11 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
           setHit((h) => h + 1);
         }}
         aria-label={`Adicionar ${p.title} ao carrinho`}
-        className={`absolute right-2 bottom-2 w-9 h-9 rounded-full flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(0,0,0,0.8)] transition-[opacity,background-color,color,transform] duration-200 active:scale-90 ${
+        className={`absolute right-2 bottom-2 w-9 h-9 rounded-[7px] flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(0,0,0,0.8)] transition-[opacity,background-color,color,transform] duration-200 active:scale-90 ${
           done ? "bg-white text-[#3b82f6]" : "bg-[#3b82f6] text-white hover:bg-[#2f74ea]"
         }`}
       >
-        {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-full bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
+        {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-[7px] bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
         {done ? <Check key={`c${hit}`} className="relative w-[18px] h-[18px] animate-[wg-pop_.45s_ease-out]" strokeWidth={3} /> : <SolarCartLarge2BoldDuotone size={18} />}
         {done && (
           <span key={`f${hit}`} aria-hidden="true" className="absolute inset-x-0 -top-1 text-center text-[11px] font-black text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.9)] animate-[wg-fly_.9s_ease-out_forwards]">

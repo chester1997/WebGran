@@ -27,6 +27,7 @@ import Toaster from "../fluxos/_components/Toaster";
 import { customerDetailAction, replyTicketAction, resetLinkAction, setCustomerStatusAction } from "./actions";
 import WebProductsPane, { type WebProductView } from "./WebProductsPane";
 import ShowcasePane from "./ShowcasePane";
+import { Portal } from "./LojaModal";
 import LojaWebTabs from "./LojaWebTabs";
 import {
   SolarSellerCarouselsIcon,
@@ -489,7 +490,8 @@ function CustomerDrawer({ c, tickets, onClose }: { c: Customer; tickets: Ticket[
     });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Cliente ${c.name}`}>
+    <Portal>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Cliente ${c.name}`}>
       <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={onClose} />
       <aside className="relative w-full max-w-[780px] max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] overflow-y-auto bg-[#111215] border border-white/[0.09] rounded-[12px] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)]">
         <div className="sticky top-0 z-10 bg-[#111215]/95 backdrop-blur px-5 py-4 border-b border-white/[0.07] flex items-center gap-3">
@@ -619,5 +621,6 @@ function CustomerDrawer({ c, tickets, onClose }: { c: Customer; tickets: Ticket[
         </div>
       </aside>
     </div>
+    </Portal>
   );
 }

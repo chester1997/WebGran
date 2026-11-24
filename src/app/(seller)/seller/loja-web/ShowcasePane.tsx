@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, BadgePercent, Check, Crown, ImagePlus, GalleryHorizontal, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
 import type { SectionConfig, SectionKind } from "@/lib/webstore/sections";
-import { BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "../fluxos/_components/flow-ui";
+import { BTN_PRI, BTN_SEC, Callout, INPUT, useToast } from "../fluxos/_components/flow-ui";
+import { Modal } from "./LojaModal";
 import { saveHeroImageAction, saveSectionsAction } from "./actions";
 import type { WebProductView } from "./WebProductsPane";
 

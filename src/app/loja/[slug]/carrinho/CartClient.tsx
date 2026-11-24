@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { ArrowRight, CheckCircle2, Layers, Lock, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, TrendingDown } from "lucide-react";
+import { ArrowRight, CheckCircle2, Layers, Lock, Minus, Plus, ShieldCheck, ShoppingBag, Ticket, Trash2, TrendingDown } from "lucide-react";
 import type { CartPromo, CartQuote } from "@/lib/webstore/catalog";
 import { checkoutAction, quoteAction } from "../actions";
 import { useCart } from "../_components/cart";
-import { brl, BTN_PRIMARY, ErrorBox, INPUT } from "../_components/ui";
+import { brl, BTN_PRIMARY, ErrorBox } from "../_components/ui";
 
 const PANEL = "rounded-[10px] border border-white/[0.07] bg-[#0f1014]";
 
@@ -118,35 +118,60 @@ export function CartClient({ slug, loggedIn }: { slug: string; loggedIn: boolean
           </Link>
         </div>
 
-        <aside className={`${PANEL} p-5 sm:p-6 space-y-4 xl:sticky xl:top-24`}>
-          <h2 className="text-[16px] font-semibold">Resumo do pedido</h2>
-          <div className="space-y-2.5 text-[14px]">
-            <div className="flex justify-between text-zinc-400">
-              <span>Subtotal</span>
-              <span className="tabular-nums">{brl(quote?.subtotal || 0)}</span>
-            </div>
-            {quote && quote.discount > 0 && (
-              <div className="flex justify-between text-[#9cc2ff]">
-                <span className="truncate pr-3">{quote.promotionTitle || "Desconto"}</span>
-                <span className="tabular-nums shrink-0">- {brl(quote.discount)}</span>
+        <aside className="relative xl:sticky xl:top-24 rounded-[16px] border border-white/[0.08] bg-[linear-gradient(180deg,#16171c_0%,#111216_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_60px_-30px_rgba(0,0,0,0.9)]">
+          {/* Parte de cima do "cupom": o valor em destaque */}
+          <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[34px] sm:text-[38px] font-bold leading-none tabular-nums tracking-tight">{brl(quote?.total || 0)}</p>
+                <p className="mt-2 text-[13.5px] text-zinc-400">
+                  {shown.length} {shown.length === 1 ? "item" : "itens"} no pedido
+                </p>
               </div>
-            )}
+              <Ticket className="w-6 h-6 text-[#7fb0ff] shrink-0" strokeWidth={1.6} />
+            </div>
+            <div className="mt-5 space-y-2 text-[13.5px]">
+              <div className="flex justify-between text-zinc-400">
+                <span>Subtotal</span>
+                <span className="tabular-nums">{brl(quote?.subtotal || 0)}</span>
+              </div>
+              {quote && quote.discount > 0 && (
+                <div className="flex justify-between text-[#9cc2ff]">
+                  <span className="truncate pr-3">{quote.promotionTitle || "Desconto"}</span>
+                  <span className="tabular-nums shrink-0">- {brl(quote.discount)}</span>
+                </div>
+              )}
+            </div>
           </div>
-          <input value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="Cupom de desconto (opcional)" className={INPUT} maxLength={40} />
-          <div className="flex justify-between items-baseline pt-4 border-t border-white/[0.07]">
-            <span className="text-[14px] text-zinc-300">Total</span>
-            <span className="text-[28px] font-bold tabular-nums tracking-tight">{brl(quote?.total || 0)}</span>
+
+          {/* Picote: recortes nas laterais e linha tracejada */}
+          <div aria-hidden="true" className="relative h-0">
+            <span className="absolute -left-[9px] -top-[9px] w-[18px] h-[18px] rounded-full bg-[#07080a] border border-white/[0.08] [clip-path:inset(0_0_0_50%)]" />
+            <span className="absolute -right-[9px] -top-[9px] w-[18px] h-[18px] rounded-full bg-[#07080a] border border-white/[0.08] [clip-path:inset(0_50%_0_0)]" />
+            <span className="absolute left-4 right-4 top-0 border-t border-dashed border-white/[0.12]" />
           </div>
-          {coupon && <p className="text-[12px] text-zinc-500">O cupom é aplicado ao gerar o PIX.</p>}
-          {error && <ErrorBox>{error}</ErrorBox>}
-          <button type="button" className={`${BTN_PRIMARY} w-full h-12 text-[15px] !rounded-[8px]`} disabled={pending || !quote || shown.length === 0} onClick={checkout}>
-            <Lock className="w-[18px] h-[18px]" />
-            {pending ? "Gerando PIX..." : loggedIn ? "Pagar com PIX" : "Entrar e pagar com PIX"}
-          </button>
-          <p className="flex items-start gap-2 text-[12.5px] text-zinc-500">
-            <ShieldCheck className="w-4 h-4 shrink-0 mt-px text-zinc-400" />
-            O acesso é liberado na sua conta assim que o PIX for confirmado. Você assiste no celular ou no computador.
-          </p>
+
+          {/* Parte de baixo: cupom e pagamento */}
+          <div className="px-5 sm:px-6 pt-6 pb-5 sm:pb-6 space-y-4">
+            <input
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+              placeholder="CUPOM"
+              aria-label="Cupom de desconto (opcional)"
+              className="w-full h-12 rounded-[10px] border border-dashed border-white/[0.14] bg-black/25 text-center font-mono text-[14px] font-semibold tracking-[0.3em] text-zinc-200 placeholder:text-zinc-600 placeholder:tracking-[0.3em] outline-none focus:border-[#3b82f6] focus:bg-[#3b82f6]/[0.05] transition-colors"
+              maxLength={40}
+            />
+            {coupon && <p className="text-[12px] text-zinc-500 text-center -mt-1">O cupom é aplicado ao gerar o PIX.</p>}
+            {error && <ErrorBox>{error}</ErrorBox>}
+            <button type="button" className={`${BTN_PRIMARY} w-full h-12 text-[15px] !rounded-[10px]`} disabled={pending || !quote || shown.length === 0} onClick={checkout}>
+              <Lock className="w-[18px] h-[18px]" />
+              {pending ? "Gerando PIX..." : loggedIn ? "Pagar com PIX" : "Entrar e pagar com PIX"}
+            </button>
+            <p className="flex items-start gap-2 text-[12.5px] text-zinc-500">
+              <ShieldCheck className="w-4 h-4 shrink-0 mt-px text-zinc-400" />
+              O acesso é liberado na sua conta assim que o PIX for confirmado. Você assiste no celular ou no computador.
+            </p>
+          </div>
         </aside>
       </div>
     </div>

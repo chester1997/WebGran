@@ -3,7 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, ImagePlus, Layers, Loader2, Pencil, Plus, Save, Trash2, TrendingDown } from "lucide-react";
-import { BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "../fluxos/_components/flow-ui";
+import { BTN_PRI, BTN_SEC, Callout, INPUT, useToast } from "../fluxos/_components/flow-ui";
+import { Modal } from "./LojaModal";
 import { archiveWebComboAction, savePromoImageAction, saveWebComboAction, saveWebProgressiveAction } from "./actions";
 import type { WebComboView } from "@/lib/webstore/combos";
 

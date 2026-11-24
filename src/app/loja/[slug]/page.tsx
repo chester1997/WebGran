@@ -19,6 +19,7 @@ const card = (p: WebProductRow): CardItem => ({
   duration: p.duration,
   videoCount: p.videoCount,
   isNew: Date.now() - +p.createdAt < 10 * 86400_000,
+  badge: p.badge,
 });
 
 export default async function LojaHome({ params }: { params: Promise<{ slug: string }> }) {

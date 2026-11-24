@@ -22,7 +22,7 @@ export default function Toaster() {
   }, []);
   if (!t) return null;
   return (
-    <div role="status" className="fixed z-[60] bottom-5 left-1/2 -translate-x-1/2 max-w-[calc(100%-32px)] flex items-center gap-2.5 bg-[#1f2026] border border-white/[0.13] px-4 py-3 rounded-xl text-[13.5px] text-white shadow-2xl">
+    <div role="status" className="fixed z-[400] bottom-5 left-1/2 -translate-x-1/2 max-w-[calc(100%-32px)] flex items-center gap-2.5 bg-[#1f2026] border border-white/[0.13] px-4 py-3 rounded-xl text-[13.5px] text-white shadow-2xl">
       {t.kind === "err" ? <AlertCircle className="w-4 h-4 text-red-400 shrink-0" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
       <span>{t.msg}</span>
     </div>
