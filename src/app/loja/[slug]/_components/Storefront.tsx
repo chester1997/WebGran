@@ -70,30 +70,22 @@ export function Storefront({
       </div>
     );
   }
-  // a faixa de promoção fica logo abaixo do primeiro carrossel (ou no fim, se não houver)
-  const firstCarousel = rows.findIndex((r) => r.kind === "carousel");
-  const promoAfter = firstCarousel >= 0 ? firstCarousel : rows.length - 1;
   const covers = Array.from(new Map([...hero, ...rows.flatMap((r) => r.items)].filter((x) => x.coverUrl).map((x) => [x.id, x.coverUrl as string])).values()).slice(0, 5);
   return (
     <div className="overflow-x-clip">
       {hero.length > 0 && <Hero slug={slug} items={hero} topId={topId} />}
       <div className={`relative z-10 space-y-9 sm:space-y-11 pb-10 ${hero.length ? "-mt-14 sm:-mt-24" : "pt-24"}`}>
-        {rows.map((r, i) => (
-          <div key={r.key}>
-            {r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}
-            {i === promoAfter && (
-              <>
+        {rows.map((r) =>
+          r.kind === "combos" ? (
+            promo || combos.length ? (
+              <div key={r.key}>
                 {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
-                {combos.length > 0 && <ComboRow combos={combos} />}
-              </>
-            )}
-          </div>
-        ))}
-        {rows.length === 0 && (
-          <>
-            {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
-            {combos.length > 0 && <ComboRow combos={combos} />}
-          </>
+                {combos.length > 0 && <ComboRow title={r.title} combos={combos} spaced={Boolean(promo)} />}
+              </div>
+            ) : null
+          ) : (
+            <div key={r.key}>{r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}</div>
+          )
         )}
       </div>
     </div>
@@ -217,7 +209,7 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
     return () => window.clearTimeout(t);
   }, [hit]);
   return (
-    <div className={`group/card relative shrink-0 snap-start aspect-[2/3] rounded-[6px] bg-[#15161a] ring-1 ring-white/[0.06] transition-[transform,box-shadow] duration-300 hover:scale-[1.07] hover:z-10 hover:shadow-[0_22px_40px_-12px_rgba(0,0,0,0.95)] hover:ring-2 hover:ring-[#3b82f6] ${done ? "ring-2 ring-[#3b82f6]" : ""} ${className}`}>
+    <div className={`group/card relative shrink-0 snap-start aspect-[2/3] rounded-[6px] bg-[#15161a] ring-1 ring-white/[0.06] transition-shadow duration-200 hover:ring-2 hover:ring-[#3b82f6] ${done ? "ring-2 ring-[#3b82f6]" : ""} ${className}`}>
       <Link href={`/loja/${slug}/produto/${p.slug}`} aria-label={p.title} className="absolute inset-0 rounded-[6px] overflow-hidden">
         {p.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -229,7 +221,7 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
         {p.compareAtPrice && p.compareAtPrice > p.price && (
           <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[3px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
         )}
-        <span className="absolute inset-x-0 bottom-0 pt-10 pl-2.5 pr-12 pb-2.5 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity">
+        <span className="absolute inset-x-0 bottom-0 pt-14 pl-2.5 pr-12 pb-2.5 bg-gradient-to-t from-black/95 via-black/65 to-transparent">
           <span className="block text-[12px] font-semibold leading-tight line-clamp-2 mb-1.5">{p.title}</span>
           <span className="block text-[12.5px] font-bold">{brl(p.price)}</span>
         </span>
@@ -243,7 +235,7 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
         }}
         aria-label={`Adicionar ${p.title} ao carrinho`}
         className={`absolute right-2 bottom-2 w-9 h-9 rounded-full flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(0,0,0,0.8)] transition-[opacity,background-color,color,transform] duration-200 active:scale-90 ${
-          done ? "opacity-100 bg-white text-[#3b82f6]" : "bg-[#3b82f6] text-white hover:bg-[#2f74ea] opacity-100 lg:opacity-0 lg:group-hover/card:opacity-100 focus-visible:opacity-100"
+          done ? "bg-white text-[#3b82f6]" : "bg-[#3b82f6] text-white hover:bg-[#2f74ea]"
         }`}
       >
         {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-full bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
@@ -296,7 +288,7 @@ function ContinueRow({ slug, row }: { slug: string; row: Row }) {
           <Link
             key={p.id}
             href={`/loja/${slug}/conta/produto/${p.id}`}
-            className="group/c relative shrink-0 snap-start w-[250px] sm:w-[320px] aspect-video rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.07] hover:ring-2 hover:ring-[#3b82f6] transition-[box-shadow,transform] hover:scale-[1.03]"
+            className="group/c relative shrink-0 snap-start w-[250px] sm:w-[320px] aspect-video rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.07] hover:ring-2 hover:ring-[#3b82f6] transition-shadow"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {(p.bannerUrl || p.coverUrl) && <img src={p.bannerUrl || p.coverUrl || ""} alt="" className="absolute inset-0 w-full h-full object-cover object-[center_30%]" />}
@@ -331,11 +323,11 @@ function PromoBanner({
 }) {
   const best = promo.tiers.reduce<number>((b, t, k) => (t.price / t.minQuantity < promo.tiers[b].price / promo.tiers[b].minQuantity ? k : b), 0);
   return (
-    <section className="px-4 sm:px-8 lg:px-10 mt-9 sm:mt-11" aria-label={promo.title}>
-      <div className="relative overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0b0d12]">
+    <section className="px-4 sm:px-8 lg:px-10" aria-label={promo.title}>
+      <div className="relative overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0b0d12] sm:min-h-[300px]">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
         ) : (
           <span aria-hidden="true" className="hidden sm:flex absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 items-center">
             {covers.map((c, k) => (
@@ -375,10 +367,10 @@ function PromoBanner({
   );
 }
 
-function ComboRow({ combos }: { combos: ComboCard[] }) {
+function ComboRow({ title, combos, spaced }: { title: string; combos: ComboCard[]; spaced: boolean }) {
   return (
-    <div className="mt-9 sm:mt-11">
-      <Track title="Combos">
+    <div className={spaced ? "mt-9 sm:mt-11" : ""}>
+      <Track title={title || "Combos"}>
         {combos.map((c) => (
           <ComboTile key={c.id} c={c} />
         ))}

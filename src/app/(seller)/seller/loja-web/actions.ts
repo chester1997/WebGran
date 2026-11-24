@@ -279,3 +279,18 @@ export async function resetLinkAction(webCustomerId: string) {
   const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   return { ok: true as const, url: `${proto}://${host}/loja/${c.store.slug}/nova-senha?t=${makeResetToken(cust)}` };
 }
+
+export async function savePromoImageAction(url: string | null) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { savePromoImage, isMissingSettingsTable } = await import("@/lib/webstore/settings");
+  try {
+    await savePromoImage(c.store.id, url);
+  } catch (e) {
+    if (isMissingSettingsTable(e)) return { ok: false as const, error: "Rode a migration 0030_web_store_settings.sql no Neon para salvar." };
+    throw e;
+  }
+  revalidatePath("/seller/loja-web");
+  revalidatePath(`/loja/${c.store.slug}`, "layout");
+  return { ok: true as const };
+}

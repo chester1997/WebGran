@@ -8,7 +8,6 @@ import {
   Copy,
   Globe,
   KeyRound,
-  Tags,
   LifeBuoy,
   Loader2,
   Mail,
@@ -28,6 +27,15 @@ import Toaster from "../fluxos/_components/Toaster";
 import { customerDetailAction, replyTicketAction, resetLinkAction, setCustomerStatusAction } from "./actions";
 import WebProductsPane, { type WebProductView } from "./WebProductsPane";
 import ShowcasePane from "./ShowcasePane";
+import LojaWebTabs from "./LojaWebTabs";
+import {
+  SolarSellerCarouselsIcon,
+  SolarSellerCombosIcon,
+  SolarSellerConversasIcon,
+  SolarSellerCustomersIcon,
+  SolarSellerProductsIcon,
+  SolarSellerWelcomeIcon,
+} from "@/components/icons/solar/seller-icons";
 import AppearancePane, { type BrandingView } from "./AppearancePane";
 import CombosPane from "./CombosPane";
 import type { WebComboView } from "@/lib/webstore/combos";
@@ -164,30 +172,45 @@ export default function WebStoreClient({
   return (
     <div className="w-full max-w-full pb-10 space-y-5">
       <Toaster />
-      <SellerPageHeader
-        title="Loja Web"
-        badge={<HeaderMeta value={stats.customers} label={stats.customers === 1 ? "cliente" : "clientes"} icon={<Users />} />}
-        subtitle="Sua loja aberta no navegador, sem precisar do Telegram. Em teste: só você vê esta aba."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={BTN_SEC} onClick={() => setTab("combos")}>
-              <Tags className="w-4 h-4" /> Ofertas e combos
-            </button>
-            <button
-              type="button"
-              className={BTN_SEC}
-              onClick={() => {
-                navigator.clipboard?.writeText(storeUrl).then(() => toast("Link da loja copiado."), () => {});
-              }}
-            >
-              <Copy className="w-4 h-4" /> Copiar link
-            </button>
-            <a href={`/loja/${storeSlug}`} target="_blank" rel="noopener noreferrer" className={BTN_PRI}>
-              <Globe className="w-4 h-4" /> Abrir loja
-            </a>
+      <SellerPageHeader>
+        <div className="flex flex-col w-full relative z-30 pt-0 sm:pt-4 pb-0.5 gap-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight truncate">Loja Web</h1>
+                <HeaderMeta value={stats.customers} label={stats.customers === 1 ? "cliente" : "clientes"} icon={<Users />} />
+              </div>
+              <p className="text-zinc-400 text-xs sm:text-sm truncate sm:whitespace-normal">Sua loja aberta no navegador, sem precisar do Telegram. Em teste: só você vê esta aba.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                className={BTN_SEC}
+                onClick={() => {
+                  navigator.clipboard?.writeText(storeUrl).then(() => toast("Link da loja copiado."), () => {});
+                }}
+              >
+                <Copy className="w-4 h-4" /> Copiar link
+              </button>
+              <a href={`/loja/${storeSlug}`} target="_blank" rel="noopener noreferrer" className={BTN_PRI}>
+                <Globe className="w-4 h-4" /> Abrir loja
+              </a>
+            </div>
           </div>
-        }
-      />
+          <LojaWebTabs
+            active={tab}
+            onSelect={setTab}
+            tabs={[
+              { id: "produtos", label: "Produtos", icon: SolarSellerProductsIcon, count: webProducts.length },
+              { id: "vitrine", label: "Vitrine", icon: SolarSellerCarouselsIcon },
+              { id: "combos", label: "Ofertas e combos", icon: SolarSellerCombosIcon, count: webCombos.length },
+              { id: "aparencia", label: "Aparência", icon: SolarSellerWelcomeIcon },
+              { id: "clientes", label: "Clientes", icon: SolarSellerCustomersIcon, count: customers.length },
+              { id: "suporte", label: "Suporte", icon: SolarSellerConversasIcon, count: stats.openTickets },
+            ]}
+          />
+        </div>
+      </SellerPageHeader>
 
       {!ready && (
         <Callout tone="warn">
@@ -214,31 +237,7 @@ export default function WebStoreClient({
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-1 mr-auto max-w-full overflow-x-auto [scrollbar-width:none]">
-          {(
-            [
-              ["produtos", "Produtos", webProducts.length],
-              ["vitrine", "Vitrine", null],
-              ["combos", "Ofertas e combos", webCombos.length],
-              ["aparencia", "Aparência", null],
-              ["clientes", "Clientes", customers.length],
-              ["suporte", "Suporte", stats.openTickets],
-            ] as const
-          ).map(([k, l, n]) => (
-            <button
-              key={k}
-              type="button"
-              aria-pressed={tab === k}
-              onClick={() => setTab(k)}
-              className={`shrink-0 inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[9px] text-[12.5px] font-medium transition-all ${
-                tab === k ? "bg-[linear-gradient(180deg,#24262d_0%,#1a1b20_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(255,255,255,0.09)]" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-              }`}
-            >
-              {l} {n !== null && <span className="text-[11px] text-zinc-500 tabular-nums">{n}</span>}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 empty:hidden">
         {tab === "clientes" && (
           <label className="relative sm:w-[300px]">
             <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -252,7 +251,7 @@ export default function WebStoreClient({
       ) : tab === "vitrine" ? (
         <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} />
       ) : tab === "combos" ? (
-        <CombosPane combos={webCombos} products={webProducts} miniApp={miniAppPromo} />
+        <CombosPane combos={webCombos} products={webProducts} miniApp={miniAppPromo} promoImage={branding.promoImageUrl} />
       ) : tab === "aparencia" ? (
         <AppearancePane initial={branding} ready={brandingReady} storeName={storeName} />
       ) : tab === "clientes" ? (
@@ -486,9 +485,9 @@ function CustomerDrawer({ c, tickets, onClose }: { c: Customer; tickets: Ticket[
     });
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={`Cliente ${c.name}`}>
-      <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
-      <aside className="relative w-full max-w-[520px] h-full overflow-y-auto bg-[#111215] border-l border-white/[0.08] shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Cliente ${c.name}`}>
+      <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={onClose} />
+      <aside className="relative w-full max-w-[780px] max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] overflow-y-auto bg-[#111215] border border-white/[0.09] rounded-[12px] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)]">
         <div className="sticky top-0 z-10 bg-[#111215]/95 backdrop-blur px-5 py-4 border-b border-white/[0.07] flex items-center gap-3">
           <span className="w-10 h-10 rounded-full bg-[#3b82f6]/15 text-[#9cc2ff] font-semibold flex items-center justify-center">{c.name.trim().charAt(0).toUpperCase()}</span>
           <div className="min-w-0 flex-1">
@@ -504,7 +503,7 @@ function CustomerDrawer({ c, tickets, onClose }: { c: Customer; tickets: Ticket[
           <section className="space-y-3">
             <ContactButtons c={c} />
             <ResetLink customerId={c.id} customer={c} via={c.whatsapp ? "whatsapp" : c.telegram ? "telegram" : "email"} />
-            <dl className="grid grid-cols-2 gap-3 text-[12.5px]">
+            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[12.5px]">
               {[
                 ["WhatsApp", c.whatsapp || "—"],
                 ["Telegram", c.telegram ? `@${c.telegram}` : "—"],

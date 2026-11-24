@@ -21,7 +21,18 @@ export function defaultSections(): SectionConfig[] {
     { kind: "continue", title: "Continuar assistindo", active: true, mode: "auto", productIds: [] },
     { kind: "top15", title: "Top 15 da semana", active: true, mode: "auto", productIds: [] },
     { kind: "carousel", title: "Lançamentos", active: true, mode: "auto", productIds: [] },
+    { kind: "combos", title: "Combos", active: true, mode: "auto", productIds: [] },
   ];
+}
+
+/** Garante a seção "Ofertas e combos" (faixa da oferta + fileira de combos). Vitrines antigas não tinham. */
+function withOffers(list: SectionConfig[]): SectionConfig[] {
+  if (list.some((s) => s.kind === "combos")) return list;
+  const firstCarousel = list.findIndex((s) => s.kind === "carousel");
+  const at = firstCarousel >= 0 ? firstCarousel + 1 : list.length;
+  const n = [...list];
+  n.splice(at, 0, { kind: "combos", title: "Combos", active: true, mode: "auto", productIds: [] });
+  return n;
 }
 
 export function isMissingSectionsTable(err: unknown): boolean {
@@ -37,14 +48,14 @@ export async function getSections(storeId: string): Promise<{ ready: boolean; se
     if (!rows.length) return { ready: true, sections: defaultSections() };
     return {
       ready: true,
-      sections: rows.map((r) => ({
+      sections: withOffers(rows.map((r) => ({
         id: r.id,
         kind: r.kind as SectionKind,
         title: r.title,
         active: r.active,
         mode: (r.mode === "auto" ? "auto" : "manual") as "auto" | "manual",
         productIds: Array.isArray(r.productIds) ? r.productIds.filter((x): x is string => typeof x === "string") : [],
-      })),
+      }))),
     };
   } catch (err) {
     if (isMissingSectionsTable(err)) return { ready: false, sections: defaultSections() };
@@ -116,7 +127,11 @@ export async function buildStorefront(storeId: string, shadowCustomerId: string 
 
   const rows: StoreRow[] = [];
   for (const [i, s] of sections.entries()) {
-    if (!s.active || s.kind === "hero" || s.kind === "combos") continue;
+    if (!s.active || s.kind === "hero") continue;
+    if (s.kind === "combos") {
+      rows.push({ key: `offers-${i}`, kind: "combos", title: s.title, items: [] });
+      continue;
+    }
     if (s.kind === "top15") {
       if (top.length) rows.push({ key: `top-${i}`, kind: "top15", title: s.title, items: top });
     } else if (s.kind === "continue") {

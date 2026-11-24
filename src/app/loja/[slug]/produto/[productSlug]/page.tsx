@@ -123,7 +123,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
           <h2 className="px-4 sm:px-8 lg:px-10 text-[20px] font-bold mb-1">Mais títulos</h2>
           <div className="flex gap-2.5 overflow-x-auto px-4 sm:px-8 lg:px-10 pt-3 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {more.map((p) => (
-              <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="shrink-0 w-[118px] sm:w-[160px] aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition hover:scale-[1.05]">
+              <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="shrink-0 w-[118px] sm:w-[160px] aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition-shadow">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {p.coverUrl && <img src={p.coverUrl} alt={p.title} loading="lazy" className="w-full h-full object-cover" />}
               </Link>

@@ -41,9 +41,20 @@ export function normalizeBranding(raw: Partial<WebBranding>): { ok: true; value:
   return { ok: true, value: { displayName: name || null, logoUrl: cleanUrl(raw.logoUrl), promoImageUrl: cleanUrl(raw.promoImageUrl) } };
 }
 
+/** Nome e logo (não mexe na imagem da faixa de promoção). */
 export async function saveWebBranding(storeId: string, v: WebBranding) {
+  const set = { displayName: v.displayName, logoUrl: v.logoUrl, updatedAt: new Date() };
   await db
     .insert(webStoreSettings)
-    .values({ storeId, ...v, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: webStoreSettings.storeId, set: { ...v, updatedAt: new Date() } });
+    .values({ storeId, ...set })
+    .onConflictDoUpdate({ target: webStoreSettings.storeId, set });
+}
+
+/** Imagem de fundo da faixa da oferta progressiva (editada em Ofertas e combos). */
+export async function savePromoImage(storeId: string, url: string | null) {
+  const clean = url && /^https:\/\/\S+$/i.test(url) && url.length <= 1000 ? url : null;
+  await db
+    .insert(webStoreSettings)
+    .values({ storeId, promoImageUrl: clean, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: webStoreSettings.storeId, set: { promoImageUrl: clean, updatedAt: new Date() } });
 }

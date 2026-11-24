@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, Crown, GalleryHorizontal, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BadgePercent, Check, Crown, GalleryHorizontal, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
 import type { SectionConfig, SectionKind } from "@/lib/webstore/sections";
 import { BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "../fluxos/_components/flow-ui";
 import { saveSectionsAction } from "./actions";
@@ -15,12 +15,12 @@ const KIND_INFO: Record<SectionKind, { label: string; icon: typeof Crown; max: n
   hero: { label: "Destaques do topo", icon: Sparkles, max: 5, autoLabel: "Automático: os 3 primeiros do Top 15" },
   top15: { label: "Top 15", icon: Crown, max: 15, autoLabel: "Automático: mais vendidos dos últimos 7 dias" },
   continue: { label: "Continuar assistindo", icon: Play, max: 0, autoLabel: "Automático: o que o cliente começou a ver" },
-  combos: { label: "Combos", icon: GalleryHorizontal, max: 0, autoLabel: "" },
+  combos: { label: "Ofertas e combos", icon: BadgePercent, max: 0, autoLabel: "Faixa da oferta progressiva + fileira de combos. Edite o conteúdo em Ofertas e combos." },
   carousel: { label: "Carrossel", icon: GalleryHorizontal, max: 40, autoLabel: "Automático: os mais recentes" },
 };
 
 export default function ShowcasePane({ initial, ready, products }: { initial: SectionConfig[]; ready: boolean; products: WebProductView[] }) {
-  const [list, setList] = useState<SectionConfig[]>(initial.filter((s) => s.kind !== "combos"));
+  const [list, setList] = useState<SectionConfig[]>(initial);
   const [picker, setPicker] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [pending, start] = useTransition();
@@ -101,7 +101,7 @@ export default function ShowcasePane({ initial, ready, products }: { initial: Se
                     <input value={s.title} onChange={(e) => upd(i, { title: e.target.value })} maxLength={60} aria-label="Título da fileira" className="w-full bg-transparent text-[14px] font-semibold text-white outline-none border-b border-transparent focus:border-[#3b82f6]/60" />
                   )}
                   <p className="text-[11.5px] text-zinc-500">
-                    {s.kind === "continue"
+                    {s.kind === "continue" || s.kind === "combos"
                       ? info.autoLabel
                       : s.mode === "auto"
                         ? info.autoLabel

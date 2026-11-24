@@ -36,7 +36,7 @@ export function SearchClient({ slug, items }: { slug: string; items: { id: strin
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5 sm:gap-3">
           {shown.map((p) => (
-            <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="group relative aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition hover:scale-[1.04]">
+            <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="group relative aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition-shadow">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {p.coverUrl && <img src={p.coverUrl} alt={p.title} loading="lazy" className="w-full h-full object-cover" />}
               <span className="absolute inset-x-0 bottom-0 p-2 pt-8 bg-gradient-to-t from-black/95 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">

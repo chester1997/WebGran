@@ -17,18 +17,18 @@ export interface BrandingView {
 
 export default function AppearancePane({ initial, ready, storeName }: { initial: BrandingView; ready: boolean; storeName: string }) {
   const [f, setF] = useState({ displayName: initial.displayName || "", logoUrl: initial.logoUrl || "", promoImageUrl: initial.promoImageUrl || "" });
-  const [uploading, setUploading] = useState<"logo" | "promo" | null>(null);
+  const [uploading, setUploading] = useState<"logo" | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
   const router = useRouter();
   const name = f.displayName.trim() || storeName;
 
-  const upload = async (kind: "logo" | "promo", file: File) => {
+  const upload = async (kind: "logo", file: File) => {
     setUploading(kind);
     try {
       const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
       const res = await uploadOptimizedImage(file, "products");
-      setF((s) => ({ ...s, [kind === "logo" ? "logoUrl" : "promoImageUrl"]: res.url }));
+      setF((s) => ({ ...s, logoUrl: res.url }));
     } catch (e) {
       toast((e as Error).message || "Não foi possível enviar a imagem.", "err");
     } finally {
@@ -87,28 +87,6 @@ export default function AppearancePane({ initial, ready, storeName }: { initial:
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="pt-4 border-t border-white/[0.06]">
-            <h3 className="text-[15px] font-semibold">Fundo da faixa de promoção</h3>
-            <p className="text-[12.5px] text-zinc-500 mt-0.5 mb-3">Imagem larga (por exemplo 1600×500). Sem ela, a faixa usa as capas dos seus títulos.</p>
-            <label className="relative block aspect-[16/5] rounded-[12px] border border-dashed border-white/[0.14] bg-white/[0.02] hover:border-[#3b82f6]/60 cursor-pointer overflow-hidden">
-              {f.promoImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.promoImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              ) : (
-                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[11.5px] text-zinc-500">
-                  {uploading === "promo" ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
-                  Enviar imagem
-                </span>
-              )}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload("promo", e.target.files[0])} />
-            </label>
-            {f.promoImageUrl && (
-              <button type="button" onClick={() => setF((s) => ({ ...s, promoImageUrl: "" }))} className="mt-1 text-[11.5px] text-zinc-500 hover:text-red-300">
-                Remover imagem
-              </button>
-            )}
           </div>
 
           <div className="flex justify-end">
