@@ -36,7 +36,9 @@ export function Storefront({
   hero,
   rows,
   promo,
+  topId = null,
 }: {
+  topId?: string | null;
   slug: string;
   storeName: string;
   notReady: boolean;
@@ -54,7 +56,7 @@ export function Storefront({
   }
   return (
     <div className="overflow-x-clip">
-      {hero.length > 0 && <Hero slug={slug} items={hero} />}
+      {hero.length > 0 && <Hero slug={slug} items={hero} topId={topId} />}
       <div className={`relative z-10 space-y-9 sm:space-y-11 pb-10 ${hero.length ? "-mt-14 sm:-mt-24" : "pt-24"}`}>
         {rows.map((r, i) => (
           <div key={r.key}>
@@ -70,7 +72,7 @@ export function Storefront({
 
 /* ------------------------------ Banner ------------------------------ */
 
-function Hero({ slug, items }: { slug: string; items: CardItem[] }) {
+function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: string | null }) {
   const [i, setI] = useState(0);
   const { add, lines } = useCart();
   const router = useRouter();
@@ -114,7 +116,7 @@ function Hero({ slug, items }: { slug: string; items: CardItem[] }) {
           {p.title}
         </h1>
         <div className="flex flex-wrap items-center gap-2.5 text-[13px] text-zinc-200 mb-3">
-          {i === 0 && <span className="font-bold text-[#7fb0ff]">Top 1 da semana</span>}
+          {p.id === topId && <span className="font-bold text-[#7fb0ff]">Top 1 da semana</span>}
           {p.videoCount > 0 && <span>{p.videoCount} {p.videoCount === 1 ? "vídeo" : "episódios"}</span>}
           <span className="h-[22px] px-2 rounded-[6px] border border-white/25 text-[11.5px] inline-flex items-center">{DURATION_LABEL[p.duration || "lifetime"] || "Vitalício"}</span>
           {p.compareAtPrice && p.compareAtPrice > p.price && <span className="text-zinc-400 line-through">{brl(p.compareAtPrice)}</span>}

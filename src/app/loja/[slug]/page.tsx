@@ -35,6 +35,7 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
       slug={slug}
       storeName={store.name}
       notReady={!ready}
+      topId={front.rows.find((r) => r.kind === "top15")?.items[0]?.id || null}
       hero={front.hero.map(card)}
       rows={front.rows.map((r) => ({ key: r.key, kind: r.kind, title: r.title, items: r.items.map(card), progress: r.progress }))}
       promo={
