@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { CheckCircle2, ExternalLink, LifeBuoy, X } from "lucide-react";
 import { parseSupportConfig } from "@/lib/support/support-helper";
@@ -28,6 +29,7 @@ export function SupportModal({
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [pending, start] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -40,7 +42,10 @@ export function SupportModal({
       setError(null);
       const res = await openTicketAction(store.slug, { subject, message, contactVia: via, orderId: orderId || null });
       if (!res.ok) setError(res.error);
-      else setSent(true);
+      else {
+        setSent(true);
+        router.refresh();
+      }
     });
 
   const viaOptions = [
