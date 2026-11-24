@@ -204,8 +204,7 @@ export default function EditorTopBar({
                 <button
                   type="button"
                   className={BTN_PRI}
-                  disabled={type !== "basic" || !requiredOk || pubPending}
-                  title={type !== "basic" ? "O fluxo avançado começa a rodar numa próxima etapa" : undefined}
+                  disabled={!requiredOk || pubPending}
                   onClick={() =>
                     startPub(async () => {
                       const res = await publishFlowAction(flowId);
@@ -240,12 +239,12 @@ export default function EditorTopBar({
               </div>
             ))}
             <div className="mt-2">
-              <Callout tone={type !== "basic" || !requiredOk ? "warn" : "info"}>
-                {type !== "basic"
-                  ? "O fluxo avançado fica salvo como rascunho. Ele começa a rodar no bot numa próxima etapa."
-                  : requiredOk
-                    ? "Antes de publicar, use “Testar no Telegram”: o rascunho roda só para você, com Order Bump, Upsell, Downsell, Mimos e Expiração."
-                    : "Falta algo obrigatório acima."}
+              <Callout tone={!requiredOk ? "warn" : "info"}>
+                {!requiredOk
+                  ? "Falta algo obrigatório acima."
+                  : type === "advanced"
+                    ? "Antes de publicar, use “Testar no Telegram”: o rascunho roda só para você, bloco por bloco."
+                    : "Antes de publicar, use “Testar no Telegram”: o rascunho roda só para você, com Order Bump, Upsell, Downsell, Mimos e Expiração."}
               </Callout>
             </div>
           </div>
