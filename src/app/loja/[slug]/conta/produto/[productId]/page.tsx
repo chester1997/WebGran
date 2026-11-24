@@ -9,8 +9,15 @@ import { ProductVideoService } from "@/lib/videos/product-video-service";
 import { BTN_PRIMARY, CARD } from "../../../_components/ui";
 import { VideoArea } from "./VideoArea";
 
-export default async function ProdutoAcessoPage({ params }: { params: Promise<{ slug: string; productId: string }> }) {
+export default async function ProdutoAcessoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string; productId: string }>;
+  searchParams: Promise<{ v?: string }>;
+}) {
   const { slug, productId } = await params;
+  const { v: startVideo } = await searchParams;
   const store = await getWebStore(slug);
   if (!store) notFound();
   const customer = await getWebCustomer(store.id);
@@ -28,7 +35,7 @@ export default async function ProdutoAcessoPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-10">
+    <div className="w-full max-w-[1500px] px-4 sm:px-8 lg:px-10 pt-6 sm:pt-10">
       <Link href={`/loja/${slug}/conta`} className="inline-flex items-center gap-1.5 text-[13px] text-zinc-400 hover:text-white mb-5">
         <ArrowLeft className="w-4 h-4" /> Meus produtos
       </Link>
@@ -47,6 +54,7 @@ export default async function ProdutoAcessoPage({ params }: { params: Promise<{ 
         <VideoArea
           slug={slug}
           productId={product.id}
+          startVideo={typeof startVideo === "string" ? startVideo : null}
           videos={videos.map((v) => ({
             id: v.id,
             title: v.title,

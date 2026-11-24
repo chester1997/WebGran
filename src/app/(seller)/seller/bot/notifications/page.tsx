@@ -3,10 +3,11 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { db } from "@/db";
 import { storeFloatingNotifications, products } from "@/db/schema";
-import { eq, asc, desc } from "drizzle-orm";
+import { eq, asc, desc, and } from "drizzle-orm";
 import { NotificationsClient } from "./NotificationsClient";
 import NotificationsClientV2 from "./NotificationsClientV2";
 import SetupStoreClient from "../../SetupStoreClient";
+import { notWebProduct } from "@/lib/webstore/scope";
 
 export default async function SellerBotNotificationsPage() {
   await connection();
@@ -33,7 +34,7 @@ export default async function SellerBotNotificationsPage() {
 
   // Fetch store products for dropdown select
   const storeProducts = await db.query.products.findMany({
-    where: eq(products.storeId, store.id),
+    where: and(eq(products.storeId, store.id), notWebProduct()),
     orderBy: [desc(products.createdAt)],
     columns: {
       id: true,

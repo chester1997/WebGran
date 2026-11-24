@@ -4,10 +4,11 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { db } from "@/db";
 import { categories, products } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import SetupStoreClient from "../SetupStoreClient";
 import CategoriesClient from "./CategoriesClient";
 import CategoriesClientV2 from "./CategoriesClientV2";
+import { notWebProduct } from "@/lib/webstore/scope";
 
 export default async function SellerCategoriesPage() {
   await connection();
@@ -30,7 +31,7 @@ export default async function SellerCategoriesPage() {
   });
 
   const storeProducts = await db.query.products.findMany({
-    where: eq(products.storeId, store.id),
+    where: and(eq(products.storeId, store.id), notWebProduct()),
     orderBy: [asc(products.title)]
   });
 

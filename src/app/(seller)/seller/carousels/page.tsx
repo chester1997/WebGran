@@ -8,6 +8,7 @@ import { getOrCreateRankingCarouselAction } from "./actions";
 import SetupStoreClient from "../SetupStoreClient";
 import CarouselsClient from "./CarouselsClient";
 import CarouselsClientV2 from "./CarouselsClientV2";
+import { notWebProduct } from "@/lib/webstore/scope";
 
 export default async function SellerCarouselsPage() {
   await connection();
@@ -40,7 +41,7 @@ export default async function SellerCarouselsPage() {
 
   // Load all products for the store
   const storeProducts = await db.query.products.findMany({
-    where: eq(products.storeId, store.id),
+    where: and(eq(products.storeId, store.id), notWebProduct()),
     orderBy: [desc(products.createdAt)],
     columns: { id: true, title: true, price: true, badge: true }
   });

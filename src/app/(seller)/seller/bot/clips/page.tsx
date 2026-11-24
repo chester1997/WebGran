@@ -4,10 +4,11 @@ import { isOwnerAccount } from "@/lib/auth/owner-access";
 import { ClipService } from "@/lib/clips/service";
 import { db } from "@/db";
 import { products } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import SetupStoreClient from "../../SetupStoreClient";
 import ClipsClient from "./ClipsClient";
 import ClipsClientV2 from "./ClipsClientV2";
+import { notWebProduct } from "@/lib/webstore/scope";
 
 export default async function SellerClipsPage() {
   await connection();
@@ -22,7 +23,7 @@ export default async function SellerClipsPage() {
 
   // Load seller's store products for selection dropdown
   const storeProducts = await db.query.products.findMany({
-    where: eq(products.storeId, store.id),
+    where: and(eq(products.storeId, store.id), notWebProduct()),
     orderBy: [asc(products.title)],
   });
 

@@ -8,6 +8,7 @@ import ProductsListClient from "./ProductsListClient";
 import ProductsListClientV2 from "./ProductsListClientV2";
 
 import SetupStoreClient from "../SetupStoreClient";
+import { notWebProduct } from "@/lib/webstore/scope";
 
 export default async function SellerProductsPage() {
   await connection();
@@ -22,7 +23,7 @@ export default async function SellerProductsPage() {
   const [allProducts, allCategories, storeBots, allCarousels] = await Promise.all([
     // Products with their categories and bot visibilities
     db.query.products.findMany({
-      where: eq(products.storeId, store.id),
+      where: and(eq(products.storeId, store.id), notWebProduct()),
       orderBy: [desc(products.createdAt)],
       with: {
         category: true,

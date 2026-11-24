@@ -14,6 +14,7 @@ import {
   type RegisterInput,
 } from "@/lib/webstore/web-store";
 import { quoteCart, type CartLine, type CartQuote } from "@/lib/webstore/catalog";
+import { WEB_ACTIVE } from "@/lib/webstore/scope";
 
 type Res<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -67,6 +68,7 @@ export async function checkoutAction(slug: string, lines: CartLine[], couponCode
     couponCode: couponCode?.trim() || undefined,
     sessionId: `web:${c.customer.id}`,
     originBotId: null,
+    productStatus: WEB_ACTIVE,
   });
   if (!res.success || !res.orderId) return { ok: false, error: res.error || "Não foi possível gerar o PIX." };
   return { ok: true, orderId: res.orderId };

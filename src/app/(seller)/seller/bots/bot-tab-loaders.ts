@@ -16,6 +16,7 @@ import { ProductVideoService } from "@/lib/videos/product-video-service";
 import { getOrCreateRankingCarouselAction } from "../carousels/actions";
 import { ClipService } from "@/lib/clips/service";
 import { getCouponsAction } from "../coupons/actions";
+import { notWebProduct } from "@/lib/webstore/scope";
 
 export interface BotTabData {
   welcomeSettings?: {
@@ -124,7 +125,7 @@ export async function loadBotTabData(
             return { allProducts: list as any[], visibilityMap };
           }
           const list = await db.query.products.findMany({
-            where: eq(products.storeId, store.id),
+            where: and(eq(products.storeId, store.id), notWebProduct()),
             orderBy: [desc(products.createdAt)],
             with: {
               category: true,
@@ -278,7 +279,7 @@ export async function loadBotTabData(
         });
 
         const storeProducts = await db.query.products.findMany({
-          where: eq(products.storeId, store.id),
+          where: and(eq(products.storeId, store.id), notWebProduct()),
           orderBy: [desc(products.createdAt)],
           columns: { id: true, title: true, price: true, badge: true },
         });
@@ -298,7 +299,7 @@ export async function loadBotTabData(
         });
 
         const storeProducts = await db.query.products.findMany({
-          where: eq(products.storeId, store.id),
+          where: and(eq(products.storeId, store.id), notWebProduct()),
           orderBy: [asc(products.title)],
         });
 
@@ -321,7 +322,7 @@ export async function loadBotTabData(
       case "clips": {
         const clipsList = await ClipService.listStoreClips(store.id);
         const storeProducts = await db.query.products.findMany({
-          where: eq(products.storeId, store.id),
+          where: and(eq(products.storeId, store.id), notWebProduct()),
           orderBy: [asc(products.title)],
         });
 
@@ -380,7 +381,7 @@ export async function loadBotTabData(
         });
 
         const storeProducts = await db.query.products.findMany({
-          where: eq(products.storeId, store.id),
+          where: and(eq(products.storeId, store.id), notWebProduct()),
           orderBy: [desc(products.createdAt)],
           columns: {
             id: true,

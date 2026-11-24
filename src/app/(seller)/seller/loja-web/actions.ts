@@ -78,3 +78,132 @@ export async function setCustomerStatusAction(webCustomerId: string, blocked: bo
   revalidatePath("/seller/loja-web");
   return { ok: true as const };
 }
+
+/* ------------------------------------------------------------------ */
+/* Produtos da Loja Web                                                */
+/* ------------------------------------------------------------------ */
+
+import {
+  archiveWebProduct,
+  copyProductsToWeb,
+  createWebProduct,
+  getWebProductOrNull,
+  getWebProductVideoIds,
+  listCopyCandidates,
+  listWebProducts,
+  setWebProductVideos,
+  updateWebProduct,
+  validateWebProduct,
+  type WebProductInput,
+} from "@/lib/webstore/products";
+import { saveSections, type SectionConfig } from "@/lib/webstore/sections";
+import { ProductVideoService } from "@/lib/videos/product-video-service";
+
+async function ownerCtx() {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized || !auth.user) return null;
+  const store = await getCurrentStore();
+  return store ? { store, user: auth.user } : null;
+}
+
+/** Limite de produtos do plano (conta todos os produtos da loja, como no cadastro normal). */
+async function checkProductLimit(userId: string, storeId: string, adding: number) {
+  const { products } = await import("@/db/schema");
+  const { count } = await import("drizzle-orm");
+  const { checkLimit } = await import("@/lib/entitlements/entitlement-service");
+  const [r] = await db.select({ n: count() }).from(products).where(eq(products.storeId, storeId));
+  const current = Number(r?.n || 0);
+  const res = await checkLimit(userId, "max_products", current + adding - 1);
+  return res.allowed ? null : `Limite de produtos do seu plano atingido (${current}/${res.limit}).`;
+}
+
+export async function copyCandidatesAction() {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  return { ok: true as const, list: await listCopyCandidates(c.store.id) };
+}
+
+export async function copyProductsAction(ids: string[]) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const list = Array.isArray(ids) ? ids.filter((x) => typeof x === "string").slice(0, 100) : [];
+  if (!list.length) return { ok: false as const, error: "Escolha pelo menos um produto." };
+  const limitErr = await checkProductLimit(c.user.id as string, c.store.id, list.length);
+  if (limitErr) return { ok: false as const, error: limitErr };
+  const res = await copyProductsToWeb(c.store.id, list);
+  revalidatePath("/seller/loja-web");
+  return { ok: true as const, ...res };
+}
+
+function parseInput(raw: WebProductInput): WebProductInput {
+  return {
+    title: String(raw.title || ""),
+    shortDescription: raw.shortDescription ? String(raw.shortDescription) : null,
+    description: raw.description ? String(raw.description) : null,
+    coverUrl: raw.coverUrl ? String(raw.coverUrl) : null,
+    bannerUrl: raw.bannerUrl ? String(raw.bannerUrl) : null,
+    price: Math.round(Number(raw.price) * 100) / 100,
+    compareAtPrice: raw.compareAtPrice ? Math.round(Number(raw.compareAtPrice) * 100) / 100 : null,
+    duration: raw.duration ? String(raw.duration) : "lifetime",
+    badge: raw.badge ? String(raw.badge) : null,
+    published: Boolean(raw.published),
+  };
+}
+
+export async function saveWebProductAction(id: string | null, raw: WebProductInput, videoIds: string[]) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const input = parseInput(raw);
+  const err = validateWebProduct(input);
+  if (err) return { ok: false as const, error: err };
+  const vids = Array.isArray(videoIds) ? videoIds.filter((v) => typeof v === "string") : [];
+  if (input.published && vids.length === 0) return { ok: false as const, error: "Escolha pelo menos um vídeo para publicar o produto." };
+  let productId = id;
+  if (productId) {
+    if (!(await getWebProductOrNull(c.store.id, productId))) return { ok: false as const, error: "Produto não encontrado." };
+    await updateWebProduct(c.store.id, productId, input);
+  } else {
+    const limitErr = await checkProductLimit(c.user.id as string, c.store.id, 1);
+    if (limitErr) return { ok: false as const, error: limitErr };
+    productId = await createWebProduct(c.store.id, input);
+  }
+  await setWebProductVideos(c.store.id, productId, vids);
+  revalidatePath("/seller/loja-web");
+  return { ok: true as const, id: productId };
+}
+
+export async function archiveWebProductAction(id: string) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  await archiveWebProduct(c.store.id, id);
+  revalidatePath("/seller/loja-web");
+  return { ok: true as const };
+}
+
+/** Vídeos prontos da Biblioteca + os já escolhidos para o produto. */
+export async function videoPickerAction(productId: string | null) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const lib = await ProductVideoService.listSellerLibraryVideos(c.store.id, { statusFilter: "READY" });
+  const selected = productId && (await getWebProductOrNull(c.store.id, productId)) ? await getWebProductVideoIds(c.store.id, productId) : [];
+  return {
+    ok: true as const,
+    selected,
+    library: lib.map((v) => ({ id: v.id, title: v.title, thumbnailUrl: v.thumbnailUrl, durationSeconds: v.durationSeconds, products: v.assignedProducts.map((p) => p.title).slice(0, 2) })),
+  };
+}
+
+export async function saveSectionsAction(list: SectionConfig[]) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const valid = new Set((await listWebProducts(c.store.id)).map((p) => p.id));
+  try {
+    await saveSections(c.store.id, Array.isArray(list) ? list : [], valid);
+  } catch (e) {
+    const { isMissingSectionsTable } = await import("@/lib/webstore/sections");
+    if (isMissingSectionsTable(e)) return { ok: false as const, error: "Rode a migration 0029_web_store_sections.sql no Neon para salvar a vitrine." };
+    throw e;
+  }
+  revalidatePath("/seller/loja-web");
+  return { ok: true as const };
+}

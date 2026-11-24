@@ -1835,3 +1835,19 @@ export const webSupportTickets = pgTable('web_support_tickets', {
   storeStatusIdx: index('web_support_tickets_store_status_idx').on(t.storeId, t.status, t.createdAt),
   customerIdx: index('web_support_tickets_customer_idx').on(t.webCustomerId),
 }));
+
+// Vitrine da Loja Web (migration 0029_web_store_sections.sql).
+export const webStoreSections = pgTable('web_store_sections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(), // 'hero' | 'top15' | 'continue' | 'combos' | 'carousel'
+  title: text('title').notNull(),
+  position: integer('position').notNull().default(0),
+  active: boolean('active').notNull().default(true),
+  mode: text('mode').notNull().default('manual'), // 'auto' | 'manual' (Top 15)
+  productIds: jsonb('product_ids').$type<string[]>().notNull().default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeIdx: index('web_store_sections_store_idx').on(t.storeId, t.position),
+}));

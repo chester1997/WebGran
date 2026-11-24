@@ -24,6 +24,9 @@ import { HeaderMeta } from "@/components/layout/HeaderMeta";
 import { BTN_PRI, BTN_SEC, Callout, INPUT, useToast } from "../fluxos/_components/flow-ui";
 import Toaster from "../fluxos/_components/Toaster";
 import { customerDetailAction, replyTicketAction, setCustomerStatusAction } from "./actions";
+import WebProductsPane, { type WebProductView } from "./WebProductsPane";
+import ShowcasePane from "./ShowcasePane";
+import type { SectionConfig } from "@/lib/webstore/sections";
 
 interface Customer {
   id: string;
@@ -104,8 +107,24 @@ function ContactButtons({ c, compact = false }: { c: { email: string; whatsapp: 
   );
 }
 
-export default function WebStoreClient({ ready, storeSlug, customers, tickets }: { ready: boolean; storeSlug: string; customers: Customer[]; tickets: Ticket[] }) {
-  const [tab, setTab] = useState<"clientes" | "suporte">("clientes");
+export default function WebStoreClient({
+  ready,
+  sectionsReady,
+  storeSlug,
+  customers,
+  tickets,
+  webProducts,
+  sections,
+}: {
+  ready: boolean;
+  sectionsReady: boolean;
+  storeSlug: string;
+  customers: Customer[];
+  tickets: Ticket[];
+  webProducts: WebProductView[];
+  sections: SectionConfig[];
+}) {
+  const [tab, setTab] = useState<"produtos" | "vitrine" | "clientes" | "suporte">("produtos");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Customer | null>(null);
   const toast = useToast();
@@ -181,6 +200,8 @@ export default function WebStoreClient({ ready, storeSlug, customers, tickets }:
         <div className="flex items-center gap-1 mr-auto">
           {(
             [
+              ["produtos", "Produtos", webProducts.length],
+              ["vitrine", "Vitrine", null],
               ["clientes", "Clientes", customers.length],
               ["suporte", "Suporte", stats.openTickets],
             ] as const
@@ -194,7 +215,7 @@ export default function WebStoreClient({ ready, storeSlug, customers, tickets }:
                 tab === k ? "bg-[linear-gradient(180deg,#24262d_0%,#1a1b20_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(255,255,255,0.09)]" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
               }`}
             >
-              {l} <span className="text-[11px] text-zinc-500 tabular-nums">{n}</span>
+              {l} {n !== null && <span className="text-[11px] text-zinc-500 tabular-nums">{n}</span>}
             </button>
           ))}
         </div>
@@ -206,7 +227,11 @@ export default function WebStoreClient({ ready, storeSlug, customers, tickets }:
         )}
       </div>
 
-      {tab === "clientes" ? (
+      {tab === "produtos" ? (
+        <WebProductsPane items={webProducts} ready={ready} />
+      ) : tab === "vitrine" ? (
+        <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} />
+      ) : tab === "clientes" ? (
         shown.length === 0 ? (
           <div className={`${SURFACE} px-6 py-14 text-center`}>
             <UserRound className="w-9 h-9 text-zinc-600 mx-auto mb-3" />

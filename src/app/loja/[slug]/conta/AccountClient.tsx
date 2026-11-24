@@ -70,7 +70,7 @@ export function AccountClient({
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8 sm:pt-12">
+    <div className="w-full max-w-[1500px] px-4 sm:px-8 lg:px-10 pt-8 sm:pt-12">
       <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-7">
         <div className="mr-auto min-w-0">
           <p className="text-[13px] text-zinc-500">Minha conta</p>

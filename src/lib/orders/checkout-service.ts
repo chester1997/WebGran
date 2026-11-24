@@ -21,6 +21,8 @@ export interface CreateCheckoutInput {
   paymentGateway?: "mercadopago" | "pushinpay" | "syncpay";
   sessionId?: string | null;
   originBotId?: string | null;
+  /** Status de produto aceito. Padrão "active" (Mini App e bots). A Loja Web usa "web_active". */
+  productStatus?: string;
 }
 
 export interface CheckoutResult {
@@ -57,6 +59,7 @@ export class CheckoutService {
       sessionId,
       originBotId,
     } = input;
+    const productStatus = input.productStatus || "active";
 
     try {
       if (!storeId || !customerId) {
@@ -103,7 +106,7 @@ export class CheckoutService {
         where: and(
           eq(products.storeId, storeId),
           inArray(products.id, candidateIds),
-          eq(products.status, "active")
+          eq(products.status, productStatus)
         ),
       });
 
@@ -170,7 +173,7 @@ export class CheckoutService {
             };
           }
         } else if (
-          (!matchedProduct || matchedProduct.status !== "active") &&
+          (!matchedProduct || matchedProduct.status !== productStatus) &&
           (!matchedCombo || matchedCombo.status !== "active")
         ) {
           return {
@@ -189,7 +192,7 @@ export class CheckoutService {
           }
 
           const invalidComponents = matchedCombo.products.filter(
-            (cp) => !cp.product || cp.product.storeId !== storeId || cp.product.status !== "active"
+            (cp) => !cp.product || cp.product.storeId !== storeId || cp.product.status !== productStatus
           );
 
           if (invalidComponents.length > 0) {

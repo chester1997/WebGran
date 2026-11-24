@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, products, banners } from "@/db/schema";
 import { ComboService } from "@/lib/combos/combo-service";
+import { WEB_ACTIVE } from "./scope";
 
 export interface WebProduct {
   id: string;
@@ -97,7 +98,7 @@ export async function loadWebCatalog(storeId: string) {
 
 export async function loadWebProduct(storeId: string, slug: string) {
   const p = await db.query.products.findFirst({
-    where: and(eq(products.storeId, storeId), eq(products.slug, slug), eq(products.status, "active")),
+    where: and(eq(products.storeId, storeId), eq(products.slug, slug), eq(products.status, WEB_ACTIVE)),
   });
   return p ? toProduct(p) : null;
 }
@@ -126,9 +127,10 @@ export async function quoteCart(storeId: string, raw: CartLine[]): Promise<CartQ
 
   const prodIds = items.filter((l) => !l.isCombo).map((l) => l.id);
   const prods = prodIds.length
-    ? await db.query.products.findMany({ where: and(eq(products.storeId, storeId), inArray(products.id, prodIds), eq(products.status, "active")) })
+    ? await db.query.products.findMany({ where: and(eq(products.storeId, storeId), inArray(products.id, prodIds), eq(products.status, WEB_ACTIVE)) })
     : [];
-  const combos = items.some((l) => l.isCombo) ? await ComboService.getActiveCombos(storeId) : [];
+  // Combos do Mini App usam produtos dos bots; na Loja Web só entram produtos da própria loja.
+  const combos: Awaited<ReturnType<typeof ComboService.getActiveCombos>> = [];
 
   const lines: CartQuote["lines"] = [];
   for (const l of items) {

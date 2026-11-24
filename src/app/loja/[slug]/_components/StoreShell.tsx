@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
-import { CheckCircle2, LifeBuoy, ShoppingBag, Store, UserRound } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { CheckCircle2, Home, LifeBuoy, MonitorPlay, Search, ShoppingBag } from "lucide-react";
 import { CartProvider, useCart } from "./cart";
 import { SupportModal } from "./SupportModal";
 
@@ -34,72 +34,105 @@ export function StoreShell({ store, customer, children }: { store: ShellStore; c
 
 function Inner({ store, customer, children }: { store: ShellStore; customer: ShellCustomer | null; children: ReactNode }) {
   const { count, ready, toast } = useCart();
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
   const [support, setSupport] = useState(false);
+  const [solid, setSolid] = useState(false);
   const base = `/loja/${store.slug}`;
-  const hideFab = pathname?.startsWith(`${base}/entrar`) || pathname?.startsWith(`${base}/cadastro`);
+  const isHome = pathname === base;
+  const isAuth = pathname.startsWith(`${base}/entrar`) || pathname.startsWith(`${base}/cadastro`);
+
+  useEffect(() => {
+    const on = () => setSolid(window.scrollY > 24);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+
+  const nav = [
+    { href: base, label: "Início", icon: Home, on: isHome },
+    { href: `${base}/buscar`, label: "Buscar", icon: Search, on: pathname.startsWith(`${base}/buscar`) },
+    { href: customer ? `${base}/conta` : `${base}/entrar`, label: "Meus vídeos", icon: MonitorPlay, on: pathname.startsWith(`${base}/conta`) },
+    { href: `${base}/carrinho`, label: "Carrinho", icon: ShoppingBag, on: pathname.startsWith(`${base}/carrinho`), badge: ready && count > 0 ? count : 0 },
+  ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#09090b] text-zinc-100">
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#09090b]/85 backdrop-blur-xl">
-        <div className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center gap-3">
-          <Link href={base} className="flex items-center gap-2.5 min-w-0 mr-auto">
-            {store.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={store.logoUrl} alt="" className="w-9 h-9 rounded-[10px] object-cover ring-1 ring-white/10" />
-            ) : (
-              <span className="w-9 h-9 rounded-[10px] bg-[#3b82f6]/15 text-[#7fb0ff] flex items-center justify-center">
-                <Store className="w-[18px] h-[18px]" />
-              </span>
-            )}
-            <span className="font-semibold text-[15px] tracking-tight truncate">{store.name}</span>
+    <div className="min-h-[100dvh] bg-[#07080a] text-zinc-100 [--rail:0px] lg:[--rail:76px]">
+      {/* Menu lateral (computador) */}
+      <nav aria-label="Navegação da loja" className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-[76px] flex-col items-center gap-1.5 pt-5 bg-gradient-to-r from-[#07080a] via-[#07080a]/80 to-transparent">
+        <Link href={base} aria-label={store.name} className="mb-6">
+          {store.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={store.logoUrl} alt="" className="w-10 h-10 rounded-[11px] object-cover ring-1 ring-white/10" />
+          ) : (
+            <span className="w-10 h-10 rounded-[11px] bg-[#3b82f6] text-white font-black text-[16px] flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(59,130,246,0.7)]">{store.name.trim().charAt(0).toUpperCase()}</span>
+          )}
+        </Link>
+        {nav.map((n) => (
+          <Link key={n.label} href={n.href} title={n.label} aria-label={n.label} aria-current={n.on ? "page" : undefined} className={`group relative w-12 h-12 rounded-[13px] flex items-center justify-center transition-colors ${n.on ? "text-white" : "text-zinc-500 hover:text-white hover:bg-white/[0.06]"}`}>
+            <n.icon className="w-[22px] h-[22px]" />
+            {n.on && <span className="absolute bottom-[7px] w-4 h-[3px] rounded-full bg-[#3b82f6]" />}
+            {n.badge ? <span className="absolute top-1.5 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-[#3b82f6] text-[10px] font-bold flex items-center justify-center tabular-nums">{n.badge}</span> : null}
+            <span className="pointer-events-none absolute left-[58px] whitespace-nowrap rounded-[8px] bg-[#18191d] border border-white/10 px-2.5 py-1 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">{n.label}</span>
           </Link>
+        ))}
+        <button type="button" onClick={() => setSupport(true)} title="Suporte" aria-label="Suporte" className="group relative mt-auto mb-5 w-12 h-12 rounded-[13px] flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/[0.06]">
+          <LifeBuoy className="w-[22px] h-[22px]" />
+          <span className="pointer-events-none absolute left-[58px] whitespace-nowrap rounded-[8px] bg-[#18191d] border border-white/10 px-2.5 py-1 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">Suporte</span>
+        </button>
+      </nav>
 
-          <Link
-            href={customer ? `${base}/conta` : `${base}/entrar`}
-            className="inline-flex items-center gap-2 h-10 px-3 rounded-[11px] text-[13.5px] font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
-          >
-            <UserRound className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline max-w-[140px] truncate">{customer ? customer.name.split(" ")[0] : "Entrar"}</span>
+      {/* Topo */}
+      <header className={`fixed top-0 right-0 left-0 lg:left-[76px] z-30 h-16 flex items-center gap-3 px-4 sm:px-8 transition-[background,border-color] duration-300 ${solid || !isHome ? "bg-[#07080a]/90 backdrop-blur-xl border-b border-white/[0.06]" : "bg-gradient-to-b from-black/70 to-transparent border-b border-transparent"}`}>
+        <Link href={base} className="flex items-center gap-2.5 min-w-0 mr-auto">
+          <span className="lg:hidden w-8 h-8 rounded-[9px] bg-[#3b82f6] text-white font-black text-[14px] flex items-center justify-center shrink-0">{store.name.trim().charAt(0).toUpperCase()}</span>
+          <span className="font-extrabold tracking-tight text-[17px] truncate">{store.name}</span>
+        </Link>
+        {customer ? (
+          <Link href={`${base}/conta`} className="inline-flex items-center gap-2 h-9 pl-1 pr-3 rounded-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-[13px] font-medium transition-colors">
+            <span className="w-7 h-7 rounded-full bg-[#3b82f6] text-white text-[12px] font-bold flex items-center justify-center">{customer.name.trim().charAt(0).toUpperCase()}</span>
+            <span className="hidden sm:inline max-w-[120px] truncate">{customer.name.split(" ")[0]}</span>
           </Link>
-          <Link
-            href={`${base}/carrinho`}
-            aria-label={`Carrinho, ${count} itens`}
-            className="relative inline-flex items-center gap-2 h-10 px-3.5 rounded-[11px] bg-[#3b82f6] hover:bg-[#2f74ea] text-white text-[13.5px] font-semibold transition-colors shadow-[0_6px_18px_-8px_rgba(59,130,246,0.8)]"
-          >
-            <ShoppingBag className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline">Carrinho</span>
-            {ready && count > 0 && (
-              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-white text-[#1d4ed8] text-[11.5px] font-bold flex items-center justify-center tabular-nums">{count}</span>
-            )}
-          </Link>
-        </div>
+        ) : (
+          !isAuth && (
+            <>
+              <Link href={`${base}/entrar`} className="hidden sm:inline-flex items-center h-9 px-4 rounded-[10px] bg-white/[0.08] hover:bg-white/[0.14] border border-white/10 text-[13px] font-semibold transition-colors">
+                Entrar
+              </Link>
+              <Link href={`${base}/cadastro`} className="inline-flex items-center h-9 px-4 rounded-[10px] bg-[#3b82f6] hover:bg-[#2f74ea] text-[13px] font-semibold transition-colors">
+                Criar conta
+              </Link>
+            </>
+          )
+        )}
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className={`lg:pl-[76px] pb-24 lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>{children}</main>
 
-      <footer className="border-t border-white/[0.06] mt-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-zinc-500">
-          <span>© {new Date().getFullYear()} {store.name}. Pagamento seguro via PIX.</span>
+      <footer className="lg:pl-[76px] border-t border-white/[0.06] mb-16 lg:mb-0">
+        <div className="px-4 sm:px-8 lg:px-10 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-zinc-500">
+          <span>© {new Date().getFullYear()} {store.name} · Pagamento seguro via PIX · Assista no celular ou no computador</span>
           <button type="button" onClick={() => setSupport(true)} className="text-zinc-400 hover:text-white transition-colors">
             Precisa de ajuda? Fale com o suporte
           </button>
         </div>
       </footer>
 
-      {!hideFab && (
-        <button
-          type="button"
-          onClick={() => setSupport(true)}
-          className="fixed z-30 right-4 bottom-4 sm:right-6 sm:bottom-6 inline-flex items-center gap-2 h-12 pl-4 pr-5 rounded-full bg-[#18181b] border border-white/10 text-[13.5px] font-semibold text-zinc-100 shadow-[0_14px_34px_-12px_rgba(0,0,0,0.9)] hover:border-[#3b82f6]/60 hover:text-white transition-colors"
-        >
-          <LifeBuoy className="w-[18px] h-[18px] text-[#7fb0ff]" />
-          Suporte
+      {/* Barra inferior (celular) */}
+      <nav aria-label="Navegação da loja" className="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[62px] grid grid-cols-5 bg-[#07080a]/95 backdrop-blur-xl border-t border-white/[0.07]">
+        {nav.map((n) => (
+          <Link key={n.label} href={n.href} aria-current={n.on ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium ${n.on ? "text-white" : "text-zinc-500"}`}>
+            <n.icon className="w-[21px] h-[21px]" />
+            {n.label}
+            {n.badge ? <span className="absolute top-1.5 left-1/2 ml-2 min-w-[16px] h-4 px-1 rounded-full bg-[#3b82f6] text-[9.5px] font-bold text-white flex items-center justify-center">{n.badge}</span> : null}
+          </Link>
+        ))}
+        <button type="button" onClick={() => setSupport(true)} className="flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium text-zinc-500">
+          <LifeBuoy className="w-[21px] h-[21px]" /> Suporte
         </button>
-      )}
+      </nav>
 
       {toast && (
-        <div role="status" className="fixed z-50 left-1/2 -translate-x-1/2 bottom-20 sm:bottom-8 inline-flex items-center gap-2 h-11 px-4 rounded-[12px] bg-[#18181b] border border-white/10 text-[13.5px] font-medium shadow-2xl">
+        <div role="status" className="fixed z-50 left-1/2 -translate-x-1/2 bottom-20 lg:bottom-8 inline-flex items-center gap-2 h-11 px-4 rounded-[12px] bg-[#18181b] border border-white/10 text-[13.5px] font-medium shadow-2xl">
           <CheckCircle2 className="w-4 h-4 text-[#3b82f6]" />
           {toast}
         </div>
@@ -109,3 +142,9 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
     </div>
   );
 }
+
+/** Espaço do topo fixo para páginas internas. */
+export function PageTop({ children }: { children: ReactNode }) {
+  return <div className="pt-20 sm:pt-24 px-4 sm:px-8 lg:px-10">{children}</div>;
+}
+

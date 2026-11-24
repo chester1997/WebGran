@@ -60,7 +60,7 @@ export function CartClient({ slug, loggedIn }: { slug: string; loggedIn: boolean
   const shown = quote?.lines || [];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8 sm:pt-12">
+    <div className="w-full max-w-[1500px] px-4 sm:px-8 lg:px-10 pt-8 sm:pt-12">
       <h1 className="text-[26px] font-semibold tracking-tight mb-6">Carrinho</h1>
       <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
         <div className={`${CARD} divide-y divide-white/[0.06]`}>

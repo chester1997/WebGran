@@ -18,8 +18,8 @@ interface V {
 
 const dur = (s: number) => (s > 0 ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "");
 
-export function VideoArea({ slug, productId, videos }: { slug: string; productId: string; videos: V[] }) {
-  const [current, setCurrent] = useState(videos.find((v) => !v.completed)?.id || videos[0].id);
+export function VideoArea({ slug, productId, videos, startVideo }: { slug: string; productId: string; videos: V[]; startVideo?: string | null }) {
+  const [current, setCurrent] = useState((startVideo && videos.some((v) => v.id === startVideo) ? startVideo : null) || videos.find((v) => !v.completed)?.id || videos[0].id);
   type Playback = Extract<Awaited<ReturnType<typeof playbackAction>>, { ok: true }>["data"];
   const [data, setData] = useState<Playback | null>(null);
   const [error, setError] = useState<string | null>(null);
