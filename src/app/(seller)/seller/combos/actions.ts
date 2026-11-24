@@ -3,7 +3,7 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { combos, comboProducts, products, comboTiers, orderItems } from "@/db/schema";
-import { eq, and, inArray, desc, asc, ne } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, ne, notLike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
 import { StorageUsageService } from "@/lib/storage/storage-usage-service";
@@ -148,7 +148,7 @@ export async function getCombosAction(): Promise<ComboItem[]> {
   }
 
   const storeCombos = await db.query.combos.findMany({
-    where: and(eq(combos.storeId, store.id), ne(combos.status, "archived")),
+    where: and(eq(combos.storeId, store.id), ne(combos.status, "archived"), notLike(combos.status, "web_%")),
     orderBy: [asc(combos.position), desc(combos.createdAt)],
     with: {
       products: {

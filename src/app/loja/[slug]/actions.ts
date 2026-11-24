@@ -69,6 +69,7 @@ export async function checkoutAction(slug: string, lines: CartLine[], couponCode
     sessionId: `web:${c.customer.id}`,
     originBotId: null,
     productStatus: WEB_ACTIVE,
+    comboStatus: WEB_ACTIVE,
   });
   if (!res.success || !res.orderId) return { ok: false, error: res.error || "Não foi possível gerar o PIX." };
   return { ok: true, orderId: res.orderId };
@@ -177,4 +178,68 @@ export async function progressAction(slug: string, videoId: string, positionSeco
   } catch {
     // não bloqueia o player
   }
+}
+
+/* ---------------------------- perfil ---------------------------- */
+
+export async function profileAction(slug: string, input: { name: string; whatsapp: string; telegram: string }): Promise<Res> {
+  const c = await ctx(slug);
+  if (!c?.customer) return { ok: false, error: "Entre na sua conta." };
+  const { updateWebProfile } = await import("@/lib/webstore/profile");
+  return updateWebProfile(c.customer, { name: String(input?.name || ""), whatsapp: String(input?.whatsapp || ""), telegram: String(input?.telegram || "") });
+}
+
+export async function passwordAction(slug: string, current: string, next: string): Promise<Res> {
+  const c = await ctx(slug);
+  if (!c?.customer) return { ok: false, error: "Entre na sua conta." };
+  const { changeWebPassword } = await import("@/lib/webstore/profile");
+  return changeWebPassword(c.customer, String(current || ""), String(next || ""));
+}
+
+/** Foto de perfil: imagem já reduzida no navegador (até ~400 KB), enviada para o armazenamento da loja. */
+export async function avatarAction(slug: string, dataUrl: string | null): Promise<Res<{ url: string | null }>> {
+  const c = await ctx(slug);
+  if (!c?.customer) return { ok: false, error: "Entre na sua conta." };
+  const { setWebAvatar } = await import("@/lib/webstore/profile");
+  if (!dataUrl) {
+    await setWebAvatar(c.customer.shadowCustomerId, null);
+    return { ok: true, url: null };
+  }
+  const m = /^data:(image\/(?:webp|jpeg|png));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl));
+  if (!m) return { ok: false, error: "Envie uma imagem JPG, PNG ou WebP." };
+  const buf = Buffer.from(m[2], "base64");
+  if (buf.length > 400 * 1024) return { ok: false, error: "A imagem ficou grande demais. Tente outra." };
+  const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+  const isJpg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  const isWebp = buf.length > 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP";
+  if (!isPng && !isJpg && !isWebp) return { ok: false, error: "Arquivo de imagem inválido." };
+  const { getStorageProvider, generateMultiTenantStoragePath } = await import("@/lib/storage/provider");
+  const { StorageUsageService } = await import("@/lib/storage/storage-usage-service");
+  const reservation = await StorageUsageService.reserveStorageForUpload({ sellerId: c.store.ownerId, storeId: c.store.id, bytes: buf.length, referenceType: "image_upload" });
+  if (!reservation.allowed) return { ok: false, error: "Não foi possível salvar a foto agora. Tente mais tarde." };
+  const path = generateMultiTenantStoragePath(c.store.id, "profiles", `cliente-${c.customer.id.slice(0, 8)}.${isPng ? "png" : isJpg ? "jpg" : "webp"}`);
+  const result = await getStorageProvider().upload(buf, path, m[1]);
+  if (reservation.reservationId) await StorageUsageService.confirmReservation(reservation.reservationId, result.sizeBytes || buf.length);
+  await setWebAvatar(c.customer.shadowCustomerId, result.url);
+  return { ok: true, url: result.url };
+}
+
+/* ------------------------- recuperar senha ------------------------- */
+
+export async function forgotPasswordAction(slug: string, email: string, contactVia: string): Promise<Res> {
+  const store = await getWebStore(slug);
+  if (!store) return { ok: false, error: "Loja não encontrada." };
+  const { requestPasswordHelp } = await import("@/lib/webstore/profile");
+  return requestPasswordHelp(store, String(email || ""), String(contactVia || ""));
+}
+
+export async function resetPasswordAction(slug: string, token: string, password: string): Promise<Res> {
+  const store = await getWebStore(slug);
+  if (!store) return { ok: false, error: "Loja não encontrada." };
+  const { resetWebPassword } = await import("@/lib/webstore/profile");
+  const r = await resetWebPassword(store.id, String(token || ""), String(password || ""));
+  if (!r.ok) return r;
+  const { openSession } = await import("@/lib/webstore/web-store");
+  await openSession(store.id, r.customer.id);
+  return { ok: true };
 }

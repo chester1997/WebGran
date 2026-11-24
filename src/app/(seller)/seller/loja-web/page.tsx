@@ -6,6 +6,7 @@ import { webTablesReady } from "@/lib/webstore/web-store";
 import { listWebProducts } from "@/lib/webstore/products";
 import { getSections } from "@/lib/webstore/sections";
 import { getWebBranding } from "@/lib/webstore/settings";
+import { listWebCombos, miniAppProgressiveTiers } from "@/lib/webstore/combos";
 import SetupStoreClient from "../SetupStoreClient";
 import WebStoreClient from "./WebStoreClient";
 
@@ -18,7 +19,13 @@ export default async function LojaWebPage() {
 
   const ready = await webTablesReady();
   const [customers, tickets] = ready ? await Promise.all([listSellerWebCustomers(store.id), listSellerTickets(store.id)]) : [[], []];
-  const [webProducts, showcase, look] = await Promise.all([listWebProducts(store.id), getSections(store.id), getWebBranding(store.id)]);
+  const [webProducts, showcase, look, webCombos, miniAppPromo] = await Promise.all([
+    listWebProducts(store.id),
+    getSections(store.id),
+    getWebBranding(store.id),
+    listWebCombos(store.id),
+    miniAppProgressiveTiers(store.id),
+  ]);
 
   return (
     <WebStoreClient
@@ -27,6 +34,8 @@ export default async function LojaWebPage() {
       branding={look.branding}
       brandingReady={look.ready}
       storeName={store.name}
+      webCombos={webCombos}
+      miniAppPromo={miniAppPromo}
       sections={showcase.sections}
       webProducts={webProducts.map(({ createdAt: _c, position: _p, ...p }) => p)}
       storeSlug={store.slug}

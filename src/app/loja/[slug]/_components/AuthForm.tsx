@@ -67,6 +67,13 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
               </button>
             </span>
           </label>
+          {mode === "login" && (
+            <div className="-mt-2 text-right">
+              <Link href={`/loja/${slug}/recuperar`} className="text-[12.5px] text-[#7fb0ff] hover:underline">
+                Esqueci minha senha
+              </Link>
+            </div>
+          )}
           {mode === "register" && (
             <>
               <div className="grid grid-cols-2 gap-3">

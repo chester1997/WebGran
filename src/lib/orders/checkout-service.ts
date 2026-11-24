@@ -23,6 +23,8 @@ export interface CreateCheckoutInput {
   originBotId?: string | null;
   /** Status de produto aceito. Padrão "active" (Mini App e bots). A Loja Web usa "web_active". */
   productStatus?: string;
+  /** Status dos combos aceitos (padrão "active"; a Loja Web usa "web_active"). */
+  comboStatus?: string;
 }
 
 export interface CheckoutResult {
@@ -60,6 +62,7 @@ export class CheckoutService {
       originBotId,
     } = input;
     const productStatus = input.productStatus || "active";
+    const comboStatus = input.comboStatus || "active";
 
     try {
       if (!storeId || !customerId) {
@@ -116,7 +119,7 @@ export class CheckoutService {
             where: and(
               eq(combos.storeId, storeId),
               inArray(combos.id, candidateIds),
-              eq(combos.status, "active")
+              eq(combos.status, comboStatus)
             ),
             with: {
               products: {
@@ -166,7 +169,7 @@ export class CheckoutService {
 
         // Discriminate or validate existence
         if (item.isCombo || item.comboId) {
-          if (!matchedCombo || matchedCombo.status !== "active") {
+          if (!matchedCombo || matchedCombo.status !== comboStatus) {
             return {
               success: false,
               error: "Combo inexistente, inativo ou pertencente a outra loja.",
@@ -174,7 +177,7 @@ export class CheckoutService {
           }
         } else if (
           (!matchedProduct || matchedProduct.status !== productStatus) &&
-          (!matchedCombo || matchedCombo.status !== "active")
+          (!matchedCombo || matchedCombo.status !== comboStatus)
         ) {
           return {
             success: false,
@@ -282,7 +285,8 @@ export class CheckoutService {
             productId: i.productId,
             quantity: i.quantity,
             price: Number(i.unitPrice),
-          }))
+          })),
+          comboStatus
         );
 
         if (progressiveEval.discountAmount > 0 && progressiveEval.promotion && progressiveEval.pricingResult) {

@@ -28,6 +28,7 @@ export interface ShellCustomer {
   email: string;
   whatsapp: string | null;
   telegram: string | null;
+  avatarUrl?: string | null;
 }
 
 export function StoreShell({ store, customer, children }: { store: ShellStore; customer: ShellCustomer | null; children: ReactNode }) {
@@ -156,7 +157,12 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
         </Link>
         {customer ? (
           <Link href={`${base}/conta`} className="inline-flex items-center gap-2 h-9 pl-1 pr-3 rounded-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-[13px] font-medium transition-colors">
-            <span className="w-7 h-7 rounded-full bg-[#3b82f6] text-white text-[12px] font-bold flex items-center justify-center">{customer.name.trim().charAt(0).toUpperCase()}</span>
+            {customer.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={customer.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+            ) : (
+              <span className="w-7 h-7 rounded-full bg-[#3b82f6] text-white text-[12px] font-bold flex items-center justify-center">{customer.name.trim().charAt(0).toUpperCase()}</span>
+            )}
             <span className="hidden sm:inline max-w-[120px] truncate">{customer.name.split(" ")[0]}</span>
           </Link>
         ) : (

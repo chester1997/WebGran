@@ -52,7 +52,7 @@ const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
 export const normalizeEmail = (e: string) => e.trim().toLowerCase();
 export const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
-async function openSession(storeId: string, webCustomerId: string) {
+export async function openSession(storeId: string, webCustomerId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400_000);
   await db.insert(webCustomerSessions).values({ webCustomerId, tokenHash: hashToken(token), expiresAt });

@@ -8,6 +8,17 @@ import { SolarCartLarge2BoldDuotone } from "@/components/icons/solar/seller-icon
 import { useCart } from "./cart";
 import { brl, DURATION_LABEL } from "./ui";
 
+export interface ComboCard {
+  id: string;
+  title: string;
+  description: string | null;
+  coverUrl: string | null;
+  price: number;
+  normalPrice: number;
+  savingsPercentage: number;
+  items: { title: string; coverUrl: string | null }[];
+}
+
 export interface CardItem {
   id: string;
   slug: string;
@@ -39,7 +50,9 @@ export function Storefront({
   promo,
   promoImage = null,
   topId = null,
+  combos = [],
 }: {
+  combos?: ComboCard[];
   topId?: string | null;
   promoImage?: string | null;
   slug: string;
@@ -68,10 +81,20 @@ export function Storefront({
         {rows.map((r, i) => (
           <div key={r.key}>
             {r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}
-            {promo && i === promoAfter && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
+            {i === promoAfter && (
+              <>
+                {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
+                {combos.length > 0 && <ComboRow combos={combos} />}
+              </>
+            )}
           </div>
         ))}
-        {promo && rows.length === 0 && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
+        {rows.length === 0 && (
+          <>
+            {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
+            {combos.length > 0 && <ComboRow combos={combos} />}
+          </>
+        )}
       </div>
     </div>
   );
@@ -309,54 +332,101 @@ function PromoBanner({
   const best = promo.tiers.reduce<number>((b, t, k) => (t.price / t.minQuantity < promo.tiers[b].price / promo.tiers[b].minQuantity ? k : b), 0);
   return (
     <section className="px-4 sm:px-8 lg:px-10 mt-9 sm:mt-11" aria-label={promo.title}>
-      <div className="relative overflow-hidden rounded-[20px] ring-1 ring-[#3b82f6]/30 bg-[#0a0f1c] min-h-[230px]">
+      <div className="relative overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0b0d12]">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <>
-            <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(70%_120%_at_85%_50%,rgba(59,130,246,0.45)_0%,rgba(59,130,246,0.08)_45%,transparent_70%)]" />
-            <span aria-hidden="true" className="hidden sm:flex absolute right-[-30px] lg:right-6 top-1/2 -translate-y-1/2 items-center">
-              {covers.map((c, k) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={c}
-                  src={c}
-                  alt=""
-                  loading="lazy"
-                  className="w-[110px] lg:w-[128px] aspect-[2/3] object-cover rounded-[12px] ring-1 ring-white/15 shadow-[0_24px_40px_-12px_rgba(0,0,0,0.95)] -ml-9 first:ml-0"
-                  style={{ transform: `rotate(${(k - (covers.length - 1) / 2) * 7}deg) translateY(${Math.abs(k - (covers.length - 1) / 2) * 10}px)`, zIndex: 10 - Math.abs(k - Math.floor(covers.length / 2)) }}
-                />
-              ))}
-            </span>
-          </>
+          <span aria-hidden="true" className="hidden sm:flex absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 items-center">
+            {covers.map((c, k) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={c} src={c} alt="" loading="lazy" className="w-[96px] lg:w-[112px] aspect-[2/3] object-cover rounded-[4px] -ml-6 first:ml-0 ring-1 ring-black/70 shadow-[0_18px_30px_-12px_rgba(0,0,0,0.9)]" style={{ zIndex: 10 - k }} />
+            ))}
+          </span>
         )}
-        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#070b14_0%,rgba(7,11,20,0.94)_38%,rgba(7,11,20,0.55)_62%,rgba(7,11,20,0.1)_100%)]" />
+        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,0.95)_40%,rgba(11,13,18,0.6)_68%,rgba(11,13,18,0.2)_100%)]" />
 
-        <div className="relative z-10 p-5 sm:p-8 max-w-[640px]">
-          <p className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-[#3b82f6] text-white text-[11px] font-bold uppercase tracking-[0.14em]">
-            <Sparkles className="w-3 h-3" /> Promoção
-          </p>
-          <h2 className="mt-3 text-[24px] sm:text-[32px] font-black leading-[1.05] tracking-[-0.02em] [text-wrap:balance]">{promo.title}</h2>
-          <p className="mt-1.5 text-[13.5px] sm:text-[14.5px] text-zinc-300">Escolha quantos títulos quiser. O desconto entra sozinho no carrinho.</p>
-          <div className="mt-5 flex flex-wrap gap-2.5">
+        <div className="relative z-10 px-5 py-6 sm:px-9 sm:py-8 max-w-[660px]">
+          <p className="text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#7fb0ff]">Oferta progressiva</p>
+          <h2 className="mt-2 text-[24px] sm:text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] [text-wrap:balance]">{promo.title}</h2>
+          <p className="mt-1.5 text-[14px] text-zinc-400">Quanto mais títulos no carrinho, menor o preço de cada um. O desconto entra sozinho.</p>
+
+          <div className="mt-5 inline-grid w-full sm:w-auto rounded-[6px] border border-white/[0.12] bg-black/45 backdrop-blur-sm overflow-hidden" style={{ gridTemplateColumns: `repeat(${promo.tiers.length}, minmax(0, 1fr))` }}>
             {promo.tiers.map((t, k) => (
-              <div
-                key={t.minQuantity}
-                className={`relative rounded-[14px] px-4 py-3 min-w-[118px] backdrop-blur-md ${k === best ? "bg-[#3b82f6]/20 ring-1 ring-[#3b82f6]" : "bg-white/[0.06] ring-1 ring-white/10"}`}
-              >
-                {k === best && <span className="absolute -top-2.5 left-3 h-5 px-2 rounded-full bg-[#3b82f6] text-white text-[10px] font-bold flex items-center">Melhor preço</span>}
-                <span className="block text-[12px] text-zinc-400">Leve {t.minQuantity}</span>
-                <b className="block text-[19px] font-extrabold tabular-nums leading-tight">{brl(t.price)}</b>
-                <span className="block text-[11.5px] text-[#9cc2ff] tabular-nums">{brl(t.price / t.minQuantity)} cada</span>
+              <div key={t.minQuantity} className={`relative px-4 sm:px-5 pt-3.5 pb-3 sm:min-w-[132px] ${k > 0 ? "border-l border-white/[0.1]" : ""} ${k === best ? "bg-[#3b82f6]/[0.12]" : ""}`}>
+                {k === best && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-[#3b82f6]" />}
+                <span className="block text-[12px] text-zinc-400">
+                  {t.minQuantity} títulos{k === best && <span className="text-[#7fb0ff] font-semibold"> · melhor preço</span>}
+                </span>
+                <b className="block mt-0.5 text-[20px] font-bold tabular-nums leading-tight">{brl(t.price)}</b>
+                <span className="block text-[12px] text-zinc-500 tabular-nums">{brl(t.price / t.minQuantity)} cada</span>
               </div>
             ))}
           </div>
-          <Link href={`/loja/${slug}/buscar`} className="mt-5 inline-flex items-center gap-2 h-11 px-5 rounded-[12px] bg-white text-black text-[14px] font-bold hover:bg-zinc-200 transition-colors">
-            Escolher títulos <ArrowRight className="w-4 h-4" />
-          </Link>
+
+          <div className="mt-5">
+            <Link href={`/loja/${slug}/buscar`} className="inline-flex items-center gap-2 h-10 px-4 rounded-[6px] bg-white text-black text-[14px] font-semibold hover:bg-zinc-200 transition-colors">
+              Escolher títulos <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function ComboRow({ combos }: { combos: ComboCard[] }) {
+  return (
+    <div className="mt-9 sm:mt-11">
+      <Track title="Combos">
+        {combos.map((c) => (
+          <ComboTile key={c.id} c={c} />
+        ))}
+      </Track>
+    </div>
+  );
+}
+
+function ComboTile({ c }: { c: ComboCard }) {
+  const { add } = useCart();
+  const [done, setDone] = useState(0);
+  useEffect(() => {
+    if (!done) return;
+    const t = window.setTimeout(() => setDone(0), 1500);
+    return () => window.clearTimeout(t);
+  }, [done]);
+  const covers = (c.coverUrl ? [c.coverUrl] : c.items.map((i) => i.coverUrl).filter(Boolean)).slice(0, 3) as string[];
+  return (
+    <article className="shrink-0 snap-start w-[300px] sm:w-[360px] rounded-[8px] border border-white/[0.08] bg-[#111216] hover:border-[#3b82f6]/60 transition-colors p-3 flex gap-3.5">
+      <span className="relative w-[92px] h-[132px] shrink-0">
+        {covers.map((src, k) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={src + k} src={src} alt="" loading="lazy" className="absolute top-0 w-[76px] h-[114px] object-cover rounded-[4px] ring-1 ring-black/70" style={{ left: k * 8, top: k * 6, zIndex: 3 - k }} />
+        ))}
+      </span>
+      <div className="min-w-0 flex-1 flex flex-col">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-[#7fb0ff]">{c.items.length} títulos</p>
+        <h3 className="mt-1 text-[15px] font-bold leading-snug line-clamp-2">{c.title}</h3>
+        <p className="mt-1 text-[12px] text-zinc-500 line-clamp-2">{c.description || c.items.map((i) => i.title).join(" · ")}</p>
+        <div className="mt-auto pt-2 flex items-end gap-2">
+          <div className="mr-auto">
+            {c.normalPrice > c.price && <span className="block text-[11.5px] text-zinc-500 line-through tabular-nums">{brl(c.normalPrice)}</span>}
+            <b className="text-[17px] tabular-nums">{brl(c.price)}</b>
+            {c.savingsPercentage > 0 && <span className="ml-1.5 text-[11.5px] font-semibold text-[#7fb0ff]">-{c.savingsPercentage}%</span>}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              add(c.id, true);
+              setDone((d) => d + 1);
+            }}
+            aria-label={`Adicionar o combo ${c.title} ao carrinho`}
+            className={`relative h-9 w-9 rounded-[6px] flex items-center justify-center transition-colors ${done ? "bg-white text-[#3b82f6]" : "bg-[#3b82f6] text-white hover:bg-[#2f74ea]"}`}
+          >
+            {done ? <Check key={done} className="w-[18px] h-[18px] animate-[wg-pop_.45s_ease-out]" strokeWidth={3} /> : <SolarCartLarge2BoldDuotone size={18} />}
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }

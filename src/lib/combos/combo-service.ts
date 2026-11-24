@@ -38,13 +38,18 @@ export class ComboService {
    * and server-verified savings calculations. Combos with fewer than 2 active products
    * are safely filtered out.
    */
-  static async getActiveCombos(storeId: string): Promise<ActiveComboDTO[]> {
+  static async getActiveCombos(
+    storeId: string,
+    opts: { comboStatus?: string; productStatus?: string } = {}
+  ): Promise<ActiveComboDTO[]> {
     if (!storeId) return [];
+    const comboStatus = opts.comboStatus || "active";
+    const productStatus = opts.productStatus || "active";
 
     const activeCombosFromDb = await db.query.combos.findMany({
       where: and(
         eq(combos.storeId, storeId),
-        eq(combos.status, "active"),
+        eq(combos.status, comboStatus),
         ne(combos.type, "progressive")
       ),
       orderBy: [asc(combos.position), desc(combos.createdAt)],
@@ -67,7 +72,7 @@ export class ComboService {
           (cp) =>
             cp.product &&
             cp.product.storeId === storeId &&
-            cp.product.status === "active"
+            cp.product.status === productStatus
         )
         .map((cp) => ({
           id: cp.product.id,
@@ -130,14 +135,14 @@ export class ComboService {
    * Retrieves the active progressive promotion for a given store, including its configured tiers
    * and eligible products list (if in specific_products mode).
    */
-  static async getActiveProgressivePromotion(storeId: string): Promise<ActiveProgressivePromotionDTO | null> {
+  static async getActiveProgressivePromotion(storeId: string, comboStatus: string = "active"): Promise<ActiveProgressivePromotionDTO | null> {
     if (!storeId) return null;
 
     const promoRecord = db.query.combos?.findFirst
       ? await db.query.combos.findFirst({
           where: and(
             eq(combos.storeId, storeId),
-            eq(combos.status, "active"),
+            eq(combos.status, comboStatus),
             eq(combos.type, "progressive")
           ),
           orderBy: [asc(combos.position), desc(combos.createdAt)],
@@ -186,7 +191,8 @@ export class ComboService {
    */
   static async calculateProgressivePricingForCart(
     storeId: string,
-    items: { productId: string | null; quantity: number; price: number; title?: string }[]
+    items: { productId: string | null; quantity: number; price: number; title?: string }[],
+    comboStatus: string = "active"
   ): Promise<ProgressivePricingEvaluation> {
     if (!storeId || !Array.isArray(items) || items.length === 0) {
       return {
@@ -198,7 +204,7 @@ export class ComboService {
       };
     }
 
-    const promotion = await ComboService.getActiveProgressivePromotion(storeId);
+    const promotion = await ComboService.getActiveProgressivePromotion(storeId, comboStatus);
     if (!promotion) {
       return {
         hasPromotion: false,

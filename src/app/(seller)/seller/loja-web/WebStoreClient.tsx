@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Globe,
+  KeyRound,
   LifeBuoy,
   Loader2,
   Mail,
@@ -23,10 +24,12 @@ import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { HeaderMeta } from "@/components/layout/HeaderMeta";
 import { BTN_PRI, BTN_SEC, Callout, INPUT, useToast } from "../fluxos/_components/flow-ui";
 import Toaster from "../fluxos/_components/Toaster";
-import { customerDetailAction, replyTicketAction, setCustomerStatusAction } from "./actions";
+import { customerDetailAction, replyTicketAction, resetLinkAction, setCustomerStatusAction } from "./actions";
 import WebProductsPane, { type WebProductView } from "./WebProductsPane";
 import ShowcasePane from "./ShowcasePane";
 import AppearancePane, { type BrandingView } from "./AppearancePane";
+import CombosPane from "./CombosPane";
+import type { WebComboView } from "@/lib/webstore/combos";
 import type { SectionConfig } from "@/lib/webstore/sections";
 
 interface Customer {
@@ -119,7 +122,11 @@ export default function WebStoreClient({
   branding,
   brandingReady,
   storeName,
+  webCombos,
+  miniAppPromo,
 }: {
+  webCombos: WebComboView[];
+  miniAppPromo: { title: string; tiers: { minQuantity: number; price: number }[] } | null;
   branding: BrandingView;
   brandingReady: boolean;
   storeName: string;
@@ -131,7 +138,7 @@ export default function WebStoreClient({
   webProducts: WebProductView[];
   sections: SectionConfig[];
 }) {
-  const [tab, setTab] = useState<"produtos" | "vitrine" | "aparencia" | "clientes" | "suporte">("produtos");
+  const [tab, setTab] = useState<"produtos" | "vitrine" | "combos" | "aparencia" | "clientes" | "suporte">("produtos");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Customer | null>(null);
   const toast = useToast();
@@ -204,11 +211,12 @@ export default function WebStoreClient({
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-1 mr-auto">
+        <div className="flex items-center gap-1 mr-auto max-w-full overflow-x-auto [scrollbar-width:none]">
           {(
             [
               ["produtos", "Produtos", webProducts.length],
               ["vitrine", "Vitrine", null],
+              ["combos", "Combos", webCombos.filter((c) => c.type === "curated").length],
               ["aparencia", "Aparência", null],
               ["clientes", "Clientes", customers.length],
               ["suporte", "Suporte", stats.openTickets],
@@ -219,7 +227,7 @@ export default function WebStoreClient({
               type="button"
               aria-pressed={tab === k}
               onClick={() => setTab(k)}
-              className={`inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[9px] text-[12.5px] font-medium transition-all ${
+              className={`shrink-0 inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[9px] text-[12.5px] font-medium transition-all ${
                 tab === k ? "bg-[linear-gradient(180deg,#24262d_0%,#1a1b20_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(255,255,255,0.09)]" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
               }`}
             >
@@ -239,6 +247,8 @@ export default function WebStoreClient({
         <WebProductsPane items={webProducts} ready={ready} />
       ) : tab === "vitrine" ? (
         <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} />
+      ) : tab === "combos" ? (
+        <CombosPane combos={webCombos} products={webProducts} miniApp={miniAppPromo} />
       ) : tab === "aparencia" ? (
         <AppearancePane initial={branding} ready={brandingReady} storeName={storeName} />
       ) : tab === "clientes" ? (
@@ -366,6 +376,7 @@ function TicketCard({ t, onOpenCustomer }: { t: Ticket; onOpenCustomer: (id: str
         </span>
       </div>
       <p className="text-[13.5px] text-zinc-300 whitespace-pre-line rounded-[11px] bg-black/20 border border-white/[0.05] p-3">{t.message}</p>
+      {t.subject === "Recuperar senha" && t.status !== "closed" && <ResetLink customerId={t.webCustomerId} customer={t.customer} via={t.contactVia} />}
       {t.sellerReply && (
         <div className="rounded-[11px] border border-[#3b82f6]/25 bg-[#3b82f6]/[0.06] p-3">
           <p className="text-[11.5px] font-semibold text-[#9cc2ff] mb-1">Sua resposta</p>
@@ -386,6 +397,57 @@ function TicketCard({ t, onOpenCustomer }: { t: Ticket; onOpenCustomer: (id: str
         </div>
       )}
     </article>
+  );
+}
+
+/** Gera o link de nova senha e ajuda a mandar pelo contato do cliente. */
+function ResetLink({ customerId, customer, via }: { customerId: string; customer: { name: string; email: string; whatsapp: string | null; telegram: string | null }; via: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const text = (u: string) => `Oi, ${customer.name.split(" ")[0]}! Aqui está o link para criar uma nova senha na loja (vale por 24 horas): ${u}`;
+  const copy = (v: string, msg: string) => navigator.clipboard?.writeText(v).then(() => toast(msg), () => {});
+  if (!url)
+    return (
+      <button
+        type="button"
+        className={BTN_SEC}
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await resetLinkAction(customerId);
+            if (!r.ok) toast(r.error, "err");
+            else setUrl(r.url);
+          })
+        }
+      >
+        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Gerar link de nova senha
+      </button>
+    );
+  const wa = customer.whatsapp ? waLink(customer.whatsapp) : null;
+  return (
+    <div className="rounded-[10px] border border-[#3b82f6]/25 bg-[#3b82f6]/[0.05] p-3 space-y-2.5">
+      <p className="text-[12px] text-zinc-400">Link pronto. Vale por 24 horas e só funciona uma vez. Mande pelo contato do cliente{via ? ` (prefere ${via === "whatsapp" ? "WhatsApp" : via === "telegram" ? "Telegram" : "e-mail"})` : ""}.</p>
+      <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} className={`${INPUT} w-full text-[12px] font-mono`} />
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={BTN_SEC} onClick={() => copy(text(url), "Mensagem com o link copiada.")}>
+          <Copy className="w-4 h-4" /> Copiar mensagem
+        </button>
+        {wa && (
+          <a href={`${wa}?text=${encodeURIComponent(text(url))}`} target="_blank" rel="noopener noreferrer" className={BTN_PRI}>
+            <MessageCircle className="w-4 h-4" /> Enviar no WhatsApp
+          </a>
+        )}
+        {customer.telegram && (
+          <a href={`https://t.me/${customer.telegram}`} target="_blank" rel="noopener noreferrer" className={BTN_SEC} onClick={() => copy(text(url), "Mensagem copiada. Cole no Telegram.")}>
+            <Send className="w-4 h-4" /> Abrir Telegram
+          </a>
+        )}
+        <a href={`mailto:${customer.email}?subject=${encodeURIComponent("Nova senha da loja")}&body=${encodeURIComponent(text(url))}`} className={BTN_SEC}>
+          <Mail className="w-4 h-4" /> E-mail
+        </a>
+      </div>
+    </div>
   );
 }
 
@@ -437,6 +499,7 @@ function CustomerDrawer({ c, tickets, onClose }: { c: Customer; tickets: Ticket[
         <div className="p-5 space-y-6">
           <section className="space-y-3">
             <ContactButtons c={c} />
+            <ResetLink customerId={c.id} customer={c} via={c.whatsapp ? "whatsapp" : c.telegram ? "telegram" : "email"} />
             <dl className="grid grid-cols-2 gap-3 text-[12.5px]">
               {[
                 ["WhatsApp", c.whatsapp || "—"],

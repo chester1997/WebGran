@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ExternalLink, LifeBuoy, LogOut, MessageSquare, Package, PlayCircle, Receipt } from "lucide-react";
+import { ExternalLink, LifeBuoy, LogOut, MessageSquare, Package, PlayCircle, Receipt, UserRound } from "lucide-react";
 import { logoutAction } from "../actions";
 import { brl, BTN_GHOST, CARD } from "../_components/ui";
+import { Avatar, ProfilePane } from "./ProfilePane";
 
 interface Owned {
   accessId: string;
@@ -54,12 +55,12 @@ export function AccountClient({
   tickets,
 }: {
   slug: string;
-  customer: { name: string; email: string; whatsapp: string | null; telegram: string | null; createdAt: string };
+  customer: { name: string; email: string; whatsapp: string | null; telegram: string | null; createdAt: string; avatarUrl: string | null };
   owned: Owned[];
   orders: Order[];
   tickets: Ticket[];
 }) {
-  const [tab, setTab] = useState<"produtos" | "pedidos" | "suporte">("produtos");
+  const [tab, setTab] = useState<"produtos" | "pedidos" | "suporte" | "perfil">("produtos");
   const router = useRouter();
   const [pending, start] = useTransition();
 
@@ -67,11 +68,15 @@ export function AccountClient({
     { k: "produtos" as const, l: "Meus produtos", n: owned.length, icon: Package },
     { k: "pedidos" as const, l: "Pedidos", n: orders.length, icon: Receipt },
     { k: "suporte" as const, l: "Suporte", n: tickets.length, icon: MessageSquare },
+    { k: "perfil" as const, l: "Perfil e senha", n: null, icon: UserRound },
   ];
 
   return (
-    <div className="w-full max-w-[1500px] px-4 sm:px-8 lg:px-10 pt-8 sm:pt-12">
-      <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-7">
+    <div className="w-full px-4 sm:px-8 lg:px-10 pt-8 sm:pt-12 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-7">
+        <button type="button" onClick={() => setTab("perfil")} className="shrink-0 self-start sm:self-auto rounded-full" aria-label="Editar perfil">
+          <Avatar url={customer.avatarUrl} name={customer.name} size={64} />
+        </button>
         <div className="mr-auto min-w-0">
           <p className="text-[13px] text-zinc-500">Minha conta</p>
           <h1 className="text-[26px] font-semibold tracking-tight truncate">Olá, {customer.name.split(" ")[0]}</h1>
@@ -110,7 +115,7 @@ export function AccountClient({
             }`}
           >
             <t.icon className="w-4 h-4" /> {t.l}
-            <span className="text-[11.5px] text-zinc-500 tabular-nums">{t.n}</span>
+            {t.n !== null && <span className="text-[11.5px] text-zinc-500 tabular-nums">{t.n}</span>}
           </button>
         ))}
       </div>
@@ -152,6 +157,8 @@ export function AccountClient({
             })}
           </div>
         ))}
+
+      {tab === "perfil" && <ProfilePane slug={slug} customer={customer} />}
 
       {tab === "pedidos" &&
         (orders.length === 0 ? (

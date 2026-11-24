@@ -225,3 +225,57 @@ export async function saveBrandingAction(raw: { displayName?: string; logoUrl?: 
   revalidatePath(`/loja/${c.store.slug}`, "layout");
   return { ok: true as const };
 }
+
+/* ------------------------- combos da Loja Web ------------------------- */
+
+export async function saveWebProgressiveAction(raw: import("@/lib/webstore/combos").ProgressiveInput) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { saveWebProgressive } = await import("@/lib/webstore/combos");
+  const r = await saveWebProgressive(c.store.id, raw);
+  if (r.ok) {
+    revalidatePath("/seller/loja-web");
+    revalidatePath(`/loja/${c.store.slug}`, "layout");
+  }
+  return r;
+}
+
+export async function saveWebComboAction(raw: import("@/lib/webstore/combos").ComboInput) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { saveWebCombo } = await import("@/lib/webstore/combos");
+  const r = await saveWebCombo(c.store.id, raw);
+  if (r.ok) {
+    revalidatePath("/seller/loja-web");
+    revalidatePath(`/loja/${c.store.slug}`, "layout");
+  }
+  return r;
+}
+
+export async function archiveWebComboAction(id: string) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { archiveWebCombo } = await import("@/lib/webstore/combos");
+  const r = await archiveWebCombo(c.store.id, String(id || ""));
+  if (r.ok) {
+    revalidatePath("/seller/loja-web");
+    revalidatePath(`/loja/${c.store.slug}`, "layout");
+  }
+  return r;
+}
+
+/** Link de nova senha para um cliente da Loja Web (vale 24 h e deixa de valer quando a senha muda). */
+export async function resetLinkAction(webCustomerId: string) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  if (!/^[0-9a-f-]{36}$/i.test(String(webCustomerId || ""))) return { ok: false as const, error: "Cliente inválido." };
+  const cust = await db.query.webCustomers.findFirst({ where: and(eq(webCustomers.id, webCustomerId), eq(webCustomers.storeId, c.store.id)) });
+  if (!cust) return { ok: false as const, error: "Cliente não encontrado." };
+  if (cust.status !== "active") return { ok: false as const, error: "Este cliente está bloqueado. Libere antes de gerar o link." };
+  const { makeResetToken } = await import("@/lib/webstore/profile");
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "www.webgran.online";
+  const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  return { ok: true as const, url: `${proto}://${host}/loja/${c.store.slug}/nova-senha?t=${makeResetToken(cust)}` };
+}
