@@ -133,7 +133,11 @@ export default function WebStoreClient({
   storeName,
   webCombos,
   miniAppPromo,
+  heroImages,
+  heroImagesReady,
 }: {
+  heroImages: Record<string, string>;
+  heroImagesReady: boolean;
   webCombos: WebComboView[];
   miniAppPromo: { title: string; tiers: { minQuantity: number; price: number }[] } | null;
   branding: BrandingView;
@@ -249,7 +253,7 @@ export default function WebStoreClient({
       {tab === "produtos" ? (
         <WebProductsPane items={webProducts} ready={ready} />
       ) : tab === "vitrine" ? (
-        <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} />
+        <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} heroImages={heroImages} heroImagesReady={heroImagesReady} />
       ) : tab === "combos" ? (
         <CombosPane combos={webCombos} products={webProducts} miniApp={miniAppPromo} promoImage={branding.promoImageUrl} />
       ) : tab === "aparencia" ? (

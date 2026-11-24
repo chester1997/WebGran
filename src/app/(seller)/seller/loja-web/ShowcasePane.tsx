@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, BadgePercent, Check, Crown, GalleryHorizontal, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BadgePercent, Check, Crown, ImagePlus, GalleryHorizontal, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
 import type { SectionConfig, SectionKind } from "@/lib/webstore/sections";
 import { BTN_PRI, BTN_SEC, Callout, INPUT, Modal, useToast } from "../fluxos/_components/flow-ui";
-import { saveSectionsAction } from "./actions";
+import { saveHeroImageAction, saveSectionsAction } from "./actions";
 import type { WebProductView } from "./WebProductsPane";
 
 const SURFACE =
@@ -19,7 +19,19 @@ const KIND_INFO: Record<SectionKind, { label: string; icon: typeof Crown; max: n
   carousel: { label: "Carrossel", icon: GalleryHorizontal, max: 40, autoLabel: "Automático: os mais recentes" },
 };
 
-export default function ShowcasePane({ initial, ready, products }: { initial: SectionConfig[]; ready: boolean; products: WebProductView[] }) {
+export default function ShowcasePane({
+  initial,
+  ready,
+  products,
+  heroImages,
+  heroImagesReady,
+}: {
+  initial: SectionConfig[];
+  ready: boolean;
+  products: WebProductView[];
+  heroImages: Record<string, string>;
+  heroImagesReady: boolean;
+}) {
   const [list, setList] = useState<SectionConfig[]>(initial);
   const [picker, setPicker] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -145,6 +157,19 @@ export default function ShowcasePane({ initial, ready, products }: { initial: Se
                       </button>
                     ))}
                   </div>
+                  {s.kind === "hero" && s.mode === "manual" && picked.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[12px] text-zinc-500">
+                        Imagem horizontal de cada destaque: <b className="text-zinc-300">1920 × 820 px</b>. Deixe o rosto ou o assunto na <b className="text-zinc-300">parte da direita</b>; a esquerda fica escura atrás do título. Sem imagem, a loja usa a capa do lado direito.
+                      </p>
+                      {!heroImagesReady && <p className="text-[12px] text-amber-300">Rode a migration 0032_web_hero_images.sql no Neon para salvar as imagens.</p>}
+                      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                        {picked.map((p) => (
+                          <HeroImageSlot key={p.id} product={p} initial={heroImages[p.id] || null} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {s.mode === "manual" && (
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {picked.map((p, k) => (
@@ -179,6 +204,76 @@ export default function ShowcasePane({ initial, ready, products }: { initial: Se
             setPicker(null);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+function HeroImageSlot({ product, initial }: { product: WebProductView; initial: string | null }) {
+  const [url, setUrl] = useState(initial || "");
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const router = useRouter();
+  const persist = async (next: string | null) => {
+    const r = await saveHeroImageAction(product.id, next);
+    if (!r.ok) {
+      toast(r.error, "err");
+      return false;
+    }
+    router.refresh();
+    return true;
+  };
+  const upload = async (file: File) => {
+    setBusy(true);
+    try {
+      const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+      const res = await uploadOptimizedImage(file, "banners", { maxWidth: 2400, maxHeight: 1200, quality: 0.86 });
+      if (await persist(res.url)) {
+        setUrl(res.url);
+        toast("Imagem do destaque salva.");
+      }
+    } catch (e) {
+      toast((e as Error).message || "Não foi possível enviar a imagem.", "err");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="min-w-0">
+      <label className="relative block aspect-[1920/820] rounded-[8px] overflow-hidden border border-dashed border-white/[0.14] bg-[#0b0d12] hover:border-[#3b82f6]/60 cursor-pointer">
+        {url ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+            <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#07080a_0%,rgba(7,8,10,0.92)_26%,rgba(7,8,10,0)_50%)]" />
+          </>
+        ) : (
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[11.5px] text-zinc-500">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+            Enviar imagem horizontal
+          </span>
+        )}
+        {busy && url && (
+          <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <Loader2 className="w-4 h-4 animate-spin" />
+          </span>
+        )}
+        <span className="absolute left-2.5 bottom-2 right-2.5 text-[11.5px] font-semibold text-white truncate drop-shadow">{product.title}</span>
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+      </label>
+      {url && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            if (await persist(null)) setUrl("");
+            setBusy(false);
+          }}
+          className="mt-1 text-[11.5px] text-zinc-500 hover:text-red-300"
+        >
+          Remover imagem
+        </button>
       )}
     </div>
   );

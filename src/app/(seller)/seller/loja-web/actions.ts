@@ -294,3 +294,16 @@ export async function savePromoImageAction(url: string | null) {
   revalidatePath(`/loja/${c.store.slug}`, "layout");
   return { ok: true as const };
 }
+
+/** Imagem horizontal de um título nos Destaques do topo. */
+export async function saveHeroImageAction(productId: string, url: string | null) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { saveHeroImage } = await import("@/lib/webstore/hero-images");
+  const r = await saveHeroImage(c.store.id, String(productId || ""), url);
+  if (r.ok) {
+    revalidatePath("/seller/loja-web");
+    revalidatePath(`/loja/${c.store.slug}`, "layout");
+  }
+  return r;
+}

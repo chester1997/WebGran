@@ -1,5 +1,6 @@
 import { 
-  pgTable, 
+  pgTable,
+  primaryKey,
   text, 
   timestamp, 
   uuid, 
@@ -1869,3 +1870,13 @@ export const sellerContacts = pgTable('seller_contacts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// Loja Web: imagem horizontal de cada título nos Destaques do topo
+export const webHeroImages = pgTable('web_hero_images', {
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  imageUrl: text('image_url').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.storeId, t.productId] }),
+}));

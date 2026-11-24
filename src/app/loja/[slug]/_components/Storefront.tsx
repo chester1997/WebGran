@@ -31,6 +31,8 @@ export interface CardItem {
   duration: string | null;
   videoCount: number;
   isNew: boolean;
+  /** Imagem horizontal definida na Vitrine para os Destaques do topo. */
+  heroUrl?: string | null;
 }
 
 interface Row {
@@ -105,27 +107,26 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
     return () => window.clearInterval(t);
   }, [items.length]);
 
-  const wide = p.bannerUrl;
   return (
     <section className="relative h-[86svh] min-h-[540px] max-h-[820px] overflow-hidden" aria-roledescription="carrossel" aria-label="Destaques">
-      {items.map((it, k) => (
-        <div key={it.id} aria-hidden={k !== i} className={`absolute inset-0 transition-opacity duration-1000 ${k === i ? "opacity-100" : "opacity-0"}`}>
-          {it.bannerUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={it.bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-[center_25%]" />
-          ) : (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {it.coverUrl && <img src={it.coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top brightness-[0.8] md:object-center md:scale-125 md:blur-[32px] md:brightness-[0.5]" />}
-              {it.coverUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.coverUrl} alt="" className="hidden md:block absolute right-[7%] top-1/2 -translate-y-[54%] h-[70%] aspect-[2/3] object-cover rounded-[8px] shadow-[0_40px_90px_-20px_rgba(0,0,0,0.95)] ring-1 ring-white/10" />
-              )}
-            </>
-          )}
-        </div>
-      ))}
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,#07080a_3%,rgba(7,8,10,0.82)_34%,rgba(7,8,10,0.08)_72%),linear-gradient(0deg,#07080a_2%,rgba(7,8,10,0)_42%),linear-gradient(180deg,rgba(7,8,10,0.55)_0%,rgba(7,8,10,0)_22%)]" />
+      {items.map((it, k) => {
+        const wide = it.heroUrl || it.bannerUrl;
+        return (
+          <div key={it.id} aria-hidden={k !== i} className={`absolute inset-0 transition-opacity duration-1000 ${k === i ? "opacity-100" : "opacity-0"}`}>
+            {wide ? (
+              // Imagem horizontal: ocupa a área toda, presa à direita
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={wide} alt="" className="absolute inset-0 w-full h-full object-cover object-[70%_center] md:object-right" />
+            ) : it.coverUrl ? (
+              // Sem imagem horizontal: a capa nítida do lado direito, sem borrão e sem card
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={it.coverUrl} alt="" className="absolute inset-y-0 right-0 h-full w-full md:w-[58%] object-cover object-top" />
+            ) : null}
+          </div>
+        );
+      })}
+      {/* Preto só atrás do texto, depois a imagem aparece limpa; fundo funde com as fileiras */}
+      <div className="absolute inset-0 bg-[linear-gradient(0deg,#07080a_0%,rgba(7,8,10,0.85)_18%,rgba(7,8,10,0)_55%)] md:bg-[linear-gradient(90deg,#07080a_0%,#07080a_22%,rgba(7,8,10,0.78)_34%,rgba(7,8,10,0.25)_46%,rgba(7,8,10,0)_56%),linear-gradient(0deg,#07080a_0%,rgba(7,8,10,0)_26%),linear-gradient(180deg,rgba(7,8,10,0.45)_0%,rgba(7,8,10,0)_16%)]" />
 
       <div className="absolute z-10 left-4 right-4 sm:left-8 lg:left-10 bottom-28 sm:bottom-44 max-w-[600px]">
         <p className="flex items-center gap-2 text-[11.5px] sm:text-[12px] font-bold uppercase tracking-[0.2em] text-zinc-300">
@@ -168,7 +169,6 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
           ))}
         </div>
       )}
-      {!wide && <span className="sr-only">{p.title}</span>}
     </section>
   );
 }

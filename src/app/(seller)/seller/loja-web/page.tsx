@@ -7,6 +7,7 @@ import { listWebProducts } from "@/lib/webstore/products";
 import { getSections } from "@/lib/webstore/sections";
 import { getWebBranding } from "@/lib/webstore/settings";
 import { listWebCombos, miniAppProgressiveTiers } from "@/lib/webstore/combos";
+import { getHeroImages } from "@/lib/webstore/hero-images";
 import SetupStoreClient from "../SetupStoreClient";
 import WebStoreClient from "./WebStoreClient";
 
@@ -26,6 +27,7 @@ export default async function LojaWebPage() {
     listWebCombos(store.id),
     miniAppProgressiveTiers(store.id),
   ]);
+  const hero = await getHeroImages(store.id);
 
   return (
     <WebStoreClient
@@ -36,6 +38,8 @@ export default async function LojaWebPage() {
       storeName={store.name}
       webCombos={webCombos}
       miniAppPromo={miniAppPromo}
+      heroImages={hero.images}
+      heroImagesReady={hero.ready}
       sections={showcase.sections}
       webProducts={webProducts.map(({ createdAt: _c, position: _p, ...p }) => p)}
       storeSlug={store.slug}
