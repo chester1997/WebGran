@@ -968,3 +968,45 @@ export function SolarShopBoldDuotone({ size = 18, className, ...props }: SolarIc
 }
 
 export const SolarSellerWebStoreIcon = SolarShopBoldDuotone;
+
+/**
+ * Loja Web: Início (home-smile-bold-duotone)
+ */
+export function SolarHomeBoldDuotone({ size = 18, className, ...props }: SolarIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className} {...props}>
+      <g fill="currentColor">
+        <path opacity=".5" d="M2 12.204c0-2.289 0-3.433.52-4.381.518-.949 1.467-1.537 3.364-2.715l2-1.241C9.889 2.622 10.892 2 12 2s2.11.622 4.116 1.867l2 1.241c1.897 1.178 2.846 1.766 3.365 2.715S22 9.915 22 12.203v1.522c0 3.9 0 5.851-1.172 7.063S17.771 22 14 22h-4c-3.771 0-5.657 0-6.828-1.212S2 17.626 2 13.725z" />
+        <path d="M9.447 15.398a.75.75 0 0 0-.894 1.205A5.77 5.77 0 0 0 12 17.75a5.77 5.77 0 0 0 3.447-1.147.75.75 0 0 0-.894-1.206A4.27 4.27 0 0 1 12 16.25a4.27 4.27 0 0 1-2.553-.852" />
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Loja Web: Buscar (magnifer-bold-duotone)
+ */
+export function SolarMagniferBoldDuotone({ size = 18, className, ...props }: SolarIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className} {...props}>
+      <g fill="currentColor">
+        <circle opacity=".5" cx="11.5" cy="11.5" r="9.5" />
+        <path fillRule="evenodd" clipRule="evenodd" d="M18.47 18.47a.75.75 0 0 1 1.06 0l2 2a.75.75 0 0 1-1.06 1.06l-2-2a.75.75 0 0 1 0-1.06" />
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Loja Web: recolher / expandir menu (sidebar-minimalistic-bold-duotone, desenho próprio)
+ */
+export function SolarSidebarBoldDuotone({ size = 18, className, ...props }: SolarIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className} {...props}>
+      <g fill="currentColor">
+        <path opacity=".5" d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2s7.071 0 8.535 1.464C22 4.93 22 7.286 22 12s0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12" />
+        <path d="M8.25 2.03V21.97a.75.75 0 0 0 1.5 0V2.03a.75.75 0 0 0-1.5 0" />
+      </g>
+    </svg>
+  );
+}

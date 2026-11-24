@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CheckCircle2, Home, LifeBuoy, MonitorPlay, Search, ShoppingBag } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import {
+  SolarCartLarge2BoldDuotone,
+  SolarChatRoundDotsBoldDuotone,
+  SolarClapperboardPlayBoldDuotone,
+  SolarHomeBoldDuotone,
+  SolarMagniferBoldDuotone,
+  SolarSidebarBoldDuotone,
+} from "@/components/icons/solar/seller-icons";
 import { CartProvider, useCart } from "./cart";
 import { SupportModal } from "./SupportModal";
 
@@ -37,6 +45,8 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
   const pathname = usePathname() || "";
   const [support, setSupport] = useState(false);
   const [solid, setSolid] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [bump, setBump] = useState(0);
   const base = `/loja/${store.slug}`;
   const isHome = pathname === base;
   const isAuth = pathname.startsWith(`${base}/entrar`) || pathname.startsWith(`${base}/cadastro`);
@@ -48,44 +58,101 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
     return () => window.removeEventListener("scroll", on);
   }, []);
 
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- preferência salva do menu
+      if (localStorage.getItem("wg_loja_rail") === "open") setOpen(true);
+    } catch {
+      // armazenamento indisponível
+    }
+  }, []);
+
+  // pulinho no ícone do carrinho quando entra produto novo
+  const [lastCount, setLastCount] = useState(count);
+  if (count !== lastCount) {
+    setLastCount(count);
+    if (ready && count > lastCount) setBump((b) => b + 1);
+  }
+
+  const toggleRail = () =>
+    setOpen((o) => {
+      try {
+        localStorage.setItem("wg_loja_rail", o ? "closed" : "open");
+      } catch {
+        // ignora
+      }
+      return !o;
+    });
+
+  const initial = store.name.trim().charAt(0).toUpperCase();
+  const logo = (size: string, text: string) =>
+    store.logoUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={store.logoUrl} alt="" className={`${size} rounded-[11px] object-cover ring-1 ring-white/10 shrink-0`} />
+    ) : (
+      <span className={`${size} ${text} rounded-[11px] bg-[#3b82f6] text-white font-black flex items-center justify-center shrink-0 shadow-[0_8px_24px_-6px_rgba(59,130,246,0.7)]`}>{initial}</span>
+    );
+
   const nav = [
-    { href: base, label: "Início", icon: Home, on: isHome },
-    { href: `${base}/buscar`, label: "Buscar", icon: Search, on: pathname.startsWith(`${base}/buscar`) },
-    { href: customer ? `${base}/conta` : `${base}/entrar`, label: "Meus vídeos", icon: MonitorPlay, on: pathname.startsWith(`${base}/conta`) },
-    { href: `${base}/carrinho`, label: "Carrinho", icon: ShoppingBag, on: pathname.startsWith(`${base}/carrinho`), badge: ready && count > 0 ? count : 0 },
+    { href: base, label: "Início", icon: SolarHomeBoldDuotone, on: isHome },
+    { href: `${base}/buscar`, label: "Buscar", icon: SolarMagniferBoldDuotone, on: pathname.startsWith(`${base}/buscar`) },
+    { href: customer ? `${base}/conta` : `${base}/entrar`, label: "Meus vídeos", icon: SolarClapperboardPlayBoldDuotone, on: pathname.startsWith(`${base}/conta`) },
+    { href: `${base}/carrinho`, label: "Carrinho", icon: SolarCartLarge2BoldDuotone, on: pathname.startsWith(`${base}/carrinho`), badge: ready && count > 0 ? count : 0 },
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-[#07080a] text-zinc-100 [--rail:0px] lg:[--rail:76px]">
-      {/* Menu lateral (computador) */}
-      <nav aria-label="Navegação da loja" className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-[76px] flex-col items-center gap-1.5 pt-5 bg-gradient-to-r from-[#07080a] via-[#07080a]/80 to-transparent">
-        <Link href={base} aria-label={store.name} className="mb-6">
-          {store.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={store.logoUrl} alt="" className="w-10 h-10 rounded-[11px] object-cover ring-1 ring-white/10" />
-          ) : (
-            <span className="w-10 h-10 rounded-[11px] bg-[#3b82f6] text-white font-black text-[16px] flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(59,130,246,0.7)]">{store.name.trim().charAt(0).toUpperCase()}</span>
-          )}
-        </Link>
+    <div className="min-h-[100dvh] bg-[#07080a] text-zinc-100" style={{ ["--rail" as string]: open ? "232px" : "76px" }}>
+      {/* Menu lateral (computador): recolhe e expande */}
+      <nav
+        aria-label="Navegação da loja"
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 w-[var(--rail)] flex-col gap-1 px-3.5 pt-4 pb-5 transition-[width,background-color] duration-300 ease-out ${open ? "bg-[#0b0c0f]" : "bg-[#07080a]"}`}
+      >
+        <div className={`flex items-center h-12 mb-5 ${open ? "px-1" : "justify-center"}`}>
+          <Link href={base} aria-label={store.name} className="flex items-center gap-3 min-w-0">
+            {logo("w-10 h-10", "text-[16px]")}
+            {open && <span className="font-extrabold tracking-tight text-[15.5px] truncate">{store.name}</span>}
+          </Link>
+        </div>
         {nav.map((n) => (
-          <Link key={n.label} href={n.href} title={n.label} aria-label={n.label} aria-current={n.on ? "page" : undefined} className={`group relative w-12 h-12 rounded-[13px] flex items-center justify-center transition-colors ${n.on ? "text-white" : "text-zinc-500 hover:text-white hover:bg-white/[0.06]"}`}>
-            <n.icon className="w-[22px] h-[22px]" />
-            {n.on && <span className="absolute bottom-[7px] w-4 h-[3px] rounded-full bg-[#3b82f6]" />}
-            {n.badge ? <span className="absolute top-1.5 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-[#3b82f6] text-[10px] font-bold flex items-center justify-center tabular-nums">{n.badge}</span> : null}
-            <span className="pointer-events-none absolute left-[58px] whitespace-nowrap rounded-[8px] bg-[#18191d] border border-white/10 px-2.5 py-1 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">{n.label}</span>
+          <Link
+            key={n.label}
+            href={n.href}
+            title={open ? undefined : n.label}
+            aria-label={n.label}
+            aria-current={n.on ? "page" : undefined}
+            className={`group relative h-12 rounded-[13px] flex items-center transition-colors ${open ? "gap-3.5 px-3.5" : "justify-center"} ${
+              n.on ? "text-white bg-white/[0.07]" : "text-zinc-500 hover:text-white hover:bg-white/[0.05]"
+            }`}
+          >
+            <span key={n.badge !== undefined ? bump : undefined} className={`relative ${n.badge !== undefined && bump ? "animate-[wg-bump_.6s_ease-out]" : ""}`}>
+              <n.icon size={23} className={n.on ? "text-[#3b82f6]" : ""} />
+              {n.badge ? <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-[#3b82f6] text-white text-[10px] font-bold flex items-center justify-center tabular-nums ring-2 ring-[#07080a]">{n.badge}</span> : null}
+            </span>
+            {open ? (
+              <span className="text-[14px] font-medium truncate">{n.label}</span>
+            ) : (
+              <span className="pointer-events-none absolute left-[58px] whitespace-nowrap rounded-[8px] bg-[#18191d] border border-white/10 px-2.5 py-1 text-[12px] text-white opacity-0 group-hover:opacity-100 transition-opacity">{n.label}</span>
+            )}
+            {n.on && !open && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-[#3b82f6]" />}
           </Link>
         ))}
-        <button type="button" onClick={() => setSupport(true)} title="Suporte" aria-label="Suporte" className="group relative mt-auto mb-5 w-12 h-12 rounded-[13px] flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/[0.06]">
-          <LifeBuoy className="w-[22px] h-[22px]" />
-          <span className="pointer-events-none absolute left-[58px] whitespace-nowrap rounded-[8px] bg-[#18191d] border border-white/10 px-2.5 py-1 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">Suporte</span>
-        </button>
+        <div className="mt-auto space-y-1">
+          <button type="button" onClick={() => setSupport(true)} title={open ? undefined : "Suporte"} aria-label="Suporte" className={`group relative w-full h-12 rounded-[13px] flex items-center text-zinc-500 hover:text-white hover:bg-white/[0.05] transition-colors ${open ? "gap-3.5 px-3.5" : "justify-center"}`}>
+            <SolarChatRoundDotsBoldDuotone size={23} />
+            {open ? <span className="text-[14px] font-medium">Suporte</span> : <span className="pointer-events-none absolute left-[58px] whitespace-nowrap rounded-[8px] bg-[#18191d] border border-white/10 px-2.5 py-1 text-[12px] text-white opacity-0 group-hover:opacity-100 transition-opacity">Suporte</span>}
+          </button>
+          <button type="button" onClick={toggleRail} aria-expanded={open} aria-label={open ? "Recolher menu" : "Expandir menu"} title={open ? undefined : "Expandir menu"} className={`w-full h-11 rounded-[13px] flex items-center text-zinc-500 hover:text-white hover:bg-white/[0.05] transition-colors ${open ? "gap-3.5 px-3.5" : "justify-center"}`}>
+            <SolarSidebarBoldDuotone size={21} className={open ? "" : "-scale-x-100"} />
+            {open && <span className="text-[13px] font-medium">Recolher menu</span>}
+          </button>
+        </div>
       </nav>
 
       {/* Topo */}
-      <header className={`fixed top-0 right-0 left-0 lg:left-[76px] z-30 h-16 flex items-center gap-3 px-4 sm:px-8 transition-[background,border-color] duration-300 ${solid || !isHome ? "bg-[#07080a]/90 backdrop-blur-xl border-b border-white/[0.06]" : "bg-gradient-to-b from-black/70 to-transparent border-b border-transparent"}`}>
+      <header className={`fixed top-0 right-0 left-0 lg:left-[var(--rail)] z-30 h-16 flex items-center gap-3 px-4 sm:px-8 transition-[left,background-color,box-shadow] duration-300 ${solid || !isHome ? "bg-[#07080a] shadow-[0_14px_28px_-14px_rgba(0,0,0,0.95)]" : "bg-transparent"}`}>
         <Link href={base} className="flex items-center gap-2.5 min-w-0 mr-auto">
-          <span className="lg:hidden w-8 h-8 rounded-[9px] bg-[#3b82f6] text-white font-black text-[14px] flex items-center justify-center shrink-0">{store.name.trim().charAt(0).toUpperCase()}</span>
-          <span className="font-extrabold tracking-tight text-[17px] truncate">{store.name}</span>
+          <span className="lg:hidden">{logo("w-8 h-8", "text-[14px]")}</span>
+          <span className={`font-extrabold tracking-tight text-[17px] truncate ${open ? "lg:invisible" : ""}`}>{store.name}</span>
         </Link>
         {customer ? (
           <Link href={`${base}/conta`} className="inline-flex items-center gap-2 h-9 pl-1 pr-3 rounded-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-[13px] font-medium transition-colors">
@@ -106,9 +173,9 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
         )}
       </header>
 
-      <main className={`lg:pl-[76px] pb-24 lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>{children}</main>
+      <main className={`lg:pl-[var(--rail)] transition-[padding] duration-300 pb-24 lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>{children}</main>
 
-      <footer className="lg:pl-[76px] border-t border-white/[0.06] mb-16 lg:mb-0">
+      <footer className="lg:pl-[var(--rail)] transition-[padding] duration-300 border-t border-white/[0.06] mb-16 lg:mb-0">
         <div className="px-4 sm:px-8 lg:px-10 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-zinc-500">
           <span>© {new Date().getFullYear()} {store.name} · Pagamento seguro via PIX · Assista no celular ou no computador</span>
           <button type="button" onClick={() => setSupport(true)} className="text-zinc-400 hover:text-white transition-colors">
@@ -121,13 +188,13 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
       <nav aria-label="Navegação da loja" className="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[62px] grid grid-cols-5 bg-[#07080a]/95 backdrop-blur-xl border-t border-white/[0.07]">
         {nav.map((n) => (
           <Link key={n.label} href={n.href} aria-current={n.on ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium ${n.on ? "text-white" : "text-zinc-500"}`}>
-            <n.icon className="w-[21px] h-[21px]" />
+            <n.icon size={22} className={n.on ? "text-[#3b82f6]" : ""} />
             {n.label}
             {n.badge ? <span className="absolute top-1.5 left-1/2 ml-2 min-w-[16px] h-4 px-1 rounded-full bg-[#3b82f6] text-[9.5px] font-bold text-white flex items-center justify-center">{n.badge}</span> : null}
           </Link>
         ))}
         <button type="button" onClick={() => setSupport(true)} className="flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium text-zinc-500">
-          <LifeBuoy className="w-[21px] h-[21px]" /> Suporte
+          <SolarChatRoundDotsBoldDuotone size={22} /> Suporte
         </button>
       </nav>
 

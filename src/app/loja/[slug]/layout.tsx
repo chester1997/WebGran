@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { getWebCustomer, getWebStore } from "@/lib/webstore/web-store";
+import { getWebBranding } from "@/lib/webstore/settings";
 import { StoreShell } from "./_components/StoreShell";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -16,15 +17,16 @@ export default async function LojaLayout({
   const { slug } = await params;
   const store = await getWebStore(slug);
   if (!store) notFound();
-  const customer = await getWebCustomer(store.id);
+  const [customer, look] = await Promise.all([getWebCustomer(store.id), getWebBranding(store.id)]);
+  const name = look.branding.displayName || store.name;
   return (
     <>
-      <title>{store.name}</title>
+      <title>{name}</title>
       <StoreShell
         store={{
           slug: store.slug,
-          name: store.name,
-          logoUrl: store.logoUrl,
+          name,
+          logoUrl: look.branding.logoUrl || store.logoUrl,
           supportType: store.supportType,
           supportValue: store.supportValue,
         }}

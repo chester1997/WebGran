@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, Play, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Info, Play, Sparkles } from "lucide-react";
+import { SolarCartLarge2BoldDuotone } from "@/components/icons/solar/seller-icons";
 import { useCart } from "./cart";
 import { brl, DURATION_LABEL } from "./ui";
 
@@ -36,9 +37,11 @@ export function Storefront({
   hero,
   rows,
   promo,
+  promoImage = null,
   topId = null,
 }: {
   topId?: string | null;
+  promoImage?: string | null;
   slug: string;
   storeName: string;
   notReady: boolean;
@@ -54,6 +57,10 @@ export function Storefront({
       </div>
     );
   }
+  // a faixa de promoção fica logo abaixo do primeiro carrossel (ou no fim, se não houver)
+  const firstCarousel = rows.findIndex((r) => r.kind === "carousel");
+  const promoAfter = firstCarousel >= 0 ? firstCarousel : rows.length - 1;
+  const covers = Array.from(new Map([...hero, ...rows.flatMap((r) => r.items)].filter((x) => x.coverUrl).map((x) => [x.id, x.coverUrl as string])).values()).slice(0, 5);
   return (
     <div className="overflow-x-clip">
       {hero.length > 0 && <Hero slug={slug} items={hero} topId={topId} />}
@@ -61,10 +68,10 @@ export function Storefront({
         {rows.map((r, i) => (
           <div key={r.key}>
             {r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}
-            {promo && i === Math.min(1, rows.length - 1) && <PromoStrip promo={promo} />}
+            {promo && i === promoAfter && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
           </div>
         ))}
-        {promo && rows.length === 0 && <PromoStrip promo={promo} />}
+        {promo && rows.length === 0 && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
       </div>
     </div>
   );
@@ -103,7 +110,7 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
           )}
         </div>
       ))}
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,#07080a_3%,rgba(7,8,10,0.82)_34%,rgba(7,8,10,0.08)_72%),linear-gradient(0deg,#07080a_2%,rgba(7,8,10,0)_42%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,#07080a_3%,rgba(7,8,10,0.82)_34%,rgba(7,8,10,0.08)_72%),linear-gradient(0deg,#07080a_2%,rgba(7,8,10,0)_42%),linear-gradient(180deg,rgba(7,8,10,0.55)_0%,rgba(7,8,10,0)_22%)]" />
 
       <div className="absolute z-10 left-4 right-4 sm:left-8 lg:left-10 bottom-28 sm:bottom-44 max-w-[600px]">
         <p className="flex items-center gap-2 text-[11.5px] sm:text-[12px] font-bold uppercase tracking-[0.2em] text-zinc-300">
@@ -166,7 +173,7 @@ function Track({ title, children, link }: { title: string; children: React.React
         <button type="button" aria-label="Voltar" onClick={() => scroll(-1)} className="hidden lg:flex absolute left-0 top-3 bottom-6 z-20 w-12 items-center justify-center bg-gradient-to-r from-[#07080a] to-transparent opacity-0 group-hover/row:opacity-100 transition-opacity">
           <ChevronLeft className="w-8 h-8" />
         </button>
-        <div ref={ref} className="flex gap-2.5 overflow-x-auto scroll-smooth px-4 sm:px-8 lg:px-10 pt-3 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x scroll-px-4 sm:scroll-px-8 lg:scroll-px-10">
+        <div ref={ref} className="flex gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth px-4 sm:px-8 lg:px-10 pt-3 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x scroll-px-4 sm:scroll-px-8 lg:scroll-px-10">
           {children}
         </div>
         <button type="button" aria-label="Avançar" onClick={() => scroll(1)} className="hidden lg:flex absolute right-0 top-3 bottom-6 z-20 w-14 items-center justify-center bg-gradient-to-l from-[#07080a] to-transparent opacity-0 group-hover/row:opacity-100 transition-opacity">
@@ -179,8 +186,15 @@ function Track({ title, children, link }: { title: string; children: React.React
 
 function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: { slug: string; p: CardItem; className?: string }) {
   const { add } = useCart();
+  const [hit, setHit] = useState(0);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!hit) return;
+    const t = window.setTimeout(() => setDone(false), 1500);
+    return () => window.clearTimeout(t);
+  }, [hit]);
   return (
-    <div className={`group/card relative shrink-0 snap-start aspect-[2/3] rounded-[10px] bg-[#15161a] ring-1 ring-white/[0.06] transition-[transform,box-shadow] duration-300 hover:scale-[1.07] hover:z-10 hover:shadow-[0_22px_40px_-12px_rgba(0,0,0,0.95)] hover:ring-2 hover:ring-[#3b82f6] ${className}`}>
+    <div className={`group/card relative shrink-0 snap-start aspect-[2/3] rounded-[10px] bg-[#15161a] ring-1 ring-white/[0.06] transition-[transform,box-shadow] duration-300 hover:scale-[1.07] hover:z-10 hover:shadow-[0_22px_40px_-12px_rgba(0,0,0,0.95)] hover:ring-2 hover:ring-[#3b82f6] ${done ? "ring-2 ring-[#3b82f6]" : ""} ${className}`}>
       <Link href={`/loja/${slug}/produto/${p.slug}`} aria-label={p.title} className="absolute inset-0 rounded-[10px] overflow-hidden">
         {p.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -192,18 +206,30 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
         {p.compareAtPrice && p.compareAtPrice > p.price && (
           <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[5px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
         )}
-        <span className="absolute inset-x-0 bottom-0 pt-10 px-2.5 pb-2.5 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity">
+        <span className="absolute inset-x-0 bottom-0 pt-10 pl-2.5 pr-12 pb-2.5 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity">
           <span className="block text-[12px] font-semibold leading-tight line-clamp-2 mb-1.5">{p.title}</span>
           <span className="block text-[12.5px] font-bold">{brl(p.price)}</span>
         </span>
       </Link>
       <button
         type="button"
-        onClick={() => add(p.id)}
+        onClick={() => {
+          add(p.id);
+          setDone(true);
+          setHit((h) => h + 1);
+        }}
         aria-label={`Adicionar ${p.title} ao carrinho`}
-        className="absolute right-2 bottom-2 w-8 h-8 rounded-full bg-[#3b82f6] text-white flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity shadow-lg"
+        className={`absolute right-2 bottom-2 w-9 h-9 rounded-full flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(0,0,0,0.8)] transition-[opacity,background-color,color,transform] duration-200 active:scale-90 ${
+          done ? "opacity-100 bg-white text-[#3b82f6]" : "bg-[#3b82f6] text-white hover:bg-[#2f74ea] opacity-100 lg:opacity-0 lg:group-hover/card:opacity-100 focus-visible:opacity-100"
+        }`}
       >
-        <Plus className="w-4 h-4" />
+        {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-full bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
+        {done ? <Check key={`c${hit}`} className="relative w-[18px] h-[18px] animate-[wg-pop_.45s_ease-out]" strokeWidth={3} /> : <SolarCartLarge2BoldDuotone size={18} />}
+        {done && (
+          <span key={`f${hit}`} aria-hidden="true" className="absolute inset-x-0 -top-1 text-center text-[11px] font-black text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.9)] animate-[wg-fly_.9s_ease-out_forwards]">
+            +1
+          </span>
+        )}
       </button>
     </div>
   );
@@ -226,7 +252,7 @@ function TopRow({ slug, row }: { slug: string; row: Row }) {
         <div key={p.id} className="group/top relative shrink-0 snap-start flex items-end w-[172px] sm:w-[226px] lg:w-[252px] h-[176px] sm:h-[224px] lg:h-[248px]">
           <span
             aria-hidden="true"
-            className={`absolute bottom-[-6px] select-none font-black leading-[0.78] tracking-[-0.08em] text-[#07080a] [-webkit-text-stroke:3px_#3f4654] sm:[-webkit-text-stroke:4px_#3f4654] group-hover/top:[-webkit-text-stroke-color:#3b82f6] transition-[-webkit-text-stroke-color] text-[150px] sm:text-[200px] lg:text-[220px] ${i >= 9 ? "-left-5 sm:-left-7" : "-left-1"}`}
+            className={`absolute bottom-0 select-none font-black leading-[0.78] tracking-[-0.08em] text-[#07080a] [-webkit-text-stroke:3px_#3f4654] sm:[-webkit-text-stroke:4px_#3f4654] group-hover/top:[-webkit-text-stroke-color:#3b82f6] transition-[-webkit-text-stroke-color] text-[150px] sm:text-[200px] lg:text-[220px] ${i >= 9 ? "-left-5 sm:-left-7" : "-left-1"}`}
           >
             {i + 1}
           </span>
@@ -269,23 +295,68 @@ function ContinueRow({ slug, row }: { slug: string; row: Row }) {
   );
 }
 
-function PromoStrip({ promo }: { promo: { title: string; tiers: { minQuantity: number; price: number }[] } }) {
+function PromoBanner({
+  slug,
+  promo,
+  image,
+  covers,
+}: {
+  slug: string;
+  promo: { title: string; tiers: { minQuantity: number; price: number }[] };
+  image: string | null;
+  covers: string[];
+}) {
+  const best = promo.tiers.reduce<number>((b, t, k) => (t.price / t.minQuantity < promo.tiers[b].price / promo.tiers[b].minQuantity ? k : b), 0);
   return (
-    <div className="mx-4 sm:mx-8 lg:mx-10 mt-9 sm:mt-11 flex flex-wrap items-center gap-4 rounded-[16px] border border-[#3b82f6]/35 bg-[linear-gradient(100deg,rgba(59,130,246,0.22),rgba(59,130,246,0.05)_60%)] px-5 py-4">
-      <div className="mr-auto">
-        <p className="text-[16px] font-bold">{promo.title}</p>
-        <p className="text-[13px] text-zinc-300">O desconto entra sozinho no carrinho.</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {promo.tiers.map((t) => (
-          <div key={t.minQuantity} className="rounded-[10px] bg-black/35 px-3 py-2 text-center">
-            <b className="block text-[14.5px]">
-              {t.minQuantity} por {brl(t.price)}
-            </b>
-            <span className="text-[11.5px] text-zinc-400">{brl(t.price / t.minQuantity)} cada</span>
+    <section className="px-4 sm:px-8 lg:px-10 mt-9 sm:mt-11" aria-label={promo.title}>
+      <div className="relative overflow-hidden rounded-[20px] ring-1 ring-[#3b82f6]/30 bg-[#0a0f1c] min-h-[230px]">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <>
+            <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(70%_120%_at_85%_50%,rgba(59,130,246,0.45)_0%,rgba(59,130,246,0.08)_45%,transparent_70%)]" />
+            <span aria-hidden="true" className="hidden sm:flex absolute right-[-30px] lg:right-6 top-1/2 -translate-y-1/2 items-center">
+              {covers.map((c, k) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={c}
+                  src={c}
+                  alt=""
+                  loading="lazy"
+                  className="w-[110px] lg:w-[128px] aspect-[2/3] object-cover rounded-[12px] ring-1 ring-white/15 shadow-[0_24px_40px_-12px_rgba(0,0,0,0.95)] -ml-9 first:ml-0"
+                  style={{ transform: `rotate(${(k - (covers.length - 1) / 2) * 7}deg) translateY(${Math.abs(k - (covers.length - 1) / 2) * 10}px)`, zIndex: 10 - Math.abs(k - Math.floor(covers.length / 2)) }}
+                />
+              ))}
+            </span>
+          </>
+        )}
+        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#070b14_0%,rgba(7,11,20,0.94)_38%,rgba(7,11,20,0.55)_62%,rgba(7,11,20,0.1)_100%)]" />
+
+        <div className="relative z-10 p-5 sm:p-8 max-w-[640px]">
+          <p className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-[#3b82f6] text-white text-[11px] font-bold uppercase tracking-[0.14em]">
+            <Sparkles className="w-3 h-3" /> Promoção
+          </p>
+          <h2 className="mt-3 text-[24px] sm:text-[32px] font-black leading-[1.05] tracking-[-0.02em] [text-wrap:balance]">{promo.title}</h2>
+          <p className="mt-1.5 text-[13.5px] sm:text-[14.5px] text-zinc-300">Escolha quantos títulos quiser. O desconto entra sozinho no carrinho.</p>
+          <div className="mt-5 flex flex-wrap gap-2.5">
+            {promo.tiers.map((t, k) => (
+              <div
+                key={t.minQuantity}
+                className={`relative rounded-[14px] px-4 py-3 min-w-[118px] backdrop-blur-md ${k === best ? "bg-[#3b82f6]/20 ring-1 ring-[#3b82f6]" : "bg-white/[0.06] ring-1 ring-white/10"}`}
+              >
+                {k === best && <span className="absolute -top-2.5 left-3 h-5 px-2 rounded-full bg-[#3b82f6] text-white text-[10px] font-bold flex items-center">Melhor preço</span>}
+                <span className="block text-[12px] text-zinc-400">Leve {t.minQuantity}</span>
+                <b className="block text-[19px] font-extrabold tabular-nums leading-tight">{brl(t.price)}</b>
+                <span className="block text-[11.5px] text-[#9cc2ff] tabular-nums">{brl(t.price / t.minQuantity)} cada</span>
+              </div>
+            ))}
           </div>
-        ))}
+          <Link href={`/loja/${slug}/buscar`} className="mt-5 inline-flex items-center gap-2 h-11 px-5 rounded-[12px] bg-white text-black text-[14px] font-bold hover:bg-zinc-200 transition-colors">
+            Escolher títulos <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

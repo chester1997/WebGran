@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getWebCustomer, getWebStore, webTablesReady } from "@/lib/webstore/web-store";
 import { buildStorefront } from "@/lib/webstore/sections";
+import { getWebBranding } from "@/lib/webstore/settings";
 import { ComboService } from "@/lib/combos/combo-service";
 import { Storefront, type CardItem } from "./_components/Storefront";
 import type { WebProductRow } from "@/lib/webstore/products";
@@ -24,16 +25,18 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
   const store = await getWebStore(slug);
   if (!store) notFound();
   const customer = await getWebCustomer(store.id);
-  const [front, ready, promo] = await Promise.all([
+  const [front, ready, promo, look] = await Promise.all([
     buildStorefront(store.id, customer?.shadowCustomerId || null),
     webTablesReady(),
     ComboService.getActiveProgressivePromotion(store.id).catch(() => null),
+    getWebBranding(store.id),
   ]);
 
   return (
     <Storefront
       slug={slug}
-      storeName={store.name}
+      storeName={look.branding.displayName || store.name}
+      promoImage={look.branding.promoImageUrl}
       notReady={!ready}
       topId={front.rows.find((r) => r.kind === "top15")?.items[0]?.id || null}
       hero={front.hero.map(card)}

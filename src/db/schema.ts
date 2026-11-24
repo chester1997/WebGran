@@ -1851,3 +1851,12 @@ export const webStoreSections = pgTable('web_store_sections', {
 }, (t) => ({
   storeIdx: index('web_store_sections_store_idx').on(t.storeId, t.position),
 }));
+
+// Loja Web: aparência (nome exibido, logo, imagem da faixa de promoção)
+export const webStoreSettings = pgTable('web_store_settings', {
+  storeId: uuid('store_id').primaryKey().references(() => stores.id, { onDelete: 'cascade' }),
+  displayName: text('display_name'),
+  logoUrl: text('logo_url'),
+  promoImageUrl: text('promo_image_url'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

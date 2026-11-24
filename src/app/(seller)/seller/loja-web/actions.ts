@@ -207,3 +207,21 @@ export async function saveSectionsAction(list: SectionConfig[]) {
   revalidatePath("/seller/loja-web");
   return { ok: true as const };
 }
+
+/** Aparência da Loja Web: nome exibido, logo e imagem da faixa de promoção. */
+export async function saveBrandingAction(raw: { displayName?: string; logoUrl?: string; promoImageUrl?: string }) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { normalizeBranding, saveWebBranding, isMissingSettingsTable } = await import("@/lib/webstore/settings");
+  const v = normalizeBranding(raw || {});
+  if (!v.ok) return { ok: false as const, error: v.error };
+  try {
+    await saveWebBranding(c.store.id, v.value);
+  } catch (e) {
+    if (isMissingSettingsTable(e)) return { ok: false as const, error: "Rode a migration 0030_web_store_settings.sql no Neon para salvar." };
+    throw e;
+  }
+  revalidatePath("/seller/loja-web");
+  revalidatePath(`/loja/${c.store.slug}`, "layout");
+  return { ok: true as const };
+}

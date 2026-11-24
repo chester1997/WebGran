@@ -165,35 +165,42 @@ function CopyModal({ onClose }: { onClose: () => void }) {
           <Loader2 className="w-4 h-4 animate-spin" /> Carregando produtos...
         </p>
       ) : (
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar" className={`${INPUT} flex-1`} />
-            <button type="button" className={BTN_SEC} onClick={() => setSel(new Set(copyable.map((c) => c.id)))} disabled={!copyable.length}>
+        <div className="space-y-3 min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto" className={`${INPUT} w-full pl-9`} />
+            </div>
+            <button type="button" className={`${BTN_SEC} shrink-0`} onClick={() => setSel(new Set(copyable.map((c) => c.id)))} disabled={!copyable.length}>
               Marcar todos
             </button>
           </div>
-          <ul className="grid gap-1.5 max-h-[52vh] overflow-y-auto pr-1">
+          <div className="flex items-center justify-between text-[11.5px] text-zinc-500 px-0.5">
+            <span>{copyable.length} {copyable.length === 1 ? "pode ser copiado" : "podem ser copiados"}</span>
+            <span>{shown.length - copyable.length} bloqueados</span>
+          </div>
+          <ul className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 -mr-1 [scrollbar-width:thin] [scrollbar-color:#2a2c33_transparent]">
             {shown.map((c) => {
               const blocked = Boolean(c.blockedReason) || c.alreadyCopied;
               const on = sel.has(c.id);
               return (
-                <li key={c.id}>
+                <li key={c.id} className="min-w-0">
                   <button
                     type="button"
                     disabled={blocked}
                     onClick={() => toggle(c.id)}
                     aria-pressed={on}
-                    className={`w-full flex items-center gap-3 p-2 rounded-[11px] border text-left transition-colors ${
-                      on ? "border-[#3b82f6] bg-[#3b82f6]/[0.08]" : "border-white/[0.07] hover:border-white/[0.14]"
-                    } ${blocked ? "opacity-55 cursor-not-allowed hover:border-white/[0.07]" : ""}`}
+                    className={`w-full min-w-0 flex items-center gap-3 h-[64px] px-3 rounded-[12px] border text-left transition-colors ${
+                      on ? "border-[#3b82f6] bg-[#3b82f6]/[0.08]" : "border-white/[0.07] bg-white/[0.015] hover:border-white/[0.14]"
+                    } ${blocked ? "opacity-60 cursor-not-allowed hover:border-white/[0.07]" : ""}`}
                   >
-                    <span className="w-9 aspect-[2/3] rounded-[6px] overflow-hidden bg-[#1a1b20] shrink-0">
+                    <span className="w-[34px] h-[48px] rounded-[6px] overflow-hidden bg-[#1a1b20] shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {c.coverUrl && <img src={c.coverUrl} alt="" className="w-full h-full object-cover" />}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[12.5px] font-medium text-zinc-100 truncate">{c.title}</span>
-                      <span className={`block text-[11.5px] ${c.blockedReason ? "text-red-300/90" : c.alreadyCopied ? "text-zinc-500" : "text-[#9cc2ff]"}`}>
+                      <span className="block text-[13px] font-medium leading-tight text-zinc-100 truncate">{c.title}</span>
+                      <span className={`block mt-1 text-[11.5px] leading-tight truncate ${c.blockedReason ? "text-zinc-500" : c.alreadyCopied ? "text-zinc-500" : "text-[#9cc2ff]"}`}>
                         {c.blockedReason || (c.alreadyCopied ? "Já está na Loja Web" : `Vídeo · ${c.videoCount} ${c.videoCount === 1 ? "vídeo" : "vídeos"} · ${brl(c.price)}`)}
                       </span>
                     </span>

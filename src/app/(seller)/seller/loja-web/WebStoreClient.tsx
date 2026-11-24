@@ -26,6 +26,7 @@ import Toaster from "../fluxos/_components/Toaster";
 import { customerDetailAction, replyTicketAction, setCustomerStatusAction } from "./actions";
 import WebProductsPane, { type WebProductView } from "./WebProductsPane";
 import ShowcasePane from "./ShowcasePane";
+import AppearancePane, { type BrandingView } from "./AppearancePane";
 import type { SectionConfig } from "@/lib/webstore/sections";
 
 interface Customer {
@@ -115,7 +116,13 @@ export default function WebStoreClient({
   tickets,
   webProducts,
   sections,
+  branding,
+  brandingReady,
+  storeName,
 }: {
+  branding: BrandingView;
+  brandingReady: boolean;
+  storeName: string;
   ready: boolean;
   sectionsReady: boolean;
   storeSlug: string;
@@ -124,7 +131,7 @@ export default function WebStoreClient({
   webProducts: WebProductView[];
   sections: SectionConfig[];
 }) {
-  const [tab, setTab] = useState<"produtos" | "vitrine" | "clientes" | "suporte">("produtos");
+  const [tab, setTab] = useState<"produtos" | "vitrine" | "aparencia" | "clientes" | "suporte">("produtos");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Customer | null>(null);
   const toast = useToast();
@@ -202,6 +209,7 @@ export default function WebStoreClient({
             [
               ["produtos", "Produtos", webProducts.length],
               ["vitrine", "Vitrine", null],
+              ["aparencia", "Aparência", null],
               ["clientes", "Clientes", customers.length],
               ["suporte", "Suporte", stats.openTickets],
             ] as const
@@ -231,6 +239,8 @@ export default function WebStoreClient({
         <WebProductsPane items={webProducts} ready={ready} />
       ) : tab === "vitrine" ? (
         <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} />
+      ) : tab === "aparencia" ? (
+        <AppearancePane initial={branding} ready={brandingReady} storeName={storeName} />
       ) : tab === "clientes" ? (
         shown.length === 0 ? (
           <div className={`${SURFACE} px-6 py-14 text-center`}>
