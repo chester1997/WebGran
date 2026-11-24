@@ -361,15 +361,26 @@ function PromoBanner({
           <h2 className="mt-2 text-[24px] sm:text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] [text-wrap:balance]">{promo.title}</h2>
           <p className="mt-1.5 text-[14px] text-zinc-400">Quanto mais títulos no carrinho, menor o preço de cada um. O desconto entra sozinho.</p>
 
-          <div className="mt-5 inline-grid w-full sm:w-auto rounded-[6px] border border-white/[0.12] bg-black/45 backdrop-blur-sm overflow-hidden" style={{ gridTemplateColumns: `repeat(${promo.tiers.length}, minmax(0, 1fr))` }}>
+          {/* Celular: uma faixa por linha. Do tablet pra cima: colunas lado a lado */}
+          <div
+            className="mt-5 w-full sm:w-auto flex flex-col sm:inline-grid sm:[grid-template-columns:repeat(var(--n),minmax(0,1fr))] rounded-[8px] border border-white/[0.12] bg-black/55 backdrop-blur-sm overflow-hidden"
+            style={{ ["--n" as string]: promo.tiers.length }}
+          >
             {promo.tiers.map((t, k) => (
-              <div key={t.minQuantity} className={`relative px-4 sm:px-5 pt-3.5 pb-3 sm:min-w-[132px] ${k > 0 ? "border-l border-white/[0.1]" : ""} ${k === best ? "bg-[#3b82f6]/[0.12]" : ""}`}>
-                {k === best && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-[#3b82f6]" />}
-                <span className="block text-[12px] text-zinc-400">
-                  {t.minQuantity} títulos{k === best && <span className="text-[#7fb0ff] font-semibold"> · melhor preço</span>}
+              <div
+                key={t.minQuantity}
+                className={`relative flex sm:block items-center gap-3 px-4 sm:px-5 py-3 sm:pt-3.5 sm:pb-3 sm:min-w-[132px] ${k > 0 ? "border-t sm:border-t-0 sm:border-l border-white/[0.1]" : ""} ${k === best ? "bg-[#3b82f6]/[0.14]" : ""}`}
+              >
+                {k === best && <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-[3px] sm:w-auto sm:bottom-auto sm:right-0 sm:h-[2px] bg-[#3b82f6]" />}
+                <span className="min-w-0 flex-1 sm:block">
+                  <span className="flex items-center gap-2 text-[13px] sm:text-[12px] text-zinc-300 sm:text-zinc-400">
+                    {t.minQuantity} títulos
+                    {k === best && <span className="h-[18px] px-1.5 rounded-[4px] bg-[#3b82f6] text-white text-[10px] font-bold uppercase tracking-wide inline-flex items-center">Melhor preço</span>}
+                  </span>
+                  <span className="hidden sm:block mt-0.5 text-[20px] font-bold tabular-nums leading-tight text-white">{brl(t.price)}</span>
+                  <span className="block mt-0.5 sm:mt-0 text-[12px] text-zinc-500 tabular-nums">{brl(t.price / t.minQuantity)} cada</span>
                 </span>
-                <b className="block mt-0.5 text-[20px] font-bold tabular-nums leading-tight">{brl(t.price)}</b>
-                <span className="block text-[12px] text-zinc-500 tabular-nums">{brl(t.price / t.minQuantity)} cada</span>
+                <b className="sm:hidden text-[19px] font-bold tabular-nums leading-none shrink-0">{brl(t.price)}</b>
               </div>
             ))}
           </div>

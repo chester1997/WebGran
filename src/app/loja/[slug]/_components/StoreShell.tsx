@@ -31,6 +31,8 @@ export interface ShellCustomer {
   avatarUrl?: string | null;
 }
 
+const TAB = "min-w-0 px-1 flex flex-col items-center justify-center gap-1.5 text-[10.5px] font-medium transition-colors";
+
 export function StoreShell({ store, customer, children }: { store: ShellStore; customer: ShellCustomer | null; children: ReactNode }) {
   return (
     <CartProvider slug={store.slug}>
@@ -102,7 +104,7 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-[#07080a] text-zinc-100" style={{ ["--rail" as string]: open ? "232px" : "76px" }}>
+    <div className="min-h-[100dvh] w-full max-w-[100vw] overflow-x-clip bg-[#07080a] text-zinc-100" style={{ ["--rail" as string]: open ? "232px" : "76px" }}>
       {/* Menu lateral (computador): recolhe e expande */}
       <nav
         aria-label="Navegação da loja"
@@ -179,9 +181,9 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
         )}
       </header>
 
-      <main className={`lg:pl-[var(--rail)] transition-[padding] duration-300 pb-24 lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>{children}</main>
+      <main className={`lg:pl-[var(--rail)] transition-[padding] duration-300 pb-[calc(84px+env(safe-area-inset-bottom))] lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>{children}</main>
 
-      <footer className="lg:pl-[var(--rail)] transition-[padding] duration-300 border-t border-white/[0.06] mb-16 lg:mb-0">
+      <footer className="lg:pl-[var(--rail)] transition-[padding] duration-300 border-t border-white/[0.06] mb-[calc(60px+env(safe-area-inset-bottom))] lg:mb-0">
         <div className="px-4 sm:px-8 lg:px-10 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-zinc-500">
           <span>© {new Date().getFullYear()} {store.name} · Pagamento seguro via PIX · Assista no celular ou no computador</span>
           <button type="button" onClick={() => setSupport(true)} className="text-zinc-400 hover:text-white transition-colors">
@@ -191,17 +193,24 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
       </footer>
 
       {/* Barra inferior (celular) */}
-      <nav aria-label="Navegação da loja" className="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[62px] grid grid-cols-5 bg-[#07080a]/95 backdrop-blur-xl border-t border-white/[0.07]">
-        {nav.map((n) => (
-          <Link key={n.label} href={n.href} aria-current={n.on ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium ${n.on ? "text-white" : "text-zinc-500"}`}>
-            <n.icon size={22} className={n.on ? "text-[#3b82f6]" : ""} />
-            {n.label}
-            {n.badge ? <span className="absolute top-1.5 left-1/2 ml-2 min-w-[16px] h-4 px-1 rounded-full bg-[#3b82f6] text-[9.5px] font-bold text-white flex items-center justify-center">{n.badge}</span> : null}
-          </Link>
-        ))}
-        <button type="button" onClick={() => setSupport(true)} className="flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium text-zinc-500">
-          <SolarChatRoundDotsBoldDuotone size={22} /> Suporte
-        </button>
+      <nav aria-label="Navegação da loja" className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#07080a]/95 backdrop-blur-xl border-t border-white/[0.07] pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-5 h-[60px]">
+          {nav.map((n) => (
+            <Link key={n.label} href={n.href} aria-current={n.on ? "page" : undefined} className={`${TAB} ${n.on ? "text-white" : "text-zinc-500"}`}>
+              <span className="relative w-6 h-6 flex items-center justify-center">
+                <n.icon size={22} className={n.on ? "text-[#3b82f6]" : ""} />
+                {n.badge ? <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-[#3b82f6] text-[9.5px] font-bold text-white flex items-center justify-center ring-2 ring-[#07080a]">{n.badge}</span> : null}
+              </span>
+              <span className="leading-none truncate max-w-full">{n.label}</span>
+            </Link>
+          ))}
+          <button type="button" onClick={() => setSupport(true)} className={`${TAB} text-zinc-500`}>
+            <span className="w-6 h-6 flex items-center justify-center">
+              <SolarChatRoundDotsBoldDuotone size={22} />
+            </span>
+            <span className="leading-none">Suporte</span>
+          </button>
+        </div>
       </nav>
 
       {toast && (

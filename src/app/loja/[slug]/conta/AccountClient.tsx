@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ExternalLink, LifeBuoy, LogOut, MessageSquare, Package, PlayCircle, Receipt, UserRound } from "lucide-react";
+import { ExternalLink, LifeBuoy, LogOut, Mail, MessageSquare, Package, Phone, PlayCircle, Receipt, Send, UserRound } from "lucide-react";
 import { logoutAction } from "../actions";
 import { brl, BTN_GHOST, CARD } from "../_components/ui";
 import { Avatar, ProfilePane } from "./ProfilePane";
@@ -65,59 +65,91 @@ export function AccountClient({
   const [pending, start] = useTransition();
 
   const tabs = [
-    { k: "produtos" as const, l: "Meus produtos", n: owned.length, icon: Package },
-    { k: "pedidos" as const, l: "Pedidos", n: orders.length, icon: Receipt },
-    { k: "suporte" as const, l: "Suporte", n: tickets.length, icon: MessageSquare },
-    { k: "perfil" as const, l: "Perfil e senha", n: null, icon: UserRound },
+    { k: "produtos" as const, l: "Meus produtos", s: "Produtos", n: owned.length, icon: Package },
+    { k: "pedidos" as const, l: "Pedidos", s: "Pedidos", n: orders.length, icon: Receipt },
+    { k: "suporte" as const, l: "Suporte", s: "Suporte", n: tickets.length, icon: MessageSquare },
+    { k: "perfil" as const, l: "Perfil e senha", s: "Perfil", n: null, icon: UserRound },
   ];
 
   return (
-    <div className="w-full px-4 sm:px-8 lg:px-10 pt-8 sm:pt-12 pb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-7">
-        <button type="button" onClick={() => setTab("perfil")} className="shrink-0 self-start sm:self-auto rounded-full" aria-label="Editar perfil">
-          <Avatar url={customer.avatarUrl} name={customer.name} size={64} />
-        </button>
-        <div className="mr-auto min-w-0">
-          <p className="text-[13px] text-zinc-500">Minha conta</p>
-          <h1 className="text-[26px] font-semibold tracking-tight truncate">Olá, {customer.name.split(" ")[0]}</h1>
-          <p className="text-[13px] text-zinc-500 truncate">
-            {customer.email}
-            {customer.whatsapp ? ` · WhatsApp ${customer.whatsapp}` : ""}
-            {customer.telegram ? ` · @${customer.telegram}` : ""}
-          </p>
+    <div className="w-full min-w-0 px-4 sm:px-8 lg:px-10 pt-5 sm:pt-12 pb-6">
+      {/* Cabeçalho do perfil: no celular, um cartão compacto; contatos quebram linha em vez de vazar */}
+      <div className="mb-6 sm:mb-7 rounded-[12px] sm:rounded-none border sm:border-0 border-white/[0.07] bg-[#0f1014] sm:bg-transparent p-4 sm:p-0">
+        <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+          <button type="button" onClick={() => setTab("perfil")} className="shrink-0 rounded-full" aria-label="Editar perfil">
+            <Avatar url={customer.avatarUrl} name={customer.name} size={64} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12.5px] sm:text-[13px] text-zinc-500">Minha conta</p>
+            <h1 className="text-[21px] sm:text-[26px] font-semibold tracking-tight leading-tight truncate">Olá, {customer.name.split(" ")[0]}</h1>
+            <p className="hidden sm:block text-[13px] text-zinc-500 truncate">
+              {customer.email}
+              {customer.whatsapp ? ` · WhatsApp ${customer.whatsapp}` : ""}
+              {customer.telegram ? ` · @${customer.telegram}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Sair da conta"
+            className={`${BTN_GHOST} shrink-0 !h-10 !px-3 sm:!px-4`}
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                await logoutAction(slug);
+                router.push(`/loja/${slug}`);
+                router.refresh();
+              })
+            }
+          >
+            <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Sair</span>
+          </button>
         </div>
-        <button
-          type="button"
-          className={BTN_GHOST}
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              await logoutAction(slug);
-              router.push(`/loja/${slug}`);
-              router.refresh();
-            })
-          }
-        >
-          <LogOut className="w-4 h-4" /> Sair
-        </button>
+        <ul className="sm:hidden mt-3.5 pt-3.5 border-t border-white/[0.06] space-y-2 text-[13px] min-w-0">
+          <li className="flex items-center gap-2.5 min-w-0 text-zinc-300">
+            <Mail className="w-4 h-4 text-zinc-500 shrink-0" />
+            <span className="truncate">{customer.email}</span>
+          </li>
+          {customer.whatsapp && (
+            <li className="flex items-center gap-2.5 min-w-0 text-zinc-300">
+              <Phone className="w-4 h-4 text-zinc-500 shrink-0" />
+              <span className="truncate tabular-nums">{customer.whatsapp}</span>
+            </li>
+          )}
+          {customer.telegram && (
+            <li className="flex items-center gap-2.5 min-w-0 text-zinc-300">
+              <Send className="w-4 h-4 text-zinc-500 shrink-0" />
+              <span className="truncate">@{customer.telegram}</span>
+            </li>
+          )}
+        </ul>
       </div>
 
-      <div role="tablist" className="flex gap-1 border-b border-white/[0.07] mb-6 overflow-x-auto [scrollbar-width:none]">
-        {tabs.map((t) => (
-          <button
-            key={t.k}
-            role="tab"
-            aria-selected={tab === t.k}
-            type="button"
-            onClick={() => setTab(t.k)}
-            className={`shrink-0 inline-flex items-center gap-2 h-11 px-3.5 -mb-px border-b-2 text-[13.5px] font-medium transition-colors ${
-              tab === t.k ? "border-[#3b82f6] text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            <t.icon className="w-4 h-4" /> {t.l}
-            {t.n !== null && <span className="text-[11.5px] text-zinc-500 tabular-nums">{t.n}</span>}
-          </button>
-        ))}
+      {/* Abas: no celular, 4 botões iguais lado a lado (sem rolar); no computador, a linha com sublinhado */}
+      <div role="tablist" className="grid grid-cols-4 gap-1 p-1 mb-5 rounded-[10px] bg-white/[0.04] border border-white/[0.06] sm:flex sm:gap-1 sm:p-0 sm:mb-6 sm:rounded-none sm:bg-transparent sm:border-0 sm:border-b sm:border-white/[0.07]">
+        {tabs.map((t) => {
+          const on = tab === t.k;
+          return (
+            <button
+              key={t.k}
+              role="tab"
+              aria-selected={on}
+              type="button"
+              onClick={() => setTab(t.k)}
+              className={`relative min-w-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 h-[58px] sm:h-11 px-1 sm:px-3.5 rounded-[8px] sm:rounded-none sm:-mb-px sm:border-b-2 text-[11.5px] sm:text-[13.5px] font-medium transition-colors ${
+                on ? "bg-[#3b82f6]/[0.14] text-white sm:bg-transparent sm:border-[#3b82f6]" : "text-zinc-500 hover:text-zinc-200 sm:border-transparent"
+              }`}
+            >
+              <t.icon className={`w-[18px] h-[18px] sm:w-4 sm:h-4 ${on ? "text-[#3b82f6] sm:text-current" : ""}`} />
+              <span className="truncate max-w-full sm:hidden">{t.s}</span>
+              <span className="hidden sm:inline">{t.l}</span>
+              {t.n !== null && t.n > 0 && (
+                <span className="absolute top-1.5 right-1.5 sm:static min-w-[16px] h-4 px-1 rounded-full sm:rounded-none sm:min-w-0 sm:h-auto sm:px-0 bg-[#3b82f6] sm:bg-transparent text-white sm:text-zinc-500 text-[10px] sm:text-[11.5px] font-bold sm:font-normal flex items-center justify-center tabular-nums">
+                  {t.n}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "produtos" &&
