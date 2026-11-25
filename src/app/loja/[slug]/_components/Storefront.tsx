@@ -240,7 +240,7 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
         {p.compareAtPrice && p.compareAtPrice > p.price && (
           <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[3px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
         )}
-        <span className="absolute inset-x-0 bottom-0 h-16 pl-2.5 pr-12 pb-3 flex items-end bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+        <span className="absolute inset-x-0 bottom-0 h-16 pl-2.5 pr-10 pb-2.5 sm:pb-3 flex items-end bg-gradient-to-t from-black/90 via-black/50 to-transparent">
           <span className="block text-[13px] font-bold tabular-nums">{brl(p.price)}</span>
         </span>
       </Link>
@@ -252,12 +252,12 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
           setHit((h) => h + 1);
         }}
         aria-label={`Adicionar ${p.title} ao carrinho`}
-        className={`absolute right-2 bottom-2 w-9 h-9 rounded-[7px] flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(0,0,0,0.8)] transition-[opacity,background-color,color,transform] duration-200 active:scale-90 ${
-          done ? "bg-white text-[#3b82f6]" : "bg-[#3b82f6] text-white hover:bg-[#2f74ea]"
+        className={`absolute right-1.5 bottom-1.5 sm:right-2 sm:bottom-2 w-7 h-7 sm:w-8 sm:h-8 rounded-[6px] flex items-center justify-center text-white border backdrop-blur-md backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_6px_16px_-6px_rgba(0,0,0,0.8)] transition-[background-color,border-color,transform] duration-200 active:scale-90 ${
+          done ? "bg-[#3b82f6]/75 border-white/40" : "bg-[#3b82f6]/30 border-[#7fb0ff]/35 hover:bg-[#3b82f6]/50"
         }`}
       >
-        {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-[7px] bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
-        {done ? <Check key={`c${hit}`} className="relative w-[18px] h-[18px] animate-[wg-pop_.45s_ease-out]" strokeWidth={3} /> : <SolarCartLarge2BoldDuotone size={18} />}
+        {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-[6px] bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
+        {done ? <Check key={`c${hit}`} className="relative w-[14px] h-[14px] sm:w-4 sm:h-4 animate-[wg-pop_.45s_ease-out]" strokeWidth={3} /> : <SolarCartLarge2BoldDuotone size={16} className="w-[14px] h-[14px] sm:w-4 sm:h-4" />}
         {done && (
           <span key={`f${hit}`} aria-hidden="true" className="absolute inset-x-0 -top-1 text-center text-[11px] font-black text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.9)] animate-[wg-fly_.9s_ease-out_forwards]">
             +1
