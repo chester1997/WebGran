@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { products } from "@/db/schema";
 import { getWebCustomer, getWebStore } from "@/lib/webstore/web-store";
 import { ProductVideoService } from "@/lib/videos/product-video-service";
+import { hasVipFor } from "@/lib/webstore/account";
 import { BTN_PRIMARY, CARD } from "../../../_components/ui";
 import { VideoArea } from "./VideoArea";
 
@@ -29,7 +30,8 @@ export default async function ProdutoAcessoPage({
   let videos: Awaited<ReturnType<typeof ProductVideoService.listCustomerProductVideos>> = [];
   let denied: string | null = null;
   try {
-    videos = await ProductVideoService.listCustomerProductVideos(store.id, customer.shadowCustomerId, product.id);
+    const vip = await hasVipFor(store.id, customer.shadowCustomerId, product.id);
+    videos = await ProductVideoService.listCustomerProductVideos(store.id, customer.shadowCustomerId, product.id, { accessGranted: vip });
   } catch (e) {
     denied = (e as Error).message || "Você não tem acesso a este produto.";
   }

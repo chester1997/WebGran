@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, like, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, like, ne, notLike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, products, productVideoAssignments, productVideos } from "@/db/schema";
 import { WEB_ACTIVE, WEB_DRAFT } from "./scope";
@@ -102,7 +102,7 @@ export async function listWebProducts(storeId: string, opts: { onlyActive?: bool
   const rows = await db.query.products.findMany({
     where: and(
       eq(products.storeId, storeId),
-      opts.onlyActive ? eq(products.status, WEB_ACTIVE) : and(like(products.status, "web_%"), ne(products.status, WEB_ARCHIVED))
+      opts.onlyActive ? eq(products.status, WEB_ACTIVE) : and(like(products.status, "web_%"), ne(products.status, WEB_ARCHIVED), notLike(products.status, "web_vip%"))
     ),
     orderBy: [asc(products.position), desc(products.createdAt)],
   });

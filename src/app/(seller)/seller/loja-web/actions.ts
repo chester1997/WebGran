@@ -226,6 +226,20 @@ export async function saveBrandingAction(raw: { displayName?: string; logoUrl?: 
   return { ok: true as const };
 }
 
+/* ------------------------- planos VIP da Loja Web ------------------------- */
+
+export async function saveVipPlansAction(raw: import("@/lib/webstore/vip").VipPlanInput[]) {
+  const c = await ownerCtx();
+  if (!c) return { ok: false as const, error: "Sem permissão." };
+  const { saveVipPlans } = await import("@/lib/webstore/vip");
+  const r = await saveVipPlans(c.store.id, Array.isArray(raw) ? raw : []);
+  if (r.ok) {
+    revalidatePath("/seller/loja-web");
+    revalidatePath(`/loja/${c.store.slug}`, "layout");
+  }
+  return r;
+}
+
 /* ------------------------- combos da Loja Web ------------------------- */
 
 export async function saveWebProgressiveAction(raw: import("@/lib/webstore/combos").ProgressiveInput) {

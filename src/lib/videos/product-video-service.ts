@@ -637,9 +637,10 @@ export class ProductVideoService {
   /**
    * Lists videos assigned to a product that the customer has active access to.
    */
-  static async listCustomerProductVideos(storeId: string, customerId: string, productId: string) {
+  static async listCustomerProductVideos(storeId: string, customerId: string, productId: string, opts: { accessGranted?: boolean } = {}) {
     const now = new Date();
-    const accessRecord = await db.query.accesses.findFirst({
+    // Loja Web com VIP ativo: o acesso já foi conferido por quem chamou (o Mini App nunca passa isso)
+    const accessRecord = opts.accessGranted ? { expiresAt: null } : await db.query.accesses.findFirst({
       where: and(
         eq(accesses.storeId, storeId),
         eq(accesses.customerId, customerId),
@@ -733,7 +734,8 @@ export class ProductVideoService {
     customerId: string,
     videoId: string,
     productId?: string,
-    triggerToken?: string | null
+    triggerToken?: string | null,
+    opts: { accessGranted?: boolean } = {}
   ) {
     // 1. Find Product Video
     const video = await db.query.productVideos.findFirst({
@@ -804,7 +806,8 @@ export class ProductVideoService {
 
     // 3. Server-side Access Authorization Check (Skipped if isPublicTrigger)
     let validAccessRecord = null;
-    if (!isPublicTrigger) {
+    // Loja Web com VIP ativo: quem chamou já conferiu o VIP e o produto (exige productId)
+    if (!isPublicTrigger && !(opts.accessGranted && productId)) {
       const now = new Date();
       const candidateProductIds = productId ? [productId] : Array.from(associatedProductIds);
 

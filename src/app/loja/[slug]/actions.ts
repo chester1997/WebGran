@@ -75,6 +75,28 @@ export async function checkoutAction(slug: string, lines: CartLine[], couponCode
   return { ok: true, orderId: res.orderId };
 }
 
+/** Assinatura VIP: um PIX só do plano escolhido (fora do carrinho, sem combos nem progressivo). */
+export async function vipCheckoutAction(slug: string, planId: string): Promise<Res<{ orderId: string }>> {
+  const c = await ctx(slug);
+  if (!c) return { ok: false, error: "Loja não encontrada." };
+  if (!c.customer) return { ok: false, error: "Entre na sua conta para assinar." };
+  if (!/^[0-9a-f-]{36}$/i.test(String(planId || ""))) return { ok: false, error: "Plano inválido." };
+  const { WEB_VIP } = await import("@/lib/webstore/vip");
+  const res = await CheckoutService.createCheckout({
+    storeId: c.store.id,
+    customerId: c.customer.shadowCustomerId,
+    storeSlug: slug,
+    items: [{ id: planId, quantity: 1, isCombo: false, comboId: null }],
+    sessionId: `web:${c.customer.id}`,
+    originBotId: null,
+    productStatus: WEB_VIP,
+    // nenhum combo/progressivo usa este status: o VIP sai pelo preço cheio do plano
+    comboStatus: "web_vip_none",
+  });
+  if (!res.success || !res.orderId) return { ok: false, error: res.error || "Não foi possível gerar o PIX." };
+  return { ok: true, orderId: res.orderId };
+}
+
 export interface OrderView {
   id: string;
   status: string;
@@ -163,7 +185,9 @@ export async function playbackAction(slug: string, videoId: string, productId?: 
   const c = await ctx(slug);
   if (!c?.customer) return { ok: false as const, error: "Entre na sua conta." };
   try {
-    const data = await ProductVideoService.getProductVideoForPlayback(c.store.id, c.customer.shadowCustomerId, videoId, productId);
+    const { hasVipFor } = await import("@/lib/webstore/account");
+    const vip = productId ? await hasVipFor(c.store.id, c.customer.shadowCustomerId, productId) : false;
+    const data = await ProductVideoService.getProductVideoForPlayback(c.store.id, c.customer.shadowCustomerId, videoId, productId, null, { accessGranted: vip });
     return { ok: true as const, data: JSON.parse(JSON.stringify(data)) as typeof data };
   } catch (e) {
     return { ok: false as const, error: (e as Error).message || "Sem acesso a este vídeo." };

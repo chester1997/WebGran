@@ -6,6 +6,7 @@ import { getHeroImages } from "@/lib/webstore/hero-images";
 import { loadWebCombos, loadWebProgressive } from "@/lib/webstore/catalog";
 import { Storefront, type CardItem, type ComboCard } from "./_components/Storefront";
 import type { WebProductRow } from "@/lib/webstore/products";
+import { getActiveVip, listActiveVipPlans } from "@/lib/webstore/vip";
 
 const card = (p: WebProductRow): CardItem => ({
   id: p.id,
@@ -35,6 +36,10 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
     loadWebCombos(store.id).catch(() => []),
     getHeroImages(store.id).catch(() => ({ ready: false, images: {} as Record<string, string> })),
   ]);
+  const [vipPlans, vipActive] = await Promise.all([
+    listActiveVipPlans(store.id).catch(() => []),
+    customer ? getActiveVip(store.id, customer.shadowCustomerId).catch(() => null) : Promise.resolve(null),
+  ]);
 
   return (
     <Storefront
@@ -54,6 +59,11 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
         })
       )}
       notReady={!ready}
+      vip={{
+        plans: vipPlans.map((p) => ({ id: p.id, label: p.label, period: p.period, price: p.price, days: p.days })),
+        active: vipActive ? { label: vipActive.label, until: vipActive.expiresAt ? vipActive.expiresAt.toISOString() : null } : null,
+        loggedIn: Boolean(customer),
+      }}
       topId={front.rows.find((r) => r.kind === "top15")?.items[0]?.id || null}
       hero={front.hero.map((p) => ({ ...card(p), heroUrl: heroImgs.images[p.id] || null }))}
       rows={front.rows.map((r) => ({ key: r.key, kind: r.kind, title: r.title, items: r.items.map(card), progress: r.progress }))}

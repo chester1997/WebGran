@@ -8,6 +8,7 @@ import { getSections } from "@/lib/webstore/sections";
 import { getWebBranding } from "@/lib/webstore/settings";
 import { listWebCombos, miniAppProgressiveTiers } from "@/lib/webstore/combos";
 import { getHeroImages } from "@/lib/webstore/hero-images";
+import { listVipPlans } from "@/lib/webstore/vip";
 import SetupStoreClient from "../SetupStoreClient";
 import WebStoreClient from "./WebStoreClient";
 
@@ -28,6 +29,7 @@ export default async function LojaWebPage() {
     miniAppProgressiveTiers(store.id),
   ]);
   const hero = await getHeroImages(store.id);
+  const vipPlans = await listVipPlans(store.id).catch(() => []);
 
   return (
     <WebStoreClient
@@ -38,6 +40,7 @@ export default async function LojaWebPage() {
       storeName={store.name}
       webCombos={webCombos}
       miniAppPromo={miniAppPromo}
+      vipPlans={vipPlans}
       heroImages={hero.images}
       heroImagesReady={hero.ready}
       sections={showcase.sections}

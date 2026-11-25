@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Info, Play, Sparkles } from "lucide-react";
 import { SolarCartLarge2BoldDuotone } from "@/components/icons/solar/seller-icons";
 import { useCart } from "./cart";
+import { VipBanner, type VipPlanCard, type VipStatus } from "./VipBanner";
 import { brl, DURATION_LABEL } from "./ui";
 
 export interface ComboCard {
@@ -56,7 +57,9 @@ export function Storefront({
   promoImage = null,
   topId = null,
   combos = [],
+  vip = null,
 }: {
+  vip?: { plans: VipPlanCard[]; active: VipStatus | null; loggedIn: boolean } | null;
   combos?: ComboCard[];
   topId?: string | null;
   promoImage?: string | null;
@@ -75,21 +78,29 @@ export function Storefront({
       </div>
     );
   }
+  const showVip = Boolean(vip && (vip.plans.length || vip.active));
+  const hasCombosRow = rows.some((r) => r.kind === "combos");
+  const vipCard = vip ? <VipBanner slug={slug} plans={vip.plans} active={vip.active} loggedIn={vip.loggedIn} image={null} /> : null;
   const covers = Array.from(new Map([...hero, ...rows.flatMap((r) => r.items)].filter((x) => x.coverUrl).map((x) => [x.id, x.coverUrl as string])).values()).slice(0, 5);
   return (
     <div className="overflow-x-clip">
       {hero.length > 0 && <Hero slug={slug} items={hero} topId={topId} />}
       <div className={`relative z-10 space-y-9 sm:space-y-11 pb-10 ${hero.length ? "-mt-14 sm:-mt-24" : "pt-24"}`}>
-        {rows.map((r) =>
+        {rows.map((r, i) =>
           r.kind === "combos" ? (
-            promo || combos.length ? (
-              <div key={r.key}>
+            promo || combos.length || showVip ? (
+              <div key={r.key} className="space-y-9 sm:space-y-11">
+                {showVip && vipCard}
                 {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
-                {combos.length > 0 && <ComboRow title={r.title} combos={combos} spaced={Boolean(promo)} />}
+                {combos.length > 0 && <ComboRow title={r.title} combos={combos} spaced={false} />}
               </div>
             ) : null
           ) : (
-            <div key={r.key}>{r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}</div>
+            <div key={r.key}>
+              {r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}
+              {/* Sem seção de ofertas na vitrine: o VIP entra depois da primeira fileira */}
+              {showVip && !hasCombosRow && i === 0 && <div className="mt-9 sm:mt-11">{vipCard}</div>}
+            </div>
           )
         )}
       </div>

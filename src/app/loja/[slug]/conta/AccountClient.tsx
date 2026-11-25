@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ExternalLink, LifeBuoy, LogOut, Mail, MessageSquare, Package, Phone, PlayCircle, Receipt, Send, UserRound } from "lucide-react";
+import { Crown, ExternalLink, LifeBuoy, LogOut, Mail, MessageSquare, Package, Phone, PlayCircle, Receipt, Send, UserRound } from "lucide-react";
 import { logoutAction } from "../actions";
 import { brl, BTN_GHOST, CARD } from "../_components/ui";
 import { Avatar, ProfilePane } from "./ProfilePane";
@@ -53,7 +53,9 @@ export function AccountClient({
   owned,
   orders,
   tickets,
+  vip = null,
 }: {
+  vip?: { label: string; until: string | null } | null;
   slug: string;
   customer: { name: string; email: string; whatsapp: string | null; telegram: string | null; createdAt: string; avatarUrl: string | null };
   owned: Owned[];
@@ -152,6 +154,15 @@ export function AccountClient({
         })}
       </div>
 
+      {tab === "produtos" && vip && (
+        <div className="mb-4 flex items-center gap-3 rounded-[12px] border border-[#3b82f6]/35 bg-[#3b82f6]/[0.1] px-4 py-3">
+          <Crown className="w-5 h-5 text-[#3b82f6] shrink-0" />
+          <p className="text-[13.5px] text-zinc-200 min-w-0">
+            <b className="text-white">VIP {vip.label} ativo</b>
+            <span className="text-zinc-400"> · {vip.until ? `todos os títulos liberados até ${fmt(vip.until)}` : "todos os títulos liberados para sempre"}</span>
+          </p>
+        </div>
+      )}
       {tab === "produtos" &&
         (owned.length === 0 ? (
           <Empty text="Você ainda não tem produtos. Depois do PIX confirmado eles aparecem aqui." cta={{ href: `/loja/${slug}`, label: "Ver produtos" }} />

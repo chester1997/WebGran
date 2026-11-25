@@ -15,8 +15,42 @@ export interface OwnedProduct {
   grantedAt: Date | null;
 }
 
-/** Produtos liberados para o cliente (um por produto, o acesso mais recente). */
+/** Produtos liberados para o cliente (um por produto, o acesso mais recente). Com VIP ativo, todos os da loja. */
 export async function listOwnedProducts(storeId: string, shadowCustomerId: string): Promise<OwnedProduct[]> {
+  const own = await listPurchasedProducts(storeId, shadowCustomerId);
+  const { getActiveVip } = await import("./vip");
+  const vip = await getActiveVip(storeId, shadowCustomerId).catch(() => null);
+  if (!vip) return own;
+  const { listWebProducts } = await import("./products");
+  const all = await listWebProducts(storeId, { onlyActive: true });
+  const byId = new Map(own.map((o) => [o.productId, o]));
+  const out: OwnedProduct[] = [];
+  for (const p of all) {
+    const o = byId.get(p.id);
+    if (o && o.status === "ACTIVE") {
+      out.push(o);
+      byId.delete(p.id);
+      continue;
+    }
+    if (p.videoCount === 0) continue;
+    out.push({
+      accessId: `vip:${p.id}`,
+      productId: p.id,
+      slug: p.slug,
+      title: p.title,
+      coverUrl: p.coverUrl || null,
+      deliveryType: "product_video",
+      link: null,
+      status: "ACTIVE",
+      expiresAt: vip.expiresAt,
+      grantedAt: null,
+    });
+    byId.delete(p.id);
+  }
+  return [...out, ...byId.values()];
+}
+
+async function listPurchasedProducts(storeId: string, shadowCustomerId: string): Promise<OwnedProduct[]> {
   const rows = await db
     .select({ a: accesses, p: products })
     .from(accesses)
@@ -27,7 +61,7 @@ export async function listOwnedProducts(storeId: string, shadowCustomerId: strin
   const out: OwnedProduct[] = [];
   const now = Date.now();
   for (const { a, p } of rows) {
-    if (seen.has(p.id)) continue;
+    if (seen.has(p.id) || p.status.startsWith("web_vip")) continue; // o plano VIP aparece como faixa, não como produto
     seen.add(p.id);
     const expired = a.expiresAt && new Date(a.expiresAt).getTime() < now;
     out.push({
@@ -46,12 +80,20 @@ export async function listOwnedProducts(storeId: string, shadowCustomerId: strin
   return out;
 }
 
-/** O cliente tem acesso ativo a este produto? */
+/** O cliente tem acesso ativo a este produto? (comprado, ou liberado por um VIP ativo) */
 export async function hasActiveAccess(storeId: string, shadowCustomerId: string, productId: string) {
   const a = await db.query.accesses.findFirst({
     where: and(eq(accesses.storeId, storeId), eq(accesses.customerId, shadowCustomerId), eq(accesses.productId, productId), eq(accesses.status, "ACTIVE")),
   });
-  return Boolean(a && (!a.expiresAt || new Date(a.expiresAt).getTime() > Date.now()));
+  if (a && (!a.expiresAt || new Date(a.expiresAt).getTime() > Date.now())) return true;
+  return hasVipFor(storeId, shadowCustomerId, productId);
+}
+
+/** VIP ativo + produto à venda na Loja Web desta loja. */
+export async function hasVipFor(storeId: string, shadowCustomerId: string, productId: string) {
+  const { getActiveVip, isVipUnlockable } = await import("./vip");
+  const vip = await getActiveVip(storeId, shadowCustomerId).catch(() => null);
+  return Boolean(vip) && (await isVipUnlockable(storeId, productId));
 }
 
 export async function listCustomerOrders(storeId: string, shadowCustomerId: string) {

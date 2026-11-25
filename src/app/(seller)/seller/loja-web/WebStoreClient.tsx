@@ -39,6 +39,8 @@ import {
 } from "@/components/icons/solar/seller-icons";
 import AppearancePane, { type BrandingView } from "./AppearancePane";
 import CombosPane from "./CombosPane";
+import VipPlansPane from "./VipPlansPane";
+import type { VipPlanView } from "@/lib/webstore/vip";
 import type { WebComboView } from "@/lib/webstore/combos";
 import type { SectionConfig } from "@/lib/webstore/sections";
 
@@ -134,6 +136,7 @@ export default function WebStoreClient({
   storeName,
   webCombos,
   miniAppPromo,
+  vipPlans = [],
   heroImages,
   heroImagesReady,
 }: {
@@ -141,6 +144,7 @@ export default function WebStoreClient({
   heroImagesReady: boolean;
   webCombos: WebComboView[];
   miniAppPromo: { title: string; tiers: { minQuantity: number; price: number }[] } | null;
+  vipPlans?: VipPlanView[];
   branding: BrandingView;
   brandingReady: boolean;
   storeName: string;
@@ -256,7 +260,10 @@ export default function WebStoreClient({
       ) : tab === "vitrine" ? (
         <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} heroImages={heroImages} heroImagesReady={heroImagesReady} />
       ) : tab === "combos" ? (
-        <CombosPane combos={webCombos} products={webProducts} miniApp={miniAppPromo} promoImage={branding.promoImageUrl} />
+        <div className="space-y-5">
+          <VipPlansPane plans={vipPlans} />
+          <CombosPane combos={webCombos} products={webProducts} miniApp={miniAppPromo} promoImage={branding.promoImageUrl} />
+        </div>
       ) : tab === "aparencia" ? (
         <AppearancePane initial={branding} ready={brandingReady} storeName={storeName} />
       ) : tab === "clientes" ? (
