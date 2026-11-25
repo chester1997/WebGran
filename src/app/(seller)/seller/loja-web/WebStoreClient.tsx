@@ -40,6 +40,9 @@ import {
 import AppearancePane, { type BrandingView } from "./AppearancePane";
 import CombosPane from "./CombosPane";
 import VipPlansPane from "./VipPlansPane";
+import OverviewPane from "./OverviewPane";
+import type { WebOverview } from "@/lib/webstore/overview";
+import { SolarChart2BoldDuotone } from "@/components/icons/solar/seller-icons";
 import type { VipPlanView } from "@/lib/webstore/vip";
 import type { WebComboView } from "@/lib/webstore/combos";
 import type { SectionConfig } from "@/lib/webstore/sections";
@@ -137,6 +140,7 @@ export default function WebStoreClient({
   webCombos,
   miniAppPromo,
   vipPlans = [],
+  overview,
   heroImages,
   heroImagesReady,
 }: {
@@ -145,6 +149,7 @@ export default function WebStoreClient({
   webCombos: WebComboView[];
   miniAppPromo: { title: string; tiers: { minQuantity: number; price: number }[] } | null;
   vipPlans?: VipPlanView[];
+  overview: WebOverview;
   branding: BrandingView;
   brandingReady: boolean;
   storeName: string;
@@ -156,7 +161,7 @@ export default function WebStoreClient({
   webProducts: WebProductView[];
   sections: SectionConfig[];
 }) {
-  const [tab, setTabNow] = useState<"produtos" | "vitrine" | "combos" | "aparencia" | "clientes" | "suporte">("produtos");
+  const [tab, setTabNow] = useState<"visao" | "produtos" | "vitrine" | "combos" | "aparencia" | "clientes" | "suporte">("visao");
   // Troca de aba em transição: o clique responde na hora e a aba nova monta sem travar a tela
   const [, startTab] = useTransition();
   const setTab = (t: typeof tab) => startTab(() => setTabNow(t));
@@ -213,6 +218,7 @@ export default function WebStoreClient({
             active={tab}
             onSelect={setTab}
             tabs={[
+              { id: "visao", label: "Visão geral", icon: SolarChart2BoldDuotone },
               { id: "produtos", label: "Produtos", icon: SolarSellerProductsIcon, count: webProducts.length },
               { id: "vitrine", label: "Vitrine", icon: SolarSellerCarouselsIcon },
               { id: "combos", label: "Ofertas e combos", icon: SolarSellerCombosIcon, count: webCombos.length },
@@ -230,6 +236,8 @@ export default function WebStoreClient({
         </Callout>
       )}
 
+      {/* Na Visão geral os números ficam mais completos; nas outras abas, o resumo rápido */}
+      {tab !== "visao" && (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {[
           { l: "Clientes cadastrados", v: String(stats.customers), icon: Users },
@@ -248,6 +256,7 @@ export default function WebStoreClient({
           </div>
         ))}
       </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 empty:hidden">
         {tab === "clientes" && (
@@ -259,7 +268,9 @@ export default function WebStoreClient({
       </div>
 
       <div key={tab} className="animate-[wg-fade_.22s_ease-out]">
-      {tab === "produtos" ? (
+      {tab === "visao" ? (
+        <OverviewPane data={overview} />
+      ) : tab === "produtos" ? (
         <WebProductsPane items={webProducts} ready={ready} />
       ) : tab === "vitrine" ? (
         <ShowcasePane initial={sections} ready={sectionsReady} products={webProducts} heroImages={heroImages} heroImagesReady={heroImagesReady} />

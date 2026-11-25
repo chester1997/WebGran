@@ -9,6 +9,7 @@ import { getWebBranding } from "@/lib/webstore/settings";
 import { listWebCombos, miniAppProgressiveTiers } from "@/lib/webstore/combos";
 import { getHeroImages } from "@/lib/webstore/hero-images";
 import { listVipPlans } from "@/lib/webstore/vip";
+import { getWebOverview } from "@/lib/webstore/overview";
 import SetupStoreClient from "../SetupStoreClient";
 import WebStoreClient from "./WebStoreClient";
 
@@ -20,7 +21,7 @@ export default async function LojaWebPage() {
   if (!store) return <SetupStoreClient />;
 
   // Tudo em paralelo (antes eram 4 rodadas seguidas ao banco)
-  const [ready, customers, tickets, webProducts, showcase, look, webCombos, miniAppPromo, hero, vipPlans] = await Promise.all([
+  const [ready, customers, tickets, webProducts, showcase, look, webCombos, miniAppPromo, hero, vipPlans, overview] = await Promise.all([
     webTablesReady(),
     listSellerWebCustomers(store.id).catch(() => []),
     listSellerTickets(store.id).catch(() => []),
@@ -31,6 +32,7 @@ export default async function LojaWebPage() {
     miniAppProgressiveTiers(store.id),
     getHeroImages(store.id),
     listVipPlans(store.id).catch(() => []),
+    getWebOverview(store.id).catch(() => ({ orders: [], newCustomers: [], allTime: { revenue: 0, paidOrders: 0, customers: 0 }, vipActive: 0 })),
   ]);
 
   return (
@@ -43,6 +45,7 @@ export default async function LojaWebPage() {
       webCombos={webCombos}
       miniAppPromo={miniAppPromo}
       vipPlans={vipPlans}
+      overview={overview}
       heroImages={hero.images}
       heroImagesReady={hero.ready}
       sections={showcase.sections}
