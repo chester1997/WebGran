@@ -13,8 +13,8 @@ describe("WebGran PWA Implementation Suite (Etapa 1)", () => {
       expect(manifestData.name).toBe("WebGran");
       expect(manifestData.short_name).toBe("WebGran");
       expect(manifestData.description).toBe("plataforma WebGran");
-      expect(manifestData.start_url).toBe("/");
-      expect(manifestData.scope).toBe("/");
+      expect(manifestData.start_url).toBe("/seller");
+      expect(manifestData.scope).toBe("/seller");
       expect(manifestData.display).toBe("standalone");
       expect(manifestData.theme_color).toBe("#121214");
       expect(manifestData.background_color).toBe("#121214");

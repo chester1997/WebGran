@@ -6,8 +6,10 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "WebGran",
     description: "plataforma WebGran",
     id: "/",
-    start_url: "/",
-    scope: "/",
+    // Escopo só do painel: o app WebGran não pode "ser dono" das lojas (/loja/...), que têm app próprio.
+    // O id continua "/" para quem já instalou receber a atualização em vez de um app novo.
+    start_url: "/seller",
+    scope: "/seller",
     display: "standalone",
     background_color: "#121214",
     theme_color: "#121214",
