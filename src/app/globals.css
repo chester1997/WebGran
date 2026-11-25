@@ -588,6 +588,10 @@ html.light {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+@keyframes wg-float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-14px) rotate(calc(var(--r, 0deg) + 4deg)); }
+}
 @media (prefers-reduced-motion: reduce) {
   [class*="animate-[wg-"] { animation: none !important; }
 }

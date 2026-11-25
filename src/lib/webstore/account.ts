@@ -123,6 +123,7 @@ export interface SellerWebCustomerRow {
   email: string;
   whatsapp: string | null;
   telegram: string | null;
+  leadSource: string | null;
   status: string;
   createdAt: Date;
   lastLoginAt: Date | null;
@@ -161,6 +162,7 @@ export async function listSellerWebCustomers(storeId: string): Promise<SellerWeb
       email: c.email,
       whatsapp: c.whatsapp,
       telegram: c.telegram,
+      leadSource: c.leadSource ?? null,
       status: c.status,
       createdAt: c.createdAt,
       lastLoginAt: c.lastLoginAt,

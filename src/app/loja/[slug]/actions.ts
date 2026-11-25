@@ -34,6 +34,7 @@ export async function registerAction(slug: string, input: RegisterInput): Promis
     password: String(input.password || ""),
     whatsapp: String(input.whatsapp || ""),
     telegram: String(input.telegram || ""),
+    leadSource: String(input.leadSource || ""),
   });
 }
 

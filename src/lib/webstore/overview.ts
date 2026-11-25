@@ -15,12 +15,14 @@ export interface OverviewOrder {
   paidAt: string | null;
   status: string;
   total: number;
+  /** origem do lead do cliente que comprou (null = não informado) */
+  source: string | null;
   items: { key: string; title: string; total: number; quantity: number; vip: boolean; combo: boolean }[];
 }
 
 export interface WebOverview {
   orders: OverviewOrder[];
-  newCustomers: string[];
+  newCustomers: { createdAt: string; source: string | null }[];
   allTime: { revenue: number; paidOrders: number; customers: number };
   vipActive: number;
 }
@@ -32,12 +34,13 @@ export async function getWebOverview(storeId: string): Promise<WebOverview> {
 
   const [rows, customers, allTime, customerCount, vip] = await Promise.all([
     db
-      .select({ id: orders.id, createdAt: orders.createdAt, paidAt: orders.paidAt, status: orders.status, total: orders.total })
+      .select({ id: orders.id, createdAt: orders.createdAt, paidAt: orders.paidAt, status: orders.status, total: orders.total, source: webCustomers.leadSource })
       .from(orders)
+      .leftJoin(webCustomers, eq(webCustomers.shadowCustomerId, orders.customerId))
       .where(and(eq(orders.storeId, storeId), isWeb, or(gte(orders.createdAt, since), gte(orders.paidAt, since))))
       .orderBy(desc(orders.createdAt))
       .limit(5000),
-    db.select({ createdAt: webCustomers.createdAt }).from(webCustomers).where(and(eq(webCustomers.storeId, storeId), gte(webCustomers.createdAt, since))),
+    db.select({ createdAt: webCustomers.createdAt, source: webCustomers.leadSource }).from(webCustomers).where(and(eq(webCustomers.storeId, storeId), gte(webCustomers.createdAt, since))),
     db
       .select({ revenue: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number), n: sql<number>`count(*)`.mapWith(Number) })
       .from(orders)
@@ -96,9 +99,10 @@ export async function getWebOverview(storeId: string): Promise<WebOverview> {
       paidAt: r.paidAt ? r.paidAt.toISOString() : null,
       status: PAID.includes(r.status) ? "paid" : r.status,
       total: Number(r.total),
+      source: r.source ?? null,
       items: byOrder.get(r.id) || [],
     })),
-    newCustomers: customers.map((c) => c.createdAt.toISOString()),
+    newCustomers: customers.map((c) => ({ createdAt: c.createdAt.toISOString(), source: c.source ?? null })),
     allTime: { revenue: allTime[0]?.revenue || 0, paidOrders: allTime[0]?.n || 0, customers: customerCount[0]?.n || 0 },
     vipActive: vip[0]?.n || 0,
   };

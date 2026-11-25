@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { isLeadSource } from "./lead-sources";
 import { cache } from "react";
 import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
@@ -106,6 +107,7 @@ export interface RegisterInput {
   password: string;
   whatsapp?: string;
   telegram?: string;
+  leadSource?: string;
 }
 
 export function validateRegister(i: RegisterInput): string | null {
@@ -117,6 +119,7 @@ export function validateRegister(i: RegisterInput): string | null {
   if (!wa && !tg) return "Informe seu WhatsApp ou seu Telegram para o suporte falar com você.";
   if (wa && (wa.length < 10 || wa.length > 13)) return "WhatsApp inválido. Use DDD + número.";
   if (tg && !/^[A-Za-z0-9_]{4,32}$/.test(tg)) return "Usuário do Telegram inválido.";
+  if (!isLeadSource(i.leadSource)) return "Conte pra gente de onde você conheceu a loja.";
   return null;
 }
 
@@ -146,6 +149,7 @@ export async function registerWebCustomer(store: WebStore, input: RegisterInput)
         passwordHash,
         whatsapp: onlyDigits(input.whatsapp || "") || null,
         telegram: (input.telegram || "").trim().replace(/^@/, "") || null,
+        leadSource: isLeadSource(input.leadSource) ? input.leadSource : null,
         lastLoginAt: new Date(),
       });
     } catch (insertErr) {

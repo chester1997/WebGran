@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Crown, Layers, Package, Receipt } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { WebOverview } from "@/lib/webstore/overview";
+import { LEAD_SOURCES } from "@/lib/webstore/lead-sources";
+import { LeadSourceIcon } from "@/components/webstore/LeadSourceIcon";
 
 const SURFACE =
   "relative rounded-[14px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
@@ -71,6 +73,30 @@ export default function OverviewPane({ data }: { data: WebOverview }) {
       }
     const topList = [...top.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 6);
 
+    // Leads por origem: cadastros no período + quanto cada origem trouxe de receita
+    const newInRange = data.newCustomers.filter((c) => inRange(c.createdAt, start, now + 1));
+    const src = new Map<string, { leads: number; revenue: number; sales: number }>();
+    const bump = (k: string) => src.get(k) || { leads: 0, revenue: 0, sales: 0 };
+    for (const c of newInRange) {
+      const k = c.source || "none";
+      const r = bump(k);
+      r.leads += 1;
+      src.set(k, r);
+    }
+    for (const o of paid) {
+      const k = o.source || "none";
+      const r = bump(k);
+      r.revenue += o.total;
+      r.sales += 1;
+      src.set(k, r);
+    }
+    const sources = [
+      ...LEAD_SOURCES.map((s) => ({ id: s.id as string, label: s.label, ...(src.get(s.id) || { leads: 0, revenue: 0, sales: 0 }) })),
+      { id: "none", label: "Não informado", ...(src.get("none") || { leads: 0, revenue: 0, sales: 0 }) },
+    ]
+      .filter((s) => s.id !== "none" || s.leads > 0 || s.revenue > 0)
+      .sort((a, b) => b.leads - a.leads || b.revenue - a.revenue);
+
     return {
       revenue,
       delta: revenuePrev > 0 ? ((revenue - revenuePrev) / revenuePrev) * 100 : null,
@@ -78,7 +104,8 @@ export default function OverviewPane({ data }: { data: WebOverview }) {
       ticket: paid.length ? revenue / paid.length : 0,
       conversion: created.length ? (created.filter((o) => o.status === "paid").length / created.length) * 100 : null,
       createdCount: created.length,
-      newCustomers: data.newCustomers.filter((c) => inRange(c, start, now + 1)).length,
+      newCustomers: newInRange.length,
+      sources,
       series,
       topList,
       kind,
@@ -179,6 +206,8 @@ export default function OverviewPane({ data }: { data: WebOverview }) {
         )}
       </section>
 
+      <LeadsBySource sources={v.sources} total={v.newCustomers} days={days} />
+
       <div className="grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-4">
         {/* Mais vendidos */}
         <section className={`${SURFACE} p-5`}>
@@ -253,6 +282,62 @@ export default function OverviewPane({ data }: { data: WebOverview }) {
         </div>
       </div>
     </div>
+  );
+}
+
+type SourceRow = { id: string; label: string; leads: number; revenue: number; sales: number };
+
+/** Leads por origem: uma barra por canal (Instagram, TikTok, Kwai...), com o que cada um rendeu. */
+function LeadsBySource({ sources, total, days }: { sources: SourceRow[]; total: number; days: number }) {
+  const max = Math.max(1, ...sources.map((s) => s.leads));
+  const leader = total > 0 ? sources[0] : null;
+  return (
+    <section className={`${SURFACE} p-5`}>
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-1 mb-4">
+        <div className="mr-auto">
+          <h3 className="text-[15px] font-semibold">Leads por origem</h3>
+          <p className="text-[12.5px] text-zinc-500 mt-0.5">De onde vieram os clientes que se cadastraram nos últimos {days} dias.</p>
+        </div>
+        <p className="text-[12.5px] text-zinc-500">
+          <b className="text-zinc-200 font-semibold tabular-nums">{total}</b> {total === 1 ? "lead" : "leads"}
+          {leader && leader.leads > 0 && (
+            <>
+              {" "}· mais forte: <b className="text-zinc-200 font-semibold">{leader.label}</b>
+            </>
+          )}
+        </p>
+      </div>
+      <div className="hidden sm:grid grid-cols-[minmax(0,150px)_minmax(0,1fr)_56px_64px_96px] gap-4 px-1 pb-2 text-[11px] font-medium text-zinc-500 border-b border-white/[0.06]">
+        <span>Origem</span>
+        <span>Leads</span>
+        <span className="text-right">%</span>
+        <span className="text-right">Vendas</span>
+        <span className="text-right">Receita</span>
+      </div>
+      <ul className="divide-y divide-white/[0.04]">
+        {sources.map((s) => (
+          <li key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,150px)_minmax(0,1fr)_56px_64px_96px] gap-x-4 gap-y-1.5 items-center px-1 py-2.5 text-[13px]">
+            <span className="flex items-center gap-2.5 min-w-0">
+              <span className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 ${s.leads ? "bg-[#3b82f6]/12 text-[#3b82f6]" : "bg-white/[0.04] text-zinc-600"}`}>
+                <LeadSourceIcon source={s.id} size={15} />
+              </span>
+              <span className={`truncate ${s.leads ? "text-zinc-200" : "text-zinc-500"}`}>{s.label}</span>
+            </span>
+            <span className="sm:hidden text-right tabular-nums font-semibold">{s.leads}</span>
+            <span className="col-span-2 sm:col-span-1 flex items-center gap-3 min-w-0">
+              <span className="flex-1 h-2 rounded-full bg-white/[0.05] overflow-hidden">
+                <span className="block h-full rounded-full bg-[#3b82f6] transition-[width] duration-500" style={{ width: s.leads ? `${Math.max(3, (s.leads / max) * 100)}%` : "0%" }} />
+              </span>
+              <span className="hidden sm:inline w-8 text-right tabular-nums font-semibold">{s.leads}</span>
+            </span>
+            <span className="hidden sm:block text-right tabular-nums text-zinc-400">{total ? Math.round((s.leads / total) * 100) : 0}%</span>
+            <span className="hidden sm:block text-right tabular-nums text-zinc-400">{s.sales}</span>
+            <span className={`hidden sm:block text-right tabular-nums ${s.revenue ? "font-semibold" : "text-zinc-600"}`}>{brl(s.revenue)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-[11.5px] text-zinc-500">Vendas e receita contam as compras pagas no período, pela origem de quem comprou.</p>
+    </section>
   );
 }
 

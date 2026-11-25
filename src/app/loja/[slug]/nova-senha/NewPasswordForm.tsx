@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { resetPasswordAction } from "../actions";
-import { BTN_PRIMARY, CARD, ErrorBox, INPUT, Label } from "../_components/ui";
+import { AUTH_CARD, BTN_PRIMARY, ErrorBox, INPUT, Label } from "../_components/ui";
 
 export function NewPasswordForm({ slug, token, email }: { slug: string; token: string; email: string }) {
   const router = useRouter();
@@ -33,8 +33,8 @@ export function NewPasswordForm({ slug, token, email }: { slug: string; token: s
   };
 
   return (
-    <div className="mx-auto max-w-[440px] px-4 py-10 sm:py-16">
-      <div className={`${CARD} p-6 sm:p-7`}>
+    <div className="mx-auto w-full max-w-[440px]">
+      <div className={AUTH_CARD}>
         <h1 className="text-[22px] font-semibold tracking-tight">Criar nova senha</h1>
         <p className="mt-1 text-[13.5px] text-zinc-500">Conta {email}</p>
         <form onSubmit={submit} className="mt-6 space-y-4">

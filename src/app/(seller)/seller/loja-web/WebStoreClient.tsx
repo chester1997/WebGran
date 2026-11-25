@@ -42,6 +42,8 @@ import CombosPane from "./CombosPane";
 import VipPlansPane from "./VipPlansPane";
 import OverviewPane from "./OverviewPane";
 import type { WebOverview } from "@/lib/webstore/overview";
+import { LEAD_SOURCES, leadSourceLabel } from "@/lib/webstore/lead-sources";
+import { LeadSourceIcon } from "@/components/webstore/LeadSourceIcon";
 import { SolarChart2BoldDuotone } from "@/components/icons/solar/seller-icons";
 import type { VipPlanView } from "@/lib/webstore/vip";
 import type { WebComboView } from "@/lib/webstore/combos";
@@ -53,6 +55,7 @@ interface Customer {
   email: string;
   whatsapp: string | null;
   telegram: string | null;
+  leadSource: string | null;
   status: string;
   createdAt: string;
   lastLoginAt: string | null;
@@ -166,6 +169,7 @@ export default function WebStoreClient({
   const [, startTab] = useTransition();
   const setTab = (t: typeof tab) => startTab(() => setTabNow(t));
   const [q, setQ] = useState("");
+  const [source, setSource] = useState<string>("all");
   const [open, setOpen] = useState<Customer | null>(null);
   const toast = useToast();
   const storeUrl = typeof window !== "undefined" ? `${window.location.origin}/loja/${storeSlug}` : `/loja/${storeSlug}`;
@@ -180,11 +184,18 @@ export default function WebStoreClient({
     [customers, tickets]
   );
 
+  const sourceCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of customers) m.set(c.leadSource || "none", (m.get(c.leadSource || "none") || 0) + 1);
+    return m;
+  }, [customers]);
+
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return customers;
-    return customers.filter((c) => [c.name, c.email, c.whatsapp || "", c.telegram || ""].some((v) => v.toLowerCase().includes(t)));
-  }, [customers, q]);
+    const bySource = source === "all" ? customers : customers.filter((c) => (c.leadSource || "none") === source);
+    if (!t) return bySource;
+    return bySource.filter((c) => [c.name, c.email, c.whatsapp || "", c.telegram || ""].some((v) => v.toLowerCase().includes(t)));
+  }, [customers, q, source]);
 
   return (
     <div className="w-full max-w-full pb-10 space-y-5">
@@ -265,6 +276,29 @@ export default function WebStoreClient({
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome, e-mail ou contato" className={`${INPUT} !pl-9`} />
           </label>
         )}
+        {tab === "clientes" && customers.length > 0 && (
+          <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] -mx-1 px-1" role="group" aria-label="Filtrar por origem">
+            {[
+              { id: "all", label: "Todas", n: customers.length },
+              ...LEAD_SOURCES.filter((s) => sourceCounts.has(s.id)).map((s) => ({ id: s.id as string, label: s.label, n: sourceCounts.get(s.id) || 0 })),
+              ...(sourceCounts.has("none") ? [{ id: "none", label: "Não informado", n: sourceCounts.get("none") || 0 }] : []),
+            ].map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setSource(o.id)}
+                aria-pressed={source === o.id}
+                className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-[9px] border text-[12.5px] font-medium transition-colors ${
+                  source === o.id ? "bg-[#3b82f6]/15 border-[#3b82f6]/50 text-white" : "bg-white/[0.03] border-white/[0.07] text-zinc-400 hover:text-white"
+                }`}
+              >
+                {o.id !== "all" && o.id !== "none" && <LeadSourceIcon source={o.id} size={14} className={source === o.id ? "text-[#3b82f6]" : ""} />}
+                {o.label}
+                <span className="tabular-nums text-zinc-500">{o.n}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div key={tab} className="animate-[wg-fade_.22s_ease-out]">
@@ -290,9 +324,10 @@ export default function WebStoreClient({
           </div>
         ) : (
           <div className={`${SURFACE} overflow-hidden`}>
-            <div className="hidden lg:grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_110px_120px_120px_100px] gap-4 px-5 h-11 items-center text-[11.5px] font-medium text-zinc-500 border-b border-white/[0.06]">
+            <div className="hidden lg:grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_120px_100px_110px_110px_90px] gap-4 px-5 h-11 items-center text-[11.5px] font-medium text-zinc-500 border-b border-white/[0.06]">
               <span>Cliente</span>
               <span>Contato</span>
+              <span>Origem</span>
               <span className="text-right">Pedidos pagos</span>
               <span className="text-right">Total gasto</span>
               <span>Última compra</span>
@@ -304,7 +339,7 @@ export default function WebStoreClient({
                   <button
                     type="button"
                     onClick={() => setOpen(c)}
-                    className="w-full text-left grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_110px_120px_120px_100px] gap-x-4 gap-y-1 px-5 py-3.5 items-center hover:bg-white/[0.025] transition-colors"
+                    className="w-full text-left grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_120px_100px_110px_110px_90px] gap-x-4 gap-y-1 px-5 py-3.5 items-center hover:bg-white/[0.025] transition-colors"
                   >
                     <span className="flex items-center gap-3 min-w-0">
                       <span className="w-9 h-9 rounded-full bg-[#3b82f6]/15 text-[#9cc2ff] text-[13px] font-semibold flex items-center justify-center shrink-0">
@@ -316,11 +351,29 @@ export default function WebStoreClient({
                           {c.status !== "active" && <span className="text-[10.5px] font-semibold text-red-300 bg-red-500/10 px-1.5 rounded">Bloqueado</span>}
                           {c.openTickets > 0 && <span className="text-[10.5px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 rounded">Suporte</span>}
                         </span>
-                        <span className="block text-[12px] text-zinc-500 truncate">{c.email}</span>
+                        <span className="flex items-center gap-1.5 text-[12px] text-zinc-500 min-w-0">
+                          <span className="truncate">{c.email}</span>
+                          {c.leadSource && (
+                            <span className="lg:hidden shrink-0 inline-flex items-center gap-1 text-zinc-400">
+                              · <LeadSourceIcon source={c.leadSource} size={12} className="text-[#3b82f6]" />
+                              {leadSourceLabel(c.leadSource)}
+                            </span>
+                          )}
+                        </span>
                       </span>
                     </span>
                     <span className="hidden lg:block text-[12.5px] text-zinc-400 truncate">
                       {[c.whatsapp && `WhatsApp ${c.whatsapp}`, c.telegram && `@${c.telegram}`].filter(Boolean).join(" · ") || "—"}
+                    </span>
+                    <span className="hidden lg:flex items-center gap-1.5 text-[12.5px] min-w-0">
+                      {c.leadSource ? (
+                        <>
+                          <LeadSourceIcon source={c.leadSource} size={15} className="text-[#3b82f6] shrink-0" />
+                          <span className="text-zinc-200 truncate">{leadSourceLabel(c.leadSource)}</span>
+                        </>
+                      ) : (
+                        <span className="text-zinc-600">—</span>
+                      )}
                     </span>
                     <span className="text-right text-[13px] tabular-nums text-zinc-200 lg:block">
                       <span className="lg:hidden text-zinc-500 text-[11.5px]">{c.paidOrders} pedidos · </span>
@@ -536,6 +589,7 @@ function CustomerDrawer({ c, tickets, onClose }: { c: Customer; tickets: Ticket[
               {[
                 ["WhatsApp", c.whatsapp || "—"],
                 ["Telegram", c.telegram ? `@${c.telegram}` : "—"],
+                ["Veio de", c.leadSource ? leadSourceLabel(c.leadSource) : "Não informado"],
                 ["Cadastro", fmt(c.createdAt)],
                 ["Último acesso", fmt(c.lastLoginAt)],
                 ["Pedidos pagos", String(c.paidOrders)],

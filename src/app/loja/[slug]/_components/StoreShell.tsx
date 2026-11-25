@@ -15,6 +15,7 @@ import {
 import { CartProvider, useCart } from "./cart";
 import { SupportModal } from "./SupportModal";
 import { StoreInstallApp } from "./StoreInstallApp";
+import { AuthScene } from "./AuthScene";
 
 import { thumb } from "@/lib/webstore/img";
 export interface ShellStore {
@@ -54,7 +55,7 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
   const [bump, setBump] = useState(0);
   const base = `/loja/${store.slug}`;
   const isHome = pathname === base;
-  const isAuth = pathname.startsWith(`${base}/entrar`) || pathname.startsWith(`${base}/cadastro`);
+  const isAuth = ["entrar", "cadastro", "recuperar", "nova-senha"].some((p) => pathname.startsWith(`${base}/${p}`));
 
   useEffect(() => {
     const on = () => setSolid(window.scrollY > 24);
@@ -104,6 +105,17 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
     { href: customer ? `${base}/conta` : `${base}/entrar`, label: "Meus vídeos", icon: SolarClapperboardPlayBoldDuotone, on: pathname.startsWith(`${base}/conta`) },
     { href: `${base}/carrinho`, label: "Carrinho", icon: SolarCartLarge2BoldDuotone, on: pathname.startsWith(`${base}/carrinho`), badge: ready && count > 0 ? count : 0 },
   ];
+
+  // Entrar/cadastro: tela cheia, sem o menu e o topo da loja
+  if (isAuth && !customer) {
+    return (
+      <AuthScene store={store}>
+        <div key={pathname} className="animate-[wg-fade_.25s_ease-out]">
+          {children}
+        </div>
+      </AuthScene>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] w-full max-w-[100vw] overflow-x-clip bg-[#07080a] text-zinc-100" style={{ ["--rail" as string]: open ? "232px" : "76px" }}>

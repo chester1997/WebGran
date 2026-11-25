@@ -3,25 +3,34 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
 import { loginAction, registerAction } from "../actions";
-import { BTN_PRIMARY, CARD, ErrorBox, INPUT, Label } from "./ui";
+import { AUTH_CARD, BTN_PRIMARY, ErrorBox, INPUT, Label } from "./ui";
+import { LEAD_SOURCES } from "@/lib/webstore/lead-sources";
+import { LeadSourceIcon } from "@/components/webstore/LeadSourceIcon";
 
 export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "register"; next: string }) {
   const router = useRouter();
-  const [f, setF] = useState({ name: "", email: "", password: "", whatsapp: "", telegram: "" });
+  const [f, setF] = useState({ name: "", email: "", password: "", whatsapp: "", telegram: "", leadSource: "" });
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceMissing, setSourceMissing] = useState(false);
   const [pending, start] = useTransition();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
   const target = next === "carrinho" ? `/loja/${slug}/carrinho` : `/loja/${slug}/conta`;
   const q = next ? `?next=${encodeURIComponent(next)}` : "";
+  const isLogin = mode === "login";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLogin && !f.leadSource) {
+      setSourceMissing(true);
+      setError("Conte pra gente de onde você conheceu a loja.");
+      return;
+    }
     start(async () => {
       setError(null);
-      const res = mode === "login" ? await loginAction(slug, f.email, f.password) : await registerAction(slug, f);
+      const res = isLogin ? await loginAction(slug, f.email, f.password) : await registerAction(slug, f);
       if (!res.ok) {
         setError(res.error);
         return;
@@ -31,15 +40,19 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
     });
   };
 
+  const Icon = isLogin ? LogIn : UserPlus;
+
   return (
-    <div className="mx-auto max-w-[440px] px-4 py-10 sm:py-16">
-      <div className={`${CARD} p-6 sm:p-7`}>
-        <h1 className="text-[22px] font-semibold tracking-tight">{mode === "login" ? "Entrar na sua conta" : "Criar sua conta"}</h1>
-        <p className="mt-1 text-[13.5px] text-zinc-500">
-          {mode === "login" ? "Acesse seus produtos e acompanhe seus pedidos." : "Seus produtos ficam salvos aqui depois da compra."}
-        </p>
+    <div className="mx-auto w-full max-w-[460px]">
+      <div className={AUTH_CARD}>
+        <span className="w-12 h-12 rounded-[14px] bg-[linear-gradient(160deg,#4f8ff7,#2563eb)] text-white flex items-center justify-center shadow-[0_14px_30px_-12px_rgba(59,130,246,0.9)]">
+          <Icon className="w-[22px] h-[22px]" />
+        </span>
+        <h1 className="mt-5 text-[24px] font-bold tracking-tight">{isLogin ? "Bem-vindo de volta" : "Criar sua conta"}</h1>
+        <p className="mt-1 text-[13.5px] text-zinc-400">{isLogin ? "Entre para assistir seus conteúdos e ver seus pedidos." : "Leva menos de um minuto. Seus produtos ficam salvos aqui."}</p>
+
         <form onSubmit={submit} className="mt-6 space-y-4">
-          {mode === "register" && (
+          {!isLogin && (
             <label className="block">
               <Label>Nome</Label>
               <input value={f.name} onChange={set("name")} className={INPUT} autoComplete="name" required maxLength={80} placeholder="Seu nome" />
@@ -50,31 +63,37 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
             <input type="email" value={f.email} onChange={set("email")} className={INPUT} autoComplete="email" required maxLength={120} placeholder="voce@email.com" />
           </label>
           <label className="block">
-            <Label hint={mode === "register" ? "mínimo 6 caracteres" : undefined}>Senha</Label>
+            <Label hint={!isLogin ? "mínimo 6 caracteres" : undefined}>Senha</Label>
             <span className="relative block">
               <input
                 type={show ? "text" : "password"}
                 value={f.password}
                 onChange={set("password")}
                 className={`${INPUT} pr-11`}
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 required
-                minLength={mode === "register" ? 6 : undefined}
+                minLength={!isLogin ? 6 : undefined}
                 maxLength={100}
+                placeholder="••••••••"
               />
-              <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? "Esconder senha" : "Mostrar senha"} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-[8px] flex items-center justify-center text-zinc-500 hover:text-white">
+              <button
+                type="button"
+                onClick={() => setShow((v) => !v)}
+                aria-label={show ? "Esconder senha" : "Mostrar senha"}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-[8px] flex items-center justify-center text-zinc-500 hover:text-white"
+              >
                 {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </span>
           </label>
-          {mode === "login" && (
+          {isLogin && (
             <div className="-mt-2 text-right">
               <Link href={`/loja/${slug}/recuperar`} className="text-[12.5px] text-[#7fb0ff] hover:underline">
                 Esqueci minha senha
               </Link>
             </div>
           )}
-          {mode === "register" && (
+          {!isLogin && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
@@ -87,30 +106,68 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
                 </label>
               </div>
               <p className="text-[12px] text-zinc-500 -mt-1">Preencha pelo menos um. É por ele que a loja fala com você se o acesso não chegar.</p>
+
+              <fieldset>
+                <legend className="w-full">
+                  <Label hint={<span className={sourceMissing && !f.leadSource ? "text-red-300" : ""}>obrigatório</span>}>Como você conheceu a loja?</Label>
+                </legend>
+                <div
+                  role="radiogroup"
+                  aria-label="Como você conheceu a loja"
+                  className={`grid grid-cols-5 gap-1 sm:gap-1.5 rounded-[12px] p-1 sm:p-1.5 border transition-colors ${
+                    sourceMissing && !f.leadSource ? "border-red-500/40 bg-red-500/[0.04]" : "border-white/[0.07] bg-black/20"
+                  }`}
+                >
+                  {LEAD_SOURCES.map((s) => {
+                    const on = f.leadSource === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => {
+                          setF((v) => ({ ...v, leadSource: s.id }));
+                          if (sourceMissing) setError(null);
+                        }}
+                        className={`min-w-0 h-[60px] rounded-[9px] flex flex-col items-center justify-center gap-1.5 border transition-colors ${
+                          on
+                            ? "bg-[#3b82f6]/15 border-[#3b82f6]/70 text-white"
+                            : "bg-white/[0.02] border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <LeadSourceIcon source={s.id} size={19} className={on ? "text-[#3b82f6]" : ""} />
+                        <span className="text-[9.5px] min-[400px]:text-[10.5px] font-medium leading-none tracking-tight truncate max-w-full">{s.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
             </>
           )}
           {error && <ErrorBox>{error}</ErrorBox>}
-          <button type="submit" className={`${BTN_PRIMARY} w-full h-12 text-[15px]`} disabled={pending}>
-            {pending ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
+          <button type="submit" className={`${BTN_PRIMARY} w-full h-12 text-[15px] rounded-[10px]`} disabled={pending}>
+            {pending ? "Aguarde..." : isLogin ? "Entrar" : "Criar conta"}
           </button>
         </form>
-        <p className="mt-5 text-center text-[13.5px] text-zinc-500">
-          {mode === "login" ? (
+
+        <div className="mt-6 pt-5 border-t border-white/[0.06] text-center text-[13.5px] text-zinc-500">
+          {isLogin ? (
             <>
               Ainda não tem conta?{" "}
-              <Link href={`/loja/${slug}/cadastro${q}`} className="text-[#7fb0ff] hover:underline font-medium">
-                Criar conta
+              <Link href={`/loja/${slug}/cadastro${q}`} className="text-[#7fb0ff] hover:underline font-semibold">
+                Criar conta grátis
               </Link>
             </>
           ) : (
             <>
               Já tem conta?{" "}
-              <Link href={`/loja/${slug}/entrar${q}`} className="text-[#7fb0ff] hover:underline font-medium">
+              <Link href={`/loja/${slug}/entrar${q}`} className="text-[#7fb0ff] hover:underline font-semibold">
                 Entrar
               </Link>
             </>
           )}
-        </p>
+        </div>
       </div>
     </div>
   );

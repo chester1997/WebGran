@@ -1799,6 +1799,7 @@ export const webCustomers = pgTable('web_customers', {
   passwordHash: text('password_hash').notNull(),
   whatsapp: text('whatsapp'),
   telegram: text('telegram'),
+  leadSource: text('lead_source'),
   status: text('status').notNull().default('active'),
   lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

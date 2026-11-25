@@ -39,3 +39,7 @@ export const DELIVERY_LABEL: Record<string, string> = {
   TELEGRAM_CHAT: "Acesso ao grupo no Telegram",
   external: "Link de acesso",
 };
+
+/** Cartão das telas de entrar/cadastro/senha (fica sobre o fundo com ícones). */
+export const AUTH_CARD =
+  "relative rounded-[20px] border border-white/[0.08] bg-[#0c0d12]/85 backdrop-blur-md p-6 sm:p-8 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.95)] before:pointer-events-none before:absolute before:inset-x-10 before:-top-px before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#3b82f6]/80 before:to-transparent";

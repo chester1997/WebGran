@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { ArrowLeft, MailCheck } from "lucide-react";
 import { forgotPasswordAction } from "../actions";
-import { BTN_PRIMARY, CARD, ErrorBox, INPUT, Label } from "../_components/ui";
+import { AUTH_CARD, BTN_PRIMARY, ErrorBox, INPUT, Label } from "../_components/ui";
 
 const VIAS = [
   ["whatsapp", "WhatsApp"],
@@ -33,8 +33,8 @@ export function RecoverForm({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-[440px] px-4 py-10 sm:py-16">
-      <div className={`${CARD} p-6 sm:p-7`}>
+    <div className="mx-auto w-full max-w-[440px]">
+      <div className={AUTH_CARD}>
         {sent ? (
           <div className="text-center py-2">
             <MailCheck className="w-10 h-10 text-[#3b82f6] mx-auto mb-3" />
