@@ -40,6 +40,25 @@ function scheduleFlowTick() {
   }
 }
 
+/**
+ * Depois de responder ao Telegram, remove dos grupos quem venceu (Diário, Semanal...).
+ * Limitado a uma passada por minuto por instância e com trava por acesso; nunca afeta a resposta.
+ */
+function scheduleExpiryTick() {
+  try {
+    after(async () => {
+      try {
+        const { tickExpiredAccesses } = await import("@/lib/orders/expiration-service");
+        await tickExpiredAccesses();
+      } catch (err: any) {
+        console.warn("[TELEGRAM WEBHOOK] Expiração de acessos falhou:", err?.message || err);
+      }
+    });
+  } catch {
+    // fora de um contexto de requisição: ignora
+  }
+}
+
 export async function POST(req: NextRequest) {
   let resolved: any = null;
   let update: any = null;
@@ -137,6 +156,8 @@ export async function POST(req: NextRequest) {
 
     const { store, token, bot } = resolved;
     update = await req.json();
+    // Toda mensagem do bot (não só as de fluxo) aproveita para remover acessos vencidos
+    scheduleExpiryTick();
 
     // Mecanismo de segurança para homologação inbound isolada
     if (update?._isHomologationTest) {
