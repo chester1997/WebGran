@@ -76,8 +76,19 @@ export async function getSections(storeId: string): Promise<{ ready: boolean; se
 
 const KINDS = new Set<SectionKind>(["hero", "top15", "continue", "combos", "vip", "carousel"]);
 
-/** Substitui a vitrine inteira pela lista enviada (na ordem). */
-export async function saveSections(storeId: string, list: SectionConfig[], validProductIds: Set<string>) {
+/** O banco ainda não aceita a seção "vip" (falta a migration 0033). */
+export function isVipKindRejected(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string; message?: string }; message?: string } | null;
+  const code = e?.code || e?.cause?.code;
+  return code === "23514" || /web_store_sections_kind_check|violates check constraint/i.test(`${e?.message || ""} ${e?.cause?.message || ""}`);
+}
+
+/**
+ * Substitui a vitrine inteira pela lista enviada (na ordem).
+ * Grava as linhas novas ANTES de apagar as antigas: se a gravação falhar, a vitrine atual fica intacta.
+ * Retorna `vipSaved=false` quando o banco ainda não aceita a seção VIP (ela volta para a posição padrão).
+ */
+export async function saveSections(storeId: string, list: SectionConfig[], validProductIds: Set<string>): Promise<{ vipSaved: boolean }> {
   const clean = list
     .filter((s) => s && KINDS.has(s.kind))
     .slice(0, 30)
@@ -95,8 +106,24 @@ export async function saveSections(storeId: string, list: SectionConfig[], valid
   // Só uma seção de cada tipo especial.
   const seen = new Set<string>();
   const final = clean.filter((s) => (s.kind === "carousel" ? true : seen.has(s.kind) ? false : (seen.add(s.kind), true)));
-  await db.delete(webStoreSections).where(eq(webStoreSections.storeId, storeId));
-  if (final.length) await db.insert(webStoreSections).values(final);
+  const old = await db.select({ id: webStoreSections.id }).from(webStoreSections).where(eq(webStoreSections.storeId, storeId));
+  let vipSaved = true;
+  let inserted: { id: string }[] = [];
+  if (final.length) {
+    try {
+      inserted = await db.insert(webStoreSections).values(final).returning({ id: webStoreSections.id });
+    } catch (err) {
+      if (!isVipKindRejected(err) || !final.some((s) => s.kind === "vip")) throw err;
+      vipSaved = false;
+      const noVip = final.filter((s) => s.kind !== "vip").map((s, position) => ({ ...s, position }));
+      if (noVip.length) inserted = await db.insert(webStoreSections).values(noVip).returning({ id: webStoreSections.id });
+    }
+  }
+  // Só agora remove a versão anterior
+  const keep = new Set(inserted.map((r) => r.id));
+  const drop = old.map((r) => r.id).filter((id) => !keep.has(id));
+  if (drop.length) await db.delete(webStoreSections).where(and(eq(webStoreSections.storeId, storeId), inArray(webStoreSections.id, drop)));
+  return { vipSaved };
 }
 
 /* ------------------------------------------------------------------ */

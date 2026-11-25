@@ -198,7 +198,11 @@ export async function saveSectionsAction(list: SectionConfig[]) {
   if (!c) return { ok: false as const, error: "Sem permissão." };
   const valid = new Set((await listWebProducts(c.store.id)).map((p) => p.id));
   try {
-    await saveSections(c.store.id, Array.isArray(list) ? list : [], valid);
+    const r = await saveSections(c.store.id, Array.isArray(list) ? list : [], valid);
+    if (!r.vipSaved) {
+      revalidatePath("/seller/loja-web");
+      return { ok: false as const, error: "Vitrine salva, mas a posição dos Planos VIP precisa da migration 0033_web_sections_vip.sql no Neon. Até lá o card fica antes de Ofertas e combos." };
+    }
   } catch (e) {
     const { isMissingSectionsTable } = await import("@/lib/webstore/sections");
     if (isMissingSectionsTable(e)) return { ok: false as const, error: "Rode a migration 0029_web_store_sections.sql no Neon para salvar a vitrine." };
