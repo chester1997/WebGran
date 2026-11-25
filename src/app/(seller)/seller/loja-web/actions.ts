@@ -5,11 +5,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { webCustomers, webSupportTickets } from "@/db/schema";
 import { getCurrentStore } from "@/lib/auth";
-import { verifyOwnerActionAccess } from "@/lib/bots/owner-guard";
+import { verifyWebStoreActionAccess } from "@/lib/bots/owner-guard";
 import { getSellerWebCustomerDetail } from "@/lib/webstore/account";
 
 async function ownerStore() {
-  const auth = await verifyOwnerActionAccess();
+  const auth = await verifyWebStoreActionAccess();
   if (!auth.authorized) return null;
   return getCurrentStore();
 }
@@ -100,7 +100,7 @@ import { saveSections, type SectionConfig } from "@/lib/webstore/sections";
 import { ProductVideoService } from "@/lib/videos/product-video-service";
 
 async function ownerCtx() {
-  const auth = await verifyOwnerActionAccess();
+  const auth = await verifyWebStoreActionAccess();
   if (!auth.authorized || !auth.user) return null;
   const store = await getCurrentStore();
   return store ? { store, user: auth.user } : null;

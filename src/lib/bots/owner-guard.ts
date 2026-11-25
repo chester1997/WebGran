@@ -15,6 +15,34 @@ export function isOwnerUser(user?: { id?: string; email?: string | null } | null
   );
 }
 
+/** Contas liberadas para testar a Loja Web (além do proprietário), antes de abrir para todos. */
+export const WEB_STORE_TESTER_EMAILS = ["saviominisseries@gmail.com"];
+
+/** A Loja Web está liberada para esta conta? (proprietário ou e-mail da lista de teste) */
+export function canUseWebStore(user?: { id?: string; email?: string | null } | null): boolean {
+  if (isOwnerUser(user)) return true;
+  const email = user?.email?.trim().toLowerCase();
+  return !!email && WEB_STORE_TESTER_EMAILS.includes(email);
+}
+
+/** Página da Loja Web no painel: sem acesso, volta para /seller. */
+export async function requireWebStoreAccount() {
+  const { getCurrentUser } = await import("@/lib/auth");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (!canUseWebStore(user)) redirect("/seller");
+  return user;
+}
+
+/** Server Actions da Loja Web. */
+export async function verifyWebStoreActionAccess() {
+  const { getCurrentUser } = await import("@/lib/auth");
+  const user = await getCurrentUser();
+  if (!user) return { authorized: false, error: "Usuário não autenticado." };
+  if (!canUseWebStore(user)) return { authorized: false, error: "A Loja Web ainda está em fase de testes." };
+  return { authorized: true, user };
+}
+
 /**
  * Validador de rota / página Server-Side.
  * Redireciona para /login caso não autenticado, ou para /seller se não for a conta do proprietário.

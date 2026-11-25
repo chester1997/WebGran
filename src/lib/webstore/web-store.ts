@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { stores, users, telegramCustomers, webCustomers, webCustomerSessions } from "@/db/schema";
-import { isOwnerUser } from "@/lib/bots/owner-guard";
+import { canUseWebStore } from "@/lib/bots/owner-guard";
 
 /**
  * LOJA WEB — esboço em validação.
@@ -36,7 +36,7 @@ async function loadWebStore(slug: string): Promise<WebStore | null> {
   const store = await db.query.stores.findFirst({ where: eq(stores.slug, slug) });
   if (!store || store.status !== "active") return null;
   const owner = await db.query.users.findFirst({ where: eq(users.id, store.ownerId), columns: { id: true, email: true } });
-  if (!isOwnerUser(owner)) return null;
+  if (!canUseWebStore(owner)) return null;
   return store;
 }
 

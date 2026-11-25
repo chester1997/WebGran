@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import SidebarNavItem from "@/components/layout/SidebarNavItem";
-import { isOwnerUser } from "@/lib/bots/owner-guard";
+import { canUseWebStore, isOwnerUser } from "@/lib/bots/owner-guard";
 import SalesVolumeCardV2 from "./SalesVolumeCardV2";
 import {
   SolarSellerDashboardIcon,
@@ -93,6 +93,7 @@ export default function SellerSidebar({
   const isAdminOrSuperAdmin = sellerProfile?.role === "admin" || sellerProfile?.role === "super_admin";
 
   const isOwner = isOwnerUser(sellerProfile);
+  const webStore = canUseWebStore(sellerProfile);
   const isBotsRouteActive = pathname === "/seller/bots" || pathname.startsWith("/seller/bots/");
 
   const visibleBotSubItems = botTelegramSubItems.filter((item) => {
@@ -292,23 +293,25 @@ export default function SellerSidebar({
         {/* ==================================================== */}
         {/* AUTOMAÇÕES (EXCLUSIVO PROPRIETÁRIO — Redesign V2)     */}
         {/* ==================================================== */}
-        {isOwner && (
+        {(isOwner || webStore) && (
           <div className="mt-[var(--section-label-margin-top,28px)]">
             <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
               <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
-                AUTOMAÇÕES
+                {isOwner ? "AUTOMAÇÕES" : "LOJA WEB"}
               </span>
               <div className="h-px flex-1 bg-white/[0.08]" />
             </div>
             <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
-              <SidebarNavItem
-                href="/seller/fluxos"
-                label="Meus Fluxos"
-                isActive={pathname === "/seller/fluxos" || pathname.startsWith("/seller/fluxos/")}
-                onClick={(e) => handleLinkClick(e, "/seller/fluxos")}
-                icon={SolarSellerFlowsIcon}
-                accent="blue"
-              />
+              {isOwner && (
+                <SidebarNavItem
+                  href="/seller/fluxos"
+                  label="Meus Fluxos"
+                  isActive={pathname === "/seller/fluxos" || pathname.startsWith("/seller/fluxos/")}
+                  onClick={(e) => handleLinkClick(e, "/seller/fluxos")}
+                  icon={SolarSellerFlowsIcon}
+                  accent="blue"
+                />
+              )}
               <SidebarNavItem
                 href="/seller/loja-web"
                 label="Loja Web"

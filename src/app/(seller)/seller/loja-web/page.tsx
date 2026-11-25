@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { getCurrentStore } from "@/lib/auth";
-import { requireOwnerAccount } from "@/lib/bots/owner-guard";
+import { requireWebStoreAccount } from "@/lib/bots/owner-guard";
 import { listSellerTickets, listSellerWebCustomers } from "@/lib/webstore/account";
 import { webTablesReady } from "@/lib/webstore/web-store";
 import { listWebProducts } from "@/lib/webstore/products";
@@ -16,7 +16,7 @@ import WebStoreClient from "./WebStoreClient";
 /** Vendas → Loja Web (esboço em teste, exclusivo da conta proprietária). */
 export default async function LojaWebPage() {
   await connection();
-  await requireOwnerAccount();
+  await requireWebStoreAccount();
   const store = await getCurrentStore();
   if (!store) return <SetupStoreClient />;
 
