@@ -12,7 +12,7 @@ import {
   SolarMagniferBoldDuotone,
   SolarSidebarBoldDuotone,
 } from "@/components/icons/solar/seller-icons";
-import { CartProvider, useCart } from "./cart";
+import { CartProvider, VipProvider, useCart } from "./cart";
 import { SupportModal } from "./SupportModal";
 import { StoreInstallApp } from "./StoreInstallApp";
 import { AuthScene } from "./AuthScene";
@@ -36,12 +36,14 @@ export interface ShellCustomer {
 
 const TAB = "min-w-0 px-1 flex flex-col items-center justify-center gap-1.5 text-[10.5px] font-medium transition-colors";
 
-export function StoreShell({ store, customer, children }: { store: ShellStore; customer: ShellCustomer | null; children: ReactNode }) {
+export function StoreShell({ store, customer, vip = false, children }: { store: ShellStore; customer: ShellCustomer | null; vip?: boolean; children: ReactNode }) {
   return (
     <CartProvider slug={store.slug}>
-      <Inner store={store} customer={customer}>
-        {children}
-      </Inner>
+      <VipProvider vip={vip}>
+        <Inner store={store} customer={customer}>
+          {children}
+        </Inner>
+      </VipProvider>
     </CartProvider>
   );
 }

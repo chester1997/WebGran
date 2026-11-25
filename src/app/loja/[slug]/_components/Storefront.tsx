@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Info, Play, Sparkles } from "lucide-react";
 import { SolarCartLarge2BoldDuotone } from "@/components/icons/solar/seller-icons";
-import { useCart } from "./cart";
+import { useCart, useIsVip } from "./cart";
 import { thumb } from "@/lib/webstore/img";
 import { VipBanner, type VipPlanCard, type VipStatus } from "./VipBanner";
 import { brl, DURATION_LABEL } from "./ui";
@@ -79,6 +79,7 @@ export function Storefront({
       </div>
     );
   }
+  const isVip = Boolean(vip?.active);
   const showVip = Boolean(vip && (vip.plans.length || vip.active));
   const covers = Array.from(new Map([...hero, ...rows.flatMap((r) => r.items)].filter((x) => x.coverUrl).map((x) => [x.id, x.coverUrl as string])).values()).slice(0, 5);
   const vipCard = vip ? <VipBanner slug={slug} plans={vip.plans} active={vip.active} loggedIn={vip.loggedIn} image={vip.image} covers={covers} /> : null;
@@ -88,7 +89,7 @@ export function Storefront({
       <div className={`relative z-10 space-y-9 sm:space-y-11 pb-10 ${hero.length ? "-mt-14 sm:-mt-24" : "pt-24"}`}>
         {rows.map((r) =>
           r.kind === "combos" ? (
-            promo || combos.length ? (
+            !isVip && (promo || combos.length) ? (
               <div key={r.key}>
                 {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
                 {combos.length > 0 && <ComboRow title={r.title} combos={combos} spaced={Boolean(promo)} />}
@@ -110,6 +111,7 @@ export function Storefront({
 function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: string | null }) {
   const [i, setI] = useState(0);
   const { add, lines } = useCart();
+  const isVip = useIsVip();
   const router = useRouter();
   const p = items[i];
   useEffect(() => {
@@ -175,20 +177,30 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
           {p.id === topId && <span className="font-bold text-[#7fb0ff]">Top 1 da semana</span>}
           {p.videoCount > 0 && <span>{p.videoCount} {p.videoCount === 1 ? "vídeo" : "episódios"}</span>}
           <span className="h-[22px] px-2 rounded-[6px] border border-white/25 text-[11.5px] inline-flex items-center">{DURATION_LABEL[p.duration || "lifetime"] || "Vitalício"}</span>
-          {p.compareAtPrice && p.compareAtPrice > p.price && <span className="text-zinc-400 line-through">{brl(p.compareAtPrice)}</span>}
+          {!isVip && p.compareAtPrice && p.compareAtPrice > p.price && <span className="text-zinc-400 line-through">{brl(p.compareAtPrice)}</span>}
+          {isVip && <span className="font-semibold text-[#7fb0ff]">Liberado no seu VIP</span>}
         </div>
         {p.shortDescription && <p className="text-[14.5px] sm:text-[16px] leading-relaxed text-zinc-300 mb-6 line-clamp-3 max-w-[520px]">{p.shortDescription}</p>}
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (!lines.some((l) => l.id === p.id)) add(p.id);
-              router.push(`/loja/${slug}/carrinho`);
-            }}
-            className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 sm:px-7 rounded-[6px] bg-white text-black text-[15px] sm:text-[16px] font-bold hover:bg-zinc-200 transition-colors"
-          >
-            <Play className="w-5 h-5 fill-black" /> Comprar · {brl(p.price)}
-          </button>
+          {isVip ? (
+            <Link
+              href={`/loja/${slug}/conta/produto/${p.id}`}
+              className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 sm:px-7 rounded-[6px] bg-white text-black text-[15px] sm:text-[16px] font-bold hover:bg-zinc-200 transition-colors"
+            >
+              <Play className="w-5 h-5 fill-black" /> Assistir
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (!lines.some((l) => l.id === p.id)) add(p.id);
+                router.push(`/loja/${slug}/carrinho`);
+              }}
+              className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 sm:px-7 rounded-[6px] bg-white text-black text-[15px] sm:text-[16px] font-bold hover:bg-zinc-200 transition-colors"
+            >
+              <Play className="w-5 h-5 fill-black" /> Comprar · {brl(p.price)}
+            </button>
+          )}
           <Link href={`/loja/${slug}/produto/${p.slug}`} className="inline-flex items-center gap-2.5 h-12 sm:h-[52px] px-6 rounded-[6px] bg-zinc-500/40 hover:bg-zinc-500/55 backdrop-blur text-[15px] sm:text-[16px] font-bold transition-colors">
             <Info className="w-5 h-5" /> Mais detalhes
           </Link>
@@ -249,6 +261,7 @@ function webBadge(v?: string | null) {
 
 function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: { slug: string; p: CardItem; className?: string }) {
   const { add } = useCart();
+  const isVip = useIsVip();
   const [hit, setHit] = useState(0);
   const [done, setDone] = useState(false);
   const badge = webBadge(p.badge);
@@ -275,13 +288,16 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
           <span className="absolute inset-0 flex items-center justify-center p-3 text-center text-[12px] font-semibold text-zinc-400">{p.title}</span>
         )}
         {badge && <span className={`absolute top-2 right-2 h-5 px-1.5 rounded-[3px] text-[10px] font-black uppercase tracking-wide flex items-center ${badge.cls}`}>{badge.label}</span>}
-        {p.compareAtPrice && p.compareAtPrice > p.price && (
+        {!isVip && p.compareAtPrice && p.compareAtPrice > p.price && (
           <span className="absolute top-2 left-2 h-5 px-1.5 rounded-[3px] bg-[#3b82f6] text-[10px] font-bold flex items-center">-{Math.round((1 - p.price / p.compareAtPrice) * 100)}%</span>
         )}
-        <span className="absolute inset-x-0 bottom-0 h-16 pl-2.5 pr-10 pb-2.5 sm:pb-3 flex items-end bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-          <span className="block text-[13px] font-bold tabular-nums">{brl(p.price)}</span>
-        </span>
+        {!isVip && (
+          <span className="absolute inset-x-0 bottom-0 h-16 pl-2.5 pr-10 pb-2.5 sm:pb-3 flex items-end bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+            <span className="block text-[13px] font-bold tabular-nums">{brl(p.price)}</span>
+          </span>
+        )}
       </Link>
+      {!isVip && (
       <button
         type="button"
         onClick={() => {
@@ -304,6 +320,7 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
           </span>
         )}
       </button>
+      )}
     </div>
   );
 }

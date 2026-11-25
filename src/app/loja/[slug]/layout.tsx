@@ -7,6 +7,7 @@ import { getWebBranding } from "@/lib/webstore/settings";
 import { getWebAvatar } from "@/lib/webstore/profile";
 import { getStorePwaInfo, storeIconUrl } from "@/lib/webstore/pwa";
 import { StoreShell } from "./_components/StoreShell";
+import { getActiveVip } from "@/lib/webstore/vip";
 
 /** App próprio da loja: manifest, ícones e títulos do vendedor no lugar dos da plataforma. */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -39,7 +40,9 @@ export default async function LojaLayout({
   if (!store) notFound();
   const [customer, look] = await Promise.all([getWebCustomer(store.id), getWebBranding(store.id)]);
   const name = look.branding.displayName || store.name;
-  const avatarUrl = customer ? await getWebAvatar(customer.shadowCustomerId).catch(() => null) : null;
+  const [avatarUrl, vipActive] = customer
+    ? await Promise.all([getWebAvatar(customer.shadowCustomerId).catch(() => null), getActiveVip(store.id, customer.shadowCustomerId).catch(() => null)])
+    : [null, null];
   return (
     <>
       <title>{name}</title>
@@ -62,6 +65,7 @@ export default async function LojaLayout({
               }
             : null
         }
+        vip={Boolean(vipActive)}
       >
         {children}
       </StoreShell>

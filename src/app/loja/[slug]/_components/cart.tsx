@@ -22,6 +22,13 @@ interface CartCtx {
 
 const Ctx = createContext<CartCtx | null>(null);
 
+/** Cliente com VIP ativo: tudo liberado, então a loja esconde preço, carrinho e ofertas. */
+const VipCtx = createContext(false);
+export const useIsVip = () => useContext(VipCtx);
+export function VipProvider({ vip, children }: { vip: boolean; children: ReactNode }) {
+  return <VipCtx.Provider value={vip}>{children}</VipCtx.Provider>;
+}
+
 export function useCart() {
   const c = useContext(Ctx);
   if (!c) throw new Error("useCart fora do CartProvider");

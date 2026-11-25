@@ -50,10 +50,12 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
               <span className="h-[22px] px-2 rounded-[6px] border border-white/25 text-[11.5px] inline-flex items-center">{DURATION_LABEL[product.duration || "lifetime"] || "Vitalício"}</span>
             </div>
             {(product.shortDescription || product.description) && <p className="mt-4 text-[15px] leading-relaxed text-zinc-300 line-clamp-4 whitespace-pre-line">{product.shortDescription || product.description}</p>}
-            <div className="mt-6 flex items-baseline gap-3">
-              <span className="text-[28px] font-black tabular-nums">{brl(product.price)}</span>
-              {product.compareAtPrice && product.compareAtPrice > product.price && <span className="text-[15px] text-zinc-500 line-through">{brl(product.compareAtPrice)}</span>}
-            </div>
+            {!owned && (
+              <div className="mt-6 flex items-baseline gap-3">
+                <span className="text-[28px] font-black tabular-nums">{brl(product.price)}</span>
+                {product.compareAtPrice && product.compareAtPrice > product.price && <span className="text-[15px] text-zinc-500 line-through">{brl(product.compareAtPrice)}</span>}
+              </div>
+            )}
             <div className="mt-4 max-w-[520px]">
               <ProductBuy slug={slug} productId={product.id} owned={owned} />
             </div>
