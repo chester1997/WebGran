@@ -156,7 +156,10 @@ export default function WebStoreClient({
   webProducts: WebProductView[];
   sections: SectionConfig[];
 }) {
-  const [tab, setTab] = useState<"produtos" | "vitrine" | "combos" | "aparencia" | "clientes" | "suporte">("produtos");
+  const [tab, setTabNow] = useState<"produtos" | "vitrine" | "combos" | "aparencia" | "clientes" | "suporte">("produtos");
+  // Troca de aba em transição: o clique responde na hora e a aba nova monta sem travar a tela
+  const [, startTab] = useTransition();
+  const setTab = (t: typeof tab) => startTab(() => setTabNow(t));
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Customer | null>(null);
   const toast = useToast();
@@ -255,6 +258,7 @@ export default function WebStoreClient({
         )}
       </div>
 
+      <div key={tab} className="animate-[wg-fade_.22s_ease-out]">
       {tab === "produtos" ? (
         <WebProductsPane items={webProducts} ready={ready} />
       ) : tab === "vitrine" ? (
@@ -324,6 +328,7 @@ export default function WebStoreClient({
       ) : (
         <TicketsList tickets={tickets} onOpenCustomer={(id) => setOpen(customers.find((c) => c.id === id) || null)} />
       )}
+      </div>
 
       {open && <CustomerDrawer key={open.id} c={open} tickets={tickets.filter((t) => t.webCustomerId === open.id)} onClose={() => setOpen(null)} />}
     </div>

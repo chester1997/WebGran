@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { and, eq, gt } from "drizzle-orm";
@@ -27,7 +28,10 @@ export function isMissingWebTables(err: unknown): boolean {
 }
 
 /** Loja liberada para a Loja Web? (fase de testes: só a loja do proprietário) */
-export async function getWebStore(slug: string): Promise<WebStore | null> {
+/** Mesma loja pedida várias vezes na mesma página (layout, página, metadados): uma consulta só. */
+export const getWebStore = cache(loadWebStore);
+
+async function loadWebStore(slug: string): Promise<WebStore | null> {
   const store = await db.query.stores.findFirst({ where: eq(stores.slug, slug) });
   if (!store || store.status !== "active") return null;
   const owner = await db.query.users.findFirst({ where: eq(users.id, store.ownerId), columns: { id: true, email: true } });

@@ -9,6 +9,7 @@ import { Modal } from "./LojaModal";
 import { saveHeroImageAction, saveSectionsAction } from "./actions";
 import type { WebProductView } from "./WebProductsPane";
 
+import { thumb } from "@/lib/webstore/img";
 const SURFACE =
   "relative rounded-[16px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
 
@@ -177,7 +178,7 @@ export default function ShowcasePane({
                       {picked.map((p, k) => (
                         <span key={p.id} className="relative w-[44px] aspect-[2/3] rounded-[6px] overflow-hidden bg-[#1a1b20]" title={p.title}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          {p.coverUrl && <img src={p.coverUrl} alt="" className="w-full h-full object-cover" />}
+                          {p.coverUrl && <img loading="lazy" decoding="async" src={thumb(p.coverUrl, 160)} alt="" className="w-full h-full object-cover" />}
                           {s.kind === "top15" && <span className="absolute left-0 top-0 px-1 text-[10px] font-black bg-black/70">{k + 1}</span>}
                         </span>
                       ))}
@@ -246,7 +247,7 @@ function HeroImageSlot({ product, initial }: { product: WebProductView; initial:
         {url ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+            <img decoding="async" src={thumb(url, 960)} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
             <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#07080a_0%,rgba(7,8,10,0.92)_26%,rgba(7,8,10,0)_50%)]" />
           </>
         ) : (
@@ -363,7 +364,7 @@ function PickerModal({
             return (
               <button key={p.id} type="button" onClick={() => toggle(p.id)} aria-pressed={on} title={p.title} className={`relative aspect-[2/3] rounded-[9px] overflow-hidden bg-[#1a1b20] ring-2 transition ${on ? "ring-[#3b82f6]" : "ring-transparent hover:ring-white/20"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {p.coverUrl && <img src={p.coverUrl} alt="" className="w-full h-full object-cover" />}
+                {p.coverUrl && <img loading="lazy" decoding="async" src={thumb(p.coverUrl, 160)} alt="" className="w-full h-full object-cover" />}
                 <span className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/90 to-transparent text-[10.5px] leading-tight text-left text-white line-clamp-2">{p.title}</span>
                 {on && <span className="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] px-1 rounded-full bg-[#3b82f6] text-[11px] font-bold flex items-center justify-center">{ordered ? n + 1 : <Check className="w-3.5 h-3.5" />}</span>}
               </button>

@@ -16,6 +16,7 @@ import { CartProvider, useCart } from "./cart";
 import { SupportModal } from "./SupportModal";
 import { StoreInstallApp } from "./StoreInstallApp";
 
+import { thumb } from "@/lib/webstore/img";
 export interface ShellStore {
   slug: string;
   name: string;
@@ -92,7 +93,7 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
   const logo = (size: string, text: string) =>
     store.logoUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={store.logoUrl} alt="" className={`${size} rounded-[11px] object-cover ring-1 ring-white/10 shrink-0`} />
+      <img src={thumb(store.logoUrl, 160)} alt="" decoding="async" className={`${size} rounded-[11px] object-cover ring-1 ring-white/10 shrink-0`} />
     ) : (
       <span className={`${size} ${text} rounded-[11px] bg-[#3b82f6] text-white font-black flex items-center justify-center shrink-0 shadow-[0_8px_24px_-6px_rgba(59,130,246,0.7)]`}>{initial}</span>
     );
@@ -162,7 +163,7 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
           <Link href={`${base}/conta`} className="inline-flex items-center gap-2.5 h-11 pl-1 pr-3.5 rounded-[8px] bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-[14px] font-semibold transition-colors">
             {customer.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={customer.avatarUrl} alt="" className="w-9 h-9 rounded-[6px] object-cover" />
+              <img src={thumb(customer.avatarUrl, 160)} alt="" decoding="async" className="w-9 h-9 rounded-[6px] object-cover" />
             ) : (
               <span className="w-9 h-9 rounded-[6px] bg-[#3b82f6] text-white text-[14px] font-bold flex items-center justify-center">{customer.name.trim().charAt(0).toUpperCase()}</span>
             )}
@@ -182,7 +183,12 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
         )}
       </header>
 
-      <main className={`lg:pl-[var(--rail)] transition-[padding] duration-300 pb-[calc(84px+env(safe-area-inset-bottom))] lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>{children}</main>
+      <main className={`lg:pl-[var(--rail)] transition-[padding] duration-300 pb-[calc(84px+env(safe-area-inset-bottom))] lg:pb-0 ${isHome || pathname.startsWith(`${base}/produto/`) || pathname.startsWith(`${base}/buscar`) ? "" : "pt-16"}`}>
+        {/* key = endereço: cada página entra com um fade curto, em vez de "piscar" */}
+        <div key={pathname} className="animate-[wg-fade_.25s_ease-out]">
+          {children}
+        </div>
+      </main>
 
       <footer className="lg:pl-[var(--rail)] transition-[padding] duration-300 border-t border-white/[0.06] mb-[calc(60px+env(safe-area-inset-bottom))] lg:mb-0">
         <div className="px-4 sm:px-8 lg:px-10 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-zinc-500">

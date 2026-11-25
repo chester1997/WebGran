@@ -8,6 +8,7 @@ import { Modal } from "./LojaModal";
 import { archiveWebComboAction, savePromoImageAction, saveWebComboAction, saveWebProgressiveAction } from "./actions";
 import type { WebComboView } from "@/lib/webstore/combos";
 
+import { thumb } from "@/lib/webstore/img";
 const SURFACE =
   "relative rounded-[14px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -157,7 +158,7 @@ function PromoImage({ initial }: { initial: string | null }) {
         {url ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+            <img decoding="async" src={thumb(url, 1280)} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
             <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,0.95)_40%,rgba(11,13,18,0.6)_68%,rgba(11,13,18,0.2)_100%)]" />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[12px] text-zinc-400">Prévia: assim fica atrás do texto</span>
           </>
@@ -291,7 +292,7 @@ function ProgressiveEditor({
                       className={`w-full min-w-0 flex items-center gap-2.5 h-11 px-2.5 rounded-[8px] border text-left ${on ? "border-[#3b82f6]/70 bg-[#3b82f6]/[0.07]" : "border-white/[0.06] hover:border-white/[0.14]"}`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {p.coverUrl ? <img src={p.coverUrl} alt="" className="w-6 h-9 rounded-[3px] object-cover shrink-0" /> : <span className="w-6 h-9 rounded-[3px] bg-[#1a1b20] shrink-0" />}
+                      {p.coverUrl ? <img loading="lazy" decoding="async" src={thumb(p.coverUrl, 160)} alt="" className="w-6 h-9 rounded-[3px] object-cover shrink-0" /> : <span className="w-6 h-9 rounded-[3px] bg-[#1a1b20] shrink-0" />}
                       <span className="text-[12.5px] truncate flex-1">{p.title}</span>
                       <span className={`w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0 ${on ? "bg-[#3b82f6] border-[#3b82f6]" : "border-zinc-600"}`}>{on && <Check className="w-3 h-3 text-white" />}</span>
                     </button>
@@ -451,7 +452,7 @@ function ComboEditor({ combo, products, onClose }: { combo: WebComboView | null;
           <label className="relative w-[72px] h-[108px] shrink-0 rounded-[8px] border border-dashed border-white/[0.14] bg-white/[0.02] hover:border-[#3b82f6]/60 cursor-pointer overflow-hidden">
             {f.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={f.coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <img decoding="async" src={thumb(f.coverUrl, 480)} alt="" className="absolute inset-0 w-full h-full object-cover" />
             ) : (
               <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[10.5px] text-zinc-500 text-center px-1">
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
@@ -484,7 +485,7 @@ function ComboEditor({ combo, products, onClose }: { combo: WebComboView | null;
                     className={`w-full min-w-0 flex items-center gap-2.5 h-11 px-2.5 rounded-[8px] border text-left ${on ? "border-[#3b82f6]/70 bg-[#3b82f6]/[0.07]" : "border-white/[0.06] hover:border-white/[0.14]"}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {p.coverUrl ? <img src={p.coverUrl} alt="" className="w-6 h-9 rounded-[3px] object-cover shrink-0" /> : <span className="w-6 h-9 rounded-[3px] bg-[#1a1b20] shrink-0" />}
+                    {p.coverUrl ? <img loading="lazy" decoding="async" src={thumb(p.coverUrl, 160)} alt="" className="w-6 h-9 rounded-[3px] object-cover shrink-0" /> : <span className="w-6 h-9 rounded-[3px] bg-[#1a1b20] shrink-0" />}
                     <span className="text-[12.5px] truncate flex-1">{p.title}</span>
                     <span className="text-[11.5px] text-zinc-500 tabular-nums shrink-0">{brl(p.price)}</span>
                     <span className={`w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0 ${on ? "bg-[#3b82f6] border-[#3b82f6]" : "border-zinc-600"}`}>{on && <Check className="w-3 h-3 text-white" />}</span>

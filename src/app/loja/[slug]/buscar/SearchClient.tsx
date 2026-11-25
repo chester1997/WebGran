@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { brl } from "../_components/ui";
 
+import { thumb } from "@/lib/webstore/img";
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function SearchClient({ slug, items }: { slug: string; items: { id: string; slug: string; title: string; coverUrl: string | null; price: number }[] }) {
@@ -38,7 +39,7 @@ export function SearchClient({ slug, items }: { slug: string; items: { id: strin
           {shown.map((p) => (
             <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="group relative aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition-shadow">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {p.coverUrl && <img src={p.coverUrl} alt={p.title} loading="lazy" className="w-full h-full object-cover" />}
+              {p.coverUrl && <img src={thumb(p.coverUrl, 360)} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
               <span className="absolute inset-x-0 bottom-0 p-2 pt-8 bg-gradient-to-t from-black/95 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="block text-[11.5px] font-semibold leading-tight line-clamp-2">{p.title}</span>
                 <span className="block text-[12px] font-bold mt-1">{brl(p.price)}</span>

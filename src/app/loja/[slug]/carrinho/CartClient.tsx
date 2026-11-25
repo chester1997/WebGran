@@ -9,6 +9,7 @@ import { checkoutAction, quoteAction } from "../actions";
 import { useCart } from "../_components/cart";
 import { brl, BTN_PRIMARY, ErrorBox } from "../_components/ui";
 
+import { thumb } from "@/lib/webstore/img";
 const PANEL = "rounded-[10px] border border-white/[0.07] bg-[#0f1014]";
 
 export function CartClient({ slug, loggedIn }: { slug: string; loggedIn: boolean }) {
@@ -79,7 +80,7 @@ export function CartClient({ slug, loggedIn }: { slug: string; loggedIn: boolean
               <div key={l.id} className="flex items-start gap-4 sm:gap-5 p-4 sm:p-5">
                 <Link href={l.isCombo ? `/loja/${slug}` : `/loja/${slug}/produto/${l.slug}`} className="w-[64px] sm:w-[76px] aspect-[2/3] rounded-[5px] overflow-hidden bg-[#1a1a1d] shrink-0 ring-1 ring-white/[0.06]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {l.coverUrl && <img src={l.coverUrl} alt="" className="w-full h-full object-cover" />}
+                  {l.coverUrl && <img src={thumb(l.coverUrl, 160)} alt="" decoding="async" className="w-full h-full object-cover" />}
                 </Link>
                 <div className="min-w-0 flex-1">
                   {l.isCombo && (

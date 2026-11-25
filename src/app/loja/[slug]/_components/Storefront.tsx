@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Info, Play, Sparkles } from "lucide-react";
 import { SolarCartLarge2BoldDuotone } from "@/components/icons/solar/seller-icons";
 import { useCart } from "./cart";
+import { thumb } from "@/lib/webstore/img";
 import { VipBanner, type VipPlanCard, type VipStatus } from "./VipBanner";
 import { brl, DURATION_LABEL } from "./ui";
 
@@ -121,16 +122,38 @@ function Hero({ slug, items, topId }: { slug: string; items: CardItem[]; topId: 
     <section className="relative h-[86svh] min-h-[540px] max-h-[820px] overflow-hidden" aria-roledescription="carrossel" aria-label="Destaques">
       {items.map((it, k) => {
         const wide = it.heroUrl || it.bannerUrl;
+        const n = items.length;
+        const near = k === i || k === (i + 1) % n || k === (i - 1 + n) % n;
         return (
           <div key={it.id} aria-hidden={k !== i} className={`absolute inset-0 transition-opacity duration-1000 ${k === i ? "opacity-100" : "opacity-0"}`}>
             {wide ? (
               // Imagem horizontal: ocupa a área toda, presa à direita
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={wide} alt="" className="absolute inset-0 w-full h-full object-cover object-[70%_center] md:object-right" />
+              near && (
+                <img
+                  src={thumb(wide, 1600)}
+                  srcSet={`${thumb(wide, 960)} 960w, ${thumb(wide, 1600)} 1600w, ${thumb(wide, 1920)} 1920w`}
+                  sizes="100vw"
+                  alt=""
+                  decoding="async"
+                  fetchPriority={k === 0 ? "high" : "low"}
+                  className="absolute inset-0 w-full h-full object-cover object-[70%_center] md:object-right"
+                />
+              )
             ) : it.coverUrl ? (
               // Sem imagem horizontal: a capa nítida do lado direito, sem borrão e sem card
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={it.coverUrl} alt="" className="absolute inset-y-0 right-0 h-full w-full md:w-[58%] object-cover object-top" />
+              near && (
+                <img
+                  src={thumb(it.coverUrl, 960)}
+                  srcSet={`${thumb(it.coverUrl, 720)} 720w, ${thumb(it.coverUrl, 960)} 960w, ${thumb(it.coverUrl, 1280)} 1280w`}
+                  sizes="(min-width: 768px) 58vw, 100vw"
+                  alt=""
+                  decoding="async"
+                  fetchPriority={k === 0 ? "high" : "low"}
+                  className="absolute inset-y-0 right-0 h-full w-full md:w-[58%] object-cover object-top"
+                />
+              )
             ) : null}
           </div>
         );
@@ -239,7 +262,15 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
       <Link href={`/loja/${slug}/produto/${p.slug}`} aria-label={p.title} className="absolute inset-0 rounded-[6px] overflow-hidden">
         {p.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.coverUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+          <img
+            src={thumb(p.coverUrl, 360)}
+            srcSet={`${thumb(p.coverUrl, 240)} 240w, ${thumb(p.coverUrl, 360)} 360w, ${thumb(p.coverUrl, 480)} 480w`}
+            sizes="(min-width: 1024px) 176px, (min-width: 640px) 160px, 118px"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center p-3 text-center text-[12px] font-semibold text-zinc-400">{p.title}</span>
         )}
@@ -259,8 +290,10 @@ function Poster({ slug, p, className = "w-[118px] sm:w-[160px] lg:w-[176px]" }: 
           setHit((h) => h + 1);
         }}
         aria-label={`Adicionar ${p.title} ao carrinho`}
-        className={`absolute right-1.5 bottom-1.5 sm:right-2 sm:bottom-2 w-7 h-7 sm:w-8 sm:h-8 rounded-[6px] flex items-center justify-center text-white border backdrop-blur-md backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_6px_16px_-6px_rgba(0,0,0,0.8)] transition-[background-color,border-color,transform] duration-200 active:scale-90 ${
-          done ? "bg-[#3b82f6]/75 border-white/40" : "bg-[#3b82f6]/30 border-[#7fb0ff]/35 hover:bg-[#3b82f6]/50"
+        className={`absolute right-1.5 bottom-1.5 sm:right-2 sm:bottom-2 w-7 h-7 sm:w-8 sm:h-8 rounded-[6px] flex items-center justify-center text-white border shadow-[inset_0_1px_0_rgba(255,255,255,0.32),inset_0_-6px_10px_-6px_rgba(10,30,80,0.55),0_6px_16px_-6px_rgba(0,0,0,0.85)] transition-[background-color,border-color,transform] duration-200 active:scale-90 ${
+          done
+            ? "bg-[#3b82f6]/85 border-white/40"
+            : "bg-[linear-gradient(180deg,rgba(110,160,255,0.62)_0%,rgba(59,130,246,0.42)_55%,rgba(37,99,235,0.5)_100%)] border-[#9cc2ff]/40 hover:bg-[#3b82f6]/70"
         }`}
       >
         {done && <span key={`r${hit}`} aria-hidden="true" className="absolute inset-0 rounded-[6px] bg-[#3b82f6] animate-[wg-ring_.7s_ease-out_forwards]" />}
@@ -316,7 +349,7 @@ function ContinueRow({ slug, row }: { slug: string; row: Row }) {
             className="group/c relative shrink-0 snap-start w-[250px] sm:w-[320px] aspect-video rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.07] hover:ring-2 hover:ring-[#3b82f6] transition-shadow"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {(p.bannerUrl || p.coverUrl) && <img src={p.bannerUrl || p.coverUrl || ""} alt="" className="absolute inset-0 w-full h-full object-cover object-[center_30%]" />}
+            {(p.bannerUrl || p.coverUrl) && <img src={thumb(p.bannerUrl || p.coverUrl, 480)} alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover object-[center_30%]" />}
             <span className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
             <span className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/50 border border-white/40 flex items-center justify-center opacity-0 group-hover/c:opacity-100 transition-opacity">
               <Play className="w-5 h-5 fill-white" />
@@ -352,12 +385,12 @@ function PromoBanner({
       <div className="relative overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0b0d12] sm:min-h-[300px]">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+          <img src={thumb(image, 1600)} srcSet={`${thumb(image, 960)} 960w, ${thumb(image, 1600)} 1600w, ${thumb(image, 1920)} 1920w`} sizes="100vw" alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover object-right" />
         ) : (
           <span aria-hidden="true" className="hidden sm:flex absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 items-center">
             {covers.map((c, k) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={c} src={c} alt="" loading="lazy" className="w-[96px] lg:w-[112px] aspect-[2/3] object-cover rounded-[4px] -ml-6 first:ml-0 ring-1 ring-black/70 shadow-[0_18px_30px_-12px_rgba(0,0,0,0.9)]" style={{ zIndex: 10 - k }} />
+              <img key={c} src={thumb(c, 240)} alt="" loading="lazy" decoding="async" className="w-[96px] lg:w-[112px] aspect-[2/3] object-cover rounded-[4px] -ml-6 first:ml-0 ring-1 ring-black/70 shadow-[0_18px_30px_-12px_rgba(0,0,0,0.9)]" style={{ zIndex: 10 - k }} />
             ))}
           </span>
         )}
@@ -429,7 +462,7 @@ function ComboTile({ c }: { c: ComboCard }) {
       <span className="relative w-[92px] h-[132px] shrink-0">
         {covers.map((src, k) => (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={src + k} src={src} alt="" loading="lazy" className="absolute top-0 w-[76px] h-[114px] object-cover rounded-[4px] ring-1 ring-black/70" style={{ left: k * 8, top: k * 6, zIndex: 3 - k }} />
+          <img key={src + k} src={thumb(src, 160)} alt="" loading="lazy" decoding="async" className="absolute top-0 w-[76px] h-[114px] object-cover rounded-[4px] ring-1 ring-black/70" style={{ left: k * 8, top: k * 6, zIndex: 3 - k }} />
         ))}
       </span>
       <div className="min-w-0 flex-1 flex flex-col">

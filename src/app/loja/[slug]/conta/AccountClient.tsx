@@ -8,6 +8,7 @@ import { logoutAction } from "../actions";
 import { brl, BTN_GHOST, CARD } from "../_components/ui";
 import { Avatar, ProfilePane } from "./ProfilePane";
 
+import { thumb } from "@/lib/webstore/img";
 interface Owned {
   accessId: string;
   productId: string;
@@ -174,7 +175,7 @@ export function AccountClient({
                 <article key={o.accessId} className={`${CARD} overflow-hidden flex`}>
                   <span className="w-[96px] shrink-0 bg-[#1a1a1d]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {o.coverUrl && <img src={o.coverUrl} alt="" className="w-full h-full object-cover" />}
+                    {o.coverUrl && <img src={thumb(o.coverUrl, 240)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
                   </span>
                   <div className="p-4 min-w-0 flex-1 flex flex-col gap-2">
                     <p className="text-[14px] font-semibold leading-snug line-clamp-2">{o.title}</p>

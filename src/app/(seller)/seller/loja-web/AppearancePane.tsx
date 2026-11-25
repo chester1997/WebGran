@@ -6,6 +6,7 @@ import { ImagePlus, Loader2, Save } from "lucide-react";
 import { BTN_PRI, Callout, INPUT, useToast } from "../fluxos/_components/flow-ui";
 import { saveBrandingAction } from "./actions";
 
+import { thumb } from "@/lib/webstore/img";
 const SURFACE =
   "relative rounded-[16px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
 
@@ -72,7 +73,7 @@ export default function AppearancePane({ initial, ready, storeName }: { initial:
             <label className="relative w-[84px] h-[84px] rounded-[18px] border border-dashed border-white/[0.16] bg-white/[0.02] hover:border-[#3b82f6]/60 cursor-pointer overflow-hidden shrink-0">
               {f.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <img decoding="async" src={thumb(f.logoUrl, 240)} alt="" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center text-zinc-500">{uploading === "logo" ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}</span>
               )}
@@ -102,7 +103,7 @@ export default function AppearancePane({ initial, ready, storeName }: { initial:
             <div className="flex items-center gap-2.5 h-14 px-3.5">
               {f.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.logoUrl} alt="" className="w-9 h-9 rounded-[10px] object-cover ring-1 ring-white/10" />
+                <img decoding="async" src={thumb(f.logoUrl, 240)} alt="" className="w-9 h-9 rounded-[10px] object-cover ring-1 ring-white/10" />
               ) : (
                 <span className="w-9 h-9 rounded-[10px] bg-[#3b82f6] text-white font-black text-[15px] flex items-center justify-center">{name.charAt(0).toUpperCase()}</span>
               )}

@@ -8,6 +8,7 @@ import { Modal, Portal } from "./LojaModal";
 import { PRODUCT_BADGE_OPTIONS, getProductBadge } from "@/lib/product-badge";
 import { archiveWebProductAction, copyCandidatesAction, copyProductsAction, saveWebProductAction, videoPickerAction } from "./actions";
 
+import { thumb } from "@/lib/webstore/img";
 export interface WebProductView {
   id: string;
   slug: string;
@@ -76,7 +77,7 @@ export default function WebProductsPane({ items, ready }: { items: WebProductVie
             <article key={p.id} className={`${SURFACE} p-2.5 flex gap-3 items-center group`}>
               <span className="w-[58px] aspect-[2/3] rounded-[8px] overflow-hidden bg-[#1a1b20] shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {p.coverUrl && <img src={p.coverUrl} alt="" className="w-full h-full object-cover" />}
+                {p.coverUrl && <img loading="lazy" decoding="async" src={thumb(p.coverUrl, 240)} alt="" className="w-full h-full object-cover" />}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-white leading-snug line-clamp-2">{p.title}</p>
@@ -199,7 +200,7 @@ function CopyModal({ onClose }: { onClose: () => void }) {
                   >
                     <span className="w-[34px] h-[48px] rounded-[6px] overflow-hidden bg-[#1a1b20] shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {c.coverUrl && <img src={c.coverUrl} alt="" className="w-full h-full object-cover" />}
+                      {c.coverUrl && <img loading="lazy" decoding="async" src={thumb(c.coverUrl, 160)} alt="" className="w-full h-full object-cover" />}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-medium leading-tight text-zinc-100 truncate">{c.title}</span>

@@ -7,6 +7,7 @@ import { BTN_PRI, INPUT, useToast } from "../fluxos/_components/flow-ui";
 import { saveVipPlansAction } from "./actions";
 import type { VipPlanView } from "@/lib/webstore/vip";
 
+import { thumb } from "@/lib/webstore/img";
 const SURFACE =
   "relative rounded-[14px] border border-white/[0.07] bg-[linear-gradient(180deg,#191a1f_0%,#121317_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_1px_2px_rgba(0,0,0,0.45),0_14px_30px_-16px_rgba(0,0,0,0.9)]";
 const num = (s: string) => Number(String(s).replace(/\./g, "").replace(",", ".")) || 0;
@@ -113,7 +114,7 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
           {image ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+              <img decoding="async" src={thumb(image, 1280)} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
               <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,0.95)_40%,rgba(11,13,18,0.6)_68%,rgba(11,13,18,0.2)_100%)]" />
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[12px] text-zinc-400">Prévia: assim fica atrás do texto</span>
             </>

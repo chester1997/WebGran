@@ -6,12 +6,13 @@ import { Camera, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { avatarAction, passwordAction, profileAction } from "../actions";
 import { BTN_GHOST, BTN_PRIMARY, ErrorBox, INPUT, Label } from "../_components/ui";
 
+import { thumb } from "@/lib/webstore/img";
 const PANEL = "rounded-[10px] border border-white/[0.07] bg-[#0f1014]";
 
 export function Avatar({ url, name, size = 56 }: { url: string | null; name: string; size?: number }) {
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" width={size} height={size} className="rounded-full object-cover ring-1 ring-white/10 shrink-0" style={{ width: size, height: size }} />
+    <img src={thumb(url, 240)} alt="" width={size} height={size} className="rounded-full object-cover ring-1 ring-white/10 shrink-0" style={{ width: size, height: size }} />
   ) : (
     <span className="rounded-full bg-[#3b82f6] text-white font-bold flex items-center justify-center shrink-0" style={{ width: size, height: size, fontSize: size * 0.4 }}>
       {name.trim().charAt(0).toUpperCase() || "?"}

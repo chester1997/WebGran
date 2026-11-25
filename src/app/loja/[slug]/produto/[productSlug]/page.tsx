@@ -9,6 +9,7 @@ import { ProductVideoService } from "@/lib/videos/product-video-service";
 import { brl, DURATION_LABEL } from "../../_components/ui";
 import { ProductBuy } from "../../_components/ProductBuy";
 
+import { thumb } from "@/lib/webstore/img";
 const dur = (s: number) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} min` : "");
 
 export default async function ProdutoPage({ params }: { params: Promise<{ slug: string; productSlug: string }> }) {
@@ -32,7 +33,12 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
       <section className="relative min-h-[520px] sm:min-h-[600px] flex items-end overflow-hidden">
         {art && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={art} alt="" className={`absolute inset-0 w-full h-full object-cover object-[center_25%] ${product.bannerUrl ? "" : "scale-125 blur-[30px] brightness-[0.5]"}`} />
+          <img
+            // Fundo borrado (sem banner): uma miniatura pequena basta e deixa o desfoque bem mais leve
+            src={product.bannerUrl ? thumb(art, 1600) : thumb(art, 240)}
+            srcSet={product.bannerUrl ? `${thumb(art, 960)} 960w, ${thumb(art, 1600)} 1600w, ${thumb(art, 1920)} 1920w` : undefined}
+            sizes={product.bannerUrl ? "100vw" : undefined}
+            alt="" decoding="async" fetchPriority="high" className={`absolute inset-0 w-full h-full object-cover object-[center_25%] ${product.bannerUrl ? "" : "scale-125 blur-[30px] brightness-[0.5]"}`} />
         )}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#07080a_5%,rgba(7,8,10,0.75)_45%,rgba(7,8,10,0.1)),linear-gradient(0deg,#07080a_4%,rgba(7,8,10,0)_55%)]" />
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 pt-28 pb-10 grid md:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end">
@@ -54,7 +60,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
           </div>
           {product.coverUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.coverUrl} alt={product.title} className="hidden md:block w-[260px] aspect-[2/3] object-cover rounded-[8px] ring-1 ring-white/10 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.95)]" />
+            <img src={thumb(product.coverUrl, 720)} alt={product.title} decoding="async" className="hidden md:block w-[260px] aspect-[2/3] object-cover rounded-[8px] ring-1 ring-white/10 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.95)]" />
           )}
         </div>
       </section>
@@ -125,7 +131,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
             {more.map((p) => (
               <Link key={p.id} href={`/loja/${slug}/produto/${p.slug}`} className="shrink-0 w-[118px] sm:w-[160px] aspect-[2/3] rounded-[6px] overflow-hidden bg-[#15161a] ring-1 ring-white/[0.06] hover:ring-2 hover:ring-[#3b82f6] transition-shadow">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {p.coverUrl && <img src={p.coverUrl} alt={p.title} loading="lazy" className="w-full h-full object-cover" />}
+                {p.coverUrl && <img src={thumb(p.coverUrl, 360)} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
               </Link>
             ))}
           </div>

@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { ArrowRight, Crown, Loader2 } from "lucide-react";
 import { vipCheckoutAction } from "../actions";
 import { brl } from "./ui";
+import { thumb } from "@/lib/webstore/img";
 
 export interface VipPlanCard {
   id: string;
@@ -68,12 +69,12 @@ export function VipBanner({
         {/* Igual à faixa da oferta progressiva: imagem do vendedor à direita; sem imagem, as capas dos títulos */}
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+          <img src={thumb(image, 1600)} srcSet={`${thumb(image, 960)} 960w, ${thumb(image, 1600)} 1600w, ${thumb(image, 1920)} 1920w`} sizes="100vw" alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover object-right" />
         ) : (
           <span aria-hidden="true" className="hidden xl:flex absolute right-12 top-1/2 -translate-y-1/2 items-center">
             {covers.slice(0, 5).map((c, k) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={c} src={c} alt="" loading="lazy" className="w-[104px] aspect-[2/3] object-cover rounded-[4px] -ml-6 first:ml-0 ring-1 ring-black/70 shadow-[0_18px_30px_-12px_rgba(0,0,0,0.9)]" style={{ zIndex: 10 - k }} />
+              <img key={c} src={thumb(c, 240)} alt="" loading="lazy" decoding="async" className="w-[104px] aspect-[2/3] object-cover rounded-[4px] -ml-6 first:ml-0 ring-1 ring-black/70 shadow-[0_18px_30px_-12px_rgba(0,0,0,0.9)]" style={{ zIndex: 10 - k }} />
             ))}
           </span>
         )}

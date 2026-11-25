@@ -19,17 +19,19 @@ export default async function LojaWebPage() {
   const store = await getCurrentStore();
   if (!store) return <SetupStoreClient />;
 
-  const ready = await webTablesReady();
-  const [customers, tickets] = ready ? await Promise.all([listSellerWebCustomers(store.id), listSellerTickets(store.id)]) : [[], []];
-  const [webProducts, showcase, look, webCombos, miniAppPromo] = await Promise.all([
+  // Tudo em paralelo (antes eram 4 rodadas seguidas ao banco)
+  const [ready, customers, tickets, webProducts, showcase, look, webCombos, miniAppPromo, hero, vipPlans] = await Promise.all([
+    webTablesReady(),
+    listSellerWebCustomers(store.id).catch(() => []),
+    listSellerTickets(store.id).catch(() => []),
     listWebProducts(store.id),
     getSections(store.id),
     getWebBranding(store.id),
     listWebCombos(store.id),
     miniAppProgressiveTiers(store.id),
+    getHeroImages(store.id),
+    listVipPlans(store.id).catch(() => []),
   ]);
-  const hero = await getHeroImages(store.id);
-  const vipPlans = await listVipPlans(store.id).catch(() => []);
 
   return (
     <WebStoreClient

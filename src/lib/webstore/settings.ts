@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { webStoreSettings } from "@/db/schema";
@@ -17,7 +18,9 @@ export function isMissingSettingsTable(err: unknown): boolean {
 }
 
 /** Aparência da Loja Web. `ready=false` quando a migration 0030 ainda não rodou (a loja usa o nome da loja). */
-export async function getWebBranding(storeId: string): Promise<{ ready: boolean; branding: WebBranding }> {
+export const getWebBranding = cache(loadWebBranding);
+
+async function loadWebBranding(storeId: string): Promise<{ ready: boolean; branding: WebBranding }> {
   try {
     const row = await db.query.webStoreSettings.findFirst({ where: eq(webStoreSettings.storeId, storeId) });
     return {
