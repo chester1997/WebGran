@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { productVideos, videoProgress, webStoreSections } from "@/db/schema";
 import { listWebProducts, topSellingWebProducts, type WebProductRow } from "./products";
 
-export type SectionKind = "hero" | "top15" | "continue" | "combos" | "carousel";
+export type SectionKind = "hero" | "top15" | "continue" | "combos" | "vip" | "carousel";
 
 export interface SectionConfig {
   id?: string;
@@ -21,17 +21,28 @@ export function defaultSections(): SectionConfig[] {
     { kind: "continue", title: "Continuar assistindo", active: true, mode: "auto", productIds: [] },
     { kind: "top15", title: "Top 15 da semana", active: true, mode: "auto", productIds: [] },
     { kind: "carousel", title: "Lançamentos", active: true, mode: "auto", productIds: [] },
+    { kind: "vip", title: "Planos VIP", active: true, mode: "auto", productIds: [] },
     { kind: "combos", title: "Combos", active: true, mode: "auto", productIds: [] },
   ];
 }
 
 /** Garante a seção "Ofertas e combos" (faixa da oferta + fileira de combos). Vitrines antigas não tinham. */
 function withOffers(list: SectionConfig[]): SectionConfig[] {
-  if (list.some((s) => s.kind === "combos")) return list;
+  if (list.some((s) => s.kind === "combos")) return withVip(list);
   const firstCarousel = list.findIndex((s) => s.kind === "carousel");
   const at = firstCarousel >= 0 ? firstCarousel + 1 : list.length;
   const n = [...list];
   n.splice(at, 0, { kind: "combos", title: "Combos", active: true, mode: "auto", productIds: [] });
+  return withVip(n);
+}
+
+/** Garante a seção "Planos VIP" (vitrines salvas antes dela existir): entra logo antes das ofertas. */
+function withVip(list: SectionConfig[]): SectionConfig[] {
+  if (list.some((s) => s.kind === "vip")) return list;
+  const offers = list.findIndex((s) => s.kind === "combos");
+  const at = offers >= 0 ? offers : list.length;
+  const n = [...list];
+  n.splice(at, 0, { kind: "vip", title: "Planos VIP", active: true, mode: "auto", productIds: [] });
   return n;
 }
 
@@ -63,7 +74,7 @@ export async function getSections(storeId: string): Promise<{ ready: boolean; se
   }
 }
 
-const KINDS = new Set<SectionKind>(["hero", "top15", "continue", "combos", "carousel"]);
+const KINDS = new Set<SectionKind>(["hero", "top15", "continue", "combos", "vip", "carousel"]);
 
 /** Substitui a vitrine inteira pela lista enviada (na ordem). */
 export async function saveSections(storeId: string, list: SectionConfig[], validProductIds: Set<string>) {
@@ -130,6 +141,10 @@ export async function buildStorefront(storeId: string, shadowCustomerId: string 
     if (!s.active || s.kind === "hero") continue;
     if (s.kind === "combos") {
       rows.push({ key: `offers-${i}`, kind: "combos", title: s.title, items: [] });
+      continue;
+    }
+    if (s.kind === "vip") {
+      rows.push({ key: `vip-${i}`, kind: "vip", title: s.title, items: [] });
       continue;
     }
     if (s.kind === "top15") {

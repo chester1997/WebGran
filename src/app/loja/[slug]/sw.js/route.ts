@@ -44,8 +44,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Casca do app (arquivos estáticos com nome versionado e ícones): cache primeiro
-  if (isStatic(url)) {
+  // Casca do app (arquivos estáticos com nome versionado e ícones): cache primeiro.
+  // No localhost os arquivos do Next não mudam de nome a cada versão: lá nunca guarda.
+  if (isStatic(url) && self.location.hostname !== "localhost") {
     event.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
         if (res && res.status === 200 && res.type === "basic") {

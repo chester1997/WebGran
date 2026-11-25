@@ -25,7 +25,21 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 /** Card dos planos VIP (mesmo estilo da oferta progressiva): assina e libera todos os títulos da loja. */
-export function VipBanner({ slug, plans, active, loggedIn, image }: { slug: string; plans: VipPlanCard[]; active: VipStatus | null; loggedIn: boolean; image: string | null }) {
+export function VipBanner({
+  slug,
+  plans,
+  active,
+  loggedIn,
+  image,
+  covers = [],
+}: {
+  slug: string;
+  plans: VipPlanCard[];
+  active: VipStatus | null;
+  loggedIn: boolean;
+  image: string | null;
+  covers?: string[];
+}) {
   const router = useRouter();
   const [pick, setPick] = useState(() => plans.find((p) => p.days === 30)?.id || plans[0]?.id);
   const [err, setErr] = useState<string | null>(null);
@@ -50,14 +64,22 @@ export function VipBanner({ slug, plans, active, loggedIn, image }: { slug: stri
 
   return (
     <section className="px-4 sm:px-8 lg:px-10" aria-label="Planos VIP">
-      <div className="relative overflow-hidden rounded-[10px] border border-[#3b82f6]/25 bg-[#0b0d12]">
-        {image && (
+      <div className="relative overflow-hidden rounded-[10px] border border-[#3b82f6]/25 bg-[#0b0d12] sm:min-h-[300px]">
+        {/* Igual à faixa da oferta progressiva: imagem do vendedor à direita; sem imagem, as capas dos títulos */}
+        {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right opacity-60" />
+          <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+        ) : (
+          <span aria-hidden="true" className="hidden xl:flex absolute right-12 top-1/2 -translate-y-1/2 items-center">
+            {covers.slice(0, 5).map((c, k) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={c} src={c} alt="" loading="lazy" className="w-[104px] aspect-[2/3] object-cover rounded-[4px] -ml-6 first:ml-0 ring-1 ring-black/70 shadow-[0_18px_30px_-12px_rgba(0,0,0,0.9)]" style={{ zIndex: 10 - k }} />
+            ))}
+          </span>
         )}
-        <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(59,130,246,0.22),transparent_55%),linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,0.96)_45%,rgba(11,13,18,0.7)_100%)]" />
+        <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(59,130,246,0.18),transparent_55%),linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,0.95)_40%,rgba(11,13,18,0.6)_68%,rgba(11,13,18,0.2)_100%)]" />
 
-        <div className="relative z-10 px-5 py-6 sm:px-9 sm:py-8">
+        <div className="relative z-10 px-5 py-6 sm:px-9 sm:py-8 max-w-[920px]">
           <p className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#7fb0ff]">
             <Crown className="w-4 h-4" /> Acesso VIP
           </p>
@@ -126,14 +148,15 @@ export function VipBanner({ slug, plans, active, loggedIn, image }: { slug: stri
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[6px] bg-[#3b82f6] hover:bg-[#2f74ea] text-white text-[14.5px] font-semibold whitespace-nowrap transition-colors disabled:opacity-60"
                 >
                   {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
-                  {chosen ? (
-                    <>
-                      Assinar <span className="hidden sm:inline">VIP </span>
-                      {chosen.label} · {brl(chosen.price)}
-                    </>
-                  ) : (
-                    "Assinar VIP"
-                  )}
+                  <span>
+                    {chosen ? (
+                      <>
+                        Assinar<span className="hidden sm:inline"> VIP</span> {chosen.label} · {brl(chosen.price)}
+                      </>
+                    ) : (
+                      "Assinar VIP"
+                    )}
+                  </span>
                 </button>
                 <span className="text-[12.5px] text-zinc-500">{chosen ? `Libera tudo por ${chosen.period} · pagamento via PIX` : ""}</span>
               </div>

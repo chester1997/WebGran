@@ -228,11 +228,11 @@ export async function saveBrandingAction(raw: { displayName?: string; logoUrl?: 
 
 /* ------------------------- planos VIP da Loja Web ------------------------- */
 
-export async function saveVipPlansAction(raw: import("@/lib/webstore/vip").VipPlanInput[]) {
+export async function saveVipPlansAction(raw: import("@/lib/webstore/vip").VipPlanInput[], image?: string | null) {
   const c = await ownerCtx();
   if (!c) return { ok: false as const, error: "Sem permissão." };
   const { saveVipPlans } = await import("@/lib/webstore/vip");
-  const r = await saveVipPlans(c.store.id, Array.isArray(raw) ? raw : []);
+  const r = await saveVipPlans(c.store.id, Array.isArray(raw) ? raw : [], image ?? null);
   if (r.ok) {
     revalidatePath("/seller/loja-web");
     revalidatePath(`/loja/${c.store.slug}`, "layout");

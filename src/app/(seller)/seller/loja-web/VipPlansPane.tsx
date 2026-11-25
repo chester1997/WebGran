@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Crown, Loader2, Save } from "lucide-react";
+import { Crown, ImagePlus, Loader2, Save, Trash2 } from "lucide-react";
 import { BTN_PRI, INPUT, useToast } from "../fluxos/_components/flow-ui";
 import { saveVipPlansAction } from "./actions";
 import type { VipPlanView } from "@/lib/webstore/vip";
@@ -19,10 +19,26 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
   const [pending, start] = useTransition();
   const [rows, setRows] = useState(() => plans.map((p) => ({ duration: p.duration, label: p.label, period: p.period, enabled: p.enabled, price: money(p.price) })));
   const on = rows.filter((r) => r.enabled).length;
+  const [image, setImage] = useState(plans.find((p) => p.image)?.image || "");
+  const [busy, setBusy] = useState(false);
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    try {
+      const { uploadOptimizedImage } = await import("@/lib/image-optimizer");
+      const res = await uploadOptimizedImage(file, "banners", { maxWidth: 2400, maxHeight: 800, quality: 0.86 });
+      setImage(res.url);
+      toast("Imagem enviada. Clique em Salvar planos para aplicar na loja.");
+    } catch (e) {
+      toast((e as Error).message || "Não foi possível enviar a imagem.", "err");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const save = () =>
     start(async () => {
-      const r = await saveVipPlansAction(rows.map((x) => ({ duration: x.duration, enabled: x.enabled, price: num(x.price) })));
+      const r = await saveVipPlansAction(rows.map((x) => ({ duration: x.duration, enabled: x.enabled, price: num(x.price) })), image || null);
       if (!r.ok) return toast(r.error, "err");
       toast(on ? `Planos VIP salvos: ${on} ${on === 1 ? "plano ativo" : "planos ativos"} na loja.` : "Planos VIP desligados. O card sai da loja.");
       router.refresh();
@@ -77,6 +93,44 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
             </label>
           </div>
         ))}
+      </div>
+
+      <div className="mt-5 pt-5 border-t border-white/[0.06]">
+        <div className="flex flex-wrap items-start gap-3 mb-3">
+          <div className="mr-auto">
+            <p className="text-[13.5px] font-semibold">Imagem de fundo do card VIP</p>
+            <p className="text-[12.5px] text-zinc-500 mt-0.5">
+              Tamanho ideal: <b className="text-zinc-300">2400 × 480 px</b> (formato 5:1). Coloque o que importa na <b className="text-zinc-300">metade direita</b>: a esquerda fica escura por trás do texto. Sem imagem, o card usa as capas dos títulos.
+            </p>
+          </div>
+          {image && (
+            <button type="button" onClick={() => setImage("")} className="inline-flex items-center gap-1.5 text-[12.5px] text-zinc-400 hover:text-red-300">
+              <Trash2 className="w-4 h-4" /> Remover imagem
+            </button>
+          )}
+        </div>
+        <label className="relative block aspect-[5/1] min-h-[96px] rounded-[8px] border border-dashed border-white/[0.14] bg-[#0b0d12] hover:border-[#3b82f6]/60 cursor-pointer overflow-hidden">
+          {image ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-right" />
+              <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,0.95)_40%,rgba(11,13,18,0.6)_68%,rgba(11,13,18,0.2)_100%)]" />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[12px] text-zinc-400">Prévia: assim fica atrás do texto</span>
+            </>
+          ) : (
+            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12px] text-zinc-500">
+              {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+              Enviar imagem
+            </span>
+          )}
+          {busy && image && (
+            <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </span>
+          )}
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+        </label>
+        <p className="mt-2 text-[12px] text-zinc-500">A posição do card na página você escolhe em <b className="text-zinc-300">Vitrine</b> (seção “Planos VIP”).</p>
       </div>
     </section>
   );

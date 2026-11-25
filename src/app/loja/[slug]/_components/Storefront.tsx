@@ -59,7 +59,7 @@ export function Storefront({
   combos = [],
   vip = null,
 }: {
-  vip?: { plans: VipPlanCard[]; active: VipStatus | null; loggedIn: boolean } | null;
+  vip?: { plans: VipPlanCard[]; active: VipStatus | null; loggedIn: boolean; image: string | null } | null;
   combos?: ComboCard[];
   topId?: string | null;
   promoImage?: string | null;
@@ -79,28 +79,24 @@ export function Storefront({
     );
   }
   const showVip = Boolean(vip && (vip.plans.length || vip.active));
-  const hasCombosRow = rows.some((r) => r.kind === "combos");
-  const vipCard = vip ? <VipBanner slug={slug} plans={vip.plans} active={vip.active} loggedIn={vip.loggedIn} image={null} /> : null;
   const covers = Array.from(new Map([...hero, ...rows.flatMap((r) => r.items)].filter((x) => x.coverUrl).map((x) => [x.id, x.coverUrl as string])).values()).slice(0, 5);
+  const vipCard = vip ? <VipBanner slug={slug} plans={vip.plans} active={vip.active} loggedIn={vip.loggedIn} image={vip.image} covers={covers} /> : null;
   return (
     <div className="overflow-x-clip">
       {hero.length > 0 && <Hero slug={slug} items={hero} topId={topId} />}
       <div className={`relative z-10 space-y-9 sm:space-y-11 pb-10 ${hero.length ? "-mt-14 sm:-mt-24" : "pt-24"}`}>
-        {rows.map((r, i) =>
+        {rows.map((r) =>
           r.kind === "combos" ? (
-            promo || combos.length || showVip ? (
-              <div key={r.key} className="space-y-9 sm:space-y-11">
-                {showVip && vipCard}
+            promo || combos.length ? (
+              <div key={r.key}>
                 {promo && <PromoBanner slug={slug} promo={promo} image={promoImage} covers={covers} />}
-                {combos.length > 0 && <ComboRow title={r.title} combos={combos} spaced={false} />}
+                {combos.length > 0 && <ComboRow title={r.title} combos={combos} spaced={Boolean(promo)} />}
               </div>
             ) : null
+          ) : r.kind === "vip" ? (
+            showVip ? <div key={r.key}>{vipCard}</div> : null
           ) : (
-            <div key={r.key}>
-              {r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}
-              {/* Sem seção de ofertas na vitrine: o VIP entra depois da primeira fileira */}
-              {showVip && !hasCombosRow && i === 0 && <div className="mt-9 sm:mt-11">{vipCard}</div>}
-            </div>
+            <div key={r.key}>{r.kind === "top15" ? <TopRow slug={slug} row={r} /> : r.kind === "continue" ? <ContinueRow slug={slug} row={r} /> : <PosterRow slug={slug} row={r} />}</div>
           )
         )}
       </div>

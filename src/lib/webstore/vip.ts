@@ -32,6 +32,8 @@ export interface VipPlanView {
   enabled: boolean;
   price: number;
   productId: string | null;
+  /** Imagem de fundo do card (a mesma em todos os planos) */
+  image: string | null;
 }
 
 export interface ActiveVip {
@@ -48,16 +50,16 @@ export async function listVipPlans(storeId: string): Promise<VipPlanView[]> {
   const byDuration = new Map(rows.map((r) => [String(r.duration), r]));
   return VIP_PLANS.map((p) => {
     const r = byDuration.get(p.duration);
-    return { duration: p.duration, label: p.label, period: p.period, enabled: r?.status === WEB_VIP, price: r ? Number(r.price) : 0, productId: r?.id || null };
+    return { duration: p.duration, label: p.label, period: p.period, enabled: r?.status === WEB_VIP, price: r ? Number(r.price) : 0, productId: r?.id || null, image: rows.find((x) => x.bannerUrl)?.bannerUrl || null };
   });
 }
 
 /** Planos ligados, para o card da loja. */
-export async function listActiveVipPlans(storeId: string): Promise<{ id: string; duration: VipDuration; label: string; period: string; price: number; days: number }[]> {
+export async function listActiveVipPlans(storeId: string): Promise<{ id: string; duration: VipDuration; label: string; period: string; price: number; days: number; image: string | null }[]> {
   const rows = await db.query.products.findMany({ where: and(eq(products.storeId, storeId), eq(products.status, WEB_VIP)) });
   return VIP_PLANS.flatMap((p) => {
     const r = rows.find((x) => x.duration === p.duration);
-    return r ? [{ id: r.id, duration: p.duration, label: p.label, period: p.period, price: Number(r.price), days: p.days }] : [];
+    return r ? [{ id: r.id, duration: p.duration, label: p.label, period: p.period, price: Number(r.price), days: p.days, image: r.bannerUrl || null }] : [];
   });
 }
 
@@ -68,7 +70,8 @@ export interface VipPlanInput {
 }
 
 /** Liga/desliga e define o preço de cada plano. Nunca apaga (quem já comprou continua com o acesso). */
-export async function saveVipPlans(storeId: string, input: VipPlanInput[]): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveVipPlans(storeId: string, input: VipPlanInput[], image?: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
+  const bannerUrl = typeof image === "string" && /^https:\/\//.test(image.trim()) ? image.trim() : null;
   const list = (Array.isArray(input) ? input : []).filter((i) => META.has(String(i?.duration)));
   for (const i of list) {
     if (i.enabled && (!Number.isFinite(i.price) || i.price < 1)) return { ok: false, error: `Informe o preço do plano ${META.get(i.duration)!.label} (mínimo R$ 1,00).` };
@@ -80,7 +83,7 @@ export async function saveVipPlans(storeId: string, input: VipPlanInput[]): Prom
     const price = Number.isFinite(i.price) && i.price > 0 ? i.price.toFixed(2) : row?.price || "1.00";
     const status = i.enabled ? WEB_VIP : WEB_VIP_OFF;
     if (row) {
-      await db.update(products).set({ status, price, updatedAt: new Date() }).where(and(eq(products.id, row.id), eq(products.storeId, storeId)));
+      await db.update(products).set({ status, price, bannerUrl, updatedAt: new Date() }).where(and(eq(products.id, row.id), eq(products.storeId, storeId)));
     } else if (i.enabled) {
       await db.insert(products).values({
         storeId,
@@ -90,6 +93,7 @@ export async function saveVipPlans(storeId: string, input: VipPlanInput[]): Prom
         price,
         duration: meta.duration,
         status,
+        bannerUrl,
         position: 0,
         deliveryType: "product_video",
         catalogScope: "STORE_GENERAL",

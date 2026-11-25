@@ -63,6 +63,7 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
         plans: vipPlans.map((p) => ({ id: p.id, label: p.label, period: p.period, price: p.price, days: p.days })),
         active: vipActive ? { label: vipActive.label, until: vipActive.expiresAt ? vipActive.expiresAt.toISOString() : null } : null,
         loggedIn: Boolean(customer),
+        image: vipPlans.find((p) => p.image)?.image || null,
       }}
       topId={front.rows.find((r) => r.kind === "top15")?.items[0]?.id || null}
       hero={front.hero.map((p) => ({ ...card(p), heroUrl: heroImgs.images[p.id] || null }))}
