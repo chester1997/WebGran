@@ -73,7 +73,7 @@ export function AuthScene({ store, children }: { store: { slug: string; name: st
       </div>
 
       <div className="relative z-10 flex min-h-[100dvh] flex-col">
-        <header className="flex items-center justify-between gap-3 px-4 sm:px-8 h-16 sm:h-20">
+        <header className="lg:absolute lg:inset-x-0 lg:top-0 lg:z-10 flex items-center justify-between gap-3 px-4 sm:px-8 h-16 lg:h-[68px] [@media(max-height:860px)]:lg:h-[52px]">
           <Link href={base} className="flex items-center gap-3 min-w-0">
             {store.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -93,7 +93,7 @@ export function AuthScene({ store, children }: { store: { slug: string; name: st
           </Link>
         </header>
 
-        <main className="flex-1 grid lg:grid-cols-[1fr_minmax(0,460px)] items-center gap-10 xl:gap-20 w-full max-w-[1160px] mx-auto px-4 sm:px-8 py-4 sm:py-8">
+        <main className="flex-1 grid lg:grid-cols-[1fr_minmax(0,460px)] items-center gap-10 xl:gap-20 w-full max-w-[1160px] mx-auto px-4 sm:px-8 py-4 sm:py-8 lg:py-[60px] [@media(max-height:860px)]:lg:py-[50px]">
           {/* Lado da marca (computador) */}
           <section className="hidden lg:block">
             <span className="inline-flex items-center gap-2 h-8 px-3 rounded-full bg-[#3b82f6]/10 border border-[#3b82f6]/25 text-[12.5px] font-semibold text-[#9cc2ff]">
@@ -104,7 +104,7 @@ export function AuthScene({ store, children }: { store: { slug: string; name: st
               <br />a um <span className="text-[#3b82f6]">PIX</span> de distância.
             </h2>
             <p className="mt-4 max-w-[440px] text-[15.5px] text-zinc-400 leading-relaxed">Entre ou crie sua conta na {store.name} e tenha acesso imediato a tudo que comprar.</p>
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-7 space-y-3.5">
               {PERKS.map(({ I, t, s }) => (
                 <li key={t} className="flex items-center gap-3.5">
                   <span className="w-11 h-11 rounded-[12px] bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#3b82f6] shrink-0">
@@ -118,7 +118,7 @@ export function AuthScene({ store, children }: { store: { slug: string; name: st
               ))}
             </ul>
             <div
-              className="mt-10 inline-flex items-center gap-3.5 rounded-[16px] border border-white/[0.08] bg-[#0d0f15]/80 pl-3.5 pr-5 py-3.5 shadow-[0_24px_60px_-24px_rgba(59,130,246,0.55)] animate-[wg-float_7s_ease-in-out_infinite]"
+              className="mt-8 inline-flex items-center gap-3.5 rounded-[16px] border border-white/[0.08] bg-[#0d0f15]/80 pl-3.5 pr-5 py-3.5 shadow-[0_24px_60px_-24px_rgba(59,130,246,0.55)] animate-[wg-float_7s_ease-in-out_infinite]"
               style={{ ["--r" as string]: "-2deg" }}
             >
               <span className="w-10 h-10 rounded-full bg-[#3b82f6]/15 flex items-center justify-center text-[#3b82f6]">
@@ -134,7 +134,7 @@ export function AuthScene({ store, children }: { store: { slug: string; name: st
           <div className="w-full">{children}</div>
         </main>
 
-        <footer className="px-4 sm:px-8 py-5 text-center text-[12px] text-zinc-600">
+        <footer className="lg:absolute lg:inset-x-0 lg:bottom-0 px-4 sm:px-8 py-5 lg:py-3 text-center text-[12px] text-zinc-600">
           © {new Date().getFullYear()} {store.name} · Pagamento seguro via PIX
         </footer>
       </div>

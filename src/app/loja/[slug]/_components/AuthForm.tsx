@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
 import { loginAction, registerAction } from "../actions";
-import { AUTH_CARD, BTN_PRIMARY, ErrorBox, INPUT, Label } from "./ui";
+import { AUTH_CARD, BTN_PRIMARY, ErrorBox, INPUT as BASE_INPUT, Label } from "./ui";
+
+// Telas baixas (notebook): tudo um pouco mais compacto para caber sem rolar
+const INPUT = `${BASE_INPUT} [@media(max-height:860px)]:h-10`;
 import { LEAD_SOURCES } from "@/lib/webstore/lead-sources";
 import { LeadSourceIcon } from "@/components/webstore/LeadSourceIcon";
 
@@ -44,14 +47,18 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
 
   return (
     <div className="mx-auto w-full max-w-[460px]">
-      <div className={AUTH_CARD}>
-        <span className="w-12 h-12 rounded-[14px] bg-[linear-gradient(160deg,#4f8ff7,#2563eb)] text-white flex items-center justify-center shadow-[0_14px_30px_-12px_rgba(59,130,246,0.9)]">
-          <Icon className="w-[22px] h-[22px]" />
-        </span>
-        <h1 className="mt-5 text-[24px] font-bold tracking-tight">{isLogin ? "Bem-vindo de volta" : "Criar sua conta"}</h1>
-        <p className="mt-1 text-[13.5px] text-zinc-400">{isLogin ? "Entre para assistir seus conteúdos e ver seus pedidos." : "Leva menos de um minuto. Seus produtos ficam salvos aqui."}</p>
+      <div className={`${AUTH_CARD} [@media(max-height:860px)]:p-5 [@media(max-height:860px)]:sm:p-6`}>
+        <div className="flex items-center gap-3.5">
+          <span className={`w-11 h-11 [@media(max-height:860px)]:w-10 [@media(max-height:860px)]:h-10 rounded-[13px] bg-[linear-gradient(160deg,#4f8ff7,#2563eb)] text-white flex items-center justify-center shrink-0 shadow-[0_14px_30px_-12px_rgba(59,130,246,0.9)]`}>
+            <Icon className="w-5 h-5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-[21px] font-bold tracking-tight leading-tight">{isLogin ? "Bem-vindo de volta" : "Criar sua conta"}</h1>
+            <p className="mt-0.5 text-[13px] text-zinc-400">{isLogin ? "Entre para assistir seus conteúdos." : "Leva menos de um minuto."}</p>
+          </div>
+        </div>
 
-        <form onSubmit={submit} className="mt-6 space-y-4">
+        <form onSubmit={submit} className={`mt-5 [@media(max-height:860px)]:mt-4 ${isLogin ? "space-y-4" : `space-y-3 [@media(max-height:860px)]:space-y-2.5`}`}>
           {!isLogin && (
             <label className="block">
               <Label>Nome</Label>
@@ -105,7 +112,7 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
                   <input value={f.telegram} onChange={set("telegram")} className={INPUT} maxLength={33} placeholder="@usuario" />
                 </label>
               </div>
-              <p className="text-[12px] text-zinc-500 -mt-1">Preencha pelo menos um. É por ele que a loja fala com você se o acesso não chegar.</p>
+              <p className="text-[11.5px] text-zinc-500 -mt-1 leading-snug [@media(max-height:800px)]:hidden">Preencha pelo menos um: é por ele que a loja fala com você.</p>
 
               <fieldset>
                 <legend className="w-full">
@@ -130,7 +137,7 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
                           setF((v) => ({ ...v, leadSource: s.id }));
                           if (sourceMissing) setError(null);
                         }}
-                        className={`min-w-0 h-[60px] rounded-[9px] flex flex-col items-center justify-center gap-1.5 border transition-colors ${
+                        className={`min-w-0 h-[52px] [@media(max-height:860px)]:h-[46px] rounded-[9px] flex flex-col items-center justify-center gap-1.5 border transition-colors ${
                           on
                             ? "bg-[#3b82f6]/15 border-[#3b82f6]/70 text-white"
                             : "bg-white/[0.02] border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.06]"
@@ -146,12 +153,12 @@ export function AuthForm({ slug, mode, next }: { slug: string; mode: "login" | "
             </>
           )}
           {error && <ErrorBox>{error}</ErrorBox>}
-          <button type="submit" className={`${BTN_PRIMARY} w-full h-12 text-[15px] rounded-[10px]`} disabled={pending}>
+          <button type="submit" className={`${BTN_PRIMARY} w-full h-12 [@media(max-height:860px)]:h-11 text-[15px] rounded-[10px]`} disabled={pending}>
             {pending ? "Aguarde..." : isLogin ? "Entrar" : "Criar conta"}
           </button>
         </form>
 
-        <div className="mt-6 pt-5 border-t border-white/[0.06] text-center text-[13.5px] text-zinc-500">
+        <div className={`mt-5 pt-4 [@media(max-height:860px)]:mt-4 [@media(max-height:860px)]:pt-3 border-t border-white/[0.06] text-center text-[13.5px] text-zinc-500`}>
           {isLogin ? (
             <>
               Ainda não tem conta?{" "}
