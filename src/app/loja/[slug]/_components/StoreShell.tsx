@@ -14,6 +14,7 @@ import {
 } from "@/components/icons/solar/seller-icons";
 import { CartProvider, useCart } from "./cart";
 import { SupportModal } from "./SupportModal";
+import { StoreInstallApp } from "./StoreInstallApp";
 
 export interface ShellStore {
   slug: string;
@@ -221,6 +222,7 @@ function Inner({ store, customer, children }: { store: ShellStore; customer: She
       )}
 
       {support && <SupportModal store={store} customer={customer} onClose={() => setSupport(false)} />}
+      <StoreInstallApp slug={store.slug} name={store.name} />
     </div>
   );
 }

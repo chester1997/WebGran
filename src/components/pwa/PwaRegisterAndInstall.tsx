@@ -21,6 +21,9 @@ export function PwaRegisterAndInstall() {
   const [showIosInstructions, setShowIosInstructions] = useState(false);
 
   useEffect(() => {
+    // Loja Web: tem o próprio app (manifest, ícone e service worker da loja). O da plataforma fica de fora.
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/loja/")) return;
+
     // 0. Ativar listener de som em primeiro plano para notificações push
     setupForegroundNotificationSoundListener();
 
