@@ -118,6 +118,13 @@ export async function processFlowJobs(opts: { budgetMs?: number; limit?: number 
     } catch (err) {
       console.warn("[flow-jobs] Expiração falhou:", (err as Error)?.message);
     }
+    // Acessos vencidos dos produtos (Diário, Semanal, Mensal...): remove do grupo/canal logo após vencer
+    try {
+      const { tickExpiredAccesses } = await import("@/lib/orders/expiration-service");
+      await tickExpiredAccesses();
+    } catch (err) {
+      console.warn("[flow-jobs] Expiração de acessos falhou:", (err as Error)?.message);
+    }
 
     let processed = 0;
     while (Date.now() < deadline && processed < limit) {

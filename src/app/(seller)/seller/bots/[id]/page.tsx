@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { telegramBots, stores, telegramCustomers, orders, telegramMessages, botStartEvents, products } from "@/db/schema";
-import { eq, and, desc, asc, or, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, or, isNull, notLike } from "drizzle-orm";
 import { getCurrentStore } from "@/lib/auth";
 import { requireOwnerAccount, isOwnerUser } from "@/lib/bots/owner-guard";
 import { ProductManualDeepLinkService } from "@/lib/products/manual-deep-link-service";
@@ -55,7 +55,8 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     }),
     // Clientes do Telegram da loja para a aba Conversas
     db.query.telegramCustomers.findMany({
-      where: eq(telegramCustomers.storeId, store.id),
+      // Clientes da Loja Web (web:<id>) não são do bot
+      where: and(eq(telegramCustomers.storeId, store.id), or(isNull(telegramCustomers.telegramUserId), notLike(telegramCustomers.telegramUserId, "web:%"))),
       orderBy: [desc(telegramCustomers.updatedAt)],
       limit: 100,
     }),
@@ -79,7 +80,8 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     }).catch(() => []),
     // Pedidos recentes vinculados à loja com itens, produtos e entregas de notificações
     db.query.orders.findMany({
-      where: eq(orders.storeId, store.id),
+      // Pedidos da Loja Web (session web:<id>) são de outro canal e não contam no bot
+      where: and(eq(orders.storeId, store.id), or(isNull(orders.sessionId), notLike(orders.sessionId, "web:%"))),
       orderBy: [desc(orders.createdAt)],
       limit: 150,
       with: {

@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { stores, telegramBots, products, orders, orderItems, telegramCustomers, telegramMessages } from "@/db/schema";
-import { eq, and, ne, sql, gte, desc, asc } from "drizzle-orm";
+import { eq, and, ne, sql, gte, desc, asc, or, isNull, notLike } from "drizzle-orm";
 import { getCurrentStore } from "@/lib/auth";
 import { verifyOwnerActionAccess } from "@/lib/bots/owner-guard";
 import { encrypt, decrypt } from "@/lib/encryption";
@@ -555,7 +555,9 @@ export async function getBotMetricsAction(botId: string, period: "today" | "week
     }).from(orders)
       .where(and(
         eq(orders.storeId, store.id),
-        gte(orders.createdAt, startDate)
+        gte(orders.createdAt, startDate),
+        // Vendas da Loja Web são de outro canal: não entram nas métricas do bot
+        or(isNull(orders.sessionId), notLike(orders.sessionId, "web:%"))
       ));
 
     const totalOrders = botOrders.length;
