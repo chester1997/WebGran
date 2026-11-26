@@ -15,7 +15,7 @@ import { flowBroadcasts, flowJobs, flowPurchases, orders, telegramBots, telegram
 import { decrypt } from "@/lib/encryption";
 import type { DelayUnit } from "./basic-config";
 
-export type JobKind = "downsell" | "upsell" | "broadcast" | "adv_step" | "adv_wait" | "adv_pix";
+export type JobKind = "downsell" | "upsell" | "broadcast" | "adv_step" | "adv_wait" | "adv_pix" | "recovery";
 
 function isMissing(err: unknown) {
   const e = err as { code?: string; message?: string; cause?: { code?: string; message?: string } };
@@ -169,6 +169,15 @@ export async function processFlowJobs(opts: { budgetMs?: number; limit?: number 
             } else {
               const { runAdvancedJob } = await import("./advanced-runtime");
               status = await runAdvancedJob(job, tg.token);
+            }
+          } else if (job.kind === "recovery") {
+            // Marketing → Recuperação de vendas (compra gerada e não paga).
+            if (!tg) {
+              status = "canceled";
+              error = "Bot sem token.";
+            } else {
+              const { runRecoveryJob } = await import("@/lib/marketing/sales-recovery");
+              status = await runRecoveryJob(job, tg.token);
             }
           } else {
             if (!flows.has(job.botId)) flows.set(job.botId, await runtime.getBasicFlowForBot(job.botId, { includeDraft: true }));

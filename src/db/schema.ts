@@ -1881,3 +1881,30 @@ export const webHeroImages = pgTable('web_hero_images', {
 }, (t) => ({
   pk: primaryKey({ columns: [t.storeId, t.productId] }),
 }));
+
+// Marketing → Recuperação de vendas (migration 0035): configuração por loja
+export const salesRecoverySettings = pgTable('sales_recovery_settings', {
+  storeId: uuid('store_id').primaryKey().references(() => stores.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  /** [{ on, delayMinutes, text, button }] — até 3 mensagens. */
+  steps: jsonb('steps').notNull().default([]),
+  quietHours: boolean('quiet_hours').notNull().default(true),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Marketing → Recuperação de vendas (migration 0035): mensagens enviadas
+export const salesRecoverySends = pgTable('sales_recovery_sends', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => telegramCustomers.id, { onDelete: 'cascade' }),
+  botId: uuid('bot_id').references(() => telegramBots.id, { onDelete: 'set null' }),
+  step: integer('step').notNull(),
+  status: text('status').notNull().default('sent'), // 'sent' | 'failed'
+  error: text('error'),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+}, (t) => ({
+  orderStepUnique: uniqueIndex('sales_recovery_sends_order_step_idx').on(t.orderId, t.step),
+  storeIdx: index('sales_recovery_sends_store_idx').on(t.storeId, t.sentAt),
+  customerIdx: index('sales_recovery_sends_customer_idx').on(t.customerId, t.sentAt),
+}));

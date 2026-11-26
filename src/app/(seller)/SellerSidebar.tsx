@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Megaphone, X } from "lucide-react";
 import SidebarNavItem from "@/components/layout/SidebarNavItem";
 import { canUseWebStore, isOwnerUser } from "@/lib/bots/owner-guard";
 import SalesVolumeCardV2 from "./SalesVolumeCardV2";
@@ -318,6 +318,30 @@ export default function SellerSidebar({
                 isActive={pathname === "/seller/loja-web" || pathname.startsWith("/seller/loja-web/")}
                 onClick={(e) => handleLinkClick(e, "/seller/loja-web")}
                 icon={SolarSellerWebStoreIcon}
+                accent="blue"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* MARKETING (EXCLUSIVO PROPRIETÁRIO — fase de testes)  */}
+        {/* ==================================================== */}
+        {isOwner && (
+          <div className="mt-[var(--section-label-margin-top,28px)]">
+            <div className="px-1 pb-2 flex items-center gap-2.5 select-none">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-slate-400 shrink-0">
+                MARKETING
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
+            </div>
+            <div className="space-y-[var(--nav-item-gap,4px)] mt-1">
+              <SidebarNavItem
+                href="/seller/marketing/recuperacao"
+                label="Recuperação de vendas"
+                isActive={pathname === "/seller/marketing/recuperacao" || pathname.startsWith("/seller/marketing/recuperacao/")}
+                onClick={(e) => handleLinkClick(e, "/seller/marketing/recuperacao")}
+                icon={Megaphone}
                 accent="blue"
               />
             </div>

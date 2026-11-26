@@ -27,6 +27,17 @@ export interface CreateCheckoutInput {
   comboStatus?: string;
 }
 
+/** Marketing → Recuperação de vendas (fase de testes: só a loja da conta proprietária). Nunca derruba o checkout. */
+async function queueSalesRecovery(ownerId: string | null, orderId: string) {
+  try {
+    const { recoveryAllowedForOwner, scheduleSalesRecovery } = await import("@/lib/marketing/sales-recovery");
+    if (!recoveryAllowedForOwner(ownerId)) return;
+    await scheduleSalesRecovery(orderId);
+  } catch (err) {
+    console.warn("[CheckoutService] Recuperação de vendas não agendada:", (err as Error)?.message);
+  }
+}
+
 export interface CheckoutResult {
   success: boolean;
   error?: string;
@@ -588,6 +599,8 @@ export class CheckoutService {
           })
           .where(eq(orders.id, newOrder.id));
 
+        await queueSalesRecovery(sellerId, newOrder.id);
+
         return {
           success: true,
           orderId: newOrder.id,
@@ -630,6 +643,8 @@ export class CheckoutService {
           })
           .where(eq(orders.id, newOrder.id));
 
+        await queueSalesRecovery(sellerId, newOrder.id);
+
         return {
           success: true,
           orderId: newOrder.id,
@@ -671,6 +686,8 @@ export class CheckoutService {
             pixExpiresAt: pixPayment.expiresAt,
           })
           .where(eq(orders.id, newOrder.id));
+
+        await queueSalesRecovery(sellerId, newOrder.id);
 
         return {
           success: true,
