@@ -16,7 +16,7 @@ export function isOwnerUser(user?: { id?: string; email?: string | null } | null
 }
 
 /** Contas liberadas para testar a Loja Web (além do proprietário), antes de abrir para todos. */
-export const WEB_STORE_TESTER_EMAILS = ["saviominisseries@gmail.com"];
+export const WEB_STORE_TESTER_EMAILS = ["saviominisseries@gmail.com", "erikaestevo@gmail.com"];
 
 /** A Loja Web está liberada para esta conta? (proprietário ou e-mail da lista de teste) */
 export function canUseWebStore(user?: { id?: string; email?: string | null } | null): boolean {
