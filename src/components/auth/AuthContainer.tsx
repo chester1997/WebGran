@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, ShoppingBag, ArrowRight, Loader2, ShieldCheck, Phone, AtSign, Eye, EyeOff, LogIn, Store, KeyRound, MailCheck, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Mail, Lock, User, ShoppingBag, ArrowRight, Loader2, ShieldCheck, Phone, AtSign, Eye, EyeOff, LogIn, Store, KeyRound, ArrowLeft, type LucideIcon } from "lucide-react";
 import { AuthShowcase } from "./AuthShowcase";
 
 // Telas baixas (notebook): campos um pouco mais compactos para caber sem rolar
@@ -28,15 +28,13 @@ function Field({ label, hint, icon: I, children }: { label: string; hint?: strin
   );
 }
 
-type Mode = "login" | "register" | "forgot" | "reset";
+type Mode = "login" | "register" | "forgot";
 
 interface AuthContainerProps {
   initialMode?: Mode;
-  /** Link do e-mail de nova senha (página /redefinir-senha). */
-  resetToken?: string;
 }
 
-export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthContainerProps) {
+export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin";
@@ -60,9 +58,9 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
   const [regLoading, setRegLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // Esqueci a senha / nova senha
+  // Esqueci a senha: 1) confirma o e-mail  2) nova senha duas vezes
   const [fEmail, setFEmail] = useState("");
-  const [fSent, setFSent] = useState(false);
+  const [fConfirmed, setFConfirmed] = useState(false);
   const [fError, setFError] = useState("");
   const [fLoading, setFLoading] = useState(false);
   const [newPass, setNewPass] = useState("");
@@ -80,10 +78,10 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
         body: JSON.stringify({ email: fEmail }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Não foi possível enviar agora. Tente de novo.");
-      setFSent(true);
+      if (!res.ok) throw new Error(data.error || "Não foi possível confirmar agora. Tente de novo.");
+      setFConfirmed(true);
     } catch (err) {
-      setFError(err instanceof Error ? err.message : "Não foi possível enviar agora. Tente de novo.");
+      setFError(err instanceof Error ? err.message : "Não foi possível confirmar agora. Tente de novo.");
     } finally {
       setFLoading(false);
     }
@@ -96,10 +94,10 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
     if (newPass !== newPass2) return setFError("As duas senhas não são iguais.");
     setFLoading(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
+      const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: resetToken || searchParams.get("token") || "", password: newPass }),
+        body: JSON.stringify({ email: fEmail, password: newPass }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Não foi possível salvar a nova senha.");
@@ -180,24 +178,27 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
   };
 
   const isLogin = mode === "login";
-  const isRecovery = mode === "forgot" || mode === "reset";
+  const isRecovery = mode === "forgot";
   const switchTo = (m: Mode) => {
     setMode(m);
     setLoginError("");
     setRegError("");
     setFError("");
     if (m === "forgot") {
-      setFSent(false);
+      setFConfirmed(false);
+      setResetDone(false);
+      setNewPass("");
+      setNewPass2("");
       if (!fEmail && loginEmail) setFEmail(loginEmail);
     }
   };
-  const HEAD: Record<Mode, { icon: LucideIcon; t: string; s: string }> = {
+  const HEAD: Record<Mode | "newpass", { icon: LucideIcon; t: string; s: string }> = {
     login: { icon: LogIn, t: "Bem-vindo de volta", s: "Entre para ver suas vendas e sua loja." },
     register: { icon: Store, t: "Crie sua loja WebGran", s: "Grátis para começar. Leva 1 minuto." },
-    forgot: { icon: KeyRound, t: "Esqueceu a senha?", s: "Mandamos um link para você criar uma nova." },
-    reset: { icon: KeyRound, t: "Crie uma nova senha", s: "Ela passa a valer no lugar da antiga." },
+    forgot: { icon: KeyRound, t: "Esqueceu a senha?", s: "Confirme o e-mail da sua conta." },
+    newpass: { icon: KeyRound, t: "Crie uma nova senha", s: "Ela passa a valer no lugar da antiga." },
   };
-  const head = HEAD[mode];
+  const head = HEAD[mode === "forgot" && fConfirmed ? "newpass" : mode];
   const HeadIcon = head.icon;
   const eye = (
     <button
@@ -264,7 +265,7 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
                 {isRecovery ? (
                   <button
                     type="button"
-                    onClick={() => (mode === "reset" ? router.replace("/login") : switchTo("login"))}
+                    onClick={() => switchTo("login")}
                     className="inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-400 hover:text-white"
                   >
                     <ArrowLeft className="w-4 h-4" /> Voltar para o login
@@ -319,32 +320,6 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
                       <div>{submitBtn(loginLoading, "Entrar", "Entrando...")}</div>
                     </form>
                   ) : mode === "forgot" ? (
-                    fSent ? (
-                      <div className="mt-5 space-y-4">
-                        <div className="flex gap-3 rounded-[12px] border border-[#3b82f6]/25 bg-[#3b82f6]/[0.07] p-4">
-                          <MailCheck className="w-5 h-5 text-[#3b82f6] shrink-0 mt-0.5" />
-                          <p className="text-[13.5px] leading-relaxed text-zinc-300">
-                            Se existir uma conta com <b className="text-white">{fEmail.trim()}</b>, o link para criar a nova senha já está a caminho. Olhe também a caixa de spam. O link vale por 1 hora.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setFSent(false)}
-                          className="w-full h-11 rounded-[11px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-[14px] font-medium text-zinc-200"
-                        >
-                          Não chegou? Enviar de novo
-                        </button>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleForgotSubmit} className="mt-5 space-y-4">
-                        {errorBox(fError)}
-                        <Field label="E-mail da sua conta" icon={Mail}>
-                          <input type="email" required autoComplete="email" placeholder="nome@exemplo.com" value={fEmail} onChange={(e) => setFEmail(e.target.value)} className={INPUT} />
-                        </Field>
-                        <div className="pt-1">{submitBtn(fLoading, "Enviar link", "Enviando...")}</div>
-                      </form>
-                    )
-                  ) : mode === "reset" ? (
                     resetDone ? (
                       <div className="mt-5 space-y-4">
                         <div className="flex gap-3 rounded-[12px] border border-[#3b82f6]/25 bg-[#3b82f6]/[0.07] p-4">
@@ -354,7 +329,7 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
                         <button
                           type="button"
                           onClick={() => {
-                            router.replace("/login");
+                            setLoginPassword("");
                             switchTo("login");
                           }}
                           className="w-full h-12 rounded-[11px] bg-[linear-gradient(180deg,#4b8ef8,#2f6fe6)] hover:brightness-110 text-white font-semibold text-[15px] flex items-center justify-center gap-2"
@@ -362,17 +337,34 @@ export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthCo
                           Ir para o login <ArrowRight className="w-4 h-4" />
                         </button>
                       </div>
-                    ) : (
+                    ) : fConfirmed ? (
                       <form onSubmit={handleResetSubmit} className="mt-5 space-y-4">
                         {errorBox(fError)}
+                        <p className="flex items-center justify-between gap-3 rounded-[10px] bg-white/[0.04] border border-white/[0.07] px-3.5 py-2.5 text-[13px] text-zinc-300">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <Mail className="w-4 h-4 text-[#3b82f6] shrink-0" />
+                            <span className="truncate">{fEmail.trim()}</span>
+                          </span>
+                          <button type="button" onClick={() => setFConfirmed(false)} className="text-[12px] font-medium text-[#7fb0ff] hover:underline shrink-0">
+                            Trocar
+                          </button>
+                        </p>
                         <Field label="Nova senha" hint="mínimo 6 caracteres" icon={Lock}>
-                          <input type={showPass ? "text" : "password"} required minLength={6} autoComplete="new-password" placeholder="••••••••" value={newPass} onChange={(e) => setNewPass(e.target.value)} className={`${INPUT} pr-11`} />
+                          <input type={showPass ? "text" : "password"} required minLength={6} autoFocus autoComplete="new-password" placeholder="••••••••" value={newPass} onChange={(e) => setNewPass(e.target.value)} className={`${INPUT} pr-11`} />
                           {eye}
                         </Field>
                         <Field label="Repita a nova senha" icon={Lock}>
                           <input type={showPass ? "text" : "password"} required minLength={6} autoComplete="new-password" placeholder="••••••••" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} className={INPUT} />
                         </Field>
                         <div className="pt-1">{submitBtn(fLoading, "Salvar nova senha", "Salvando...")}</div>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleForgotSubmit} className="mt-5 space-y-4">
+                        {errorBox(fError)}
+                        <Field label="E-mail da sua conta" icon={Mail}>
+                          <input type="email" required autoComplete="email" placeholder="nome@exemplo.com" value={fEmail} onChange={(e) => setFEmail(e.target.value)} className={INPUT} />
+                        </Field>
+                        <div className="pt-1">{submitBtn(fLoading, "Continuar", "Confirmando...")}</div>
                       </form>
                     )
                   ) : (

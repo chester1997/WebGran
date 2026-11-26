@@ -1,34 +1,41 @@
 import { NextResponse } from "next/server";
-import { appUrl, createResetToken, findUserByEmail, sendResetEmail } from "@/lib/auth/password-reset";
+import { findSellerForReset, setNewPassword } from "@/lib/auth/password-reset";
 
-// Evita disparar vários e-mails seguidos para o mesmo endereço (por instância)
-const last = new Map<string, number>();
+// Freio simples contra tentativas em massa (por instância): 10 pedidos a cada 10 min por IP
+const hits = new Map<string, number[]>();
+function limited(ip: string) {
+  const now = Date.now();
+  const list = (hits.get(ip) || []).filter((t) => t > now - 10 * 60_000);
+  list.push(now);
+  hits.set(ip, list);
+  return list.length > 10;
+}
 
-/** Pede o link de nova senha. Sempre responde igual, para não revelar quais e-mails têm conta. */
+const BLOCKED = "Esta conta não pode trocar a senha por aqui. Fale com o suporte da WebGran.";
+const NOT_FOUND = "Não encontramos uma conta com este e-mail.";
+
+/**
+ * Esqueci minha senha.
+ * - { email }: só confere se o e-mail tem conta (passo 1 da tela).
+ * - { email, password }: grava a nova senha, que passa a valer na hora.
+ */
 export async function POST(req: Request) {
+  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "local";
+  if (limited(ip)) return NextResponse.json({ error: "Muitas tentativas. Espere alguns minutos e tente de novo." }, { status: 429 });
+
   const body = await req.json().catch(() => ({}));
   const email = String(body?.email || "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: "Digite um e-mail válido." }, { status: 400 });
-  }
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json(
-      { error: "A recuperação por e-mail está indisponível no momento. Fale com o suporte da WebGran para trocar sua senha." },
-      { status: 503 }
-    );
-  }
-  const now = Date.now();
-  if ((last.get(email) || 0) > now - 60_000) return NextResponse.json({ ok: true });
-  last.set(email, now);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Digite um e-mail válido." }, { status: 400 });
 
-  try {
-    const user = await findUserByEmail(email);
-    if (user && user.password) {
-      const link = `${appUrl()}/redefinir-senha?token=${createResetToken(user)}`;
-      await sendResetEmail(user.email, user.name, link);
-    }
-  } catch (err) {
-    console.error("[forgot-password]", err);
-  }
-  return NextResponse.json({ ok: true });
+  const user = await findSellerForReset(email);
+  if (!user) return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
+  if (user.blocked) return NextResponse.json({ error: BLOCKED }, { status: 403 });
+
+  if (body?.password === undefined) return NextResponse.json({ ok: true });
+
+  const password = String(body.password || "");
+  if (password.length < 6) return NextResponse.json({ error: "A senha precisa ter pelo menos 6 caracteres." }, { status: 400 });
+  if (password.length > 128) return NextResponse.json({ error: "Senha muito longa." }, { status: 400 });
+  await setNewPassword(user.id, password);
+  return NextResponse.json({ ok: true, email: user.email });
 }
