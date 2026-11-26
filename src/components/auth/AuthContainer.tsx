@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, ShoppingBag, ArrowRight, Loader2, ShieldCheck, Phone, AtSign, Eye, EyeOff, LogIn, Store, type LucideIcon } from "lucide-react";
+import { Mail, Lock, User, ShoppingBag, ArrowRight, Loader2, ShieldCheck, Phone, AtSign, Eye, EyeOff, LogIn, Store, KeyRound, MailCheck, ArrowLeft, type LucideIcon } from "lucide-react";
 import { AuthShowcase } from "./AuthShowcase";
 
 // Telas baixas (notebook): campos um pouco mais compactos para caber sem rolar
@@ -28,16 +28,20 @@ function Field({ label, hint, icon: I, children }: { label: string; hint?: strin
   );
 }
 
+type Mode = "login" | "register" | "forgot" | "reset";
+
 interface AuthContainerProps {
-  initialMode?: "login" | "register";
+  initialMode?: Mode;
+  /** Link do e-mail de nova senha (página /redefinir-senha). */
+  resetToken?: string;
 }
 
-export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
+export function AuthContainer({ initialMode = "login", resetToken = "" }: AuthContainerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin";
 
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const [mode, setMode] = useState<Mode>(initialMode);
   
   // Login Form State
   const [loginEmail, setLoginEmail] = useState("");
@@ -55,6 +59,58 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
   const [regError, setRegError] = useState("");
   const [regLoading, setRegLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+
+  // Esqueci a senha / nova senha
+  const [fEmail, setFEmail] = useState("");
+  const [fSent, setFSent] = useState(false);
+  const [fError, setFError] = useState("");
+  const [fLoading, setFLoading] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [newPass2, setNewPass2] = useState("");
+  const [resetDone, setResetDone] = useState(false);
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFLoading(true);
+    setFError("");
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Não foi possível enviar agora. Tente de novo.");
+      setFSent(true);
+    } catch (err) {
+      setFError(err instanceof Error ? err.message : "Não foi possível enviar agora. Tente de novo.");
+    } finally {
+      setFLoading(false);
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFError("");
+    if (newPass.length < 6) return setFError("A senha precisa ter pelo menos 6 caracteres.");
+    if (newPass !== newPass2) return setFError("As duas senhas não são iguais.");
+    setFLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken || searchParams.get("token") || "", password: newPass }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Não foi possível salvar a nova senha.");
+      setResetDone(true);
+      if (data.email) setLoginEmail(data.email);
+    } catch (err) {
+      setFError(err instanceof Error ? err.message : "Não foi possível salvar a nova senha.");
+    } finally {
+      setFLoading(false);
+    }
+  };
 
   // Handle Login Submit
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -124,11 +180,25 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
   };
 
   const isLogin = mode === "login";
-  const switchTo = (m: "login" | "register") => {
+  const isRecovery = mode === "forgot" || mode === "reset";
+  const switchTo = (m: Mode) => {
     setMode(m);
     setLoginError("");
     setRegError("");
+    setFError("");
+    if (m === "forgot") {
+      setFSent(false);
+      if (!fEmail && loginEmail) setFEmail(loginEmail);
+    }
   };
+  const HEAD: Record<Mode, { icon: LucideIcon; t: string; s: string }> = {
+    login: { icon: LogIn, t: "Bem-vindo de volta", s: "Entre para ver suas vendas e sua loja." },
+    register: { icon: Store, t: "Crie sua loja WebGran", s: "Grátis para começar. Leva 1 minuto." },
+    forgot: { icon: KeyRound, t: "Esqueceu a senha?", s: "Mandamos um link para você criar uma nova." },
+    reset: { icon: KeyRound, t: "Crie uma nova senha", s: "Ela passa a valer no lugar da antiga." },
+  };
+  const head = HEAD[mode];
+  const HeadIcon = head.icon;
   const eye = (
     <button
       type="button"
@@ -162,7 +232,7 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
     msg ? <p className="rounded-[10px] border border-red-500/25 bg-red-500/[0.07] px-3.5 py-2.5 text-[13px] text-red-300">{msg}</p> : null;
 
   return (
-    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-[#05060a] text-zinc-100 font-sans">
+    <div className="relative min-h-[100dvh] w-full overflow-clip bg-[#05060a] text-zinc-100 font-sans">
       {/* Fundo: aurora azul, grade em perspectiva e estrelas */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-[35%] left-[10%] w-[1000px] h-[800px] bg-[radial-gradient(closest-side,rgba(59,130,246,0.22),transparent)]" />
@@ -190,7 +260,16 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
           <div className="mx-auto w-full max-w-[460px]">
             <div className="relative rounded-[22px] p-px bg-[linear-gradient(160deg,rgba(59,130,246,0.55),rgba(255,255,255,0.06)_35%,rgba(255,255,255,0.04)_70%,rgba(59,130,246,0.35))] shadow-[0_40px_100px_-40px_rgba(0,0,0,0.95),0_0_80px_-30px_rgba(59,130,246,0.45)]">
               <div className="rounded-[21px] bg-[#0b0d12]/95 backdrop-blur-md p-6 sm:p-7 [@media(max-height:860px)]:p-5 [@media(max-height:860px)]:sm:p-6">
-                {/* Abas com indicador que desliza */}
+                {/* Abas com indicador que desliza (na recuperação de senha, só o "voltar") */}
+                {isRecovery ? (
+                  <button
+                    type="button"
+                    onClick={() => (mode === "reset" ? router.replace("/login") : switchTo("login"))}
+                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-400 hover:text-white"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Voltar para o login
+                  </button>
+                ) : (
                 <div role="tablist" className="relative grid grid-cols-2 p-1 rounded-[12px] bg-black/40 border border-white/[0.07]">
                   <span
                     aria-hidden
@@ -209,14 +288,15 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
                     </button>
                   ))}
                 </div>
+                )}
 
                 <div className="mt-5 [@media(max-height:860px)]:mt-4 flex items-center gap-3.5">
                   <span className="w-11 h-11 [@media(max-height:860px)]:w-10 [@media(max-height:860px)]:h-10 rounded-[13px] bg-[#3b82f6]/12 border border-[#3b82f6]/30 text-[#3b82f6] flex items-center justify-center shrink-0">
-                    {isLogin ? <LogIn className="w-5 h-5" /> : <Store className="w-5 h-5" />}
+                    <HeadIcon className="w-5 h-5" />
                   </span>
                   <div className="min-w-0">
-                    <h1 className="text-[21px] font-bold tracking-tight leading-tight">{isLogin ? "Bem-vindo de volta" : "Crie sua loja WebGran"}</h1>
-                    <p className="mt-0.5 text-[13px] text-zinc-400">{isLogin ? "Entre para ver suas vendas e sua loja." : "Grátis para começar. Leva 1 minuto."}</p>
+                    <h1 className="text-[21px] font-bold tracking-tight leading-tight">{head.t}</h1>
+                    <p className="mt-0.5 text-[13px] text-zinc-400">{head.s}</p>
                   </div>
                 </div>
 
@@ -231,8 +311,70 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
                         <input type={showPass ? "text" : "password"} required autoComplete="current-password" placeholder="••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className={`${INPUT} pr-11`} />
                         {eye}
                       </Field>
-                      <div className="pt-1">{submitBtn(loginLoading, "Entrar", "Entrando...")}</div>
+                      <div className="-mt-1.5 flex justify-end">
+                        <button type="button" onClick={() => switchTo("forgot")} className="text-[12.5px] font-medium text-[#7fb0ff] hover:underline">
+                          Esqueci minha senha
+                        </button>
+                      </div>
+                      <div>{submitBtn(loginLoading, "Entrar", "Entrando...")}</div>
                     </form>
+                  ) : mode === "forgot" ? (
+                    fSent ? (
+                      <div className="mt-5 space-y-4">
+                        <div className="flex gap-3 rounded-[12px] border border-[#3b82f6]/25 bg-[#3b82f6]/[0.07] p-4">
+                          <MailCheck className="w-5 h-5 text-[#3b82f6] shrink-0 mt-0.5" />
+                          <p className="text-[13.5px] leading-relaxed text-zinc-300">
+                            Se existir uma conta com <b className="text-white">{fEmail.trim()}</b>, o link para criar a nova senha já está a caminho. Olhe também a caixa de spam. O link vale por 1 hora.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFSent(false)}
+                          className="w-full h-11 rounded-[11px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-[14px] font-medium text-zinc-200"
+                        >
+                          Não chegou? Enviar de novo
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleForgotSubmit} className="mt-5 space-y-4">
+                        {errorBox(fError)}
+                        <Field label="E-mail da sua conta" icon={Mail}>
+                          <input type="email" required autoComplete="email" placeholder="nome@exemplo.com" value={fEmail} onChange={(e) => setFEmail(e.target.value)} className={INPUT} />
+                        </Field>
+                        <div className="pt-1">{submitBtn(fLoading, "Enviar link", "Enviando...")}</div>
+                      </form>
+                    )
+                  ) : mode === "reset" ? (
+                    resetDone ? (
+                      <div className="mt-5 space-y-4">
+                        <div className="flex gap-3 rounded-[12px] border border-[#3b82f6]/25 bg-[#3b82f6]/[0.07] p-4">
+                          <ShieldCheck className="w-5 h-5 text-[#3b82f6] shrink-0 mt-0.5" />
+                          <p className="text-[13.5px] leading-relaxed text-zinc-300">Pronto! Sua nova senha foi salva. A partir de agora, entre com ela.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            router.replace("/login");
+                            switchTo("login");
+                          }}
+                          className="w-full h-12 rounded-[11px] bg-[linear-gradient(180deg,#4b8ef8,#2f6fe6)] hover:brightness-110 text-white font-semibold text-[15px] flex items-center justify-center gap-2"
+                        >
+                          Ir para o login <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleResetSubmit} className="mt-5 space-y-4">
+                        {errorBox(fError)}
+                        <Field label="Nova senha" hint="mínimo 6 caracteres" icon={Lock}>
+                          <input type={showPass ? "text" : "password"} required minLength={6} autoComplete="new-password" placeholder="••••••••" value={newPass} onChange={(e) => setNewPass(e.target.value)} className={`${INPUT} pr-11`} />
+                          {eye}
+                        </Field>
+                        <Field label="Repita a nova senha" icon={Lock}>
+                          <input type={showPass ? "text" : "password"} required minLength={6} autoComplete="new-password" placeholder="••••••••" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} className={INPUT} />
+                        </Field>
+                        <div className="pt-1">{submitBtn(fLoading, "Salvar nova senha", "Salvando...")}</div>
+                      </form>
+                    )
                   ) : (
                     <form onSubmit={handleRegisterSubmit} className="mt-5 [@media(max-height:860px)]:mt-4 space-y-3 [@media(max-height:860px)]:space-y-2.5">
                       {errorBox(regError)}
@@ -265,12 +407,14 @@ export function AuthContainer({ initialMode = "login" }: AuthContainerProps) {
                   )}
                 </div>
 
+                {!isRecovery && (
                 <p className="mt-5 [@media(max-height:860px)]:mt-4 pt-4 [@media(max-height:860px)]:pt-3 border-t border-white/[0.06] text-center text-[13px] text-zinc-500">
                   {isLogin ? "Ainda não tem conta? " : "Já tem uma conta? "}
                   <button type="button" onClick={() => switchTo(isLogin ? "register" : "login")} className="text-[#7fb0ff] hover:underline font-semibold">
                     {isLogin ? "Criar minha loja grátis" : "Entrar"}
                   </button>
                 </p>
+                )}
               </div>
             </div>
           </div>
