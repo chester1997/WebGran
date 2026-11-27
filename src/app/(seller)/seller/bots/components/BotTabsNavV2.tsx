@@ -219,7 +219,7 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
                     type="button"
                     onClick={() => onSelectTab(t.id)}
                     aria-current={isActive ? "page" : undefined}
-                    className={`group relative inline-flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm transition-colors cursor-pointer select-none whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#60a5fa] ${
+                    className={`group relative inline-flex items-center gap-2 px-3.5 first:pl-0 py-3 text-xs sm:text-sm transition-colors cursor-pointer select-none whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#60a5fa] ${
                       isActive ? "text-white font-semibold" : "text-zinc-400 hover:text-white font-medium"
                     }`}
                   >
@@ -231,7 +231,7 @@ export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "
                     />
                     <span>{t.label}</span>
                     {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#3984FF] rounded-full" />
+                      <span className="absolute bottom-0 left-2 group-first:left-0 right-2 h-0.5 bg-[#3984FF] rounded-full" />
                     )}
                   </button>
                 );

@@ -343,7 +343,7 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
           )}
 
           {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado e Fundo Sólido Uniforme */}
-          <div className={`flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] z-10 ${focusMode ? "" : "rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10"}`}>
+          <div className={`flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] z-10 ${focusMode ? "" : ownerMobileHeader ? "rounded-none border-0 lg:mx-8 lg:mb-6 lg:rounded-[10px] lg:border lg:border-white/10" : "rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10"}`}>
             {/* Área de Rolagem do Conteúdo */}
             <main
               onScroll={(e) => {
