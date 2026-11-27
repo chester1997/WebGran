@@ -1917,6 +1917,8 @@ export const botMiniappAppearance = pgTable('bot_miniapp_appearance', {
   logoUrl: text('logo_url'),
   accentColor: text('accent_color'),
   showExtraButtons: boolean('show_extra_buttons').notNull().default(false),
+  /** migration 0037: texto do botão que abre a loja nas boas-vindas (null = "🛍️ ABRIR LOJA") */
+  welcomeButtonText: text('welcome_button_text'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
   storeIdx: index('bot_miniapp_appearance_store_idx').on(t.storeId),

@@ -1046,9 +1046,8 @@ export async function POST(req: NextRequest) {
         .replace(/\{name\}/gi, customerFirstName);
 
       const { getInitialBotKeyboard } = await import("@/lib/telegram/bot-cart-handler");
-      const { welcomeShowsExtraButtons } = await import("@/lib/miniapp/bot-appearance");
-      const extraButtons = await welcomeShowsExtraButtons(store.id, resolved.bot.id);
-      const inlineKeyboard = getInitialBotKeyboard(store, miniAppUrl, { extraButtons });
+      const { getWelcomeKeyboardOptions } = await import("@/lib/miniapp/bot-appearance");
+      const inlineKeyboard = getInitialBotKeyboard(store, miniAppUrl, await getWelcomeKeyboardOptions(store.id, resolved.bot.id));
 
       const banners = welcomeAllowed ? ((store.welcomeBanners as string[]) || []) : [];
       let primaryBanner = banners.find(b => b && typeof b === "string" && b.trim() !== "");

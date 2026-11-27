@@ -19,9 +19,13 @@ export interface BotAppearance {
   /** null = vermelho de sempre */
   accentColor: string | null;
   showExtraButtons: boolean;
+  /** Texto do botão que abre a loja nas boas-vindas. null = "🛍️ ABRIR LOJA" */
+  welcomeButtonText: string | null;
 }
 
-export const EMPTY_APPEARANCE: BotAppearance = { displayName: null, logoUrl: null, accentColor: null, showExtraButtons: false };
+export const DEFAULT_OPEN_LABEL = "🛍️ ABRIR LOJA";
+
+export const EMPTY_APPEARANCE: BotAppearance = { displayName: null, logoUrl: null, accentColor: null, showExtraButtons: false, welcomeButtonText: null };
 
 const isMissing = (e: unknown) => {
   const code = (e as { code?: string; cause?: { code?: string } })?.code || (e as { cause?: { code?: string } })?.cause?.code;
@@ -56,7 +60,13 @@ export async function getBotAppearanceForEditor(botId: string): Promise<{ ready:
     return {
       ready: true,
       appearance: row
-        ? { displayName: row.displayName, logoUrl: row.logoUrl, accentColor: normalizeHex(row.accentColor), showExtraButtons: row.showExtraButtons }
+        ? {
+            displayName: row.displayName,
+            logoUrl: row.logoUrl,
+            accentColor: normalizeHex(row.accentColor),
+            showExtraButtons: row.showExtraButtons,
+            welcomeButtonText: row.welcomeButtonText?.trim() || null,
+          }
         : EMPTY_APPEARANCE,
     };
   } catch (e) {
@@ -81,6 +91,7 @@ export async function getEffectiveBotAppearance(storeId: string, botId: string |
       logoUrl: row.logoUrl?.trim() || null,
       accentColor: accent && accent !== DEFAULT_ACCENT ? accent : null,
       showExtraButtons: row.showExtraButtons,
+      welcomeButtonText: row.welcomeButtonText?.trim() || null,
     };
   } catch (e) {
     console.warn("[bot-appearance] falha ao ler personalização (segue sem):", (e as Error)?.message || e);
@@ -93,14 +104,22 @@ export async function getEffectiveBotAppearance(storeId: string, botId: string |
  * Lojas fora do teste: sempre aparecem (como hoje). Conta proprietária: só se ligados na Personalização.
  */
 export async function welcomeShowsExtraButtons(storeId: string, botId: string | null | undefined): Promise<boolean> {
+  return (await getWelcomeKeyboardOptions(storeId, botId)).extraButtons;
+}
+
+/**
+ * Opções do teclado das boas-vindas: botões extras + texto do botão que abre a loja.
+ * Lojas fora do teste: exatamente como hoje (extras ligados, "🛍️ ABRIR LOJA").
+ */
+export async function getWelcomeKeyboardOptions(storeId: string, botId: string | null | undefined): Promise<{ extraButtons: boolean; openLabel: string }> {
   try {
-    if (!(await appearanceAllowedForStore(storeId))) return true;
-    if (!botId) return false;
+    if (!(await appearanceAllowedForStore(storeId))) return { extraButtons: true, openLabel: DEFAULT_OPEN_LABEL };
+    if (!botId) return { extraButtons: false, openLabel: DEFAULT_OPEN_LABEL };
     const row = await readRow(botId);
-    return Boolean(row?.showExtraButtons);
+    return { extraButtons: Boolean(row?.showExtraButtons), openLabel: row?.welcomeButtonText?.trim() || DEFAULT_OPEN_LABEL };
   } catch (e) {
-    console.warn("[bot-appearance] falha ao ler botões extras (mantém como hoje):", (e as Error)?.message || e);
-    return true;
+    console.warn("[bot-appearance] falha ao ler botões das boas-vindas (mantém como hoje):", (e as Error)?.message || e);
+    return { extraButtons: true, openLabel: DEFAULT_OPEN_LABEL };
   }
 }
 
@@ -109,6 +128,7 @@ export interface SaveAppearanceInput {
   logoUrl?: string | null;
   accentColor?: string | null;
   showExtraButtons?: boolean;
+  welcomeButtonText?: string | null;
 }
 
 export async function saveBotAppearance(storeId: string, botId: string, input: SaveAppearanceInput): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -123,6 +143,8 @@ export async function saveBotAppearance(storeId: string, botId: string, input: S
     logoUrl: rawLogo || null,
     accentColor: accent,
     showExtraButtons: Boolean(input.showExtraButtons),
+    // Telegram aceita até 64 bytes no texto do botão; 30 caracteres cabe com folga (inclusive emojis)
+    welcomeButtonText: String(input.welcomeButtonText || "").replace(/\s+/g, " ").trim().slice(0, 30) || null,
     updatedAt: new Date(),
   };
   try {
@@ -132,7 +154,7 @@ export async function saveBotAppearance(storeId: string, botId: string, input: S
       .onConflictDoUpdate({ target: botMiniappAppearance.botId, set: values });
     return { ok: true };
   } catch (e) {
-    if (isMissing(e)) return { ok: false, error: "Falta rodar a migration 0036_bot_miniapp_appearance.sql no Neon." };
+    if (isMissing(e)) return { ok: false, error: "Falta rodar as migrations 0036 e 0037 (Personalização do bot) no Neon." };
     throw e;
   }
 }

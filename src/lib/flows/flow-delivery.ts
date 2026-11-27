@@ -243,19 +243,25 @@ export async function deliverFlowPurchase(orderId: string): Promise<boolean> {
     }
   }
 
-  // Avisos de venda ao lojista (os mesmos do Mini App). Não bloqueiam.
-  try {
-    const { SellerSaleNotificationService } = await import("@/lib/notifications/seller-sale-notification-service");
-    await SellerSaleNotificationService.notifySellerOfSale(orderId);
-  } catch (err) {
-    console.error("[flow-delivery] Aviso de venda falhou:", (err as Error)?.message);
-  }
-  try {
-    const { SellerPushService } = await import("@/lib/push/seller-push-service");
-    await SellerPushService.notifySellerOfSale(orderId);
-  } catch (err) {
-    console.error("[flow-delivery] Push de venda falhou:", (err as Error)?.message);
-  }
+  // Avisos de venda ao lojista (os mesmos do Mini App), em paralelo: o push não espera o aviso do Telegram.
+  await Promise.allSettled([
+    (async () => {
+      try {
+        const { SellerSaleNotificationService } = await import("@/lib/notifications/seller-sale-notification-service");
+        await SellerSaleNotificationService.notifySellerOfSale(orderId);
+      } catch (err) {
+        console.error("[flow-delivery] Aviso de venda falhou:", (err as Error)?.message);
+      }
+    })(),
+    (async () => {
+      try {
+        const { SellerPushService } = await import("@/lib/push/seller-push-service");
+        await SellerPushService.notifySellerOfSale(orderId);
+      } catch (err) {
+        console.error("[flow-delivery] Push de venda falhou:", (err as Error)?.message);
+      }
+    })(),
+  ]);
   return true;
 }
 

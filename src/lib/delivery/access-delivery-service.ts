@@ -670,20 +670,24 @@ export class AccessDeliveryService {
       results.push(deliveryRes);
     }
 
-    // Trigger seller sale notification asynchronously / non-blocking
-    try {
-      await SellerSaleNotificationService.notifySellerOfSale(orderId);
-    } catch (err) {
-      console.error("[AccessDeliveryService] Seller notification trigger failed:", err);
-    }
-
-    // Trigger seller PWA push notification asynchronously / non-blocking
-    try {
-      const { SellerPushService } = await import("@/lib/push/seller-push-service");
-      await SellerPushService.notifySellerOfSale(orderId);
-    } catch (err) {
-      console.error("[AccessDeliveryService] Seller push notification trigger failed:", err);
-    }
+    // Avisos de venda ao lojista em paralelo: o push do celular não espera o aviso do Telegram terminar
+    await Promise.allSettled([
+      (async () => {
+        try {
+          await SellerSaleNotificationService.notifySellerOfSale(orderId);
+        } catch (err) {
+          console.error("[AccessDeliveryService] Seller notification trigger failed:", err);
+        }
+      })(),
+      (async () => {
+        try {
+          const { SellerPushService } = await import("@/lib/push/seller-push-service");
+          await SellerPushService.notifySellerOfSale(orderId);
+        } catch (err) {
+          console.error("[AccessDeliveryService] Seller push notification trigger failed:", err);
+        }
+      })(),
+    ]);
 
     return results;
   }

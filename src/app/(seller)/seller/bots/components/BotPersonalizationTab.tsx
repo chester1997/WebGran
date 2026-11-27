@@ -52,6 +52,7 @@ export default function BotPersonalizationTab({
   const [logo, setLogo] = useState(data.appearance.logoUrl || "");
   const [color, setColor] = useState(data.appearance.accentColor || DEFAULT_ACCENT);
   const [extra, setExtra] = useState(data.appearance.showExtraButtons);
+  const [openLabel, setOpenLabel] = useState(data.appearance.welcomeButtonText || "");
   const [uploading, setUploading] = useState(false);
 
   const shownName = name.trim() || storeName;
@@ -72,7 +73,7 @@ export default function BotPersonalizationTab({
 
   const save = () =>
     start(async () => {
-      const r = await saveBotAppearanceAction(botId, { displayName: name, logoUrl: logo || null, accentColor: color, showExtraButtons: extra });
+      const r = await saveBotAppearanceAction(botId, { displayName: name, logoUrl: logo || null, accentColor: color, showExtraButtons: extra, welcomeButtonText: openLabel });
       if (!r.success) return showNotification("error", r.error || "Não foi possível salvar.");
       showNotification("success", "Personalização salva. Abra o Mini App de novo para ver.");
       router.refresh();
@@ -177,11 +178,19 @@ export default function BotPersonalizationTab({
           </section>
 
           <section className={CARD}>
-            <div className="flex items-start gap-4">
+            <h3 className="text-[15px] font-bold text-white">Botões da mensagem de boas-vindas</h3>
+            <label className="block mt-4">
+              <span className="block text-[12px] font-semibold text-zinc-400 mb-2">Texto do botão que abre a loja</span>
+              <input value={openLabel} maxLength={30} onChange={(e) => setOpenLabel(e.target.value)} placeholder="🛍️ ABRIR LOJA" className={INPUT} />
+              <span className="block text-[11.5px] text-zinc-500 mt-1.5">
+                Vai junto com a mensagem de boas-vindas, ex.: <b className="text-zinc-300">🎬 Abrir App Studio</b>. Até 30 caracteres; emoji é opcional. Em branco, fica “🛍️ ABRIR LOJA”.
+              </span>
+            </label>
+            <div className="flex items-start gap-4 mt-5 pt-5 border-t border-white/[0.06]">
               <div className="mr-auto">
-                <h3 className="text-[15px] font-bold text-white">Botões da mensagem de boas-vindas</h3>
+                <p className="text-[13.5px] font-semibold text-white">Mostrar os outros botões</p>
                 <p className="text-[12.5px] text-zinc-400 mt-0.5">
-                  Desligado, o bot mostra só o botão <b className="text-zinc-300">ABRIR LOJA</b>. Ligado, aparecem também Carrinho, Meus Acessos, Catálogo e Suporte.
+                  Desligado, o bot mostra só o botão acima. Ligado, aparecem também Carrinho, Meus Acessos, Catálogo e Suporte.
                 </p>
               </div>
               <button
@@ -203,7 +212,7 @@ export default function BotPersonalizationTab({
           <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-zinc-500">Prévia no Mini App</p>
           <MiniAppPreview name={shownName} logo={logo} color={color} products={data.sampleProducts} />
           <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-zinc-500">Prévia no Telegram</p>
-          <TelegramPreview botUsername={botUsername} text={data.welcomeText} banner={data.welcomeBanner} extra={extra} buttonText={buttonText} />
+          <TelegramPreview botUsername={botUsername} text={data.welcomeText} banner={data.welcomeBanner} extra={extra} buttonText={buttonText} openLabel={openLabel.trim() || "🛍️ ABRIR LOJA"} />
         </div>
       </div>
     </div>
@@ -304,7 +313,21 @@ function MiniAppPreview({
   );
 }
 
-function TelegramPreview({ botUsername, text, banner, extra, buttonText }: { botUsername: string; text: string | null; banner: string | null; extra: boolean; buttonText: string }) {
+function TelegramPreview({
+  botUsername,
+  text,
+  banner,
+  extra,
+  buttonText,
+  openLabel,
+}: {
+  botUsername: string;
+  text: string | null;
+  banner: string | null;
+  extra: boolean;
+  buttonText: string;
+  openLabel: string;
+}) {
   const body = (text || "Olá {nome}! Bem-vindo(a).\n\nClique no botão abaixo para abrir nossa loja e conferir os produtos!").replace(/\{nome\}|\{name\}/gi, "Fernando");
   const btn = "w-full py-2 rounded-lg bg-[#2b5278]/70 text-white text-[12px] font-semibold text-center";
   return (
@@ -316,7 +339,7 @@ function TelegramPreview({ botUsername, text, banner, extra, buttonText }: { bot
         <p className="p-3 text-[12px] text-zinc-100 whitespace-pre-line line-clamp-[10]">{body}</p>
       </div>
       <div className="mt-1.5 space-y-1.5">
-        <span className={`${btn} block`}>🛍️ ABRIR LOJA</span>
+        <span className={`${btn} block truncate px-2`}>{openLabel}</span>
         {extra && (
           <>
             <div className="grid grid-cols-2 gap-1.5">

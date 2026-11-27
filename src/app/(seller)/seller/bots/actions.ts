@@ -1414,7 +1414,7 @@ export async function sendTelegramDirectMessageAction(params: {
 
 export async function saveBotAppearanceAction(
   botId: string,
-  input: { displayName?: string | null; logoUrl?: string | null; accentColor?: string | null; showExtraButtons?: boolean }
+  input: { displayName?: string | null; logoUrl?: string | null; accentColor?: string | null; showExtraButtons?: boolean; welcomeButtonText?: string | null }
 ): Promise<ActionResponse> {
   const auth = await verifyOwnerActionAccess();
   if (!auth.authorized) return { success: false, error: auth.error };
