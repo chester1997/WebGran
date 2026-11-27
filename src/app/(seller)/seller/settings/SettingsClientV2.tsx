@@ -516,6 +516,26 @@ function urlBase64ToUint8Array(base64String: string) {
     }
   };
 
+  const [delayedTestPending, setDelayedTestPending] = useState(false);
+  const handleSendDelayedTest = async () => {
+    if (delayedTestPending) return;
+    setDelayedTestPending(true);
+    showToast("Bloqueie a tela agora: o teste chega em 10 segundos.");
+    try {
+      const res = await fetch("/api/seller/push/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delayMs: 10000 }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) showToast(data?.message || "Não foi possível enviar o teste.");
+    } catch {
+      showToast("Erro ao contatar o servidor para envio de teste.");
+    } finally {
+      setDelayedTestPending(false);
+    }
+  };
+
   const handleSendTestNotification = async () => {
     if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") {
       alert("Permissão de notificação não concedida.");
@@ -901,6 +921,10 @@ function urlBase64ToUint8Array(base64String: string) {
                     {" "}
                     <button type="button" onClick={handleSendTestNotification} className="text-zinc-400 hover:text-white underline underline-offset-2">
                       Enviar teste
+                    </button>
+                    {" · "}
+                    <button type="button" onClick={handleSendDelayedTest} disabled={delayedTestPending} className="text-zinc-400 hover:text-white underline underline-offset-2 disabled:opacity-60">
+                      {delayedTestPending ? "Aguardando 10 s..." : "Teste com a tela bloqueada (10 s)"}
                     </button>
                   </>
                 )}

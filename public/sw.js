@@ -312,7 +312,12 @@ async function handlePushEvent(event) {
     reason: 'no_clients',
   };
 
+  // Teste do painel: sempre vira notificação do sistema com som (o Android precisa receber uma de verdade
+  // para liberar a categoria do site e a escolha do som). Não delega o som para a página.
+  const isTestPush = !!(data.data && (data.data.isTest === true || data.data.type === 'TEST'));
+
   try {
+    if (isTestPush) throw { skipClients: true };
     const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     clientDiagnostic.evaluatedClientsCount = windowClients ? windowClients.length : 0;
 
@@ -408,8 +413,12 @@ async function handlePushEvent(event) {
       clientDiagnostic.reason = windowClients && windowClients.length > 0 ? 'all_windows_hidden' : 'pwa_closed';
     }
   } catch (err) {
-    clientDiagnostic.reason = `error: ${err?.message || err}`;
-    console.warn('[SW] Erro na negociação de áudio com janela:', err);
+    if (err && err.skipClients) {
+      clientDiagnostic.reason = 'test_push';
+    } else {
+      clientDiagnostic.reason = `error: ${err?.message || err}`;
+      console.warn('[SW] Erro na negociação de áudio com janela:', err);
+    }
   }
 
   // 2. Quando o PWA estiver fechado, em background, ou quando nenhuma janela visível tocou o áudio:

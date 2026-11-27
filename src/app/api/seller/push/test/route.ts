@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
       role: user.role || "seller",
     });
 
+    // Atraso opcional (até 15 s) para o vendedor bloquear a tela e receber o teste com o app fechado
+    const body = await req.json().catch(() => null);
+    const delayMs = Math.min(15000, Math.max(0, Number(body?.delayMs) || 0));
+    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+
     const result = await SellerPushService.sendToSeller(user.id, payload);
 
 
@@ -31,6 +36,13 @@ export async function POST(req: NextRequest) {
           details: result,
         },
         { status: 400 }
+      );
+    }
+
+    if (result.sentCount === 0) {
+      return NextResponse.json(
+        { success: false, message: "O envio para o seu celular falhou. Desative e ative as notificações de novo.", details: result },
+        { status: 502 }
       );
     }
 
