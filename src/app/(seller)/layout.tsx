@@ -337,13 +337,13 @@ function SellerLayoutContent({ children }: SellerLayoutProps) {
             {/* External Header Slot para Páginas do Seller (Portal) com altura uniforme de 112px no desktop e padding vertical refinado no mobile */}
             <div
               id="seller-page-header-portal"
-              className="w-full px-4 sm:px-6 md:px-7 lg:px-8 pt-3.5 pb-4 lg:py-0 min-h-0 lg:min-h-[var(--header-h,112px)] h-auto flex items-center relative z-30 overflow-visible"
+              className={`w-full px-4 sm:px-6 md:px-7 ${ownerMobileHeader ? "lg:pl-0 lg:pr-8" : "lg:px-8"} pt-3.5 pb-4 lg:py-0 min-h-0 lg:min-h-[var(--header-h,112px)] h-auto flex items-center relative z-30 overflow-visible`}
             />
           </header>
           )}
 
           {/* Canvas de Conteúdo com Canto Superior Esquerdo Arredondado e Fundo Sólido Uniforme */}
-          <div className={`flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] z-10 ${focusMode ? "" : "rounded-none lg:rounded-tl-[24px] border-0 lg:border-t lg:border-l lg:border-white/10"}`}>
+          <div className={`flex-1 min-h-0 flex flex-col min-w-0 relative overflow-hidden bg-[var(--seller-bg,#0A0A0A)] z-10 ${focusMode ? "" : `rounded-none ${ownerMobileHeader ? "lg:rounded-tl-[6px]" : "lg:rounded-tl-[24px]"} border-0 lg:border-t lg:border-l lg:border-white/10`}`}>
             {/* Área de Rolagem do Conteúdo */}
             <main
               onScroll={(e) => {
