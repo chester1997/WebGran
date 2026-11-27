@@ -1908,3 +1908,16 @@ export const salesRecoverySends = pgTable('sales_recovery_sends', {
   storeIdx: index('sales_recovery_sends_store_idx').on(t.storeId, t.sentAt),
   customerIdx: index('sales_recovery_sends_customer_idx').on(t.customerId, t.sentAt),
 }));
+
+// Bot → Personalização (migration 0036): visual do Mini App e botões extras das boas-vindas, por bot
+export const botMiniappAppearance = pgTable('bot_miniapp_appearance', {
+  botId: uuid('bot_id').primaryKey().references(() => telegramBots.id, { onDelete: 'cascade' }),
+  storeId: uuid('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
+  displayName: text('display_name'),
+  logoUrl: text('logo_url'),
+  accentColor: text('accent_color'),
+  showExtraButtons: boolean('show_extra_buttons').notNull().default(false),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => ({
+  storeIdx: index('bot_miniapp_appearance_store_idx').on(t.storeId),
+}));

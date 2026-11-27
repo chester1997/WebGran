@@ -12,6 +12,7 @@ import { StudioAccesses } from "../studio/views/StudioAccesses";
 import { StudioProfile } from "../studio/views/StudioProfile";
 
 import { getStoreBySlug } from "@/lib/store-cache";
+import { getEffectiveBotAppearance } from "@/lib/miniapp/bot-appearance";
 
 async function getResolvedThemeSlug(storeSlug: string) {
   const store = await getStoreBySlug(storeSlug);
@@ -32,8 +33,13 @@ export async function ThemeEngineLayout({ storeSlug, children }: { storeSlug: st
 
 export async function ThemeEngineHome({ storeSlug, originBotId }: { storeSlug: string; originBotId?: string | null }) {
   const theme = await getResolvedThemeSlug(storeSlug);
-  if (theme === 'studio') return <StudioHome storeSlug={storeSlug} originBotId={originBotId} />;
-  return <StudioHome storeSlug={storeSlug} originBotId={originBotId} />;
+  // Personalização do bot (fora do cache da Home: muda na hora quando o vendedor salva).
+  // Sem personalização (todas as lojas fora do teste) = null, e a Home fica exatamente como antes.
+  const store = await getStoreBySlug(storeSlug);
+  const look = store ? await getEffectiveBotAppearance(store.id, originBotId) : null;
+  const appearance = look && (look.displayName || look.logoUrl || look.accentColor) ? { displayName: look.displayName, logoUrl: look.logoUrl, accentColor: look.accentColor } : null;
+  if (theme === 'studio') return <StudioHome storeSlug={storeSlug} originBotId={originBotId} appearance={appearance} />;
+  return <StudioHome storeSlug={storeSlug} originBotId={originBotId} appearance={appearance} />;
 }
 
 export async function ThemeEngineSearch({ storeSlug, q, originBotId }: { storeSlug: string; q: string; originBotId?: string | null }) {

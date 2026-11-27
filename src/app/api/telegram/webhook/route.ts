@@ -526,7 +526,7 @@ export async function POST(req: NextRequest) {
           const messageId = update.callback_query.message?.message_id;
 
           await handleCartCallbackQuery(
-            { store, botService, miniAppUrl },
+            { store, botService, miniAppUrl, botId: bot?.id || null },
             cbId,
             chatId,
             messageId,
@@ -1046,7 +1046,9 @@ export async function POST(req: NextRequest) {
         .replace(/\{name\}/gi, customerFirstName);
 
       const { getInitialBotKeyboard } = await import("@/lib/telegram/bot-cart-handler");
-      const inlineKeyboard = getInitialBotKeyboard(store, miniAppUrl);
+      const { welcomeShowsExtraButtons } = await import("@/lib/miniapp/bot-appearance");
+      const extraButtons = await welcomeShowsExtraButtons(store.id, resolved.bot.id);
+      const inlineKeyboard = getInitialBotKeyboard(store, miniAppUrl, { extraButtons });
 
       const banners = welcomeAllowed ? ((store.welcomeBanners as string[]) || []) : [];
       let primaryBanner = banners.find(b => b && typeof b === "string" && b.trim() !== "");

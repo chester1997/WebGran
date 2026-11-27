@@ -18,13 +18,14 @@ export function CartBadge({ active = false }: CartBadgeProps) {
         active ? "bg-white !text-red-600" : "bg-red-600 !text-white"
       }`}
       style={{
-        backgroundColor: active ? "#ffffff" : "#dc2626",
-        color: active ? "#dc2626" : "#ffffff",
+        // --wg-accent só existe quando o bot tem cor própria (Personalização); sem ela, o vermelho de sempre
+        backgroundColor: active ? "#ffffff" : "var(--wg-accent, #dc2626)",
+        color: active ? "var(--wg-accent, #dc2626)" : "#ffffff",
       }}
     >
       <span
         style={{
-          color: active ? "#dc2626" : "#ffffff",
+          color: active ? "var(--wg-accent, #dc2626)" : "#ffffff",
         }}
         className={active ? "!text-red-600" : "!text-white"}
       >

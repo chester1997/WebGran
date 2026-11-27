@@ -19,6 +19,8 @@ export interface BotCartContext {
   };
   botService: TelegramBotService;
   miniAppUrl: string;
+  /** id (uuid) do bot, para a Personalização dos botões do menu inicial */
+  botId?: string | null;
 }
 
 /**
@@ -970,8 +972,14 @@ export async function handleProgressiveOffersCommand(
  */
 export function getInitialBotKeyboard(
   store: { supportType?: string | null; supportValue?: string | null },
-  miniAppUrl: string
+  miniAppUrl: string,
+  opts?: { extraButtons?: boolean }
 ) {
+  // Sem os botões extras (Personalização do bot): fica só o ABRIR LOJA
+  if (opts?.extraButtons === false) {
+    return { inline_keyboard: [[{ text: "🛍️ ABRIR LOJA", web_app: { url: miniAppUrl } }]] };
+  }
+
   const supportConfig = parseSupportConfig(store.supportType, store.supportValue);
   const supportButton = supportConfig.isValid && supportConfig.url
     ? { text: "💬 Suporte", url: supportConfig.url }
@@ -1522,7 +1530,9 @@ export async function handleCartCallbackQuery(
 
     // 3.3 Return to initial start menu
     if (cbData === "start_menu") {
-      const replyMarkup = getInitialBotKeyboard(ctx.store, ctx.miniAppUrl);
+      const { welcomeShowsExtraButtons } = await import("@/lib/miniapp/bot-appearance");
+      const extraButtons = await welcomeShowsExtraButtons(ctx.store.id, ctx.botId);
+      const replyMarkup = getInitialBotKeyboard(ctx.store, ctx.miniAppUrl, { extraButtons });
       const text = `🛍️ *Menu Inicial — ${ctx.store.name}*\n\nSelecione uma opção abaixo para navegar:`;
       await ctx.botService.answerCallbackQuery(cbId);
       await safeEditOrSendMessage(ctx.botService, chatId || telegramUser.id, messageId, text, replyMarkup, "Markdown");

@@ -17,6 +17,7 @@ import BotConversationsTab, { CustomerItem, MessageItem } from "../components/Bo
 import ConversasCenter from "../components/ConversasCenter";
 import ConversasCenterV2 from "../components/ConversasCenterV2";
 import BotSettingsTab from "../components/BotSettingsTab";
+import BotPersonalizationTab from "../components/BotPersonalizationTab";
 
 import WelcomeClient from "@/app/(seller)/seller/boas-vindas/WelcomeClient";
 import BannersClient from "@/app/(seller)/seller/banners/BannersClient";
@@ -111,6 +112,16 @@ interface SingleBotClientProps {
   isOwnerAccount?: boolean;
   /** Redesign V2: decidido no servidor, true apenas para a conta proprietária. */
   useRedesignV2?: boolean;
+  /** Aba Personalização (em teste: só bots da conta proprietária). null = aba escondida. */
+  personalization?: BotPersonalizationData | null;
+}
+
+export interface BotPersonalizationData {
+  ready: boolean;
+  appearance: import("@/lib/miniapp/bot-appearance").BotAppearance;
+  welcomeText: string | null;
+  welcomeBanner: string | null;
+  sampleProducts: { title: string; coverUrl: string | null; price: number }[];
 }
 
 export default function SingleBotClient({
@@ -128,6 +139,7 @@ export default function SingleBotClient({
   isAdmin,
   isOwnerAccount = false,
   useRedesignV2 = false,
+  personalization = null,
 }: SingleBotClientProps) {
   // Redesign V2 (apenas conta proprietária): as versões V2 recebem os mesmos dados das clássicas.
   const ConversasCenterTab = useRedesignV2 ? ConversasCenterV2 : ConversasCenter;
@@ -404,6 +416,7 @@ export default function SingleBotClient({
         onSelectPeriod={setSelectedPeriod}
         onOpenConversasModal={() => setIsConversasModalOpen(true)}
         useRedesignV2={useRedesignV2}
+        showPersonalization={Boolean(personalization)}
       />
 
       {/* MODAL IMERSIVO DE CONVERSAS (CENTRAL DE ATENDIMENTO) */}
@@ -460,6 +473,17 @@ export default function SingleBotClient({
           }}
           onToggleStatus={handleToggleStatus}
           onOpenDelete={() => setDeleteModal(true)}
+          showNotification={showNotification}
+        />
+      )}
+
+      {activeTab === "personalizacao" && personalization && (
+        <BotPersonalizationTab
+          botId={bot.id}
+          botUsername={bot.username}
+          storeName={bot.storeName}
+          buttonText={bot.buttonText}
+          data={personalization}
           showNotification={showNotification}
         />
       )}

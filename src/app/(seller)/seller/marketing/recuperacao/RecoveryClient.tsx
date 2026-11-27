@@ -3,7 +3,8 @@
 import React, { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BellRing, CheckCircle2, Clock, Coins, Info, MessageCircle, Moon, Send, Users } from "lucide-react";
-import { PageHeader, StatCard, Card, Button, Switch, Toast } from "@/components/seller-v2";
+import { StatCard, Card, Button, Switch, Toast } from "@/components/seller-v2";
+import SellerPageHeader from "@/components/layout/SellerPageHeader";
 import { saveRecoveryAction } from "./actions";
 
 interface Step {
@@ -113,7 +114,7 @@ export default function RecoveryClient({ initial, stats, storeName }: Props) {
 
   return (
     <div className="w-full space-y-6 pb-28">
-      <PageHeader
+      <SellerPageHeader
         title="Recuperação de vendas"
         subtitle="Quem gerou uma compra e não pagou recebe mensagens automáticas no bot, falando do produto, com um botão para concluir."
         badge={

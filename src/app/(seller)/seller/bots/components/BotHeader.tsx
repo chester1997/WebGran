@@ -52,6 +52,8 @@ interface BotHeaderProps {
   onOpenConversasModal?: () => void;
   /** Redesign V2: true apenas para a conta proprietária (decidido no servidor). */
   useRedesignV2?: boolean;
+  /** Aba Personalização (em teste: só bots da conta proprietária). */
+  showPersonalization?: boolean;
 }
 
 export default function BotHeader({
@@ -67,6 +69,7 @@ export default function BotHeader({
   onSelectPeriod,
   onOpenConversasModal,
   useRedesignV2 = false,
+  showPersonalization = false,
 }: BotHeaderProps) {
   const router = useRouter();
   const [copiedLink, setCopiedLink] = useState(false);
@@ -554,6 +557,7 @@ export default function BotHeader({
             onSelectTab={onSelectTab}
             isAdmin={isAdmin}
             mode={bot.mode || "MINI_APP"}
+            showPersonalization={showPersonalization}
           />
         ) : (
           <BotTabsNav

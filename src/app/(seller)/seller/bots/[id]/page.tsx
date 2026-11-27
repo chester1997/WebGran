@@ -300,6 +300,28 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
     : [];
 
 
+  // Personalização do Mini App (em teste: só os bots da conta proprietária)
+  const canPersonalize = isOwnerUser({ id: store.ownerId });
+  let personalization: import("./SingleBotClient").BotPersonalizationData | null = null;
+  if (canPersonalize) {
+    const { getBotAppearanceForEditor } = await import("@/lib/miniapp/bot-appearance");
+    const [look, sample] = await Promise.all([
+      getBotAppearanceForEditor(botRecord.id).catch(() => null),
+      db.query.products
+        .findMany({ where: and(eq(products.storeId, store.id), eq(products.status, "active")), columns: { title: true, coverUrl: true, price: true }, orderBy: [desc(products.createdAt)], limit: 3 })
+        .catch(() => []),
+    ]);
+    if (look) {
+      personalization = {
+        ready: look.ready,
+        appearance: look.appearance,
+        welcomeText: store.welcomeMessage || null,
+        welcomeBanner: ((store.welcomeBanners as string[] | null) || []).find((b) => typeof b === "string" && b.trim()) || null,
+        sampleProducts: sample.map((p) => ({ title: p.title, coverUrl: p.coverUrl, price: Number(p.price || 0) })),
+      };
+    }
+  }
+
   return (
     <Suspense fallback={<div className="p-8 text-zinc-400 text-sm">Carregando painel do bot...</div>}>
       <SingleBotClient
@@ -317,6 +339,7 @@ export default async function SingleBotPage({ params, searchParams }: SingleBotP
         isAdmin={user.role === "admin" || user.role === "super_admin"}
         isOwnerAccount={ProductManualDeepLinkService.isAuthorized(user.role, user)}
         useRedesignV2={isOwnerUser(user)}
+        personalization={personalization}
       />
     </Suspense>
   );

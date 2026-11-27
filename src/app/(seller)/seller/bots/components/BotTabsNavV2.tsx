@@ -15,6 +15,7 @@ import {
   SolarSellerClipsIcon,
   SolarSellerNotificationsIcon,
   SolarSellerCouponsIcon,
+  SolarSellerPersonalizeIcon,
   type SolarIconProps,
 } from "@/components/icons/solar/seller-icons";
 
@@ -39,7 +40,7 @@ export interface BotTabGroupV2 {
   tabs: BotTabV2[];
 }
 
-export function buildBotTabGroupsV2(opts: { isAdmin: boolean; mode?: string }): BotTabGroupV2[] {
+export function buildBotTabGroupsV2(opts: { isAdmin: boolean; mode?: string; showPersonalization?: boolean }): BotTabGroupV2[] {
   const isMiniApp = (opts.mode || "MINI_APP") === "MINI_APP";
 
   const groups: BotTabGroupV2[] = [
@@ -49,6 +50,7 @@ export function buildBotTabGroupsV2(opts: { isAdmin: boolean; mode?: string }): 
       tabs: [
         { id: "visao-geral", label: "Visão geral", icon: SolarSellerOverviewIcon },
         { id: "configuracao", label: "Configuração", icon: SolarSellerBotIcon },
+        ...(opts.showPersonalization && isMiniApp ? [{ id: "personalizacao", label: "Personalização", icon: SolarSellerPersonalizeIcon }] : []),
         { id: "boas-vindas", label: "Boas-vindas", icon: SolarSellerWelcomeIcon },
       ],
     },
@@ -94,11 +96,12 @@ interface BotTabsNavV2Props {
   onSelectTab: (tabId: string) => void;
   isAdmin: boolean;
   mode?: "PADRAO" | "MINI_APP" | string;
+  showPersonalization?: boolean;
 }
 
-export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "MINI_APP" }: BotTabsNavV2Props) {
+export default function BotTabsNavV2({ activeTab, onSelectTab, isAdmin, mode = "MINI_APP", showPersonalization = false }: BotTabsNavV2Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const groups = buildBotTabGroupsV2({ isAdmin, mode });
+  const groups = buildBotTabGroupsV2({ isAdmin, mode, showPersonalization });
 
   const flat = groups.flatMap((g) => g.tabs);
   const current = flat.find((t) => t.id === activeTab) || flat[0];

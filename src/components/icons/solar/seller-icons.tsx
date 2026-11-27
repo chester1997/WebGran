@@ -1010,3 +1010,20 @@ export function SolarSidebarBoldDuotone({ size = 18, className, ...props }: Sola
     </svg>
   );
 }
+
+/**
+ * Pallete (Solar Bold Duotone) — aba Personalização do bot.
+ */
+export function SolarPaletteBoldDuotone({ size = 18, className, ...props }: SolarIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className} {...props}>
+      <path opacity=".5" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.92 0 1.67-.75 1.67-1.67 0-.43-.17-.82-.43-1.11-.26-.29-.42-.67-.42-1.1 0-.92.75-1.67 1.67-1.67h1.97A5.55 5.55 0 0 0 22 10.9C22 5.98 17.52 2 12 2Z" />
+      <circle cx="6.5" cy="11.5" r="1.5" />
+      <circle cx="9.5" cy="7.5" r="1.5" />
+      <circle cx="14.5" cy="7.5" r="1.5" />
+      <circle cx="17.5" cy="11.5" r="1.5" />
+    </svg>
+  );
+}
+
+export const SolarSellerPersonalizeIcon = SolarPaletteBoldDuotone;

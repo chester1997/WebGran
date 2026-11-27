@@ -126,7 +126,7 @@ function ProductCardBase({
             {buttonVariant === "details" ? (
               <Link
                 href={`/miniapp/${storeSlug}/product/${product.slug}`}
-                className="w-full bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-[11px] font-bold py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-0.5 shadow-sm active:scale-95"
+                className="wg-accent w-full bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-[11px] font-bold py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-0.5 shadow-sm active:scale-95"
               >
                 + Detalhes
               </Link>
@@ -134,7 +134,7 @@ function ProductCardBase({
               <div className="flex gap-1 w-full">
                 <Link
                   href={`/miniapp/${storeSlug}/product/${product.slug}`}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center"
+                  className="wg-accent flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold py-1.5 rounded-md text-center transition-colors flex items-center justify-center"
                 >
                   Ver mais
                 </Link>

@@ -51,7 +51,7 @@ export function StudioBottomNav({
   return (
     <nav
       aria-label="Navegação inferior"
-      className="fixed bottom-0 left-0 right-0 z-50 w-full bg-[#0a0b0e]/75 dark:bg-[#07080a]/75 backdrop-blur-2xl backdrop-saturate-[180%] border-t border-white/[0.12] shadow-[0_-8px_32px_rgba(0,0,0,0.65),0_-1px_0_rgba(255,255,255,0.08)] rounded-t-[24px] pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto select-none overflow-hidden"
+      className="wg-accent fixed bottom-0 left-0 right-0 z-50 w-full bg-[#0a0b0e]/75 dark:bg-[#07080a]/75 backdrop-blur-2xl backdrop-saturate-[180%] border-t border-white/[0.12] shadow-[0_-8px_32px_rgba(0,0,0,0.65),0_-1px_0_rgba(255,255,255,0.08)] rounded-t-[24px] pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto select-none overflow-hidden"
     >
       {/* Specular glass reflection line (iOS Liquid Glass top edge sheen) */}
       <div

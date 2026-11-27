@@ -4,6 +4,7 @@ import React, { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { StudioBottomNav } from "./components/StudioBottomNav";
 import { FloatingPromotionNotification } from "./components/FloatingPromotionNotification";
+import { MiniAppAccentRestore } from "./components/MiniAppAccent";
 
 interface StudioLayoutClientProps {
   storeSlug: string;
@@ -43,6 +44,8 @@ export function StudioLayoutClient({
       <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-[calc(76px+env(safe-area-inset-bottom,0px))] relative z-10">
         {children}
       </main>
+
+      <MiniAppAccentRestore storeSlug={storeSlug} />
 
       {/* Floating Promotional Toasts */}
       <FloatingPromotionNotification storeSlug={storeSlug} />

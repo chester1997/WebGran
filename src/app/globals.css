@@ -611,3 +611,16 @@ html.light {
 @media (prefers-reduced-motion: reduce) {
   [class*="animate-[wg-"] { animation: none !important; }
 }
+
+/* Mini App: cor principal escolhida na aba Personalização do bot.
+   Só vale quando o mini app define --wg-accent no <html> (data-wg-accent); sem isso, o vermelho de sempre.
+   Troca apenas os tons de vermelho dos elementos marcados com .wg-accent (botões de compra/carrinho,
+   ícone de entrega, item ativo do menu inferior). */
+html[data-wg-accent] .wg-accent {
+  --color-red-400: color-mix(in oklab, var(--wg-accent) 72%, white);
+  --color-red-500: color-mix(in oklab, var(--wg-accent) 86%, white);
+  --color-red-600: var(--wg-accent);
+  --color-red-700: color-mix(in oklab, var(--wg-accent) 82%, black);
+  --color-red-800: color-mix(in oklab, var(--wg-accent) 66%, black);
+  --color-red-950: color-mix(in oklab, var(--wg-accent) 32%, black);
+}

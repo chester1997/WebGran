@@ -427,7 +427,7 @@ export function StudioProductClient({
                 type="button"
                 onClick={handleDirectBuy}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-red-600/30 transition-all text-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                className="wg-accent w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-red-600/30 transition-all text-sm active:scale-95 cursor-pointer disabled:opacity-50"
               >
                 {isProcessing ? (
                   <>
@@ -493,7 +493,7 @@ export function StudioProductClient({
         {clientHasAccess ? (
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
-              <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
+              <PlayCircle className="wg-accent w-5 h-5 text-red-500 fill-red-500/20" />
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
                 {product.deliveryType === "product_video" ? "VÍDEOS DA SUA COMPRA" : "SUA ENTREGA"}
               </h3>
@@ -557,7 +557,7 @@ export function StudioProductClient({
                           </div>
                         </div>
 
-                        <span className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shrink-0 flex items-center gap-1.5">
+                        <span className="wg-accent px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shrink-0 flex items-center gap-1.5">
                           <Play className="w-3.5 h-3.5 fill-current" />
                           {hasStarted && !isCompleted ? "CONTINUAR" : "ASSISTIR"}
                         </span>
@@ -629,7 +629,7 @@ export function StudioProductClient({
           /* ESTADO A — NÃO COMPROU (INFORMAÇÃO SOBRE A ENTREGA REAL DO PRODUTO) */
           <div className="pt-4 border-t border-zinc-300/60 dark:border-white/10 space-y-3">
             <div className="flex items-center gap-2">
-              <PlayCircle className="w-5 h-5 text-red-500 fill-red-500/20" />
+              <PlayCircle className="wg-accent w-5 h-5 text-red-500 fill-red-500/20" />
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
                 ENTREGA DO PRODUTO
               </h3>

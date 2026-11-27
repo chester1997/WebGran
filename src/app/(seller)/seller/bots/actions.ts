@@ -1409,3 +1409,22 @@ export async function sendTelegramDirectMessageAction(params: {
   }
 }
 
+
+/* --------------------- Personalização do Mini App (por bot) --------------------- */
+
+export async function saveBotAppearanceAction(
+  botId: string,
+  input: { displayName?: string | null; logoUrl?: string | null; accentColor?: string | null; showExtraButtons?: boolean }
+): Promise<ActionResponse> {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized) return { success: false, error: auth.error };
+  const store = await getCurrentStore();
+  if (!store) return { success: false, error: "Loja não encontrada." };
+  const { appearanceAllowedForStore, saveBotAppearance } = await import("@/lib/miniapp/bot-appearance");
+  if (!(await appearanceAllowedForStore(store.id))) return { success: false, error: "A Personalização ainda está em fase de testes." };
+  const r = await saveBotAppearance(store.id, String(botId || ""), input || {});
+  if (!r.ok) return { success: false, error: r.error };
+  revalidatePath(`/seller/bots/${botId}`);
+  revalidatePath(`/miniapp/${store.slug}`, "layout");
+  return { success: true, message: "Personalização salva." };
+}

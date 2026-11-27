@@ -58,7 +58,7 @@ export const AddToCartButton = React.memo(function AddToCartButton({
         onClick={handleClick}
         aria-label="Adicionar ao Carrinho"
         title="Adicionar ao Carrinho"
-        className="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded-lg text-center transition-colors flex items-center justify-center shrink-0 cursor-pointer active:scale-95 z-30 shadow-md border border-white/20"
+        className="wg-accent bg-red-600 hover:bg-red-500 text-white p-1.5 rounded-lg text-center transition-colors flex items-center justify-center shrink-0 cursor-pointer active:scale-95 z-30 shadow-md border border-white/20"
       >
         {justAdded ? (
           <Check className="w-3.5 h-3.5 text-white" />
@@ -85,7 +85,7 @@ export const AddToCartButton = React.memo(function AddToCartButton({
     <button 
       type="button"
       onClick={handleClick}
-      className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors cursor-pointer z-30"
+      className="wg-accent w-full flex items-center justify-center gap-2 bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors cursor-pointer z-30"
     >
       {justAdded ? (
         <>

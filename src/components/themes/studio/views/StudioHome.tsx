@@ -8,6 +8,8 @@ import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
 import Link from "next/link";
 import { StudioHeader } from "../components/StudioHeader";
+import { StudioBrandHeader } from "../components/StudioBrandHeader";
+import { MiniAppAccent } from "../components/MiniAppAccent";
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
 
 import { decrypt } from "@/lib/encryption";
@@ -21,7 +23,13 @@ import { CombosCarousel } from "../components/CombosCarousel";
 import { getStoreBySlug } from "@/lib/store-cache";
 import { CatalogResolverService } from "@/lib/products/catalog-resolver";
 
-export async function StudioHome({ storeSlug, originBotId }: { storeSlug: string; originBotId?: string | null }) {
+export interface HomeAppearance {
+  displayName: string | null;
+  logoUrl: string | null;
+  accentColor: string | null;
+}
+
+export async function StudioHome({ storeSlug, originBotId, appearance = null }: { storeSlug: string; originBotId?: string | null; appearance?: HomeAppearance | null }) {
   "use cache";
   cacheLife("minutes");
   cacheTag(`store-home-${storeSlug}-${originBotId || "web"}`);
@@ -141,11 +149,16 @@ export async function StudioHome({ storeSlug, originBotId }: { storeSlug: string
   return (
     <div className="w-full">
       {/* Search Header */}
-      <StudioHeader 
-        storeSlug={storeSlug} 
-        storeName={store.name} 
-        headerLogoUrl={headerLogoUrl} 
-      />
+      {appearance && <MiniAppAccent storeSlug={storeSlug} color={appearance.accentColor} />}
+      {appearance ? (
+        <StudioBrandHeader storeSlug={storeSlug} name={appearance.displayName || store.name} logoUrl={appearance.logoUrl} />
+      ) : (
+        <StudioHeader
+          storeSlug={storeSlug}
+          storeName={store.name}
+          headerLogoUrl={headerLogoUrl}
+        />
+      )}
 
       {/* Main Hero Banners */}
       {storeBanners.length > 0 && (
