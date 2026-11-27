@@ -30,6 +30,7 @@ import ShowcasePane from "./ShowcasePane";
 import { Portal } from "./LojaModal";
 import LojaWebTabs from "./LojaWebTabs";
 import {
+  SolarSellerBannersIcon,
   SolarSellerCarouselsIcon,
   SolarSellerCombosIcon,
   SolarSellerConversasIcon,
@@ -40,6 +41,7 @@ import {
 import AppearancePane, { type BrandingView } from "./AppearancePane";
 import CombosPane from "./CombosPane";
 import VipPlansPane from "./VipPlansPane";
+import ThemesPane from "./ThemesPane";
 import OverviewPane from "./OverviewPane";
 import type { WebOverview } from "@/lib/webstore/overview";
 import { LEAD_SOURCES, leadSourceLabel } from "@/lib/webstore/lead-sources";
@@ -164,7 +166,7 @@ export default function WebStoreClient({
   webProducts: WebProductView[];
   sections: SectionConfig[];
 }) {
-  const [tab, setTabNow] = useState<"visao" | "produtos" | "vitrine" | "combos" | "aparencia" | "clientes" | "suporte">("visao");
+  const [tab, setTabNow] = useState<"visao" | "produtos" | "vitrine" | "combos" | "aparencia" | "temas" | "clientes" | "suporte">("visao");
   // Troca de aba em transição: o clique responde na hora e a aba nova monta sem travar a tela
   const [, startTab] = useTransition();
   const setTab = (t: typeof tab) => startTab(() => setTabNow(t));
@@ -234,6 +236,7 @@ export default function WebStoreClient({
               { id: "vitrine", label: "Vitrine", icon: SolarSellerCarouselsIcon },
               { id: "combos", label: "Ofertas e combos", icon: SolarSellerCombosIcon, count: webCombos.length },
               { id: "aparencia", label: "Aparência", icon: SolarSellerWelcomeIcon },
+              { id: "temas", label: "Temas", icon: SolarSellerBannersIcon },
               { id: "clientes", label: "Clientes", icon: SolarSellerCustomersIcon, count: customers.length },
               { id: "suporte", label: "Suporte", icon: SolarSellerConversasIcon, count: stats.openTickets },
             ]}
@@ -315,6 +318,8 @@ export default function WebStoreClient({
         </div>
       ) : tab === "aparencia" ? (
         <AppearancePane initial={branding} ready={brandingReady} storeName={storeName} />
+      ) : tab === "temas" ? (
+        <ThemesPane storeSlug={storeSlug} />
       ) : tab === "clientes" ? (
         shown.length === 0 ? (
           <div className={`${SURFACE} px-6 py-14 text-center`}>
