@@ -257,23 +257,57 @@ export function ProductVideoPlayer({
     }
   };
 
+  // Mantém o estado em sincronia quando a tela cheia é fechada pelo sistema (gesto, Esc, botão nativo do iPhone).
+  useEffect(() => {
+    const doc = document as any;
+    const onChange = () => setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    const video = videoRef.current;
+    const onIosEnd = () => setIsFullscreen(false);
+    video?.addEventListener("webkitendfullscreen", onIosEnd);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+      video?.removeEventListener("webkitendfullscreen", onIosEnd);
+    };
+  }, []);
+
   const toggleFullscreen = () => {
-    const elem = containerRef.current;
+    const elem = containerRef.current as any;
+    const video = videoRef.current as any;
+    const doc = document as any;
     if (!elem) return;
 
-    if (!document.fullscreenElement) {
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-      } else if ((elem as any).webkitRequestFullscreen) {
-        (elem as any).webkitRequestFullscreen();
-        setIsFullscreen(true);
-      }
-    } else {
+    const activeElement = document.fullscreenElement || doc.webkitFullscreenElement;
+    if (activeElement) {
       if (document.exitFullscreen) {
         document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
         setIsFullscreen(false);
+      }
+      return;
+    }
+
+    // Android / desktop / iPad: tela cheia do player inteiro (mantém marca d'água e controles).
+    const canElementFullscreen = !!(document.fullscreenEnabled || doc.webkitFullscreenEnabled);
+    if (canElementFullscreen && elem.requestFullscreen) {
+      elem.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      return;
+    }
+    if (canElementFullscreen && elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+      setIsFullscreen(true);
+      return;
+    }
+
+    // iPhone (Safari, Chrome e qualquer navegador iOS): só o próprio <video> pode ir para tela cheia.
+    if (video && typeof video.webkitEnterFullscreen === "function") {
+      try {
+        video.webkitEnterFullscreen();
+      } catch (err) {
+        console.warn("[VideoPlayer] iOS fullscreen failed:", err);
       }
     }
   };
