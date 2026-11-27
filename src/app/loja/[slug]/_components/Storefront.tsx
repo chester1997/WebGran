@@ -60,7 +60,7 @@ export function Storefront({
   combos = [],
   vip = null,
 }: {
-  vip?: { plans: VipPlanCard[]; active: VipStatus | null; loggedIn: boolean; image: string | null } | null;
+  vip?: { plans: VipPlanCard[]; active: VipStatus | null; loggedIn: boolean; image: string | null; mode?: "all" | "link" } | null;
   combos?: ComboCard[];
   topId?: string | null;
   promoImage?: string | null;
@@ -79,10 +79,11 @@ export function Storefront({
       </div>
     );
   }
-  const isVip = Boolean(vip?.active);
+  // VIP no modo link não libera os títulos: combos e ofertas continuam aparecendo.
+  const isVip = Boolean(vip?.active && !vip.active.link);
   const showVip = Boolean(vip && (vip.plans.length || vip.active));
   const covers = Array.from(new Map([...hero, ...rows.flatMap((r) => r.items)].filter((x) => x.coverUrl).map((x) => [x.id, x.coverUrl as string])).values()).slice(0, 5);
-  const vipCard = vip ? <VipBanner slug={slug} plans={vip.plans} active={vip.active} loggedIn={vip.loggedIn} image={vip.image} covers={covers} /> : null;
+  const vipCard = vip ? <VipBanner slug={slug} plans={vip.plans} active={vip.active} loggedIn={vip.loggedIn} image={vip.image} covers={covers} mode={vip.mode || "all"} /> : null;
   return (
     <div className="overflow-x-clip">
       {hero.length > 0 && <Hero slug={slug} items={hero} topId={topId} />}

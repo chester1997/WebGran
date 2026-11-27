@@ -6,7 +6,7 @@ import { getHeroImages } from "@/lib/webstore/hero-images";
 import { loadWebCombos, loadWebProgressive } from "@/lib/webstore/catalog";
 import { Storefront, type CardItem, type ComboCard } from "./_components/Storefront";
 import type { WebProductRow } from "@/lib/webstore/products";
-import { getActiveVip, listActiveVipPlans } from "@/lib/webstore/vip";
+import { getActiveVip, getActiveVipLink, listActiveVipPlans } from "@/lib/webstore/vip";
 
 const card = (p: WebProductRow): CardItem => ({
   id: p.id,
@@ -36,10 +36,12 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
     loadWebCombos(store.id).catch(() => []),
     getHeroImages(store.id).catch(() => ({ ready: false, images: {} as Record<string, string> })),
   ]);
-  const [vipPlans, vipActive] = await Promise.all([
+  const [vipPlans, vipActive, vipLink] = await Promise.all([
     listActiveVipPlans(store.id).catch(() => []),
     customer ? getActiveVip(store.id, customer.shadowCustomerId).catch(() => null) : Promise.resolve(null),
+    customer ? getActiveVipLink(store.id, customer.shadowCustomerId).catch(() => null) : Promise.resolve(null),
   ]);
+  const vipMode = vipPlans[0]?.mode || "all";
 
   return (
     <Storefront
@@ -61,7 +63,12 @@ export default async function LojaHome({ params }: { params: Promise<{ slug: str
       notReady={!ready}
       vip={{
         plans: vipPlans.map((p) => ({ id: p.id, label: p.label, period: p.period, price: p.price, days: p.days })),
-        active: vipActive ? { label: vipActive.label, until: vipActive.expiresAt ? vipActive.expiresAt.toISOString() : null } : null,
+        mode: vipMode,
+        active: vipActive
+          ? { label: vipActive.label, until: vipActive.expiresAt ? vipActive.expiresAt.toISOString() : null }
+          : vipLink
+            ? { label: vipLink.label, until: vipLink.expiresAt ? vipLink.expiresAt.toISOString() : null, link: vipLink.link }
+            : null,
         loggedIn: Boolean(customer),
         image: vipPlans.find((p) => p.image)?.image || null,
       }}

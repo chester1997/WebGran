@@ -56,7 +56,7 @@ export function AccountClient({
   tickets,
   vip = null,
 }: {
-  vip?: { label: string; until: string | null } | null;
+  vip?: { label: string; until: string | null; link?: string | null } | null;
   slug: string;
   customer: { name: string; email: string; whatsapp: string | null; telegram: string | null; createdAt: string; avatarUrl: string | null };
   owned: Owned[];
@@ -156,12 +156,26 @@ export function AccountClient({
       </div>
 
       {tab === "produtos" && vip && (
-        <div className="mb-4 flex items-center gap-3 rounded-[12px] border border-[#3b82f6]/35 bg-[#3b82f6]/[0.1] px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#3b82f6]/35 bg-[#3b82f6]/[0.1] px-4 py-3">
           <Crown className="w-5 h-5 text-[#3b82f6] shrink-0" />
-          <p className="text-[13.5px] text-zinc-200 min-w-0">
+          <p className="text-[13.5px] text-zinc-200 min-w-0 flex-1">
             <b className="text-white">VIP {vip.label} ativo</b>
-            <span className="text-zinc-400"> · {vip.until ? `todos os títulos liberados até ${fmt(vip.until)}` : "todos os títulos liberados para sempre"}</span>
+            <span className="text-zinc-400">
+              {" · "}
+              {vip.link
+                ? vip.until
+                  ? `acesso até ${fmt(vip.until)}`
+                  : "acesso para sempre"
+                : vip.until
+                  ? `todos os títulos liberados até ${fmt(vip.until)}`
+                  : "todos os títulos liberados para sempre"}
+            </span>
           </p>
+          {vip.link && (
+            <a href={vip.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] bg-[#3b82f6] hover:bg-[#2f74ea] text-[13px] font-semibold shrink-0">
+              Entrar no VIP <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
         </div>
       )}
       {tab === "produtos" &&

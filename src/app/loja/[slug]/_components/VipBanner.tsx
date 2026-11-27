@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowRight, Crown, Loader2 } from "lucide-react";
+import { ArrowRight, Crown, ExternalLink, Loader2 } from "lucide-react";
 import { vipCheckoutAction } from "../actions";
 import { brl } from "./ui";
 import { thumb } from "@/lib/webstore/img";
@@ -20,6 +20,8 @@ export interface VipStatus {
   label: string;
   /** ISO; null = vitalício */
   until: string | null;
+  /** VIP no modo link: o botão leva para este link (grupo/canal/bot) */
+  link?: string | null;
 }
 
 const fmtDate = (iso: string) =>
@@ -33,6 +35,7 @@ export function VipBanner({
   loggedIn,
   image,
   covers = [],
+  mode = "all",
 }: {
   slug: string;
   plans: VipPlanCard[];
@@ -40,7 +43,9 @@ export function VipBanner({
   loggedIn: boolean;
   image: string | null;
   covers?: string[];
+  mode?: "all" | "link";
 }) {
+  const isLink = active ? Boolean(active.link) : mode === "link";
   const router = useRouter();
   const [pick, setPick] = useState(() => plans.find((p) => p.days === 30)?.id || plans[0]?.id);
   const [err, setErr] = useState<string | null>(null);
@@ -84,8 +89,14 @@ export function VipBanner({
           <p className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#7fb0ff]">
             <Crown className="w-4 h-4" /> Acesso VIP
           </p>
-          <h2 className="mt-2 text-[24px] sm:text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] [text-wrap:balance]">Assista tudo da loja com um plano só</h2>
-          <p className="mt-1.5 max-w-[620px] text-[14px] text-zinc-400">Enquanto o plano estiver ativo, todos os títulos ficam liberados para você. Sem comprar um por um.</p>
+          <h2 className="mt-2 text-[24px] sm:text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] [text-wrap:balance]">
+            {isLink ? "Entre para o nosso VIP" : "Assista tudo da loja com um plano só"}
+          </h2>
+          <p className="mt-1.5 max-w-[620px] text-[14px] text-zinc-400">
+            {isLink
+              ? "Assine e receba o acesso ao nosso VIP no Telegram assim que o PIX for confirmado."
+              : "Enquanto o plano estiver ativo, todos os títulos ficam liberados para você. Sem comprar um por um."}
+          </p>
 
           {active ? (
             <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
@@ -93,12 +104,26 @@ export function VipBanner({
                 <Crown className="w-5 h-5 text-[#3b82f6] shrink-0" />
                 <p className="text-[14px] text-zinc-200">
                   <b className="text-white">VIP {active.label} ativo</b>
-                  <span className="block text-[12.5px] text-zinc-400">{active.until ? `Tudo liberado até ${fmtDate(active.until)}` : "Tudo liberado para sempre"}</span>
+                  <span className="block text-[12.5px] text-zinc-400">
+                    {active.link
+                      ? active.until
+                        ? `Acesso até ${fmtDate(active.until)}`
+                        : "Acesso para sempre"
+                      : active.until
+                        ? `Tudo liberado até ${fmtDate(active.until)}`
+                        : "Tudo liberado para sempre"}
+                  </span>
                 </p>
               </div>
-              <Link href={`/loja/${slug}/conta`} className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[6px] bg-white text-black text-[14px] font-semibold hover:bg-zinc-200 transition-colors">
-                Ver meus vídeos <ArrowRight className="w-4 h-4" />
-              </Link>
+              {active.link ? (
+                <a href={active.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[6px] bg-[#3b82f6] hover:bg-[#2f74ea] text-white text-[14px] font-semibold transition-colors">
+                  Entrar no VIP <ExternalLink className="w-4 h-4" />
+                </a>
+              ) : (
+                <Link href={`/loja/${slug}/conta`} className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[6px] bg-white text-black text-[14px] font-semibold hover:bg-zinc-200 transition-colors">
+                  Ver meus vídeos <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
             </div>
           ) : (
             <>
@@ -159,7 +184,7 @@ export function VipBanner({
                     )}
                   </span>
                 </button>
-                <span className="text-[12.5px] text-zinc-500">{chosen ? `Libera tudo por ${chosen.period} · pagamento via PIX` : ""}</span>
+                <span className="text-[12.5px] text-zinc-500">{chosen ? `${isLink ? "Acesso ao VIP" : "Libera tudo"} por ${chosen.period} · pagamento via PIX` : ""}</span>
               </div>
               {err && <p className="mt-3 text-[13px] text-red-400">{err}</p>}
             </>

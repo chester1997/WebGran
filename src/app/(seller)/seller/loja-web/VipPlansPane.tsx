@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Crown, ImagePlus, Loader2, Save, Trash2 } from "lucide-react";
+import { Crown, ImagePlus, LayoutGrid, Loader2, Save, Send, Trash2 } from "lucide-react";
 import { BTN_PRI, INPUT, useToast } from "../fluxos/_components/flow-ui";
 import { saveVipPlansAction } from "./actions";
-import type { VipPlanView } from "@/lib/webstore/vip";
+import type { VipMode, VipPlanView } from "@/lib/webstore/vip";
 
 import { thumb } from "@/lib/webstore/img";
 const SURFACE =
@@ -22,6 +22,9 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
   const on = rows.filter((r) => r.enabled).length;
   const [image, setImage] = useState(plans.find((p) => p.image)?.image || "");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<VipMode>(plans[0]?.mode || "all");
+  const [link, setLink] = useState(plans[0]?.link || "");
+  const perLabel = mode === "link" ? "Dá acesso ao link por" : "Libera tudo por";
 
   const upload = async (file: File) => {
     setBusy(true);
@@ -39,7 +42,11 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
 
   const save = () =>
     start(async () => {
-      const r = await saveVipPlansAction(rows.map((x) => ({ duration: x.duration, enabled: x.enabled, price: num(x.price) })), image || null);
+      const r = await saveVipPlansAction(
+        rows.map((x) => ({ duration: x.duration, enabled: x.enabled, price: num(x.price) })),
+        image || null,
+        mode === "link" ? { mode, link } : { mode: "all" }
+      );
       if (!r.ok) return toast(r.error, "err");
       toast(on ? `Planos VIP salvos: ${on} ${on === 1 ? "plano ativo" : "planos ativos"} na loja.` : "Planos VIP desligados. O card sai da loja.");
       router.refresh();
@@ -53,13 +60,63 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
             <Crown className="w-4 h-4 text-[#3b82f6]" /> Planos VIP
           </h3>
           <p className="text-[12.5px] text-zinc-500 mt-0.5">
-            Quem assina vê <b className="text-zinc-300">todos os títulos da Loja Web</b> enquanto o plano estiver ativo. Ligue os planos que quiser vender e defina o preço. Quando vence, os títulos
-            voltam a ficar bloqueados (o que o cliente comprou avulso continua dele).
+            {mode === "link" ? (
+              <>
+                Quem assina recebe o <b className="text-zinc-300">link do seu VIP</b> (grupo, canal ou bot do Telegram) na conta dele enquanto o plano estiver ativo. Os títulos da loja continuam à
+                venda normalmente.
+              </>
+            ) : (
+              <>
+                Quem assina vê <b className="text-zinc-300">todos os títulos da Loja Web</b> enquanto o plano estiver ativo. Ligue os planos que quiser vender e defina o preço. Quando vence, os títulos
+                voltam a ficar bloqueados (o que o cliente comprou avulso continua dele).
+              </>
+            )}
           </p>
         </div>
         <button type="button" onClick={save} disabled={pending} className={BTN_PRI}>
           {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar planos
         </button>
+      </div>
+
+      <div className="mb-5">
+        <p className="text-[13.5px] font-semibold mb-2">O que o VIP entrega</p>
+        <div role="radiogroup" aria-label="O que o VIP entrega" className="grid sm:grid-cols-2 gap-2.5">
+          {[
+            { k: "all" as const, icon: LayoutGrid, t: "Liberar todos os títulos da loja", d: "O cliente assiste tudo da Loja Web enquanto o plano estiver ativo." },
+            { k: "link" as const, icon: Send, t: "Enviar para um link", d: "Grupo ou canal do Telegram, um bot, ou qualquer outro link seu." },
+          ].map((o) => {
+            const on = mode === o.k;
+            return (
+              <button
+                key={o.k}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setMode(o.k)}
+                className={`text-left flex items-start gap-3 rounded-[11px] border p-3.5 transition-colors ${on ? "border-[#3b82f6]/60 bg-[#3b82f6]/[0.08]" : "border-white/[0.07] bg-black/20 hover:border-white/[0.14]"}`}
+              >
+                <span className={`mt-0.5 w-[18px] h-[18px] rounded-full border-2 shrink-0 flex items-center justify-center ${on ? "border-[#3b82f6]" : "border-zinc-600"}`}>
+                  {on && <span className="w-2 h-2 rounded-full bg-[#3b82f6]" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5 text-[13.5px] font-semibold">
+                    <o.icon className={`w-4 h-4 ${on ? "text-[#3b82f6]" : "text-zinc-500"}`} /> {o.t}
+                  </span>
+                  <span className="block text-[12px] text-zinc-500 mt-0.5">{o.d}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {mode === "link" && (
+          <label className="block mt-3 max-w-[560px]">
+            <span className="block text-[11.5px] font-medium text-zinc-500 mb-1">Link do VIP</span>
+            <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://t.me/+seugrupo ou @seubot" className={`${INPUT} w-full`} />
+            <span className="block text-[11.5px] text-zinc-500 mt-1">
+              Aparece só para quem tem o VIP ativo, no botão <b className="text-zinc-300">Entrar no VIP</b> da conta do cliente. Prefira um link de convite que você possa trocar se vazar.
+            </span>
+          </label>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
@@ -68,7 +125,9 @@ export default function VipPlansPane({ plans }: { plans: VipPlanView[] }) {
             <div className="flex items-center gap-2 mb-3">
               <div className="mr-auto min-w-0">
                 <p className="text-[13.5px] font-semibold">{r.label}</p>
-                <p className="text-[11.5px] text-zinc-500">Libera tudo por {r.period}</p>
+                <p className="text-[11.5px] text-zinc-500">
+                  {perLabel} {r.period}
+                </p>
               </div>
               <button
                 type="button"
