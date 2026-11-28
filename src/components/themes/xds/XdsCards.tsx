@@ -19,6 +19,7 @@ const money = (v: string | number) => `R$ ${Number(v).toFixed(2).replace(".", ",
 const href = (storeSlug: string, p: XdsProduct) => `/miniapp/${storeSlug}/product/${p.slug}`;
 
 export function XdsSectionTitle({ children }: { children: React.ReactNode }) {
+  if (typeof children === "string" && !children.trim()) return null;
   return <h2 className="px-4 mb-2.5 text-[19px] font-semibold tracking-tight text-white">{children}</h2>;
 }
 
@@ -163,7 +164,7 @@ export function XdsCollection({ storeSlug, title, subtitle, coverUrl, products }
           )}
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-[#0d0e10]" />
           <div className="relative h-full flex flex-col items-center justify-start pt-12 px-6 text-center">
-            <p className="text-[26px] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-lg">{title}</p>
+            {title.trim() && <p className="text-[26px] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-lg">{title}</p>}
             <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.3em] text-zinc-200">{subtitle || "Coleção"}</p>
             <button
               type="button"
@@ -184,12 +185,12 @@ export function XdsCollection({ storeSlug, title, subtitle, coverUrl, products }
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="fixed inset-0 z-[80] flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title.trim() || subtitle || "Coleção"}>
           <button type="button" aria-label="Fechar" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/70" />
           <div className="relative w-full max-w-[560px] max-h-[85dvh] overflow-y-auto rounded-t-[16px] bg-[#141518] border-t border-white/10 p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))]">
             <div className="flex items-start gap-3 mb-4">
               <div className="mr-auto min-w-0">
-                <p className="text-[18px] font-bold text-white leading-tight">{title}</p>
+                <p className="text-[18px] font-bold text-white leading-tight">{title.trim() || subtitle || "Coleção"}</p>
                 <p className="text-[12px] text-zinc-400 mt-0.5">
                   {subtitle || "Coleção"} · {products.length} {products.length === 1 ? "título" : "títulos"}
                 </p>
@@ -233,13 +234,26 @@ export function XdsTop15({ storeSlug, title, products, badgeColor }: { storeSlug
             className="relative snap-start shrink-0 w-[62%] max-w-[300px] aspect-[2/3] rounded-[10px] overflow-hidden bg-zinc-900 ring-1 ring-white/[0.08]"
           >
             <ProductCoverImage src={p.coverUrl} alt={p.title} aspectRatioClass="" className="w-full h-full object-cover" />
-            {/* Emblema: um quarto de círculo no canto, acompanhando o arredondamento da capa */}
+            {/* Emblema: quarto de círculo grande no canto, em degradê escuro da cor, com o número brilhando */}
             <span
               aria-hidden="true"
-              className="absolute top-0 left-0 w-[30%] aspect-square rounded-br-full flex items-start justify-start pl-[9%] pt-[5%] shadow-[2px_2px_12px_rgba(0,0,0,0.35)]"
-              style={{ background: `color-mix(in srgb, ${color} 82%, #000)` }}
+              className="absolute top-0 left-0 w-[52%] aspect-square rounded-br-full flex items-start justify-start pl-[9%] pt-[7%]"
+              style={{
+                background: `radial-gradient(circle at 0% 0%, color-mix(in srgb, ${color} 22%, #02060a) 0%, color-mix(in srgb, ${color} 30%, #02060a) 60%, color-mix(in srgb, ${color} 46%, #02060a) 100%)`,
+                boxShadow: `1px 1px 0 color-mix(in srgb, ${color} 35%, transparent), 4px 4px 18px rgba(0,0,0,0.45)`,
+              }}
             >
-              <span className="text-[34px] font-black leading-none" style={{ color: `color-mix(in srgb, ${color} 35%, #fff)` }}>
+              <span
+                className="text-[56px] font-black leading-none tracking-tighter"
+                style={{
+                  backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${color} 45%, #fff) 0%, color-mix(in srgb, ${color} 85%, #fff) 100%)`,
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                  WebkitTextStroke: `1.5px color-mix(in srgb, ${color} 55%, #fff)`,
+                  filter: `drop-shadow(0 0 6px color-mix(in srgb, ${color} 70%, transparent))`,
+                }}
+              >
                 {i + 1}
               </span>
             </span>

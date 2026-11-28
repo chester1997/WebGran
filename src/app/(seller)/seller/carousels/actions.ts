@@ -2,8 +2,8 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { productCarousels, carouselProducts, telegramBots } from "@/db/schema";
-import { eq, and, asc, desc, count, isNull, or } from "drizzle-orm";
+import { productCarousels, carouselProducts, telegramBots, productBotVisibility } from "@/db/schema";
+import { eq, and, asc, desc, count, isNull, or, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
@@ -146,12 +146,23 @@ export async function updateRankingCarouselAction(
     updatedAt: new Date()
   }).where(eq(productCarousels.id, carouselId));
 
+  // Top 15 de um bot só aceita produtos que aparecem nesse bot
+  let finalIds = productIds;
+  if (existing.botId && productIds.length > 0) {
+    const vis = await db.query.productBotVisibility.findMany({
+      where: and(eq(productBotVisibility.botId, existing.botId), inArray(productBotVisibility.productId, productIds)),
+      columns: { productId: true },
+    });
+    const ok = new Set(vis.map((v) => v.productId));
+    finalIds = productIds.filter((id) => ok.has(id));
+  }
+
   // Sync products
   await db.delete(carouselProducts).where(eq(carouselProducts.carouselId, carouselId));
 
-  if (productIds.length > 0) {
+  if (finalIds.length > 0) {
     await db.insert(carouselProducts).values(
-      productIds.slice(0, 15).map((productId, idx) => ({
+      finalIds.slice(0, 15).map((productId, idx) => ({
         carouselId,
         productId,
         position: idx
@@ -204,7 +215,6 @@ export async function createCarouselAction(
   const seller = await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
-  if (!name.trim()) throw new Error("Nome do carrossel é obrigatório");
 
   // Limite do plano conta por bot (cada bot tem os seus carrosséis)
   const scopedBotId = await carouselBotScope(store, botId);
@@ -227,7 +237,7 @@ export async function createCarouselAction(
 
   const [carousel] = await db.insert(productCarousels).values({
     storeId: store.id,
-    name: name.trim(),
+    name: (name || "").trim(),
     indicatorType: validated.indicatorType,
     iconName: validated.iconName,
     iconColor: validated.iconColor,
@@ -267,7 +277,6 @@ export async function updateCarouselAction(
   await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
-  if (!name.trim()) throw new Error("Nome do carrossel é obrigatório");
 
   const existing = await db.query.productCarousels.findFirst({
     where: and(eq(productCarousels.id, carouselId), eq(productCarousels.storeId, store.id))
@@ -277,7 +286,7 @@ export async function updateCarouselAction(
   const validated = validateIndicator(indicatorType, iconName, iconColor, "BAR", "#8B5CF6");
 
   const updatePayload: Record<string, any> = {
-    name: name.trim(),
+    name: (name || "").trim(),
     indicatorType: validated.indicatorType,
     iconName: validated.iconName,
     iconColor: validated.iconColor,

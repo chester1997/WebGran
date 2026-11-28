@@ -585,7 +585,7 @@ export default function CarouselsClientV2({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-bold text-white text-sm uppercase tracking-tight truncate">{carousel.name}</h4>
+                      <h4 className="font-bold text-white text-sm uppercase tracking-tight truncate">{carousel.name?.trim() || <span className="text-zinc-500 normal-case font-medium">Sem nome</span>}</h4>
                       <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
                         {activeProducts.length} {activeProducts.length === 1 ? "produto" : "produtos"}
                         {carousel.displayStyle && carousel.displayStyle !== "small"
@@ -921,11 +921,6 @@ function CarouselFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setErrorMessage("O nome do carrossel é obrigatório.");
-      return;
-    }
-
     setLoading(true);
     setErrorMessage(null);
 
@@ -941,7 +936,7 @@ function CarouselFormModal({
           status,
           xds
         );
-        onSuccess(`Carrossel "${name.trim()}" atualizado com sucesso!`);
+        onSuccess(name.trim() ? `Carrossel "${name.trim()}" atualizado com sucesso!` : "Carrossel atualizado com sucesso!");
       } else {
         await createCarouselAction(
           name.trim(),
@@ -952,7 +947,7 @@ function CarouselFormModal({
           xds,
           botId
         );
-        onSuccess(`Carrossel "${name.trim()}" criado com sucesso!`);
+        onSuccess(name.trim() ? `Carrossel "${name.trim()}" criado com sucesso!` : "Carrossel criado com sucesso!");
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Erro ao salvar carrossel.");
@@ -984,7 +979,7 @@ function CarouselFormModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               <div className="sm:col-span-2 space-y-1.5">
                 <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                  Nome do Carrossel *
+                  Nome do Carrossel <span className="normal-case font-normal text-zinc-500">(opcional)</span>
                 </label>
                 <input
                   type="text"
@@ -1057,7 +1052,7 @@ function CarouselFormModal({
             </Button>
             <Button
               type="submit"
-              disabled={loading || !name.trim()}
+              disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             >
               {loading ? (

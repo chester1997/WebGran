@@ -282,11 +282,25 @@ export async function loadBotTabData(
           },
         });
 
-        const storeProducts = await db.query.products.findMany({
-          where: and(eq(products.storeId, store.id), notWebProduct()),
-          orderBy: [desc(products.createdAt)],
-          columns: { id: true, title: true, price: true, badge: true },
-        });
+        // Top 15 do bot: só os produtos que aparecem neste bot
+        const botProductIds = currentBotId
+          ? (await db.query.productBotVisibility.findMany({
+              where: and(eq(productBotVisibility.storeId, store.id), eq(productBotVisibility.botId, currentBotId)),
+              columns: { productId: true },
+            })).map((v) => v.productId)
+          : null;
+        const storeProducts =
+          botProductIds && botProductIds.length === 0
+            ? []
+            : await db.query.products.findMany({
+                where: and(
+                  eq(products.storeId, store.id),
+                  notWebProduct(),
+                  ...(botProductIds ? [inArray(products.id, botProductIds)] : [])
+                ),
+                orderBy: [desc(products.createdAt)],
+                columns: { id: true, title: true, price: true, badge: true },
+              });
 
         result.carouselsData = {
           rankingCarousel,
