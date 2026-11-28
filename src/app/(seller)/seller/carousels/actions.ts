@@ -3,7 +3,7 @@
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { productCarousels, carouselProducts, telegramBots } from "@/db/schema";
-import { eq, and, asc, desc, count, isNull } from "drizzle-orm";
+import { eq, and, asc, desc, count, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
@@ -66,9 +66,15 @@ export async function getOrCreateRankingCarouselAction(botId?: string | null) {
   const scopedBotId = await carouselBotScope(store, botId);
 
   let ranking = await db.query.productCarousels.findFirst({
+    // Top 15 do bot; enquanto ele não tiver um, usa o da loja toda (sem bot), que é o que o Mini App mostra
     where: scopedBotId
-      ? and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, true), eq(productCarousels.botId, scopedBotId))
+      ? and(
+          eq(productCarousels.storeId, store.id),
+          eq(productCarousels.isRanking, true),
+          or(eq(productCarousels.botId, scopedBotId), isNull(productCarousels.botId))
+        )
       : and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, true)),
+    orderBy: [asc(productCarousels.botId)], // ASC = NULLS LAST: o do bot vem antes
     with: {
       items: {
         orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)],
