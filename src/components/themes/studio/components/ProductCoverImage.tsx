@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Film } from "lucide-react";
 
 export interface ProductCoverImageProps {
@@ -28,6 +28,16 @@ export function ProductCoverImage({
 }: ProductCoverImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // A imagem pode terminar de carregar antes da página ficar interativa (hidratação): aí o onLoad
+  // não dispara e a capa ficaria invisível. Ao montar, confere se ela já está pronta.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || !img.complete) return;
+    if (img.naturalWidth > 0) setIsLoaded(true);
+    else setHasError(true);
+  }, [src]);
 
   const cleanSrc = src?.trim();
   const hasValidUrl = Boolean(cleanSrc && cleanSrc.length > 0 && !cleanSrc.startsWith("blob:null"));
@@ -59,6 +69,7 @@ export function ProductCoverImage({
         </div>
       )}
       <img
+        ref={imgRef}
         src={cleanSrc}
         alt=""
         aria-hidden="true"

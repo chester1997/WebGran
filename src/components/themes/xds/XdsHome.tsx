@@ -55,7 +55,7 @@ export async function XdsHome({
       with: { items: { orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)], with: { product: true } } },
     }),
     originBotId
-      ? db.query.telegramBots.findFirst({ where: and(eq(telegramBots.id, originBotId), eq(telegramBots.storeId, store.id)), columns: { photoUrl: true } })
+      ? db.query.telegramBots.findFirst({ where: and(eq(telegramBots.id, originBotId), eq(telegramBots.storeId, store.id)), columns: { photoUrl: true, displayName: true } })
       : null,
   ]);
 
@@ -86,7 +86,7 @@ export async function XdsHome({
     fallback = recent.map((p) => ({ id: p.id, slug: p.slug, title: p.title, coverUrl: p.coverUrl, bannerUrl: p.bannerUrl, price: p.price }));
   }
 
-  const name = brandName || store.name;
+  const name = brandName || activeBot?.displayName?.trim() || store.name;
   const logo = brandLogoUrl || activeBot?.photoUrl || store.logoUrl || null;
   const cats = (store.categories || []).map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
 
