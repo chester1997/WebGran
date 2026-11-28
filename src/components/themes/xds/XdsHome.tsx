@@ -52,7 +52,7 @@ export async function XdsHome({
         originBotId ? or(isNull(productCarousels.botId), eq(productCarousels.botId, originBotId)) : isNull(productCarousels.botId)
       ),
       orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
-      with: { items: { orderBy: (items, { asc }) => [asc(items.position)], with: { product: true } } },
+      with: { items: { orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)], with: { product: true } } },
     }),
     originBotId
       ? db.query.telegramBots.findFirst({ where: and(eq(telegramBots.id, originBotId), eq(telegramBots.storeId, store.id)), columns: { photoUrl: true } })

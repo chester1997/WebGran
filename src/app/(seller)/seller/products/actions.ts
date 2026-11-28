@@ -4,7 +4,7 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { products, productVideos, productCarousels, carouselProducts, productBotVisibility, telegramBots } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and, count, inArray } from "drizzle-orm";
+import { eq, and, count, inArray, min } from "drizzle-orm";
 import { getStorageProvider, generateMultiTenantStoragePath } from "@/lib/storage/provider";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 import { MediaLifecycleService } from "@/lib/storage/lifecycle-service";
@@ -74,6 +74,24 @@ export type UpdateProductActionResult = {
   success: boolean;
   error?: string;
 };
+
+/** Menor posição atual de cada carrossel (para colocar um produto novo antes de todos). */
+async function carouselFirstPositions(conn: any, carouselIds: string[]): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (carouselIds.length === 0) return map;
+  try {
+    const rows: { carouselId: string; first: number | null }[] = await conn
+      .select({ carouselId: carouselProducts.carouselId, first: min(carouselProducts.position) })
+      .from(carouselProducts)
+      .where(inArray(carouselProducts.carouselId, carouselIds))
+      .groupBy(carouselProducts.carouselId);
+    for (const r of rows || []) if (r.first !== null && r.first !== undefined) map.set(r.carouselId, Number(r.first));
+  } catch (e) {
+    // Sem a posição atual o produto entra na posição 0 (não impede o cadastro)
+    console.warn("[carouselFirstPositions] falha ao ler posições:", (e as Error)?.message || e);
+  }
+  return map;
+}
 
 export async function createProductAction(formData: FormData): Promise<CreateProductActionResult> {
   let seller;
@@ -367,10 +385,12 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
       });
 
       if (selectedCarouselIds.length > 0) {
-        const recordsToInsert = selectedCarouselIds.map((cId, idx) => ({
+        // Produto novo entra no início de cada carrossel (primeiro da esquerda)
+        const firstPositions = await carouselFirstPositions(tx, selectedCarouselIds);
+        const recordsToInsert = selectedCarouselIds.map((cId) => ({
           carouselId: cId,
           productId: inserted.id,
-          position: idx,
+          position: (firstPositions.get(cId) ?? 1) - 1,
         }));
         await tx.insert(carouselProducts).values(recordsToInsert);
       }
@@ -711,6 +731,20 @@ export async function updateProductAction(productId: string, formData: FormData)
       });
       const customCarouselIds = storeCustomCarousels.map((c) => c.id);
 
+      // Posições atuais do produto (quem já estava no carrossel mantém o lugar)
+      let previousRows: { carouselId: string; position: number }[] = [];
+      if (customCarouselIds.length > 0) {
+        try {
+          previousRows = (await db.query.carouselProducts.findMany({
+            where: and(eq(carouselProducts.productId, productId), inArray(carouselProducts.carouselId, customCarouselIds)),
+            columns: { carouselId: true, position: true },
+          })) || [];
+        } catch {
+          previousRows = [];
+        }
+      }
+      const previousPosition = new Map(previousRows.map((r) => [r.carouselId, r.position]));
+
       // Delete existing custom carousel associations for this product (Top 15 ranking is strictly preserved!)
       if (customCarouselIds.length > 0) {
         await db.delete(carouselProducts).where(
@@ -723,10 +757,12 @@ export async function updateProductAction(productId: string, formData: FormData)
 
       // Insert new custom carousel associations
       if (selectedCarouselIds.length > 0) {
-        const recordsToInsert = selectedCarouselIds.map((cId, idx) => ({
+        // Carrossel em que o produto acabou de entrar: vai para o início (primeiro da esquerda)
+        const firstPositions = await carouselFirstPositions(db, selectedCarouselIds);
+        const recordsToInsert = selectedCarouselIds.map((cId) => ({
           carouselId: cId,
           productId,
-          position: idx,
+          position: previousPosition.has(cId) ? previousPosition.get(cId)! : (firstPositions.get(cId) ?? 1) - 1,
         }));
         await db.insert(carouselProducts).values(recordsToInsert);
       }

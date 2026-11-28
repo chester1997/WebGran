@@ -4,7 +4,6 @@ import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
 import { productCarousels, carouselProducts, telegramBots } from "@/db/schema";
 import { eq, and, asc, desc, count, isNull } from "drizzle-orm";
-import { isOwnerUser } from "@/lib/bots/owner-guard";
 import { revalidatePath } from "next/cache";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
@@ -49,11 +48,10 @@ function themeOptionsPayload(opts?: CarouselThemeOptions): Record<string, any> {
 }
 
 /**
- * Carrosséis por bot (em teste: só a conta proprietária). Devolve o bot quando ele é da loja e a conta
- * está no teste; senão null (carrossel da loja toda, como sempre).
+ * Carrosséis por bot. Devolve o bot quando ele é da loja; senão null (carrossel da loja toda).
  */
 async function carouselBotScope(store: { id: string; ownerId?: string | null }, botId?: string | null): Promise<string | null> {
-  if (!botId || !store.ownerId || !isOwnerUser({ id: store.ownerId })) return null;
+  if (!botId) return null;
   const bot = await db.query.telegramBots.findFirst({
     where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
     columns: { id: true },
@@ -73,7 +71,7 @@ export async function getOrCreateRankingCarouselAction(botId?: string | null) {
       : and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, true)),
     with: {
       items: {
-        orderBy: (items, { asc }) => [asc(items.position)],
+        orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)],
         with: {
           product: true
         }
@@ -202,10 +200,16 @@ export async function createCarouselAction(
   if (!store) throw new Error("Loja não encontrada");
   if (!name.trim()) throw new Error("Nome do carrossel é obrigatório");
 
+  // Limite do plano conta por bot (cada bot tem os seus carrosséis)
+  const scopedBotId = await carouselBotScope(store, botId);
   const [carouselCountRes] = await db
     .select({ value: count() })
     .from(productCarousels)
-    .where(and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, false)));
+    .where(and(
+      eq(productCarousels.storeId, store.id),
+      eq(productCarousels.isRanking, false),
+      scopedBotId ? eq(productCarousels.botId, scopedBotId) : isNull(productCarousels.botId)
+    ));
   const currentCount = carouselCountRes?.value ?? 0;
 
   const check = await checkLimit(seller.id, "max_product_carousels", currentCount);
@@ -224,7 +228,7 @@ export async function createCarouselAction(
     position: 1,
     status: "active",
     isRanking: false,
-    botId: await carouselBotScope(store, botId),
+    botId: scopedBotId,
     ...themeOptionsPayload(themeOptions),
   }).returning();
 

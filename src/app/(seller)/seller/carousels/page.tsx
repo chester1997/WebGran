@@ -31,7 +31,7 @@ export default async function SellerCarouselsPage() {
     orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
     with: {
       items: {
-        orderBy: (items, { asc }) => [asc(items.position)],
+        orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)],
         with: {
           product: true
         }

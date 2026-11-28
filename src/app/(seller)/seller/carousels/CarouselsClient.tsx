@@ -14,6 +14,7 @@ interface CarouselsClientProps {
   standardCarousels: any[];
   storeProducts: any[];
   hideHeader?: boolean;
+  botId?: string;
 }
 
 export default function CarouselsClient({
@@ -21,6 +22,7 @@ export default function CarouselsClient({
   standardCarousels,
   storeProducts,
   hideHeader = false,
+  botId,
 }: CarouselsClientProps) {
   const rankingSelectedIds = rankingCarousel?.items
     ? rankingCarousel.items.map((i: any) => i.productId)
@@ -40,7 +42,7 @@ export default function CarouselsClient({
             </span>
           }
           subtitle="Personalize a seção de Ranking e crie carrosséis de produtos exibidos no seu Mini App."
-          actions={<CarouselModal products={storeProducts} />}
+          actions={<CarouselModal botId={botId} products={storeProducts} />}
         />
       )}
 
@@ -50,7 +52,7 @@ export default function CarouselsClient({
             <h3 className="text-sm font-bold text-white tracking-tight">Carrosséis da Loja</h3>
             <p className="text-xs text-zinc-400">Personalize o Ranking Editorial e carrosséis temáticos do Mini App.</p>
           </div>
-          <CarouselModal products={storeProducts} />
+          <CarouselModal botId={botId} products={storeProducts} />
         </div>
       )}
 
@@ -179,7 +181,7 @@ export default function CarouselsClient({
             <p className="text-zinc-500 text-xs max-w-sm mb-6">
               Crie carrosséis de produtos personalizados como "Lançamentos", "Mais Vendidos" ou "Doramas".
             </p>
-            <CarouselModal products={storeProducts} triggerText="Criar Carrossel" />
+            <CarouselModal botId={botId} products={storeProducts} triggerText="Criar Carrossel" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">

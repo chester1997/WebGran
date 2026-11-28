@@ -20,7 +20,7 @@ export default async function SellerProductsPage() {
   }
 
   // Consultas independentes em paralelo (antes rodavam uma depois da outra)
-  const [allProducts, allCategories, storeBots, allCarousels] = await Promise.all([
+  const [allProducts, allCategories, storeBots, rawCarousels] = await Promise.all([
     // Products with their categories and bot visibilities
     db.query.products.findMany({
       where: and(eq(products.storeId, store.id), notWebProduct()),
@@ -53,9 +53,18 @@ export default async function SellerProductsPage() {
         iconColor: true,
         status: true,
         position: true,
+        botId: true,
       }
     }),
   ]);
+
+  // Cada bot tem os seus carrosséis: mostra o bot no nome para não confundir carrosséis de mesmo nome
+  const botUsername = new Map(storeBots.map((b) => [b.id, b.username]));
+  const labeledCarousels = rawCarousels.map(({ botId, ...c }) => ({
+    ...c,
+    name: botId && botUsername.get(botId) ? `${c.name} · @${botUsername.get(botId)}` : c.name,
+  }));
+  const allCarousels = labeledCarousels;
 
   // Map product carousels
   const customCarouselIds = allCarousels.map((c) => c.id);

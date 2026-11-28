@@ -934,7 +934,7 @@ function CarouselFormModal({
   }, [storeProducts, selectedProductIds, productSearch]);
 
   const handleAddProduct = (id: string) => {
-    setSelectedProductIds((prev) => [...prev, id]);
+    setSelectedProductIds((prev) => [id, ...prev]);
   };
 
   const handleRemoveProduct = (id: string) => {

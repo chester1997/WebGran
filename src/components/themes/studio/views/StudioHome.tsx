@@ -68,7 +68,7 @@ export async function StudioHome({ storeSlug, originBotId, appearance = null }: 
       orderBy: [asc(productCarousels.botId)], // ASC = NULLS LAST: o do bot vem antes
       with: {
         items: {
-          orderBy: (items, { asc }) => [asc(items.position)],
+          orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)],
           with: {
             product: true
           }
@@ -85,7 +85,7 @@ export async function StudioHome({ storeSlug, originBotId, appearance = null }: 
       orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
       with: {
         items: {
-          orderBy: (items, { asc }) => [asc(items.position)],
+          orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)],
           with: {
             product: true
           }

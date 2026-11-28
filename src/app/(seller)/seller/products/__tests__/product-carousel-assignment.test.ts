@@ -239,7 +239,7 @@ describe("Product and Carousel Decoupling Suite", () => {
       expect(res.success).toBe(true);
       expect(insertCarouselsValuesFn).toHaveBeenCalledWith([
         { carouselId: "c-1", productId: "prod-new-1", position: 0 },
-        { carouselId: "c-2", productId: "prod-new-1", position: 1 },
+        { carouselId: "c-2", productId: "prod-new-1", position: 0 }, // produto novo entra no início de cada carrossel
       ]);
     });
 
@@ -305,7 +305,7 @@ describe("Product and Carousel Decoupling Suite", () => {
       expect(mockDb.delete).toHaveBeenCalled();
       expect(insertValuesFn).toHaveBeenCalledWith([
         { carouselId: "c-1", productId: "prod-existing-1", position: 0 },
-        { carouselId: "c-3", productId: "prod-existing-1", position: 1 },
+        { carouselId: "c-3", productId: "prod-existing-1", position: 0 }, // carrossel novo para o produto: entra no início
       ]);
     });
 

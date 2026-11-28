@@ -8,7 +8,7 @@ import {
   storeFloatingNotifications,
   productBotVisibility,
 } from "@/db/schema";
-import { eq, desc, and, asc, inArray } from "drizzle-orm";
+import { eq, desc, and, asc, inArray, or, isNull } from "drizzle-orm";
 import { getWelcomeSettingsAction } from "../boas-vindas/actions";
 import { getStoreBanners } from "../banners/actions";
 import { getCombosAction, getStoreActiveProductsAction } from "../combos/actions";
@@ -148,7 +148,8 @@ export async function loadBotTabData(
           db.query.productCarousels.findMany({
             where: and(
               eq(productCarousels.storeId, store.id),
-              eq(productCarousels.isRanking, false)
+              eq(productCarousels.isRanking, false),
+              ...(currentBotId ? [or(eq(productCarousels.botId, currentBotId), isNull(productCarousels.botId))!] : [])
             ),
             orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
             columns: {
@@ -262,19 +263,17 @@ export async function loadBotTabData(
 
       case "carrosseis": {
         const rankingCarousel = await getOrCreateRankingCarouselAction(currentBotId);
-        // Conta proprietária (teste): só os carrosséis deste bot. Demais lojas: todos, como sempre.
-        const { isOwnerUser } = await import("@/lib/bots/owner-guard");
-        const perBot = Boolean(currentBotId && isOwnerUser({ id: userId }));
+        // Carrosséis deste bot + os da loja toda (sem bot)
         const standardCarousels = await db.query.productCarousels.findMany({
           where: and(
             eq(productCarousels.storeId, store.id),
             eq(productCarousels.isRanking, false),
-            ...(perBot ? [eq(productCarousels.botId, currentBotId!)] : [])
+            ...(currentBotId ? [or(eq(productCarousels.botId, currentBotId), isNull(productCarousels.botId))!] : [])
           ),
           orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
           with: {
             items: {
-              orderBy: (items, { asc }) => [asc(items.position)],
+              orderBy: (items, { asc, desc }) => [asc(items.position), desc(items.createdAt)],
               with: {
                 product: true,
               },

@@ -8,6 +8,8 @@ import { createCarouselAction, updateCarouselAction } from "./actions";
 import { IconPickerModal } from "./IconPickerModal";
 
 interface CarouselModalProps {
+  /** Página do bot: carrossel novo fica só neste bot */
+  botId?: string;
   products?: Array<{ id: string; title: string; price: string | number; badge?: string | null }>;
   carousel?: {
     id: string;
@@ -20,7 +22,7 @@ interface CarouselModalProps {
   triggerText?: string;
 }
 
-export function CarouselModal({ carousel, triggerText }: CarouselModalProps) {
+export function CarouselModal({ carousel, triggerText, botId }: CarouselModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState(carousel?.name || "");
@@ -62,7 +64,9 @@ export function CarouselModal({ carousel, triggerText }: CarouselModalProps) {
           undefined, // Cria carrossel vazio sem exigir produtos prévios
           indicatorType,
           iconName,
-          iconColor
+          iconColor,
+          undefined,
+          botId
         );
       }
       setOpen(false);
