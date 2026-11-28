@@ -902,8 +902,6 @@ function CarouselFormModal({
   );
   const [iconName, setIconName] = useState<string>(carousel?.iconName || "Flame");
   const [iconColor, setIconColor] = useState<string>(carousel?.iconColor || "#8B5CF6");
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const [productSearch, setProductSearch] = useState("");
   const [xds, setXds] = useState<XdsCarouselValues>(xdsDefaults(carousel));
 
   const isEditing = !!carousel;
@@ -916,41 +914,10 @@ function CarouselFormModal({
       setIndicatorType((carousel?.indicatorType as "BAR" | "ICON" | "NONE") || "BAR");
       setIconName(carousel?.iconName || "Flame");
       setIconColor(carousel?.iconColor || "#8B5CF6");
-      const ids = carousel?.items?.map((i) => i.productId) || [];
-      setSelectedProductIds(ids);
-      setProductSearch("");
       setErrorMessage(null);
       setXds(xdsDefaults(carousel));
     }
   }, [isOpen, carousel]);
-
-  // Available products to add
-  const availableProducts = useMemo(() => {
-    return storeProducts.filter(
-      (p) =>
-        !selectedProductIds.includes(p.id) &&
-        p.title.toLowerCase().includes(productSearch.toLowerCase())
-    );
-  }, [storeProducts, selectedProductIds, productSearch]);
-
-  const handleAddProduct = (id: string) => {
-    setSelectedProductIds((prev) => [id, ...prev]);
-  };
-
-  const handleRemoveProduct = (id: string) => {
-    setSelectedProductIds((prev) => prev.filter((pId) => pId !== id));
-  };
-
-  const handleMoveProduct = (index: number, direction: "up" | "down") => {
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= selectedProductIds.length) return;
-
-    const newList = [...selectedProductIds];
-    const temp = newList[index];
-    newList[index] = newList[targetIndex];
-    newList[targetIndex] = temp;
-    setSelectedProductIds(newList);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -967,7 +934,7 @@ function CarouselFormModal({
         await updateCarouselAction(
           carousel.id,
           name.trim(),
-          selectedProductIds,
+          undefined, // mantém os produtos (associados pela aba Produtos)
           indicatorType,
           iconName,
           iconColor,
@@ -978,7 +945,7 @@ function CarouselFormModal({
       } else {
         await createCarouselAction(
           name.trim(),
-          selectedProductIds,
+          undefined, // carrossel nasce vazio; produtos entram pela aba Produtos
           indicatorType,
           iconName,
           iconColor,
@@ -1070,117 +1037,12 @@ function CarouselFormModal({
             {/* Visual no Tema XDs (Destaque, cards grandes/pequenos, Coleção) */}
             <XdsCarouselOptions value={xds} onChange={setXds} />
 
-            {/* Gestão e Ordenação de Produtos */}
-            <div className="space-y-3 pt-2 border-t border-white/5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider block">
-                  Produtos Associados ({selectedProductIds.length})
-                </label>
-                <span className="text-[11px] text-zinc-500">
-                  Arraste ou ordene pelos botões
-                </span>
-              </div>
-
-              {/* Lista dos produtos selecionados */}
-              {selectedProductIds.length === 0 ? (
-                <div className="p-4 text-center bg-[#181820] border border-white/5 rounded-xl text-zinc-500 text-xs">
-                  Nenhum produto associado ainda. Escolha produtos abaixo para incluir neste carrossel.
-                </div>
-              ) : (
-                <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                  {selectedProductIds.map((pId, idx) => {
-                    const prod = storeProducts.find((p) => p.id === pId);
-                    if (!prod) return null;
-                    return (
-                      <div
-                        key={pId}
-                        className="flex items-center justify-between p-2 rounded-xl bg-[#181820] border border-white/5 text-xs text-white"
-                      >
-                        <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-2">
-                          <span className="w-5 h-5 rounded bg-zinc-800 text-zinc-400 flex items-center justify-center font-bold text-[10px] shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="truncate">{prod.title}</span>
-                          <span className="text-emerald-400 font-semibold tabular-nums ml-1 shrink-0">
-                            R$ {Number(prod.price).toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={() => handleMoveProduct(idx, "up")}
-                            className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 rounded"
-                            title="Subir posição"
-                          >
-                            <ArrowUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === selectedProductIds.length - 1}
-                            onClick={() => handleMoveProduct(idx, "down")}
-                            className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 rounded"
-                            title="Descer posição"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveProduct(pId)}
-                            className="p-1 text-red-400 hover:text-red-300 rounded ml-1"
-                            title="Remover"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Seletor de produtos disponíveis */}
-              <div className="space-y-2 pt-2">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    placeholder="Adicionar produto da loja ao carrossel..."
-                    className="w-full bg-[#181820] border border-white/10 rounded-xl pl-8 pr-4 py-2 text-xs text-white focus:outline-none focus:border-blue-500 placeholder:text-zinc-600"
-                  />
-                </div>
-
-                {availableProducts.length > 0 && (
-                  <div className="max-h-36 overflow-y-auto custom-scrollbar space-y-1">
-                    {availableProducts.slice(0, 8).map((p) => (
-                      <div
-                        key={p.id}
-                        onClick={() => handleAddProduct(p.id)}
-                        className="flex items-center justify-between p-2 rounded-xl bg-[#181820] hover:bg-white/10 border border-white/5 text-xs text-zinc-200 cursor-pointer transition-all"
-                      >
-                        <span className="truncate mr-2">{p.title}</span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-emerald-400 font-semibold tabular-nums">
-                            R$ {Number(p.price).toFixed(2).replace(".", ",")}
-                          </span>
-                          <Plus className="w-4 h-4 text-blue-400" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Dica sobre vinculação pela tela de produtos */}
-              <div className="bg-[#1A1A1E] rounded-xl p-3 border border-white/5 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Você também pode associar produtos a este carrossel diretamente no cadastro e edição de cada produto na tela de <strong className="text-zinc-200">Produtos</strong>.
-                </p>
-              </div>
+            {/* Produtos: associados no cadastro/edição de cada produto (aba Produtos), não aqui */}
+            <div className="bg-[#1A1A1E] rounded-xl p-3 border border-white/5 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Os produtos entram neste carrossel pelo cadastro ou edição de cada produto, na aba <strong className="text-zinc-200">Produtos</strong>. O carrossel aparece lá para você marcar.
+              </p>
             </div>
           </div>
 
