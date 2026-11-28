@@ -102,6 +102,8 @@ export interface CarouselsClientV2Props {
   standardCarousels: StandardCarousel[];
   storeProducts: ProductOption[];
   hideHeader?: boolean;
+  /** Página do bot: carrossel novo fica só neste bot (em teste: só a conta proprietária) */
+  botId?: string;
 }
 
 export default function CarouselsClientV2({
@@ -109,6 +111,7 @@ export default function CarouselsClientV2({
   standardCarousels,
   storeProducts,
   hideHeader = false,
+  botId,
 }: CarouselsClientV2Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -379,43 +382,32 @@ export default function CarouselsClientV2({
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 shrink-0">
-              <Button
-                variant="secondary"
-                size="sm"
+            <div className="flex items-center gap-2 shrink-0 self-center">
+              <button
+                type="button"
                 onClick={handleToggleRankingStatus}
                 disabled={actionLoadingId === "toggle-ranking"}
-                className="gap-1.5 text-xs text-zinc-300 hover:text-white"
-                title={
-                  rankingCarousel.status === "active"
-                    ? "Ocultar ranking do Mini App"
-                    : "Ativar ranking no Mini App"
-                }
+                title={rankingCarousel.status === "active" ? "Ocultar ranking do Mini App" : "Ativar ranking no Mini App"}
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[10px] border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-[13px] font-medium text-zinc-200 disabled:opacity-60 transition"
               >
                 {actionLoadingId === "toggle-ranking" ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : rankingCarousel.status === "active" ? (
-                  <>
-                    <EyeOff className="w-3.5 h-3.5 text-zinc-400" />
-                    <span className="hidden sm:inline">Ocultar</span>
-                  </>
+                  <EyeOff className="w-4 h-4 text-zinc-400" />
                 ) : (
-                  <>
-                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="hidden sm:inline">Ativar</span>
-                  </>
+                  <Eye className="w-4 h-4 text-emerald-400" />
                 )}
-              </Button>
+                <span>{rankingCarousel.status === "active" ? "Ocultar" : "Ativar"}</span>
+              </button>
 
-              <Button
-                variant="primary"
-                size="sm"
+              <button
+                type="button"
                 onClick={() => setIsRankingModalOpen(true)}
-                className="gap-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 border-0 shadow-lg shadow-red-600/20 text-xs"
+                className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-[10px] bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 shadow-lg shadow-red-600/20 text-[13px] font-semibold text-white transition"
               >
-                <Trophy className="w-3.5 h-3.5 text-amber-300" />
+                <Trophy className="w-4 h-4 text-amber-200" />
                 <span>Gerenciar Top 15</span>
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -527,15 +519,14 @@ export default function CarouselsClientV2({
             </span>
           </h3>
 
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 gap-1.5"
+            className="inline-flex items-center gap-2 h-9 pl-3 pr-4 rounded-[10px] bg-[#3b82f6] hover:bg-[#2563eb] active:scale-[0.98] text-white text-[13px] font-semibold shadow-[0_6px_18px_-6px_rgba(59,130,246,0.6)] transition"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Criar Carrossel</span>
-          </Button>
+            <Plus className="w-4 h-4" strokeWidth={2.5} />
+            Criar carrossel
+          </button>
         </div>
 
         {filteredCarousels.length === 0 ? (
@@ -579,79 +570,34 @@ export default function CarouselsClientV2({
               return (
                 <div
                   key={carousel.id}
-                  className="bg-[#121214] border border-white/[0.08] hover:border-white/20 rounded-2xl p-4 shadow-xl flex flex-col justify-between space-y-4 transition-all duration-200"
+                  className="bg-[#121214] border border-white/[0.08] hover:border-white/20 rounded-2xl p-4 shadow-xl flex flex-col gap-3.5 transition-all duration-200"
                 >
-                  <div>
-                    {/* Header do Card */}
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        {carousel.indicatorType === "ICON" ? (
-                          <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                            <CarouselIconRenderer
-                              iconName={carousel.iconName || "Flame"}
-                              color={carousel.iconColor || "#8B5CF6"}
-                              size={16}
-                            />
-                          </div>
-                        ) : carousel.indicatorType === "NONE" ? null : (
-                          <div
-                            className="w-1.5 h-6 rounded-full shrink-0"
-                            style={{ backgroundColor: carousel.iconColor || "#8B5CF6" }}
-                          />
-                        )}
-                        <h4 className="font-bold text-white text-sm uppercase tracking-tight truncate">
-                          {carousel.name}
-                        </h4>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Chip
-                          label={carousel.status === "active" ? "Ativo" : "Oculto"}
-                          variant={carousel.status === "active" ? "active" : "inactive"}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Contagem e lista de produtos */}
-                    <div className="bg-[#17171A] rounded-xl p-3 border border-white/5 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-zinc-400 pb-1 border-b border-white/5">
-                        <span className="font-medium">Produtos no Carrossel</span>
-                        <span className="font-semibold text-white tabular-nums">
-                          {activeProducts.length} item{activeProducts.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-
-                      {activeProducts.length === 0 ? (
-                        <div className="py-3 text-center space-y-1">
-                          <p className="text-zinc-500 text-xs font-medium">Nenhum produto vinculado</p>
-                          <p className="text-[11px] text-zinc-600">
-                            Edite o carrossel ou vincule produtos pela tela de Produtos.
-                          </p>
-                        </div>
+                  {/* Card: posição, ícone e nome */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-8 h-8 rounded-lg bg-[#3b82f6]/15 border border-[#3b82f6]/30 text-[#60a5fa] text-[13px] font-extrabold tabular-nums flex items-center justify-center shrink-0" title={`${idx + 1}º no Mini App`}>
+                      {idx + 1}
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center shrink-0">
+                      {carousel.indicatorType === "BAR" ? (
+                        <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: carousel.iconColor || "#8B5CF6" }} />
                       ) : (
-                        <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1">
-                          {activeProducts.slice(0, 4).map((prod) => (
-                            <div
-                              key={prod.id}
-                              className="flex items-center justify-between text-xs py-1 px-1.5 rounded-lg bg-[#121214] border border-white/5"
-                            >
-                              <span className="text-zinc-300 truncate max-w-[170px]">
-                                {prod.title}
-                              </span>
-                              <span className="text-emerald-400 font-semibold tabular-nums ml-2 shrink-0">
-                                R$ {Number(prod.price).toFixed(2).replace(".", ",")}
-                              </span>
-                            </div>
-                          ))}
-                          {activeProducts.length > 4 && (
-                            <p className="text-[11px] text-zinc-500 text-center pt-1 font-medium">
-                              + {activeProducts.length - 4} outros produtos
-                            </p>
-                          )}
-                        </div>
+                        <CarouselIconRenderer iconName={carousel.iconName || "Flame"} color={carousel.iconColor || "#8B5CF6"} size={20} />
                       )}
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-white text-sm uppercase tracking-tight truncate">{carousel.name}</h4>
+                      <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
+                        {activeProducts.length} {activeProducts.length === 1 ? "produto" : "produtos"}
+                        {carousel.displayStyle && carousel.displayStyle !== "small"
+                          ? ` · ${carousel.displayStyle === "large" ? "Cards grandes" : carousel.displayStyle === "featured" ? "Destaque" : "Coleção"}`
+                          : ""}
+                      </p>
+                    </div>
+                    <Chip
+                      label={carousel.status === "active" ? "Ativo" : "Oculto"}
+                      variant={carousel.status === "active" ? "active" : "inactive"}
+                      size="sm"
+                    />
                   </div>
 
                   {/* Rodapé de Ações */}
@@ -857,6 +803,7 @@ export default function CarouselsClientV2({
 
       {/* 6. Modal de Criação / Edição de Carrossel Padrão */}
       <CarouselFormModal
+        botId={botId}
         isOpen={isCreateModalOpen || !!editingCarousel}
         onClose={() => {
           setIsCreateModalOpen(false);
@@ -929,6 +876,7 @@ export default function CarouselsClientV2({
 // Subcomponente: Modal de Criação / Edição de Carrossel
 // ==========================================
 interface CarouselFormModalProps {
+  botId?: string;
   isOpen: boolean;
   onClose: () => void;
   carousel: StandardCarousel | null;
@@ -937,6 +885,7 @@ interface CarouselFormModalProps {
 }
 
 function CarouselFormModal({
+  botId,
   isOpen,
   onClose,
   carousel,
@@ -1033,7 +982,8 @@ function CarouselFormModal({
           indicatorType,
           iconName,
           iconColor,
-          xds
+          xds,
+          botId
         );
         onSuccess(`Carrossel "${name.trim()}" criado com sucesso!`);
       }

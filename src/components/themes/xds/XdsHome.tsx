@@ -2,7 +2,7 @@ import React from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { products, banners, telegramBots, productCarousels } from "@/db/schema";
-import { eq, desc, and, asc, inArray } from "drizzle-orm";
+import { eq, desc, and, asc, inArray, isNull, or } from "drizzle-orm";
 import { getStoreBySlug } from "@/lib/store-cache";
 import { CatalogResolverService } from "@/lib/products/catalog-resolver";
 import { HeroBanner } from "../studio/components/HeroBanner";
@@ -45,7 +45,12 @@ export async function XdsHome({
       limit: 5,
     }),
     db.query.productCarousels.findMany({
-      where: and(eq(productCarousels.storeId, store.id), eq(productCarousels.status, "active")),
+      where: and(
+        eq(productCarousels.storeId, store.id),
+        eq(productCarousels.status, "active"),
+        // Carrosséis da loja toda (bot_id vazio) + os deste bot
+        originBotId ? or(isNull(productCarousels.botId), eq(productCarousels.botId, originBotId)) : isNull(productCarousels.botId)
+      ),
       orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
       with: { items: { orderBy: (items, { asc }) => [asc(items.position)], with: { product: true } } },
     }),
@@ -60,7 +65,7 @@ export async function XdsHome({
       .filter((p): p is typeof products.$inferSelect => Boolean(p && p.status === "active" && visibleSet.has(p.id)))
       .map((p) => ({ id: p.id, slug: p.slug, title: p.title, coverUrl: p.coverUrl, bannerUrl: p.bannerUrl, price: p.price }));
 
-  const ranking = carousels.find((c) => c.isRanking);
+  const ranking = carousels.find((c) => c.isRanking && c.botId) || carousels.find((c) => c.isRanking);
   const rankingProducts = ranking ? toProducts(ranking.items) : [];
   const standard = carousels
     .filter((c) => !c.isRanking)

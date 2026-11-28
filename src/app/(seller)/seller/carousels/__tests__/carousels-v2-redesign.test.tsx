@@ -310,8 +310,8 @@ describe("ETAPA 4.7 — REDESIGN V2 DA PÁGINA DE CARROSSÉIS (/seller/carousels
 
       expect(html).toContain("Lançamentos");
       expect(html).toContain("Ofertas Especiais");
-      expect(html).toContain("1 item");
-      expect(html).toContain("0 items");
+      expect(html).toContain("1 produto");
+      expect(html).toContain("0 produtos");
       expect(html).toContain("1º");
       expect(html).toContain("2º");
     });
@@ -347,7 +347,7 @@ describe("ETAPA 4.7 — REDESIGN V2 DA PÁGINA DE CARROSSÉIS (/seller/carousels
   });
 
   describe("3. Preservação de Regras de Negócio e Dados", () => {
-    it("deve exibir corretamente os preços dos produtos vinculados formatados em Real (R$)", () => {
+    it("mostra só ícone, nome e ordem no card do carrossel (sem a lista de produtos)", () => {
       const html = renderToStaticMarkup(
         <CarouselsClientV2
           rankingCarousel={mockRankingCarousel}
@@ -356,7 +356,8 @@ describe("ETAPA 4.7 — REDESIGN V2 DA PÁGINA DE CARROSSÉIS (/seller/carousels
         />
       );
 
-      expect(html).toContain("R$ 97,00");
+      expect(html).not.toContain("Produtos no Carrossel");
+      expect(html).toContain("Lançamentos");
     });
 
     it("deve identificar visualmente carrosséis com status Oculto/Inativo", () => {

@@ -261,11 +261,15 @@ export async function loadBotTabData(
       }
 
       case "carrosseis": {
-        const rankingCarousel = await getOrCreateRankingCarouselAction();
+        const rankingCarousel = await getOrCreateRankingCarouselAction(currentBotId);
+        // Conta proprietária (teste): só os carrosséis deste bot. Demais lojas: todos, como sempre.
+        const { isOwnerUser } = await import("@/lib/bots/owner-guard");
+        const perBot = Boolean(currentBotId && isOwnerUser({ id: userId }));
         const standardCarousels = await db.query.productCarousels.findMany({
           where: and(
             eq(productCarousels.storeId, store.id),
-            eq(productCarousels.isRanking, false)
+            eq(productCarousels.isRanking, false),
+            ...(perBot ? [eq(productCarousels.botId, currentBotId!)] : [])
           ),
           orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
           with: {

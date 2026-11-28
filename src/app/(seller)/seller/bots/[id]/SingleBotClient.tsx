@@ -150,7 +150,7 @@ export default function SingleBotClient({
   const ProductsListTab = (useRedesignV2 ? ProductsListClientV2 : ProductsListClient) as typeof ProductsListClient;
   const CombosTab = (useRedesignV2 ? CombosClientV2 : CombosClient) as typeof CombosClient;
   const VideosTab = (useRedesignV2 ? VideoLibraryClientV2 : VideosClient) as typeof VideosClient;
-  const CarouselsTab = (useRedesignV2 ? CarouselsClientV2 : CarouselsClient) as typeof CarouselsClient;
+  const CarouselsTab = (useRedesignV2 ? CarouselsClientV2 : CarouselsClient) as React.ComponentType<React.ComponentProps<typeof CarouselsClient> & { botId?: string }>;
   const CategoriesTab = (useRedesignV2 ? CategoriesClientV2 : CategoriesClient) as typeof CategoriesClient;
   const ClipsTab = (useRedesignV2 ? ClipsClientV2 : ClipsClient) as typeof ClipsClient;
   const CouponsTab = (useRedesignV2 ? CouponsClientV2 : CouponsClient) as typeof CouponsClient;
@@ -578,6 +578,7 @@ export default function SingleBotClient({
             standardCarousels={tabCache.carouselsData.standardCarousels}
             storeProducts={tabCache.carouselsData.storeProducts}
             hideHeader={true}
+            botId={bot.id}
           />
         ) : (
           <div className="flex items-center justify-center p-12 text-zinc-400">

@@ -440,6 +440,8 @@ export const productCarousels = pgTable('product_carousels', {
   coverImageUrl: text('cover_image_url'),
   subtitle: text('subtitle'),
   badgeColor: text('badge_color'),
+  // Carrossel de um bot só (migration 0039). null = todos os bots da loja
+  botId: uuid('bot_id').references(() => telegramBots.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({

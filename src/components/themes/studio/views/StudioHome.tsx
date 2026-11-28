@@ -2,7 +2,7 @@ import React from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { stores, products, categories, banners, telegramBots, productCarousels } from "@/db/schema";
-import { eq, desc, and, asc, inArray } from "drizzle-orm";
+import { eq, desc, and, asc, inArray, isNull, or } from "drizzle-orm";
 import { HeroBanner } from "../components/HeroBanner";
 import { ProductCarousel } from "../components/ProductCarousel";
 import { TopTenCarousel } from "../components/TopTenCarousel";
@@ -40,6 +40,10 @@ export async function StudioHome({ storeSlug, originBotId, appearance = null }: 
 
   const visibleProductIds = await CatalogResolverService.getVisibleProductIds(store.id, originBotId);
   const visibleSet = new Set(visibleProductIds);
+  // Carrosséis da loja toda (bot_id vazio) + os do bot que abriu o Mini App
+  const botScope = originBotId
+    ? or(isNull(productCarousels.botId), eq(productCarousels.botId, originBotId))
+    : isNull(productCarousels.botId);
 
   const [
     storeBanners,
@@ -53,12 +57,15 @@ export async function StudioHome({ storeSlug, originBotId, appearance = null }: 
       orderBy: [asc(banners.position), desc(banners.createdAt)],
       limit: 5
     }),
+    // Top 15: o do bot (quando houver) ou o da loja toda
     db.query.productCarousels.findFirst({
       where: and(
         eq(productCarousels.storeId, store.id),
         eq(productCarousels.isRanking, true),
-        eq(productCarousels.status, 'active')
+        eq(productCarousels.status, 'active'),
+        botScope
       ),
+      orderBy: [asc(productCarousels.botId)], // ASC = NULLS LAST: o do bot vem antes
       with: {
         items: {
           orderBy: (items, { asc }) => [asc(items.position)],
@@ -72,7 +79,8 @@ export async function StudioHome({ storeSlug, originBotId, appearance = null }: 
       where: and(
         eq(productCarousels.storeId, store.id),
         eq(productCarousels.isRanking, false),
-        eq(productCarousels.status, 'active')
+        eq(productCarousels.status, 'active'),
+        botScope
       ),
       orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)],
       with: {

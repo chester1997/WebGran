@@ -2,8 +2,9 @@
 
 import { requireSeller, getCurrentStore } from "@/lib/auth";
 import { db } from "@/db";
-import { productCarousels, carouselProducts } from "@/db/schema";
-import { eq, and, asc, desc, count } from "drizzle-orm";
+import { productCarousels, carouselProducts, telegramBots } from "@/db/schema";
+import { eq, and, asc, desc, count, isNull } from "drizzle-orm";
+import { isOwnerUser } from "@/lib/bots/owner-guard";
 import { revalidatePath } from "next/cache";
 import { checkLimit } from "@/lib/entitlements/entitlement-service";
 
@@ -47,13 +48,29 @@ function themeOptionsPayload(opts?: CarouselThemeOptions): Record<string, any> {
   };
 }
 
-export async function getOrCreateRankingCarouselAction() {
+/**
+ * Carrosséis por bot (em teste: só a conta proprietária). Devolve o bot quando ele é da loja e a conta
+ * está no teste; senão null (carrossel da loja toda, como sempre).
+ */
+async function carouselBotScope(store: { id: string; ownerId?: string | null }, botId?: string | null): Promise<string | null> {
+  if (!botId || !store.ownerId || !isOwnerUser({ id: store.ownerId })) return null;
+  const bot = await db.query.telegramBots.findFirst({
+    where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, store.id)),
+    columns: { id: true },
+  });
+  return bot?.id || null;
+}
+
+export async function getOrCreateRankingCarouselAction(botId?: string | null) {
   await requireSeller();
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
+  const scopedBotId = await carouselBotScope(store, botId);
 
   let ranking = await db.query.productCarousels.findFirst({
-    where: and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, true)),
+    where: scopedBotId
+      ? and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, true), eq(productCarousels.botId, scopedBotId))
+      : and(eq(productCarousels.storeId, store.id), eq(productCarousels.isRanking, true)),
     with: {
       items: {
         orderBy: (items, { asc }) => [asc(items.position)],
@@ -71,6 +88,7 @@ export async function getOrCreateRankingCarouselAction() {
         storeId: store.id,
         name: "Top 15 Hoje",
         isRanking: true,
+        botId: scopedBotId,
         indicatorType: "ICON",
         iconName: "Trophy",
         iconColor: "#FFD700",
@@ -176,7 +194,8 @@ export async function createCarouselAction(
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
   iconColor?: string,
-  themeOptions?: CarouselThemeOptions
+  themeOptions?: CarouselThemeOptions,
+  botId?: string | null
 ) {
   const seller = await requireSeller();
   const store = await getCurrentStore();
@@ -205,6 +224,7 @@ export async function createCarouselAction(
     position: 1,
     status: "active",
     isRanking: false,
+    botId: await carouselBotScope(store, botId),
     ...themeOptionsPayload(themeOptions),
   }).returning();
 
@@ -323,10 +343,18 @@ export async function moveCarouselPositionAction(carouselId: string, direction: 
   const store = await getCurrentStore();
   if (!store) throw new Error("Loja não encontrada");
 
+  // Reordena só entre os carrosséis do mesmo bot (ou os da loja toda)
+  const moving = await db.query.productCarousels.findFirst({
+    where: and(eq(productCarousels.id, carouselId), eq(productCarousels.storeId, store.id)),
+    columns: { botId: true },
+  });
+  if (!moving) return { success: false };
+
   const carousels = await db.query.productCarousels.findMany({
     where: and(
       eq(productCarousels.storeId, store.id),
-      eq(productCarousels.isRanking, false)
+      eq(productCarousels.isRanking, false),
+      moving.botId ? eq(productCarousels.botId, moving.botId) : isNull(productCarousels.botId)
     ),
     orderBy: [asc(productCarousels.position), desc(productCarousels.createdAt)]
   });
