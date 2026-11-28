@@ -18,6 +18,7 @@ import ConversasCenter from "../components/ConversasCenter";
 import ConversasCenterV2 from "../components/ConversasCenterV2";
 import BotSettingsTab from "../components/BotSettingsTab";
 import BotPersonalizationTab from "../components/BotPersonalizationTab";
+import BotThemesTab from "../components/BotThemesTab";
 
 import WelcomeClient from "@/app/(seller)/seller/boas-vindas/WelcomeClient";
 import BannersClient from "@/app/(seller)/seller/banners/BannersClient";
@@ -487,6 +488,8 @@ export default function SingleBotClient({
           showNotification={showNotification}
         />
       )}
+
+      {activeTab === "temas" && personalization && <BotThemesTab botUsername={bot.username} />}
 
       {activeTab === "boas-vindas" && (
         tabCache.welcomeSettings ? (

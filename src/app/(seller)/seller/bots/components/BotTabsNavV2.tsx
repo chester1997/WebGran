@@ -50,7 +50,7 @@ export function buildBotTabGroupsV2(opts: { isAdmin: boolean; mode?: string; sho
       tabs: [
         { id: "visao-geral", label: "Visão geral", icon: SolarSellerOverviewIcon },
         { id: "configuracao", label: "Configuração", icon: SolarSellerBotIcon },
-        ...(opts.showPersonalization && isMiniApp ? [{ id: "personalizacao", label: "Personalização", icon: SolarSellerPersonalizeIcon }] : []),
+        ...(opts.showPersonalization && isMiniApp ? [{ id: "personalizacao", label: "Personalização", icon: SolarSellerPersonalizeIcon }, { id: "temas", label: "Temas", icon: SolarSellerBannersIcon }] : []),
         { id: "boas-vindas", label: "Boas-vindas", icon: SolarSellerWelcomeIcon },
       ],
     },
