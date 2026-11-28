@@ -30,7 +30,7 @@ import {
   VideoItemV2,
 } from "./types";
 import { BotPicker } from "./BotPicker";
-import { CarouselOption, carouselsForBots } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots, isCarouselSelected, toggleCarouselSelection } from "../ProductCarouselsPicker";
 
 interface ProductDetailsStepProps {
   state: NewProductFormStateV2;
@@ -912,7 +912,7 @@ export function ProductDetailsStep({
                 {botCarousels.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {botCarousels.map((c) => {
-                      const isSelected = state.selectedCarouselIds.includes(c.id);
+                      const isSelected = isCarouselSelected(c, state.selectedCarouselIds);
                       return (
                         <button
                           key={c.id}
@@ -920,9 +920,7 @@ export function ProductDetailsStep({
                           onClick={() => {
                             setState((prev) => ({
                               ...prev,
-                              selectedCarouselIds: isSelected
-                                ? prev.selectedCarouselIds.filter((id) => id !== c.id)
-                                : [...prev.selectedCarouselIds, c.id],
+                              selectedCarouselIds: toggleCarouselSelection(c, prev.selectedCarouselIds),
                             }));
                           }}
                           style={{

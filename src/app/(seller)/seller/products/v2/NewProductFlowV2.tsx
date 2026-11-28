@@ -11,7 +11,7 @@ import {
   INITIAL_FORM_STATE,
 } from "./types";
 import { createProductAction } from "../actions";
-import { CarouselOption, carouselsForBots } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots, expandCarouselSelection } from "../ProductCarouselsPicker";
 
 export interface NewProductFlowV2Props {
   isOpen: boolean;
@@ -174,10 +174,7 @@ export function NewProductFlowV2({
       // Mini App Showcase
       if (formState.selectedCarouselIds && formState.selectedCarouselIds.length > 0) {
         // Só carrosséis do(s) bot(s) deste produto
-        const allowedCarouselIds = new Set(
-          carouselsForBots(carousels, formState.catalogScope, [formState.selectedBotId, ...(formState.targetBotIds || [])]).map((c) => c.id)
-        );
-        formData.append("carouselIds", JSON.stringify(formState.selectedCarouselIds.filter((id) => allowedCarouselIds.has(id))));
+        formData.append("carouselIds", JSON.stringify(expandCarouselSelection(carouselsForBots(carousels, formState.catalogScope, [formState.selectedBotId, ...(formState.targetBotIds || [])]), formState.selectedCarouselIds)));
       } else {
         // Mark as initialized empty so carousels aren't ignored
         formData.append("carouselIds_initialized", "true");

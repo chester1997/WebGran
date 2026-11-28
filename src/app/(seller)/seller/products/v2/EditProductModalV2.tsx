@@ -27,7 +27,7 @@ import {
   DELIVERY_TYPE_CONFIG,
 } from "./types";
 import { BotPicker } from "./BotPicker";
-import { CarouselOption, carouselsForBots } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots, expandCarouselSelection, isCarouselSelected, toggleCarouselSelection } from "../ProductCarouselsPicker";
 import { updateProductAction, getProductVisibilitiesAction } from "../actions";
 
 export interface EditProductModalV2Props {
@@ -521,8 +521,7 @@ export function EditProductModalV2({
 
       if (selectedCarouselIds.length > 0) {
         // Só carrosséis do(s) bot(s) deste produto
-        const allowedCarouselIds = new Set(carouselsForBots(carousels, catalogScope, [selectedBotId, ...selectedBotIds]).map((c) => c.id));
-        formData.set("carouselIds", JSON.stringify(selectedCarouselIds.filter((id) => allowedCarouselIds.has(id))));
+        formData.set("carouselIds", JSON.stringify(expandCarouselSelection(carouselsForBots(carousels, catalogScope, [selectedBotId, ...selectedBotIds]), selectedCarouselIds)));
       } else {
         formData.set("carouselIds_initialized", "true");
       }
@@ -1221,15 +1220,13 @@ export function EditProductModalV2({
                 {botCarousels.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {botCarousels.map((car) => {
-                      const isSelected = selectedCarouselIds.includes(car.id);
+                      const isSelected = isCarouselSelected(car, selectedCarouselIds);
                       return (
                         <button
                           key={car.id}
                           type="button"
                           onClick={() => {
-                            setSelectedCarouselIds((prev) =>
-                              isSelected ? prev.filter((id) => id !== car.id) : [...prev, car.id]
-                            );
+                            setSelectedCarouselIds((prev) => toggleCarouselSelection(car, prev));
                           }}
                           style={{
                             borderColor: isSelected ? config.cc : "#26262a",

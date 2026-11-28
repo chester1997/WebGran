@@ -14,24 +14,60 @@ export interface CarouselOption {
   status?: string | null;
   /** Bot dono do carrossel (null = todos os bots da loja) */
   botId?: string | null;
-  /** @username do bot, mostrado só quando a lista mistura carrosséis de bots diferentes */
+  /** @username do bot */
   botLabel?: string | null;
+  /** Carrosséis com o mesmo nome nos outros bots do produto (marcar um vale para todos) */
+  memberIds?: string[];
 }
 
 /**
  * Carrosséis que o produto pode usar: cada bot tem os seus. Produto de bot específico só vê os carrosséis
- * do(s) bot(s) dele (e os da loja toda). Quando a lista mistura bots, o nome ganha "· @bot".
+ * do(s) bot(s) dele (e os da loja toda). Carrosséis com o mesmo nome em bots diferentes aparecem uma vez só:
+ * marcar "LANÇAMENTO" coloca o produto no LANÇAMENTO de cada bot dele.
  */
 export function carouselsForBots<T extends CarouselOption>(
   carousels: T[],
   catalogScope: string | null | undefined,
   botIds: (string | null | undefined)[]
-): T[] {
+): (T & { memberIds: string[] })[] {
   const allowed = new Set(botIds.filter(Boolean) as string[]);
   const list = catalogScope === "BOT_SPECIFIC" ? carousels.filter((c) => !c.botId || allowed.has(c.botId)) : carousels;
-  const bots = new Set(list.map((c) => c.botId).filter(Boolean));
-  if (bots.size <= 1) return list;
-  return list.map((c) => (c.botId && c.botLabel ? { ...c, name: `${c.name} · @${c.botLabel}` } : c));
+  const groups = new Map<string, T & { memberIds: string[] }>();
+  const out: (T & { memberIds: string[] })[] = [];
+  for (const c of list) {
+    const key = (c.name || "").trim().toLowerCase() || `id:${c.id}`;
+    const g = groups.get(key);
+    if (g) g.memberIds.push(c.id);
+    else {
+      const rep = { ...c, memberIds: [c.id] };
+      groups.set(key, rep);
+      out.push(rep);
+    }
+  }
+  return out;
+}
+
+/** Todos os ids que uma opção representa */
+export function carouselMemberIds(c: CarouselOption): string[] {
+  return c.memberIds && c.memberIds.length > 0 ? c.memberIds : [c.id];
+}
+
+/** Opção marcada se qualquer carrossel dela já tem o produto */
+export function isCarouselSelected(c: CarouselOption, selectedIds: string[]): boolean {
+  return carouselMemberIds(c).some((id) => selectedIds.includes(id));
+}
+
+/** Ids a salvar: cada opção marcada entra com os carrosséis de todos os bots do produto */
+export function expandCarouselSelection(options: CarouselOption[], selectedIds: string[]): string[] {
+  return Array.from(new Set(options.filter((c) => isCarouselSelected(c, selectedIds)).flatMap(carouselMemberIds)));
+}
+
+/** Marca/desmarca a opção inteira */
+export function toggleCarouselSelection(c: CarouselOption, selectedIds: string[]): string[] {
+  const members = carouselMemberIds(c);
+  return isCarouselSelected(c, selectedIds)
+    ? selectedIds.filter((id) => !members.includes(id))
+    : [...selectedIds, ...members.filter((id) => !selectedIds.includes(id))];
 }
 
 interface ProductCarouselsPickerProps {
@@ -45,13 +81,8 @@ export function ProductCarouselsPicker({
   selectedIds,
   onChange,
 }: ProductCarouselsPickerProps) {
-  const toggleCarousel = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((item) => item !== id));
-    } else {
-      onChange([...selectedIds, id]);
-    }
-  };
+  const toggleCarousel = (c: CarouselOption) => onChange(toggleCarouselSelection(c, selectedIds));
+  const selectedCount = carousels.filter((c) => isCarouselSelected(c, selectedIds)).length;
 
   return (
     <div className="p-3.5 sm:p-4 rounded-xl bg-[#15171D] border border-white/[0.08] space-y-3 w-full">
@@ -60,9 +91,9 @@ export function ProductCarouselsPicker({
           <Layers className="w-3.5 h-3.5 text-blue-400" />
           Em quais carrosséis este produto deve aparecer?
         </label>
-        {carousels.length > 0 && selectedIds.length > 0 && (
+        {carousels.length > 0 && selectedCount > 0 && (
           <span className="text-[11px] font-semibold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
-            {selectedIds.length} selecionado{selectedIds.length > 1 ? "s" : ""}
+            {selectedCount} selecionado{selectedCount > 1 ? "s" : ""}
           </span>
         )}
       </div>
@@ -103,7 +134,7 @@ export function ProductCarouselsPicker({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto custom-scrollbar p-0.5">
           {carousels.map((c) => {
-            const isSelected = selectedIds.includes(c.id);
+            const isSelected = isCarouselSelected(c, selectedIds);
             const indicatorType = c.indicatorType || "BAR";
             const iconColor = c.iconColor || "#3B82F6";
 
@@ -111,7 +142,7 @@ export function ProductCarouselsPicker({
               <button
                 key={c.id}
                 type="button"
-                onClick={() => toggleCarousel(c.id)}
+                onClick={() => toggleCarousel(c)}
                 className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all group ${
                   isSelected
                     ? "bg-blue-500/10 border-blue-500/40 shadow-sm shadow-blue-500/5"
