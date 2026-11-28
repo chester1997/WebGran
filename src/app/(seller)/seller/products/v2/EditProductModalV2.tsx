@@ -27,7 +27,7 @@ import {
   DELIVERY_TYPE_CONFIG,
 } from "./types";
 import { BotPicker } from "./BotPicker";
-import { CarouselOption, carouselsForBots, expandCarouselSelection, isCarouselSelected, toggleCarouselSelection } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots, expandCarouselSelection, isCarouselSelected, toggleCarouselSelection, carouselsByBot } from "../ProductCarouselsPicker";
 import { updateProductAction, getProductVisibilitiesAction } from "../actions";
 
 export interface EditProductModalV2Props {
@@ -519,9 +519,12 @@ export function EditProductModalV2({
       formData.set("status", status);
       if (badge) formData.set("badge", badge);
 
+      // Só carrosséis do(s) bot(s) deste produto
+      const carouselOptions = carouselsForBots(carousels, catalogScope, [selectedBotId, ...selectedBotIds]);
+      // Só troca as marcações dos carrosséis mostrados aqui (os de outros bots ficam como estão)
+      formData.set("carouselScopeIds", JSON.stringify(carouselOptions.map((c) => c.id)));
       if (selectedCarouselIds.length > 0) {
-        // Só carrosséis do(s) bot(s) deste produto
-        formData.set("carouselIds", JSON.stringify(expandCarouselSelection(carouselsForBots(carousels, catalogScope, [selectedBotId, ...selectedBotIds]), selectedCarouselIds)));
+        formData.set("carouselIds", JSON.stringify(expandCarouselSelection(carouselOptions, selectedCarouselIds)));
       } else {
         formData.set("carouselIds_initialized", "true");
       }
@@ -1218,8 +1221,16 @@ export function EditProductModalV2({
                 </div>
 
                 {botCarousels.length > 0 ? (
+                  <div className="space-y-3">
+                  {carouselsByBot(botCarousels).map((group, gi, all) => (
+                  <div key={group.key}>
+                    {all.length > 1 && (
+                      <p className="text-[11px] font-semibold text-[#a1a1aa] mb-1.5 truncate">
+                        Carrosséis do bot <span style={{ color: config.cc }}>{group.label}</span>
+                      </p>
+                    )}
                   <div className="flex flex-wrap gap-2">
-                    {botCarousels.map((car) => {
+                    {group.items.map((car) => {
                       const isSelected = isCarouselSelected(car, selectedCarouselIds);
                       return (
                         <button
@@ -1239,6 +1250,9 @@ export function EditProductModalV2({
                         </button>
                       );
                     })}
+                  </div>
+                  </div>
+                  ))}
                   </div>
                 ) : (
                   <p className="text-[12px] text-[#71717a]">

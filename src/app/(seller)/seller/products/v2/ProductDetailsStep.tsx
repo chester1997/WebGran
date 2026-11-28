@@ -30,7 +30,7 @@ import {
   VideoItemV2,
 } from "./types";
 import { BotPicker } from "./BotPicker";
-import { CarouselOption, carouselsForBots, isCarouselSelected, toggleCarouselSelection } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots, isCarouselSelected, toggleCarouselSelection, carouselsByBot } from "../ProductCarouselsPicker";
 
 interface ProductDetailsStepProps {
   state: NewProductFormStateV2;
@@ -910,8 +910,16 @@ export function ProductDetailsStep({
                   Em quais carrosséis este produto deve aparecer?
                 </label>
                 {botCarousels.length > 0 ? (
+                  <div className="space-y-3">
+                  {carouselsByBot(botCarousels).map((group, gi, all) => (
+                  <div key={group.key}>
+                    {all.length > 1 && (
+                      <p className="text-[11px] font-semibold text-[#a1a1aa] mb-1.5 truncate">
+                        Carrosséis do bot <span style={{ color: config.cc }}>{group.label}</span>
+                      </p>
+                    )}
                   <div className="flex flex-wrap gap-2">
-                    {botCarousels.map((c) => {
+                    {group.items.map((c) => {
                       const isSelected = isCarouselSelected(c, state.selectedCarouselIds);
                       return (
                         <button
@@ -934,6 +942,9 @@ export function ProductDetailsStep({
                         </button>
                       );
                     })}
+                  </div>
+                  </div>
+                  ))}
                   </div>
                 ) : (
                   <p className="text-[12px] text-[#71717a]">Nenhum carrossel ativo cadastrado na loja.</p>

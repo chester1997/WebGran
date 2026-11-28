@@ -170,7 +170,10 @@ export function EditProductModal({
     formData.set("coverUrl", imageUrl);
     formData.set("bannerUrl", bannerUrl);
     // Só carrosséis do(s) bot(s) deste produto
-    formData.set("carouselIds", JSON.stringify(expandCarouselSelection(carouselsForBots(carousels, catalogScope, [selectedBotId, ...extraBotIds]), selectedCarouselIds)));
+    const carouselOptions = carouselsForBots(carousels, catalogScope, [selectedBotId, ...extraBotIds]);
+    formData.set("carouselIds", JSON.stringify(expandCarouselSelection(carouselOptions, selectedCarouselIds)));
+    // Só troca as marcações dos carrosséis mostrados aqui (os de outros bots ficam como estão)
+    formData.set("carouselScopeIds", JSON.stringify(carouselOptions.map((c) => c.id)));
 
     try {
       const res = await updateProductAction(product.id, formData);

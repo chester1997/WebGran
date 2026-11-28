@@ -21,9 +21,9 @@ export interface CarouselOption {
 }
 
 /**
- * Carrosséis que o produto pode usar: cada bot tem os seus. Produto de bot específico só vê os carrosséis
- * do(s) bot(s) dele (e os da loja toda). Carrosséis com o mesmo nome em bots diferentes aparecem uma vez só:
- * marcar "LANÇAMENTO" coloca o produto no LANÇAMENTO de cada bot dele.
+ * Carrosséis que o produto pode usar: cada bot tem os seus, e a escolha é separada por bot
+ * (marcar LANÇAMENTO de um bot não mexe no LANÇAMENTO de outro). Produto de bot específico
+ * só vê os carrosséis do(s) bot(s) dele (e os da loja toda).
  */
 export function carouselsForBots<T extends CarouselOption>(
   carousels: T[],
@@ -32,19 +32,18 @@ export function carouselsForBots<T extends CarouselOption>(
 ): (T & { memberIds: string[] })[] {
   const allowed = new Set(botIds.filter(Boolean) as string[]);
   const list = catalogScope === "BOT_SPECIFIC" ? carousels.filter((c) => !c.botId || allowed.has(c.botId)) : carousels;
-  const groups = new Map<string, T & { memberIds: string[] }>();
-  const out: (T & { memberIds: string[] })[] = [];
-  for (const c of list) {
-    const key = (c.name || "").trim().toLowerCase() || `id:${c.id}`;
-    const g = groups.get(key);
-    if (g) g.memberIds.push(c.id);
-    else {
-      const rep = { ...c, memberIds: [c.id] };
-      groups.set(key, rep);
-      out.push(rep);
-    }
+  return list.map((c) => ({ ...c, memberIds: [c.id] }));
+}
+
+/** Separa os carrosséis por bot, para a vendedora escolher em cada bot */
+export function carouselsByBot<T extends CarouselOption>(carousels: T[]): { key: string; label: string; items: T[] }[] {
+  const groups = new Map<string, { key: string; label: string; items: T[] }>();
+  for (const c of carousels) {
+    const key = c.botId || "all";
+    if (!groups.has(key)) groups.set(key, { key, label: c.botId ? (c.botLabel ? `@${c.botLabel}` : "Bot") : "Todos os bots", items: [] });
+    groups.get(key)!.items.push(c);
   }
-  return out;
+  return Array.from(groups.values());
 }
 
 /** Todos os ids que uma opção representa */
@@ -132,8 +131,16 @@ export function ProductCarouselsPicker({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto custom-scrollbar p-0.5">
-          {carousels.map((c) => {
+        <div className="max-h-72 overflow-y-auto custom-scrollbar p-0.5 space-y-3">
+          {carouselsByBot(carousels).map((group, gi, all) => (
+          <div key={group.key} className="space-y-1.5">
+            {all.length > 1 && (
+              <p className="text-[11px] font-semibold text-zinc-400 truncate">
+                Carrosséis do bot <span className="text-blue-400">{group.label}</span>
+              </p>
+            )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {group.items.map((c) => {
             const isSelected = isCarouselSelected(c, selectedIds);
             const indicatorType = c.indicatorType || "BAR";
             const iconColor = c.iconColor || "#3B82F6";
@@ -195,6 +202,9 @@ export function ProductCarouselsPicker({
               </button>
             );
           })}
+        </div>
+          </div>
+          ))}
         </div>
       )}
     </div>

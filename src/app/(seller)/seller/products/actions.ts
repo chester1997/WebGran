@@ -751,7 +751,18 @@ export async function updateProductAction(productId: string, formData: FormData)
         ),
         columns: { id: true },
       });
-      const customCarouselIds = storeCustomCarousels.map((c) => c.id);
+      let customCarouselIds = storeCustomCarousels.map((c) => c.id);
+      // Formulário que mostra só alguns carrosséis (ex.: aba de um bot): não mexe nos dos outros bots
+      const rawScope = formData.get("carouselScopeIds");
+      if (typeof rawScope === "string" && rawScope) {
+        try {
+          const scope = JSON.parse(rawScope);
+          if (Array.isArray(scope)) {
+            const scoped = new Set(scope.map(String));
+            customCarouselIds = customCarouselIds.filter((id) => scoped.has(id));
+          }
+        } catch {}
+      }
 
       // Posições atuais do produto (quem já estava no carrossel mantém o lugar)
       let previousRows: { carouselId: string; position: number }[] = [];
