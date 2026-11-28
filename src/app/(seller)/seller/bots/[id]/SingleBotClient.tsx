@@ -489,7 +489,7 @@ export default function SingleBotClient({
         />
       )}
 
-      {activeTab === "temas" && personalization && <BotThemesTab botUsername={bot.username} />}
+      {activeTab === "temas" && personalization && <BotThemesTab botId={bot.id} botUsername={bot.username} currentTheme={personalization.appearance.theme} ready={personalization.ready} />}
 
       {activeTab === "boas-vindas" && (
         tabCache.welcomeSettings ? (

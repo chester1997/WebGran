@@ -21,11 +21,17 @@ export interface BotAppearance {
   showExtraButtons: boolean;
   /** Texto do botão que abre a loja nas boas-vindas. null = "🛍️ ABRIR LOJA" */
   welcomeButtonText: string | null;
+  /** Tema do Mini App: null = Padrão */
+  theme: MiniAppTheme | null;
 }
+
+export type MiniAppTheme = "xds";
+export const MINIAPP_THEMES: MiniAppTheme[] = ["xds"];
+const normalizeTheme = (v: unknown): MiniAppTheme | null => (MINIAPP_THEMES.includes(v as MiniAppTheme) ? (v as MiniAppTheme) : null);
 
 export const DEFAULT_OPEN_LABEL = "🛍️ ABRIR LOJA";
 
-export const EMPTY_APPEARANCE: BotAppearance = { displayName: null, logoUrl: null, accentColor: null, showExtraButtons: false, welcomeButtonText: null };
+export const EMPTY_APPEARANCE: BotAppearance = { displayName: null, logoUrl: null, accentColor: null, showExtraButtons: false, welcomeButtonText: null, theme: null };
 
 const isMissing = (e: unknown) => {
   const code = (e as { code?: string; cause?: { code?: string } })?.code || (e as { cause?: { code?: string } })?.cause?.code;
@@ -66,6 +72,7 @@ export async function getBotAppearanceForEditor(botId: string): Promise<{ ready:
             accentColor: normalizeHex(row.accentColor),
             showExtraButtons: row.showExtraButtons,
             welcomeButtonText: row.welcomeButtonText?.trim() || null,
+            theme: normalizeTheme(row.theme),
           }
         : EMPTY_APPEARANCE,
     };
@@ -92,6 +99,7 @@ export async function getEffectiveBotAppearance(storeId: string, botId: string |
       accentColor: accent && accent !== DEFAULT_ACCENT ? accent : null,
       showExtraButtons: row.showExtraButtons,
       welcomeButtonText: row.welcomeButtonText?.trim() || null,
+      theme: normalizeTheme(row.theme),
     };
   } catch (e) {
     console.warn("[bot-appearance] falha ao ler personalização (segue sem):", (e as Error)?.message || e);
@@ -155,6 +163,23 @@ export async function saveBotAppearance(storeId: string, botId: string, input: S
     return { ok: true };
   } catch (e) {
     if (isMissing(e)) return { ok: false, error: "Falta rodar as migrations 0036 e 0037 (Personalização do bot) no Neon." };
+    throw e;
+  }
+}
+
+/** Troca o tema do Mini App do bot (null = Padrão). Não mexe no resto da Personalização. */
+export async function saveBotTheme(storeId: string, botId: string, theme: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
+  const bot = await db.query.telegramBots.findFirst({ where: and(eq(telegramBots.id, botId), eq(telegramBots.storeId, storeId)), columns: { id: true } });
+  if (!bot) return { ok: false, error: "Bot não encontrado." };
+  const value = normalizeTheme(theme);
+  try {
+    await db
+      .insert(botMiniappAppearance)
+      .values({ botId, storeId, theme: value, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: botMiniappAppearance.botId, set: { theme: value, updatedAt: new Date() } });
+    return { ok: true };
+  } catch (e) {
+    if (isMissing(e)) return { ok: false, error: "Falta rodar a migration 0038 (Tema XDs) no Neon." };
     throw e;
   }
 }

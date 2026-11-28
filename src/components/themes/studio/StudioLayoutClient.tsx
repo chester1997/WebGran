@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { StudioBottomNav } from "./components/StudioBottomNav";
 import { FloatingPromotionNotification } from "./components/FloatingPromotionNotification";
 import { MiniAppAccentRestore } from "./components/MiniAppAccent";
+import { MiniAppThemeRestore } from "../xds/MiniAppTheme";
 
 interface StudioLayoutClientProps {
   storeSlug: string;
@@ -46,6 +47,7 @@ export function StudioLayoutClient({
       </main>
 
       <MiniAppAccentRestore storeSlug={storeSlug} />
+      <MiniAppThemeRestore storeSlug={storeSlug} />
 
       {/* Floating Promotional Toasts */}
       <FloatingPromotionNotification storeSlug={storeSlug} />

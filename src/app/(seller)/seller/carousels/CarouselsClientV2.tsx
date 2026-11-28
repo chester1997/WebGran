@@ -51,6 +51,7 @@ import {
 import { CarouselIconRenderer } from "@/lib/carousel-icons";
 import { getProductBadge } from "@/lib/product-badge";
 import { IconPickerModal } from "./IconPickerModal";
+import { XdsCarouselOptions, XdsBadgeColorPicker, xdsDefaults, type XdsCarouselValues } from "./XdsCarouselOptions";
 import { SolarSellerCarouselsIcon } from "@/components/icons/solar/seller-icons";
 
 export interface ProductOption {
@@ -75,6 +76,10 @@ export interface StandardCarousel {
   indicatorType?: string | null;
   iconName?: string | null;
   iconColor?: string | null;
+  displayStyle?: string | null;
+  autoplaySeconds?: number | null;
+  coverImageUrl?: string | null;
+  subtitle?: string | null;
   items?: CarouselItem[];
   createdAt?: Date | string;
   updatedAt?: Date | string;
@@ -88,6 +93,7 @@ export interface RankingCarousel {
   indicatorType?: string | null;
   iconName?: string | null;
   iconColor?: string | null;
+  badgeColor?: string | null;
   items?: CarouselItem[];
 }
 
@@ -949,6 +955,7 @@ function CarouselFormModal({
   const [iconColor, setIconColor] = useState<string>(carousel?.iconColor || "#8B5CF6");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [productSearch, setProductSearch] = useState("");
+  const [xds, setXds] = useState<XdsCarouselValues>(xdsDefaults(carousel));
 
   const isEditing = !!carousel;
 
@@ -964,6 +971,7 @@ function CarouselFormModal({
       setSelectedProductIds(ids);
       setProductSearch("");
       setErrorMessage(null);
+      setXds(xdsDefaults(carousel));
     }
   }, [isOpen, carousel]);
 
@@ -1014,7 +1022,8 @@ function CarouselFormModal({
           indicatorType,
           iconName,
           iconColor,
-          status
+          status,
+          xds
         );
         onSuccess(`Carrossel "${name.trim()}" atualizado com sucesso!`);
       } else {
@@ -1023,7 +1032,8 @@ function CarouselFormModal({
           selectedProductIds,
           indicatorType,
           iconName,
-          iconColor
+          iconColor,
+          xds
         );
         onSuccess(`Carrossel "${name.trim()}" criado com sucesso!`);
       }
@@ -1106,6 +1116,9 @@ function CarouselFormModal({
               onChangeIconName={setIconName}
               onChangeIconColor={setIconColor}
             />
+
+            {/* Visual no Tema XDs (Destaque, cards grandes/pequenos, Coleção) */}
+            <XdsCarouselOptions value={xds} onChange={setXds} />
 
             {/* Gestão e Ordenação de Produtos */}
             <div className="space-y-3 pt-2 border-t border-white/5">
@@ -1284,6 +1297,7 @@ function RankingFormModal({
   );
   const [iconName, setIconName] = useState<string>(rankingCarousel.iconName || "Trophy");
   const [iconColor, setIconColor] = useState<string>(rankingCarousel.iconColor || "#FFD700");
+  const [badgeColor, setBadgeColor] = useState<string>(rankingCarousel.badgeColor || "#3B82F6");
 
   const maxLimit = 15;
   const isLimitReached = selectedIds.length >= maxLimit;
@@ -1298,6 +1312,7 @@ function RankingFormModal({
       setIndicatorType((rankingCarousel.indicatorType as "BAR" | "ICON" | "NONE") || "ICON");
       setIconName(rankingCarousel.iconName || "Trophy");
       setIconColor(rankingCarousel.iconColor || "#FFD700");
+      setBadgeColor(rankingCarousel.badgeColor || "#3B82F6");
       setSearchTerm("");
       setErrorMessage(null);
     }
@@ -1355,7 +1370,8 @@ function RankingFormModal({
           selectedIds,
           indicatorType,
           iconName,
-          iconColor
+          iconColor,
+          badgeColor
         );
         onSuccess("Ranking Top 15 atualizado com sucesso!");
       } catch (err: any) {
@@ -1441,6 +1457,9 @@ function RankingFormModal({
             onChangeIconName={setIconName}
             onChangeIconColor={setIconColor}
           />
+
+          {/* Cor do emblema com o número (Top 15 no Tema XDs) */}
+          <XdsBadgeColorPicker value={badgeColor} onChange={setBadgeColor} />
 
           {/* Lista de Produtos Selecionados (Até 15) */}
           <div className="space-y-3">

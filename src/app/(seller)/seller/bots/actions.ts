@@ -1428,3 +1428,18 @@ export async function saveBotAppearanceAction(
   revalidatePath(`/miniapp/${store.slug}`, "layout");
   return { success: true, message: "Personalização salva." };
 }
+
+/** Bot → Temas: escolhe o tema do Mini App (null = Padrão). Em teste: só a conta proprietária. */
+export async function saveBotThemeAction(botId: string, theme: string | null): Promise<ActionResponse> {
+  const auth = await verifyOwnerActionAccess();
+  if (!auth.authorized) return { success: false, error: auth.error };
+  const store = await getCurrentStore();
+  if (!store) return { success: false, error: "Loja não encontrada." };
+  const { appearanceAllowedForStore, saveBotTheme } = await import("@/lib/miniapp/bot-appearance");
+  if (!(await appearanceAllowedForStore(store.id))) return { success: false, error: "Os temas ainda estão em fase de testes." };
+  const r = await saveBotTheme(store.id, String(botId || ""), theme);
+  if (!r.ok) return { success: false, error: r.error };
+  revalidatePath(`/seller/bots/${botId}`);
+  revalidatePath(`/miniapp/${store.slug}`, "layout");
+  return { success: true, message: theme ? "Tema aplicado no Mini App." : "Mini App voltou para o tema Padrão." };
+}

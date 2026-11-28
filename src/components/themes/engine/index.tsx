@@ -13,6 +13,8 @@ import { StudioProfile } from "../studio/views/StudioProfile";
 
 import { getStoreBySlug } from "@/lib/store-cache";
 import { getEffectiveBotAppearance } from "@/lib/miniapp/bot-appearance";
+import { XdsHome } from "../xds/XdsHome";
+import { MiniAppThemeMarker } from "../xds/MiniAppTheme";
 
 async function getResolvedThemeSlug(storeSlug: string) {
   const store = await getStoreBySlug(storeSlug);
@@ -38,8 +40,23 @@ export async function ThemeEngineHome({ storeSlug, originBotId }: { storeSlug: s
   const store = await getStoreBySlug(storeSlug);
   const look = store ? await getEffectiveBotAppearance(store.id, originBotId) : null;
   const appearance = look && (look.displayName || look.logoUrl || look.accentColor) ? { displayName: look.displayName, logoUrl: look.logoUrl, accentColor: look.accentColor } : null;
-  if (theme === 'studio') return <StudioHome storeSlug={storeSlug} originBotId={originBotId} appearance={appearance} />;
-  return <StudioHome storeSlug={storeSlug} originBotId={originBotId} appearance={appearance} />;
+  // Tema do Mini App escolhido em Bot → Temas (em teste: só bots da conta proprietária; demais = null)
+  const botTheme = look?.theme || null;
+  const marker = <MiniAppThemeMarker storeSlug={storeSlug} theme={botTheme} />;
+  if (botTheme === 'xds') {
+    return (
+      <>
+        {marker}
+        <XdsHome storeSlug={storeSlug} originBotId={originBotId} brandName={look?.displayName || null} brandLogoUrl={look?.logoUrl || null} accentColor={look?.accentColor || null} />
+      </>
+    );
+  }
+  return (
+    <>
+      {marker}
+      <StudioHome storeSlug={storeSlug} originBotId={originBotId} appearance={appearance} />
+    </>
+  );
 }
 
 export async function ThemeEngineSearch({ storeSlug, q, originBotId }: { storeSlug: string; q: string; originBotId?: string | null }) {

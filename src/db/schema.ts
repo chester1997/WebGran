@@ -434,6 +434,12 @@ export const productCarousels = pgTable('product_carousels', {
   indicatorType: text('indicator_type').notNull().default('BAR'),
   iconName: text('icon_name'),
   iconColor: text('icon_color'),
+  // Tema XDs (migration 0038): 'small' | 'large' | 'featured' | 'collection'; null = 'small'
+  displayStyle: text('display_style'),
+  autoplaySeconds: integer('autoplay_seconds'),
+  coverImageUrl: text('cover_image_url'),
+  subtitle: text('subtitle'),
+  badgeColor: text('badge_color'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
@@ -1919,6 +1925,8 @@ export const botMiniappAppearance = pgTable('bot_miniapp_appearance', {
   showExtraButtons: boolean('show_extra_buttons').notNull().default(false),
   /** migration 0037: texto do botão que abre a loja nas boas-vindas (null = "🛍️ ABRIR LOJA") */
   welcomeButtonText: text('welcome_button_text'),
+  /** Tema do Mini App (migration 0038): null = Padrão, 'xds' = Tema XDs */
+  theme: text('theme'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => ({
   storeIdx: index('bot_miniapp_appearance_store_idx').on(t.storeId),

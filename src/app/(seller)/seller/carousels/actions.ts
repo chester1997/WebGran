@@ -24,6 +24,29 @@ function validateIndicator(
   return { indicatorType, iconName, iconColor };
 }
 
+/** Opções do Tema XDs para um carrossel (só aplicadas quando enviadas). */
+export interface CarouselThemeOptions {
+  displayStyle?: string | null;
+  autoplaySeconds?: number | null;
+  coverImageUrl?: string | null;
+  subtitle?: string | null;
+}
+
+const DISPLAY_STYLES = ["small", "large", "featured", "collection"];
+
+function themeOptionsPayload(opts?: CarouselThemeOptions): Record<string, any> {
+  if (!opts) return {};
+  const style = DISPLAY_STYLES.includes(String(opts.displayStyle)) ? String(opts.displayStyle) : "small";
+  const secs = Math.round(Number(opts.autoplaySeconds) || 0);
+  const cover = String(opts.coverImageUrl || "").trim();
+  return {
+    displayStyle: style,
+    autoplaySeconds: style === "featured" ? Math.min(30, Math.max(2, secs || 5)) : null,
+    coverImageUrl: style === "collection" && /^https:\/\//i.test(cover) ? cover : null,
+    subtitle: style === "collection" ? String(opts.subtitle || "").trim().slice(0, 40) || null : null,
+  };
+}
+
 export async function getOrCreateRankingCarouselAction() {
   await requireSeller();
   const store = await getCurrentStore();
@@ -72,7 +95,8 @@ export async function updateRankingCarouselAction(
   productIds: string[],
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
-  iconColor?: string
+  iconColor?: string,
+  badgeColor?: string | null
 ) {
   await requireSeller();
   const store = await getCurrentStore();
@@ -96,6 +120,7 @@ export async function updateRankingCarouselAction(
     indicatorType: validated.indicatorType,
     iconName: validated.iconName,
     iconColor: validated.iconColor,
+    ...(badgeColor !== undefined ? { badgeColor: badgeColor && /^#[0-9a-f]{6}$/i.test(badgeColor.trim()) ? badgeColor.trim().toUpperCase() : null } : {}),
     updatedAt: new Date()
   }).where(eq(productCarousels.id, carouselId));
 
@@ -137,6 +162,10 @@ export async function getStoreCarouselsAction() {
       iconColor: true,
       position: true,
       status: true,
+      displayStyle: true,
+      autoplaySeconds: true,
+      coverImageUrl: true,
+      subtitle: true,
     }
   });
 }
@@ -146,7 +175,8 @@ export async function createCarouselAction(
   productIds?: string[],
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
-  iconColor?: string
+  iconColor?: string,
+  themeOptions?: CarouselThemeOptions
 ) {
   const seller = await requireSeller();
   const store = await getCurrentStore();
@@ -175,6 +205,7 @@ export async function createCarouselAction(
     position: 1,
     status: "active",
     isRanking: false,
+    ...themeOptionsPayload(themeOptions),
   }).returning();
 
   if (Array.isArray(productIds) && productIds.length > 0) {
@@ -200,7 +231,8 @@ export async function updateCarouselAction(
   indicatorType?: "BAR" | "ICON" | "NONE",
   iconName?: string,
   iconColor?: string,
-  status?: string
+  status?: string,
+  themeOptions?: CarouselThemeOptions
 ) {
   await requireSeller();
   const store = await getCurrentStore();
@@ -219,6 +251,7 @@ export async function updateCarouselAction(
     indicatorType: validated.indicatorType,
     iconName: validated.iconName,
     iconColor: validated.iconColor,
+    ...themeOptionsPayload(themeOptions),
     updatedAt: new Date()
   };
 

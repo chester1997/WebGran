@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Home, Heart, LibraryBig, Search, ShoppingCart, Headphones } from "lucide-react";
 import { CartBadge } from "./CartBadge";
 import { parseSupportConfig, openSupportLink } from "@/lib/support/support-helper";
+import { useMiniAppTheme } from "../../xds/MiniAppTheme";
+import { XdsBottomNav } from "../../xds/XdsBottomNav";
 
 interface StudioBottomNavProps {
   storeSlug: string;
@@ -47,6 +49,20 @@ export function StudioBottomNav({
       router.push(href);
     });
   };
+
+  // Tema XDs (Bot → Temas): mesmo menu, outro visual
+  const miniAppTheme = useMiniAppTheme();
+  if (miniAppTheme === "xds") {
+    return (
+      <XdsBottomNav
+        basePath={basePath}
+        active={{ home: activeHome, favorites: activeFavorites, accesses: activeAccesses, search: activeSearch, cart: activeCart }}
+        hasSupport={hasValidSupport}
+        onSupport={() => openSupportLink(supportConfig)}
+        onNavigate={handleNavClick}
+      />
+    );
+  }
 
   return (
     <nav
