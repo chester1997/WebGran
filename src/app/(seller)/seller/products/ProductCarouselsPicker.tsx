@@ -12,6 +12,26 @@ export interface CarouselOption {
   iconName?: string | null;
   iconColor?: string | null;
   status?: string | null;
+  /** Bot dono do carrossel (null = todos os bots da loja) */
+  botId?: string | null;
+  /** @username do bot, mostrado só quando a lista mistura carrosséis de bots diferentes */
+  botLabel?: string | null;
+}
+
+/**
+ * Carrosséis que o produto pode usar: cada bot tem os seus. Produto de bot específico só vê os carrosséis
+ * do(s) bot(s) dele (e os da loja toda). Quando a lista mistura bots, o nome ganha "· @bot".
+ */
+export function carouselsForBots<T extends CarouselOption>(
+  carousels: T[],
+  catalogScope: string | null | undefined,
+  botIds: (string | null | undefined)[]
+): T[] {
+  const allowed = new Set(botIds.filter(Boolean) as string[]);
+  const list = catalogScope === "BOT_SPECIFIC" ? carousels.filter((c) => !c.botId || allowed.has(c.botId)) : carousels;
+  const bots = new Set(list.map((c) => c.botId).filter(Boolean));
+  if (bots.size <= 1) return list;
+  return list.map((c) => (c.botId && c.botLabel ? { ...c, name: `${c.name} · @${c.botLabel}` } : c));
 }
 
 interface ProductCarouselsPickerProps {

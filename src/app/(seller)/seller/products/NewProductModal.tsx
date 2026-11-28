@@ -15,7 +15,7 @@ import { createProductAction, testTelegramChatAccessAction } from "./actions";
 import { IndicatorTypePicker } from "./IndicatorTypePicker";
 import { BotSharingPicker, type LegacySharingMode } from "./BotSharingPicker";
 import { ProductVideosManager, PendingVideo } from "./ProductVideosManager";
-import { ProductCarouselsPicker, CarouselOption } from "./ProductCarouselsPicker";
+import { ProductCarouselsPicker, CarouselOption, carouselsForBots } from "./ProductCarouselsPicker";
 
 import { DeliveryTestResult } from "@/lib/delivery/telegram-delivery-service";
 
@@ -170,7 +170,9 @@ export function NewProductModal({
     formData.set("coverUrl", imageUrl);
     formData.set("bannerUrl", bannerUrl);
     formData.set("videoIds", JSON.stringify(selectedVideoIds));
-    formData.set("carouselIds", JSON.stringify(selectedCarouselIds));
+    // Só carrosséis do(s) bot(s) deste produto
+    const allowedCarouselIds = new Set(carouselsForBots(carousels, catalogScope, [selectedBotId, ...extraBotIds]).map((c) => c.id));
+    formData.set("carouselIds", JSON.stringify(selectedCarouselIds.filter((id) => allowedCarouselIds.has(id))));
 
     try {
       const res = await createProductAction(formData);
@@ -592,7 +594,7 @@ export function NewProductModal({
 
             {/* Carrosséis da Loja */}
             <ProductCarouselsPicker
-              carousels={carousels}
+              carousels={carouselsForBots(carousels, catalogScope, [selectedBotId, ...extraBotIds])}
               selectedIds={selectedCarouselIds}
               onChange={setSelectedCarouselIds}
             />

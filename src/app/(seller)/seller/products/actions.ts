@@ -268,7 +268,7 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
           eq(productCarousels.isRanking, false),
           inArray(productCarousels.id, selectedCarouselIds)
         ),
-        columns: { id: true },
+        columns: { id: true, botId: true },
       });
 
       if (validCarousels.length !== selectedCarouselIds.length) {
@@ -276,6 +276,17 @@ export async function createProductAction(formData: FormData): Promise<CreatePro
           success: false,
           error: "Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja.",
         };
+      }
+
+      // Cada bot tem os seus carrosséis: produto de um bot só entra nos carrosséis desse(s) bot(s)
+      if (catalogScope === "BOT_SPECIFIC") {
+        const allowedBots = new Set([botId, ...targetBotIds].filter(Boolean) as string[]);
+        if (validCarousels.some((c) => c.botId && !allowedBots.has(c.botId))) {
+          return {
+            success: false,
+            error: "Um dos carrosséis escolhidos é de outro bot. Escolha só carrosséis do bot deste produto.",
+          };
+        }
       }
     } catch (carErr: any) {
       console.error("[createProductAction] Erro ao validar carrosséis:", carErr);
@@ -594,7 +605,7 @@ export async function updateProductAction(productId: string, formData: FormData)
             eq(productCarousels.isRanking, false),
             inArray(productCarousels.id, selectedCarouselIds)
           ),
-          columns: { id: true },
+          columns: { id: true, botId: true },
         });
 
         if (validCarousels.length !== selectedCarouselIds.length) {
@@ -602,6 +613,17 @@ export async function updateProductAction(productId: string, formData: FormData)
             success: false,
             error: "Um ou mais carrosséis selecionados são inválidos ou não pertencem a esta loja.",
           };
+        }
+
+        // Cada bot tem os seus carrosséis: produto de um bot só entra nos carrosséis desse(s) bot(s)
+        if (catalogScope === "BOT_SPECIFIC") {
+          const allowedBots = new Set([botId, ...targetBotIds].filter(Boolean) as string[]);
+          if (validCarousels.some((c) => c.botId && !allowedBots.has(c.botId))) {
+            return {
+              success: false,
+              error: "Um dos carrosséis escolhidos é de outro bot. Escolha só carrosséis do bot deste produto.",
+            };
+          }
         }
       } catch (carErr: any) {
         console.error("[updateProductAction] Erro ao validar carrosséis:", carErr);

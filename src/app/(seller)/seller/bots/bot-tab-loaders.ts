@@ -160,6 +160,7 @@ export async function loadBotTabData(
               iconColor: true,
               status: true,
               position: true,
+              botId: true,
             },
           }),
         ]);

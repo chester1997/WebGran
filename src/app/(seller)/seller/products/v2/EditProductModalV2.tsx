@@ -27,7 +27,7 @@ import {
   DELIVERY_TYPE_CONFIG,
 } from "./types";
 import { BotPicker } from "./BotPicker";
-import { CarouselOption } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots } from "../ProductCarouselsPicker";
 import { updateProductAction, getProductVisibilitiesAction } from "../actions";
 
 export interface EditProductModalV2Props {
@@ -109,6 +109,8 @@ export function EditProductModalV2({
   const [viewsCount, setViewsCount] = useState<number>(Number(product?.viewsCount || 0));
   const [showFire, setShowFire] = useState<boolean>(Boolean(product?.showFire));
   const [fireCount, setFireCount] = useState<number>(Number(product?.fireCount || 0));
+  // Cada bot tem os seus carrosséis: só os do(s) bot(s) deste produto
+  const botCarousels = carouselsForBots(carousels, catalogScope, [selectedBotId, ...selectedBotIds]);
 
   // Delivery switcher (Part D)
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
@@ -518,7 +520,9 @@ export function EditProductModalV2({
       if (badge) formData.set("badge", badge);
 
       if (selectedCarouselIds.length > 0) {
-        formData.set("carouselIds", JSON.stringify(selectedCarouselIds));
+        // Só carrosséis do(s) bot(s) deste produto
+        const allowedCarouselIds = new Set(carouselsForBots(carousels, catalogScope, [selectedBotId, ...selectedBotIds]).map((c) => c.id));
+        formData.set("carouselIds", JSON.stringify(selectedCarouselIds.filter((id) => allowedCarouselIds.has(id))));
       } else {
         formData.set("carouselIds_initialized", "true");
       }
@@ -1214,9 +1218,9 @@ export function EditProductModalV2({
                   )}
                 </div>
 
-                {carousels.length > 0 ? (
+                {botCarousels.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {carousels.map((car) => {
+                    {botCarousels.map((car) => {
                       const isSelected = selectedCarouselIds.includes(car.id);
                       return (
                         <button

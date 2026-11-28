@@ -30,7 +30,7 @@ import {
   VideoItemV2,
 } from "./types";
 import { BotPicker } from "./BotPicker";
-import { CarouselOption } from "../ProductCarouselsPicker";
+import { CarouselOption, carouselsForBots } from "../ProductCarouselsPicker";
 
 interface ProductDetailsStepProps {
   state: NewProductFormStateV2;
@@ -59,6 +59,8 @@ export function ProductDetailsStep({
   saveSuccess,
   serverError,
 }: ProductDetailsStepProps) {
+  // Cada bot tem os seus carrosséis: só os do(s) bot(s) deste produto
+  const botCarousels = carouselsForBots(carousels || [], state.catalogScope, [state.selectedBotId, ...(state.targetBotIds || [])]);
   const config = DELIVERY_TYPE_CONFIG[state.deliveryType];
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -907,9 +909,9 @@ export function ProductDetailsStep({
                 <label className="block text-[12px] font-medium text-[#a1a1aa] mb-2">
                   Em quais carrosséis este produto deve aparecer?
                 </label>
-                {carousels && carousels.length > 0 ? (
+                {botCarousels.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {carousels.map((c) => {
+                    {botCarousels.map((c) => {
                       const isSelected = state.selectedCarouselIds.includes(c.id);
                       return (
                         <button
