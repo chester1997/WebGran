@@ -358,23 +358,14 @@ describe("WebGran — Fase G: Catálogo Paginado, Botões Compactos e Navegaçã
     expect(accessesLastRow[0].text).toBe("↩️ Voltar ao Menu");
     expect(accessesLastRow[0].callback_data).toBe("start_menu");
 
-    // 4. Invoking start_menu callback query restores the exact 4-row initial menu
+    // 4. Invoking start_menu callback query restores the initial menu: só o botão que abre a loja
+    // (Carrinho, Meus Acessos, Catálogo e Suporte ficam escondidos, salvo se ligados na Personalização do bot)
     await handleCartCallbackQuery(defaultCtx, "cb-menu", 12345, 100, "start_menu", { id: "user-42" });
     expect(mockBotService.editMessageText).toHaveBeenCalledWith(
       12345,
       100,
       expect.stringContaining("Menu Inicial"),
-      expect.objectContaining({
-        inline_keyboard: expect.arrayContaining([
-          expect.arrayContaining([expect.objectContaining({ text: "🛍️ ABRIR LOJA" })]),
-          expect.arrayContaining([
-            expect.objectContaining({ text: "🛒 Carrinho" }),
-            expect.objectContaining({ text: "📺 Meus Acessos" }),
-          ]),
-          expect.arrayContaining([expect.objectContaining({ text: "📚 Catálogo" })]),
-          expect.arrayContaining([expect.objectContaining({ text: "💬 Suporte" })]),
-        ]),
-      }),
+      { inline_keyboard: [[expect.objectContaining({ text: "🛍️ ABRIR LOJA" })]] },
       "Markdown"
     );
   });

@@ -109,7 +109,7 @@ export async function getEffectiveBotAppearance(storeId: string, botId: string |
 
 /**
  * Botões extras (Carrinho, Meus Acessos, Catálogo, Suporte) na mensagem de boas-vindas.
- * Lojas fora do teste: sempre aparecem (como hoje). Conta proprietária: só se ligados na Personalização.
+ * Escondidos para todos; só aparecem quando ligados na Personalização do bot.
  */
 export async function welcomeShowsExtraButtons(storeId: string, botId: string | null | undefined): Promise<boolean> {
   return (await getWelcomeKeyboardOptions(storeId, botId)).extraButtons;
@@ -117,17 +117,19 @@ export async function welcomeShowsExtraButtons(storeId: string, botId: string | 
 
 /**
  * Opções do teclado das boas-vindas: botões extras + texto do botão que abre a loja.
- * Lojas fora do teste: exatamente como hoje (extras ligados, "🛍️ ABRIR LOJA").
+ * Para todas as lojas, as boas-vindas mostram só o botão que abre a loja; Carrinho, Meus Acessos,
+ * Catálogo e Suporte aparecem só quando ligados na Personalização do bot.
  */
 export async function getWelcomeKeyboardOptions(storeId: string, botId: string | null | undefined): Promise<{ extraButtons: boolean; openLabel: string }> {
+  const plain = { extraButtons: false, openLabel: DEFAULT_OPEN_LABEL };
   try {
-    if (!(await appearanceAllowedForStore(storeId))) return { extraButtons: true, openLabel: DEFAULT_OPEN_LABEL };
-    if (!botId) return { extraButtons: false, openLabel: DEFAULT_OPEN_LABEL };
+    if (!botId || !(await appearanceAllowedForStore(storeId))) return plain;
     const row = await readRow(botId);
-    return { extraButtons: Boolean(row?.showExtraButtons), openLabel: row?.welcomeButtonText?.trim() || DEFAULT_OPEN_LABEL };
+    if (!row || row.storeId !== storeId) return plain;
+    return { extraButtons: Boolean(row.showExtraButtons), openLabel: row.welcomeButtonText?.trim() || DEFAULT_OPEN_LABEL };
   } catch (e) {
-    console.warn("[bot-appearance] falha ao ler botões das boas-vindas (mantém como hoje):", (e as Error)?.message || e);
-    return { extraButtons: true, openLabel: DEFAULT_OPEN_LABEL };
+    console.warn("[bot-appearance] falha ao ler botões das boas-vindas (só o botão da loja):", (e as Error)?.message || e);
+    return plain;
   }
 }
 
